@@ -1,0 +1,18 @@
+* text=auto
+
+# Unity guarda escenas, prefabs y metas como YAML
+*.unity text eol=lf
+*.prefab text eol=lf
+*.asset text eol=lf
+*.meta text eol=lf
+*.mat text eol=lf
+*.cs text eol=lf
+
+*.png binary
+*.jpg binary
+*.psd binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.fbx binary
+
