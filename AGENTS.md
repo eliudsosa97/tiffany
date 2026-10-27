@@ -14,7 +14,7 @@ Juego de terror y sigilo en Unity 6.3 LTS `6000.3.27f1` con URP. Sale para naveg
 ## Convenciones de código
 
 - Todo el código vive en el namespace `ElVelador`. Las herramientas de editor en `ElVelador.EditorTools` y los tests en `ElVelador.Tests`.
-- La lógica va en clases de C# simples y testeables (ruido, energía del alma, pánico, estados del Velador, recuerdos, poderes). Los `MonoBehaviour` son delgados: leen la escena, llaman a la lógica y aplican el resultado.
+- La lógica va en clases de C# simples y testeables (ruido, energía del alma, pánico, estados de la bruja, recuerdos, poderes). Los `MonoBehaviour` son delgados: leen la escena, llaman a la lógica y aplican el resultado.
 - Solo Input System (el input viejo está apagado). La entrada se lee a través de una sola clase, `GameInput`.
 - UI con `UnityEngine.UI.Text` y la fuente `LegacyRuntime.ttf`. Sin TextMeshPro.
 - Sin asignaciones de memoria por cuadro en `Update`: nada de LINQ, strings concatenados, `Find` ni `GetComponent` en el ciclo caliente.
@@ -38,7 +38,7 @@ Juego de terror y sigilo en Unity 6.3 LTS `6000.3.27f1` con URP. Sale para naveg
 
 ```
 Assets/
-  Scripts/      Core, Player, Velador, Soul, Noise, Powers, Memories, World, UI, Audio, Debug
+  Scripts/      Core, Player, Witch, Soul, Noise, Powers, Memories, World, UI, Audio, Debug
   Editor/       SceneBuilder, BuildTools y herramientas de editor
   Tests/        EditMode (lógica) y PlayMode (prueba de humo)
   Data/         recuerdos y textos
