@@ -26,9 +26,9 @@ namespace ElVelador.Tests
 
         [TestCase(false, 89.9f)]
         [TestCase(true, 44.9f)]
-        public void LitCandlesExpireAndCanBeRelit(bool raining, float beforeExpiry)
+        public void KindledCandlesExpireAndCanBeRelit(bool raining, float beforeExpiry)
         {
-            var candle = new Candle(CandleKind.Lit, Vector3.zero);
+            var candle = new Candle(CandleKind.Kindled, Vector3.zero);
             Assert.IsFalse(candle.IsLit);
             Assert.IsFalse(candle.IsSafeZone);
             Assert.AreEqual(0f, candle.Remaining);
@@ -55,12 +55,14 @@ namespace ElVelador.Tests
         [Test]
         public void InitiallyLitCandleBurnsFasterWhenRainStarts()
         {
-            var candle = new Candle(CandleKind.Lit, Vector3.zero, true);
+            var candle = new Candle(CandleKind.Kindled, Vector3.zero, true);
             Assert.IsTrue(candle.IsLit);
             Assert.AreEqual(90f, candle.Remaining);
             candle.Tick(30f, false);
             Assert.AreEqual(60f, candle.Remaining);
-            candle.Tick(30f, true);
+            candle.Tick(29.9f, true);
+            Assert.IsTrue(candle.IsLit);
+            candle.Tick(0.2f, true);
             Assert.AreEqual(0f, candle.Remaining);
             Assert.IsFalse(candle.IsLit);
         }
@@ -70,7 +72,7 @@ namespace ElVelador.Tests
         [TestCase(float.NaN)]
         public void InvalidTimeDoesNotBurnCandle(float dt)
         {
-            var candle = new Candle(CandleKind.Lit, Vector3.zero, true);
+            var candle = new Candle(CandleKind.Kindled, Vector3.zero, true);
             candle.Tick(dt, false);
             candle.Tick(dt, true);
             Assert.AreEqual(90f, candle.Remaining);
@@ -83,9 +85,9 @@ namespace ElVelador.Tests
             Assert.AreEqual(Vector3.up, point.Position);
             point.Touch(null);
             Assert.AreEqual(Vector3.up, point.Position);
-            point.Touch(new Candle(CandleKind.Lit, Vector3.zero));
+            point.Touch(new Candle(CandleKind.Kindled, Vector3.zero));
             Assert.AreEqual(Vector3.up, point.Position);
-            point.Touch(new Candle(CandleKind.Lit, Vector3.zero, true));
+            point.Touch(new Candle(CandleKind.Kindled, Vector3.zero, true));
             Assert.AreEqual(Vector3.up, point.Position);
             point.Touch(new Candle(CandleKind.Family, Vector3.right));
             Assert.AreEqual(Vector3.right, point.Position);

@@ -33,7 +33,7 @@ namespace ElVelador
 
         public void Tick(float dt, bool raining)
         {
-            if (Kind == CandleKind.Lit && IsLit && dt > 0f)
+            if (Kind == CandleKind.Kindled && IsLit && dt > 0f)
             {
                 Remaining = Mathf.Max(0f, Remaining - dt * (raining ? RainBurnMultiplier : 1f));
             }
