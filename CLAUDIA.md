@@ -9,9 +9,10 @@ Eres la directora de arte y narrativa de los recuerdos. El código, la escena y 
 1. El guion de los cinco recuerdos.
 2. Los dibujos de cada recuerdo, en Procreate.
 3. El archivo de datos de cada recuerdo, con las frases de los dibujos.
-4. Si sobra tiempo: el storyboard de los ecos y los carteles de SE BUSCA.
+4. Modelos 3D en Blender para el río y el bosque, y verlos en Unity (Paso 5). Aquí aprendes las dos herramientas con algo que entra al juego.
+5. Si sobra tiempo: el storyboard de los ecos y los carteles de SE BUSCA.
 
-No necesitas Unity para nada de esto. Instalarlo es decisión tuya y puede esperar.
+Para los pasos 1 a 3 no necesitas Unity. Para el Paso 5 sí.
 
 ## Calendario
 
@@ -123,6 +124,60 @@ Un archivo por recuerdo en `Assets/Data/Memories/`, llamado `memory-<n>.json`. E
 - **Storyboard de los ecos.** Tres o cuatro viñetas por eco: dónde está la niña, dónde está la abuela, qué hacen. Sirve para armar la escena. Va en `docs/`.
 - **Carteles de SE BUSCA** con la foto de Tiffany, para pegarlos en el cerro. PNG en `Assets/Art/`.
 
+## Paso 5. Blender y Unity
+
+Vas a modelar a mano en Blender y a ver tus modelos en Unity. Tu Claude te enseña cada herramienta desde cero: pídele que te explique antes de cada paso.
+
+Necesitas en tu Mac:
+
+- Blender (unos 1.5 GB), desde blender.org.
+- Unity `6000.3.27f1` con Web Build Support (unos 20 GB libres), desde Unity Hub. Ver `README.md`.
+
+### Qué modelas, en este orden
+
+En el guion hay un río que se cruza por piedras y troncos. Esas piezas son tuyas.
+
+| Orden | Modelo | Nombre | Triángulos |
+| --- | --- | --- | --- |
+| 1 | Piedras del río: tres o cuatro rocas de orilla y dos piedras planas para pisar. Con ellas aprendes Blender | `river-rock-1`, `river-rock-2`, ..., `river-step-1`, `river-step-2` | 300 cada una |
+| 2 | Tiffany, como la diseñaste en tus dibujos (ver abajo) | `tiffany` | 3000 |
+| 3 | Tronco caído para cruzar el río | `river-log` | 500 |
+| 4 | Tramo del cauce con sus orillas: uno recto y uno en curva, de 10 m de largo | `river-bed-straight`, `river-bed-curve` | 1500 cada uno |
+| 5 | Una planta del bosque: helecho, cempasúchil o la que veas en las fotos | `plant-<nombre>` | 600 |
+| 6 | Si sobra tiempo: los objetos de tus recuerdos (flores, listón, muñeca, zapato, medalla) | `memory-object-<n>` | 500 |
+
+**Tiffany.** Tú haces la malla y un carril le pone esqueleto y animaciones (caminar, correr, esconderse, cargar la luz). Mientras no esté la tuya, el juego usa una provisional.
+
+- Mide 1.2 m, de pie, en pose de T: brazos abiertos a los lados, rectos, y piernas un poco separadas.
+- Mira hacia el frente de Blender (el eje -Y) y su origen va entre los pies, en el suelo.
+- Una sola malla. Materiales por zona con estos nombres: `TiffanySkin`, `TiffanyHair`, `TiffanyClothes` y `TiffanyGlow` (las manos, de donde sale su luz).
+- Es un alma: brilla tenue. El brillo lo pone Unity; tú solo eliges colores.
+- Antes de modelar, dibuja en Procreate una hoja de frente y de perfil. Te sirve de guía en Blender y al carril le sirve para revisar.
+
+El agua del río no se modela: es un efecto de Unity que hace un carril encima de tu cauce.
+
+### Reglas para que entren al juego
+
+- Tamaño real: en Blender, 1 unidad es 1 metro.
+- El punto de origen va en la base del modelo, al centro (en Blender: Object, Set Origin).
+- Poco detalle: respeta los triángulos de la tabla (en Blender: el contador de Statistics).
+- Colores con materiales simples. Sin texturas grandes.
+- Guarda el `.blend` en `Art/Claudia/<nombre>.blend`.
+- Exporta a FBX en `Assets/Art/Models/Claudia/<nombre>.fbx` con: Selected Objects, Apply Scalings "FBX All", Forward "-Z Forward", Up "Y Up" y Apply Transform activado.
+- Fotos de referencia del lugar: pídeselas a Eliud.
+
+### Verlos en Unity
+
+1. Abre el proyecto en Unity Hub (la primera vez tarda unos minutos).
+2. Tus FBX aparecen solos en `Assets/Art/Models/Claudia/`.
+3. Crea un material (Create, Material, shader `Universal Render Pipeline/Lit`) con el color de cada pieza y ponlo en el modelo.
+4. Arrastra el modelo a la ventana Project, dentro de la misma carpeta, para hacerlo prefab: `<nombre>.prefab`.
+5. Para mirarlos de noche, haz tu propia escena de prueba en `Assets/Art/Models/Claudia/Preview.unity`. Nunca guardes cambios en `Assets/Scenes/Main.unity`: se genera sola por código y tus cambios se borrarían.
+
+Un carril pone tus prefabs en el bosque y en el río, con sus colisiones para pisarlos. Mientras no estén, usa piezas provisionales, así que nadie te espera: ve a tu ritmo.
+
+Cada modelo entra en un PR propio, con el `.blend`, el FBX, el material y el prefab. Rama `art/<nombre>`, por ejemplo `art/river-rock-1`.
+
 ## Cómo entregar
 
 Un Pull Request por recuerdo. Así cada uno se revisa rápido y entra aunque el siguiente no esté listo.
@@ -140,7 +195,7 @@ Lo tuyo no se corrige en estilo: solo se te pide cambiar algo si rompe el juego 
 
 - `Assets/Scripts/`, `Assets/Editor/`, `Assets/Tests/`: el código.
 - `Assets/Scenes/`: la escena se genera sola por código.
-- Tus carpetas son `Assets/Art/Memories/`, `Assets/Audio/`, `Assets/Data/` y `docs/`.
+- Tus carpetas son `Assets/Art/Memories/`, `Assets/Audio/`, `Assets/Data/`, `docs/`, `Art/Claudia/` y `Assets/Art/Models/Claudia/`.
 
 ## Tu Claude
 

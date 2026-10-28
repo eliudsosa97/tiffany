@@ -301,6 +301,52 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator WitchStalksAroundAFamilyCandleWithoutCrossingIt()
+        {
+            var candle = AddFamilyCandle();
+            player.transform.position = new Vector3(0f, 0f, 6f);
+            witch.transform.position = new Vector3(0f, 0f, -6f);
+            controller.playerHidden = true;
+            controller.raining = true;
+            Physics.SyncTransforms();
+            yield return WaitForStalking();
+            float initialDistance = HorizontalDistanceToPlayer();
+            NoiseBus.Publish(new StepNoise(player.transform.position, 20f));
+
+            float deadline = Time.time + 12f;
+            while (Time.time < deadline)
+            {
+                yield return null;
+                Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+                Vector3 offset = witch.transform.position - candle.transform.position;
+                offset.y = 0f;
+                Assert.GreaterOrEqual(offset.magnitude, candle.radius - 0.05f);
+            }
+
+            Assert.Less(HorizontalDistanceToPlayer(), initialDistance - 4f);
+            Assert.Greater(witch.transform.position.z, candle.radius);
+        }
+
+        [UnityTest]
+        public IEnumerator LandingNearLightInsideFamilyCandleEndsOutsideRadius()
+        {
+            var candle = AddFamilyCandle();
+            controller.enabled = false;
+            LightPlayerAt(new Vector3(0f, 0f, 6f));
+            controller.playerLightPosition = candle.transform.position;
+            witch.transform.position = new Vector3(0.5f, 14f, 0f);
+            yield return new WaitForSeconds(0.6f);
+            controller.enabled = true;
+            Assert.IsTrue(SafeZones.Contains(controller.playerLightPosition));
+
+            yield return WaitForStalking();
+
+            Vector3 offset = witch.transform.position - candle.transform.position;
+            offset.y = 0f;
+            Assert.GreaterOrEqual(offset.magnitude, candle.radius);
+        }
+
+        [UnityTest]
         public IEnumerator StalkingClosesHorizontalDistanceOnNavMesh()
         {
             TurnOnPlayerLight();
@@ -476,6 +522,24 @@ namespace TiffanyGame.Tests
             yield return null;
             Assert.AreEqual(WitchState.Landing, controller.Decision.State);
             yield return WaitForStalking();
+        }
+
+        private CandleSpot AddFamilyCandle()
+        {
+            var candle = new GameObject("Family Candle");
+            candle.SetActive(false);
+            candle.transform.SetParent(world.transform, false);
+            var obstacle = candle.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = CandleSite.DefaultRadius;
+            obstacle.height = 2f;
+            obstacle.center = Vector3.up;
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = true;
+            var spot = candle.AddComponent<CandleSpot>();
+            candle.SetActive(true);
+            Assert.IsTrue(SafeZones.Contains(candle.transform.position));
+            return spot;
         }
 
         private BoxCollider AddBox(string name, Vector3 position, Vector3 size)
