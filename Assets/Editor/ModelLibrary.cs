@@ -26,6 +26,7 @@ namespace TiffanyGame.EditorTools
             public string name;
             public string color;
             public float smoothness;
+            public float metallic;
         }
 
         public static ModelSpec LoadSpec(string id)
@@ -63,7 +64,9 @@ namespace TiffanyGame.EditorTools
                     if (!ColorUtility.TryParseHtmlString(entry.color, out var color))
                         throw new InvalidDataException($"{GameInfo.LogPrefix} Color inválido '{entry.color}' en {entry.name}.");
                     // Sin _Color la segunda corrida reescribe el .mat: URP lo iguala a _BaseColor.
-                    GeneratedMaterials.Get(entry.name, color, false, entry.smoothness).SetColor("_Color", color);
+                    var material = GeneratedMaterials.Get(entry.name, color, false, entry.smoothness);
+                    material.SetColor("_Color", color);
+                    material.SetFloat("_Metallic", entry.metallic);
                 }
             }
             finally

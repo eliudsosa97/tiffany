@@ -107,6 +107,7 @@ namespace TiffanyGame.Tests
                     var baseColor = material.GetColor("_BaseColor");
                     for (int c = 0; c < 4; c++) Assert.AreEqual(color[c], baseColor[c], 1e-4f, material.name);
                     Assert.AreEqual(entry.smoothness, material.GetFloat("_Smoothness"), 1e-4f);
+                    Assert.AreEqual(entry.metallic, material.GetFloat("_Metallic"), 1e-4f, material.name);
                 }
             }
         }

@@ -1,38 +1,78 @@
 {
   "materials": [
-    { "name": "WitchSkin", "color": "#6E6B60", "smoothness": 0.25 },
-    { "name": "WitchCloth", "color": "#4A2622", "smoothness": 0.05 },
-    { "name": "WitchHair", "color": "#0A0A0B", "smoothness": 0.15 }
+    { "name": "WitchSkin", "color": "#6E6B60", "smoothness": 0.25, "metallic": 0 },
+    { "name": "WitchCloth", "color": "#4A2622", "smoothness": 0.05, "metallic": 0 },
+    { "name": "WitchHair", "color": "#060607", "smoothness": 0.1, "metallic": 1 }
   ],
   "seed": 13,
   "body": {
     "armLengthScale": 1.0,
-    "fingerLength": 0.26,
-    "fingerSpread": 0.022,
-    "fingerFan": 0.05,
     "headRadius": [0.095, 0.135, 0.11],
     "neckRadius": 0.032,
     "torsoHalfWidth": [0.13, 0.085, 0.13, 0.06],
     "torsoHalfDepth": [0.09, 0.065, 0.085, 0.05],
     "rebozoHalfWidth": [0.23, 0.2, 0.21, 0.09],
     "rebozoHalfDepth": [0.17, 0.13, 0.12, 0.07],
-    "legRadius": [0.06, 0.048, 0.032],
+    "legRadius": [0.06, 0.048, 0.034],
     "armRadius": [0.045, 0.04, 0.028],
     "boneThinning": 0.65,
-    "footRadius": [0.035, 0.022],
-    "fingerRadius": [0.012, 0.004]
+    "trapezius": [[0.03, 0.03], [0.036, 0.026], [0.052, 0.05]],
+    "clavicleRadius": 0.011
   },
-  "hair": { "strands": 28, "frontLength": [0.45, 0.7], "backLength": [0.6, 0.95], "width": 0.05, "thickness": 0.012 },
-  "rebozoRags": { "chestStrips": 11, "chestLength": [0.3, 0.75], "hipStrips": 9, "hipLength": [0.3, 0.55], "width": 0.09, "thickness": 0.012 },
+  "face": {
+    "segments": 18, "rings": 17, "frontDensity": 1.5,
+    "jawLength": 0.5, "jawNarrow": 0.35, "chinForward": 0.2, "backOfSkull": 1.1,
+    "cavity": -0.16,
+    "features": [
+      { "name": "eyeSocket", "center": [0.36, 0.14, 0.92], "size": [0.2, 0.16, 0.5], "amount": -0.38, "dark": true },
+      { "name": "brow", "center": [0.36, 0.34, 0.86], "size": [0.26, 0.08, 0.5], "amount": 0.08 },
+      { "name": "cheekbone", "center": [0.6, -0.06, 0.76], "size": [0.15, 0.11, 0.5], "amount": 0.2 },
+      { "name": "cheekHollow", "center": [0.5, -0.42, 0.75], "size": [0.18, 0.17, 0.5], "amount": -0.3 },
+      { "name": "temple", "center": [0.86, 0.22, 0.42], "size": [0.14, 0.16, 0.4], "amount": -0.14 },
+      { "name": "noseBridge", "center": [0, 0.02, 1.0], "size": [0.07, 0.22, 0.5], "amount": 0.24 },
+      { "name": "noseTip", "center": [0, -0.17, 0.98], "size": [0.06, 0.08, 0.5], "amount": 0.2 },
+      { "name": "mouth", "center": [0, -0.5, 0.84], "size": [0.42, 0.13, 0.5], "amount": -0.36, "dark": true }
+    ]
+  },
+  "hair": {
+    "strands": 28, "frontLength": [0.45, 0.7], "backLength": [0.6, 0.95], "width": 0.05, "thickness": 0.014, "sides": 3,
+    "capColumns": 16, "capRows": 4, "capScale": 1.07, "capLift": 0.035, "hairlineFront": 0.5, "hairlineBack": -0.6,
+    "faceGapDeg": 80, "faceGapOffsetDeg": 5, "strayEvery": 9, "parting": 0.7
+  },
+  "hands": {
+    "length": 0.26, "spread": 0.02, "radius": [0.012, 0.006], "knuckle": 1.6, "fanDeg": 12,
+    "phalanges": [0.36, 0.28, 0.2], "fingerScale": [0.92, 1.0, 0.96, 0.8], "nailLength": 0.05,
+    "thumbScale": 0.75, "thumbAngleDeg": 30, "thumbBase": 0.75,
+    "palm": [[0.03, 0.022], [0.034, 0.013], [0.04, 0.012]]
+  },
+  "feet": {
+    "heelBack": 0.05, "heelHeight": 0.03, "ballBack": 0.05, "ballHeight": 0.018,
+    "sections": [[0.024, 0.026], [0.036, 0.03], [0.034, 0.02], [0.042, 0.014]],
+    "toes": [0.05, 0.042, 0.038, 0.034, 0.028], "toeSpread": 0.016, "toeRadius": 0.008
+  },
+  "torso": {
+    "rows": 9, "sides": 10, "ribs": 5, "ribRange": [0.88, 0.6], "ribArcDeg": [14, 45, 80, 112],
+    "ribDroop": 0.035, "ribRadius": 0.0075, "sternum": [0.9, 0.62], "sternumRadius": 0.01
+  },
+  "rebozo": {
+    "rows": 6, "columns": 17, "hangRows": 5, "tears": 3, "openTopDeg": 26, "openBottomDeg": 46, "tiltFrom": 0.5,
+    "folds": 5, "foldDepth": 0.08, "frontLength": 0.3, "backLength": 0.6, "ragged": 0.55, "tearGap": 0.03, "thickness": 0.01,
+    "vertebrae": 7, "spineFrom": 0.1, "spineTo": 0.85, "knob": [0.02, 0.011]
+  },
+  "enagua": {
+    "waist": 0.35, "clearance": 0.02, "columns": 16, "rows": 5, "tears": 3, "folds": 6, "foldDepth": 0.07,
+    "length": 0.55, "ragged": 0.6, "tearGap": 0.025, "thickness": 0.008, "drift": 0.08
+  },
+  "rebozoRags": { "chestStrips": 7, "chestHeight": 0.6, "chestLength": [0.35, 0.75], "hipStrips": 5, "hipLength": [0.4, 0.65], "width": 0.08, "thickness": 0.012, "sides": 3 },
   "poses": {
     "WitchStand": {
       "headRollDeg": 36, "headPitchDeg": 28,
       "head": [-0.14, 2.12, 0.33],
       "pelvis": [0.03, 1.04, -0.02], "waist": [0.0, 1.32, -0.06], "chest": [-0.02, 1.62, -0.06], "neck": [-0.05, 1.88, 0.12],
       "shoulderL": [-0.2, 1.8, 0.03], "elbowL": [-0.28, 1.16, -0.02], "wristL": [-0.31, 0.5, 0.05], "handL": [-0.32, 0.38, 0.07],
-      "fingerDirL": [-0.05, -1, 0.15], "fingerCurlL": -0.03,
+      "fingerDirL": [-0.05, -1, 0.15], "fingerBendDegL": 12, "palmTwistDegL": 130,
       "shoulderR": [0.15, 2.02, 0.03], "elbowR": [0.33, 1.52, -0.05], "wristR": [0.24, 1.44, 0.38], "handR": [0.22, 1.42, 0.49],
-      "fingerDirR": [-0.05, -0.3, 1], "fingerCurlR": 0.04,
+      "fingerDirR": [-0.05, -0.3, 1], "fingerBendDegR": 8, "palmTwistDegR": 0,
       "hipL": [-0.1, 1.02, 0], "kneeL": [-0.1, 0.56, 0.09], "ankleL": [-0.13, 0.07, -0.03], "toeL": [-0.07, 0.022, 0.19],
       "hipR": [0.1, 1.04, 0], "kneeR": [0.05, 0.58, 0.07], "ankleR": [0.13, 0.07, 0.0], "toeR": [0.2, 0.022, 0.21]
     },
@@ -41,12 +81,12 @@
       "head": [0.0, 1.06, 0.84],
       "pelvis": [0, 0.92, -0.14], "waist": [0.0, 1.14, 0.04], "chest": [0.02, 1.32, 0.28], "neck": [0.02, 1.3, 0.52],
       "shoulderL": [-0.19, 1.26, 0.42], "elbowL": [-0.38, 0.75, 0.55], "wristL": [-0.32, 0.16, 0.95], "handL": [-0.33, 0.07, 1.06],
-      "fingerDirL": [-0.15, -0.2, 1], "fingerCurlL": -0.04,
+      "fingerDirL": [-0.15, -0.2, 1], "fingerBendDegL": 16, "palmTwistDegL": 0,
       "shoulderR": [0.19, 1.38, 0.44], "elbowR": [0.42, 0.9, 0.58], "wristR": [0.34, 0.18, 1.0], "handR": [0.35, 0.08, 1.11],
-      "fingerDirR": [0.15, -0.2, 1], "fingerCurlR": -0.04,
+      "fingerDirR": [0.15, -0.2, 1], "fingerBendDegR": 16, "palmTwistDegR": 0,
       "hipL": [-0.11, 0.9, -0.12], "kneeL": [-0.34, 0.55, 0.3], "ankleL": [-0.27, 0.07, 0.02], "toeL": [-0.31, 0.022, 0.25],
       "hipR": [0.11, 0.92, -0.12], "kneeR": [0.36, 0.58, 0.32], "ankleR": [0.27, 0.07, 0.04], "toeR": [0.33, 0.022, 0.27]
     }
   },
-  "preview": { "crouchOffsetX": 1.4 }
+  "preview": { "crouchOffsetX": 1.4, "faceDistance": 1.1, "handDistance": 0.9, "handCamera": [0.35, 0.3, 1] }
 }
