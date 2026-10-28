@@ -256,7 +256,15 @@ class Poser:
 
 def bake(arm, rig, name, samples, loop):
     """samples: [(cuadro, Poser)]. Rotaciones en cuaternión de todos los huesos y posición solo de Hips."""
+    previous = bpy.data.actions.get(name)
+    if previous is not None:
+        generated = previous.get("tiffany_witch_clip") == name
+        legacy = previous.use_fake_user and len(previous.slots) == 1 and previous.slots[0].identifier == "OBWitchRig"
+        if not generated and not legacy:
+            raise ValueError(f"[Tiffany] La acción '{name}' ya existe y no pertenece al generador de la bruja.")
+        bpy.data.actions.remove(previous)
     act = bpy.data.actions.new(name)
+    act["tiffany_witch_clip"] = name
     act.use_fake_user = True
     ad = arm.animation_data_create()
     ad.action = act

@@ -64,6 +64,29 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void FigureSkinsWithFourBonesOnEveryQualityLevel()
+        {
+            var figure = WitchBuilder.BuildFigure(root.transform);
+            foreach (var skin in figure.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                Assert.AreEqual(SkinQuality.Bone4, skin.quality, skin.name);
+
+            // El renderer no supera el límite global: WebGL usa Mobile y el pelo y la tela pesan cuatro huesos.
+            int previous = QualitySettings.GetQualityLevel();
+            try
+            {
+                for (int level = 0; level < QualitySettings.names.Length; level++)
+                {
+                    QualitySettings.SetQualityLevel(level, false);
+                    Assert.AreEqual(SkinWeights.FourBones, QualitySettings.skinWeights, QualitySettings.names[level]);
+                }
+            }
+            finally
+            {
+                QualitySettings.SetQualityLevel(previous, false);
+            }
+        }
+
+        [Test]
         public void FigureHasNoCollidersAndUsesModelMaterials()
         {
             var figure = WitchBuilder.BuildFigure(root.transform);

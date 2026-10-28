@@ -146,6 +146,8 @@ namespace TiffanyGame.EditorTools
             animator.runtimeAnimatorController = controller();
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            foreach (var renderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                renderer.quality = SkinQuality.Bone4;
         }
     }
 }

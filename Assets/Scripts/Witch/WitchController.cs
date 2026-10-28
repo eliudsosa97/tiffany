@@ -354,8 +354,7 @@ namespace TiffanyGame
             else
             {
                 float duration = state == WitchState.Sprinting ? 0.1f : 0.25f;
-                float sourceLength = animator.GetCurrentAnimatorStateInfo(0).length;
-                animator.CrossFade(hash, sourceLength > 0f ? duration / sourceLength : 0f, 0, 0f);
+                animator.CrossFadeInFixedTime(hash, duration, 0, 0f);
             }
             lastAnimationState = state;
             hasAnimationState = true;

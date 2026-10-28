@@ -130,6 +130,38 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator MovingStalkingFinishesWindUpBlendWithinThreeTenthsOfASecond()
+        {
+            controller.raining = true;
+            yield return WaitForStalking();
+            LightPlayerAt(witch.transform.position + Vector3.right * 14f);
+            var animator = controller.figure.GetComponent<Animator>();
+            int speedHash = Animator.StringToHash("Speed");
+
+            float deadline = Time.time + 2f;
+            while (Time.time < deadline && (animator.IsInTransition(0)
+                || !animator.GetCurrentAnimatorStateInfo(0).IsName("Stalking")
+                || animator.GetCurrentAnimatorStateInfo(0).length >= 2.5f
+                || animator.GetFloat(speedHash) < 1f)) yield return null;
+
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            Assert.IsFalse(animator.IsInTransition(0));
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Stalking"));
+            Assert.Less(animator.GetCurrentAnimatorStateInfo(0).length, 2.5f);
+            Assert.GreaterOrEqual(animator.GetFloat(speedHash), 1f);
+            Assert.Greater(agent.velocity.sqrMagnitude, 1f);
+            LightPlayerAt(witch.transform.position + Vector3.right * 8f);
+            yield return WaitForState(WitchState.WindUp, 1f);
+
+            yield return new WaitForSeconds(0.3f);
+
+            Assert.AreEqual(WitchState.WindUp, controller.Decision.State);
+            Assert.AreEqual(0f, animator.GetFloat(speedHash), 0.01f);
+            Assert.IsFalse(animator.IsInTransition(0));
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("WindUp"));
+        }
+
+        [UnityTest]
         public IEnumerator SprintingAnimatesAtMeasuredSpeedWithoutRestartingClip()
         {
             witch.transform.position = Vector3.zero;
