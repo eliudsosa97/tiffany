@@ -10,6 +10,7 @@ namespace TiffanyGame.EditorTools
 {
     public static class RouteBuilder
     {
+        public const float SkyHeight = 7.9f;
         const float ClearingSize = 36f;
         const float Spacing = 56f;
         const float PathWidth = 5f;
@@ -40,7 +41,7 @@ namespace TiffanyGame.EditorTools
                 if (i < names.Length - 1) BuildPath(clearing, floor, dark);
                 Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark);
                 if (i < memories.Length) memories[i] = Root("Memory Point", clearing, memoryPosition);
-                skyRoute[i] = clearing.position + Vector3.up * 14f;
+                skyRoute[i] = clearing.position + Vector3.up * SkyHeight;
 
                 var stop = Root(clearing.name, clearing, new Vector3(0f, 0f, -8f));
                 var capture = stop.gameObject.AddComponent<CaptureStop>();
