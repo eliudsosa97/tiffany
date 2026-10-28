@@ -28,6 +28,8 @@ namespace TiffanyGame.Tests
             yield return null;
             yield return null;
 
+            // Heartbeat registra cada cambio de ritmo y estos tests no admiten logs inesperados.
+            foreach (var heartbeat in Object.FindObjectsByType<Heartbeat>(FindObjectsSortMode.None)) heartbeat.enabled = false;
             mainScene = SceneManager.GetActiveScene();
             NoiseBus.Published += RecordStep;
         }

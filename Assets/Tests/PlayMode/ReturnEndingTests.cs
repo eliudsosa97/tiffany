@@ -26,6 +26,8 @@ namespace TiffanyGame.Tests
             GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = GameInput.FlashOverride = false;
             yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Single);
             yield return null;
+            // Heartbeat registra cada cambio de ritmo y estos tests no admiten logs inesperados.
+            foreach (var heartbeat in Object.FindObjectsByType<Heartbeat>(FindObjectsSortMode.None)) heartbeat.enabled = false;
             collector = Object.FindAnyObjectByType<MemoryCollector>();
             ending = Object.FindAnyObjectByType<EndingController>();
             Assert.IsNotNull(collector);
