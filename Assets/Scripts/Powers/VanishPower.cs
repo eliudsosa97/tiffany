@@ -14,6 +14,7 @@ namespace TiffanyGame
         private PlayerSoul soul;
         private PlayerHiding hiding;
         private bool figureShown = true;
+        private bool wasHidden;
 
         private void Awake()
         {
@@ -50,9 +51,12 @@ namespace TiffanyGame
         {
             if (playerLight != null) playerLight.visibility = visibility;
             bool shown = VanishLook.FigureShown(visibility, Time.time);
-            if (shown == figureShown) return;
+            bool hidden = hiding != null && hiding.Hidden;
+            bool leftHiding = wasHidden && !hidden;
+            wasHidden = hidden;
+            if (shown == figureShown && !leftHiding) return;
             figureShown = shown;
-            if (shown && hiding != null && hiding.Hidden) return;
+            if (shown && hidden) return;
             for (int i = 0; i < figure.Length; i++)
             {
                 if (figure[i] != null && figure[i].enabled != shown) figure[i].enabled = shown;

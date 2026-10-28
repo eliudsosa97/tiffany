@@ -167,6 +167,45 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator LeavingHideoutWhileVanishedKeepsTheFigureHidden()
+        {
+            yield return null;
+            var bush = new GameObject("Hide Test");
+            bush.transform.SetParent(world.transform, false);
+            bush.layer = LayerMask.NameToLayer("Ignore Raycast");
+            var collider = bush.AddComponent<BoxCollider>();
+            collider.size = new Vector3(1.6f, 1.8f, 1.6f);
+            collider.center = Vector3.up * 0.9f;
+            var volume = bush.AddComponent<HideVolume>();
+            Physics.SyncTransforms();
+
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Escondida");
+            hiding.Hide(volume);
+            Assert.IsTrue(hiding.Hidden);
+            Assert.IsFalse(figure.enabled);
+            Assert.IsTrue(vanish.TryStart());
+            float deadline = Time.time + 3.2f;
+
+            yield return new WaitForSeconds(1f);
+
+            Assert.IsTrue(vanish.State.IsActive);
+            Assert.IsFalse(figure.enabled);
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Fuera del escondite");
+            hiding.Leave();
+            yield return null;
+            yield return null;
+
+            Assert.IsFalse(hiding.Hidden);
+            Assert.IsTrue(vanish.State.IsActive);
+            Assert.IsFalse(figure.enabled);
+
+            while (Time.time < deadline) yield return null;
+
+            Assert.IsFalse(vanish.State.IsActive);
+            Assert.IsTrue(figure.enabled);
+        }
+
+        [UnityTest]
         public IEnumerator GroundedWitchLosesTheGirlWhileVanished()
         {
             player.transform.position = new Vector3(20f, 0f, 0f);
