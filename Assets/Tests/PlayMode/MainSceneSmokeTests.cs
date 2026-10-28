@@ -250,6 +250,7 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator WalkingInMainScenePublishesStepsAndCameraFollows()
         {
+            Object.FindAnyObjectByType<TylerController>().enabled = false;
             var player = GameObject.FindGameObjectWithTag("Player");
             Assert.IsNotNull(player);
             var viewCamera = Camera.main;

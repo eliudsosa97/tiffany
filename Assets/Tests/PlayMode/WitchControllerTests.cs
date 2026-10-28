@@ -415,6 +415,45 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator CemeteryRespawnKeepsTheHigherRouteWithoutAccumulatingHeight()
+        {
+            controller.chapter = Chapter.Cemetery;
+            Vector3 expected = controller.skyRoute[1] + Vector3.up * WitchProfiles.For(Chapter.Cemetery).FlightHeightOffset;
+            controller.ResetBrain();
+            Assert.AreEqual(expected, witch.transform.position);
+            controller.ResetBrain();
+            Assert.AreEqual(expected, witch.transform.position);
+            yield return null;
+            Assert.AreEqual(expected.y, witch.transform.position.y, 0.01f);
+            Assert.AreEqual(WitchState.Flying, controller.Decision.State);
+        }
+
+        [UnityTest]
+        public IEnumerator ChapterUpgradeKeepsLandingPositionAndEnablesVoiceWithoutRestarting()
+        {
+            controller.chapter = Chapter.WaterPlant;
+            controller.ResetBrain();
+            controller.raining = true;
+            yield return WaitForState(WitchState.Landing, 1f);
+            Vector3 position = witch.transform.position;
+            WitchDecision decision = controller.Decision;
+
+            controller.SetChapter(Chapter.TrainTracks);
+
+            Assert.AreEqual(Chapter.TrainTracks, controller.chapter);
+            Assert.AreEqual(position, witch.transform.position);
+            Assert.AreEqual(decision, controller.Decision);
+            Assert.IsFalse(agent.enabled);
+            yield return WaitForStalking();
+            Assert.IsTrue(controller.Decision.VoiceLure);
+            controller.SetChapter(Chapter.Cemetery);
+            Assert.AreEqual(Chapter.TrainTracks, controller.chapter);
+            yield return null;
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            Assert.IsTrue(controller.Decision.VoiceLure);
+        }
+
+        [UnityTest]
         public IEnumerator ResetBrainKeepsReturnChaseOnGroundAwayFromPlayerAndSafeZones()
         {
             player.transform.position = Vector3.zero;

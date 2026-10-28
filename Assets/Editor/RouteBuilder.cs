@@ -27,9 +27,13 @@ namespace TiffanyGame.EditorTools
             var dark = GeneratedMaterials.Get("RouteForest", new Color(0.09f, 0.09f, 0.09f));
             memories = new Transform[5];
             skyRoute = new Vector3[names.Length];
+            var tracker = route.gameObject.AddComponent<WitchChapterTracker>();
+            tracker.player = player.transform;
+            tracker.clearings = new Transform[names.Length];
             for (int i = 0; i < names.Length; i++)
             {
                 var clearing = Root($"Route {i + 1} {names[i]}", route, new Vector3(108f, 0f, i * Spacing));
+                tracker.clearings[i] = clearing;
                 if (i == 5) BuildLake(clearing, floor);
                 else Ground("Ground", clearing, Vector3.zero, new Vector2(ClearingSize, ClearingSize), grounds[i], floor);
                 BuildEdges(clearing, i, dark);

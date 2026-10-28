@@ -33,6 +33,7 @@ namespace TiffanyGame.Tests
             witch.transform.position = Vector3.up * 14f;
             witch.AddComponent<NavMeshAgent>().enabled = false;
             var controller = witch.AddComponent<WitchController>();
+            controller.chapter = Chapter.TrainTracks;
             controller.player = new GameObject("Player").transform;
             controller.player.SetParent(world.transform);
             controller.player.position = new Vector3(-30f, 0f, -30f);
