@@ -202,7 +202,7 @@ namespace TiffanyGame.Tests
             Assert.Less(Vector3.Distance(tyler.transform.position, cemetery.Find("Ball").position), 3f);
             Assert.AreEqual(8, witch.skyRoute.Length);
             for (int i = 0; i < 8; i++)
-                Assert.AreEqual(route.GetChild(i).position + Vector3.up * 14f, witch.skyRoute[i]);
+                Assert.AreEqual(route.GetChild(i).position + Vector3.up * 7.9f, witch.skyRoute[i]);
 
             var surfaces = Object.FindObjectsByType<NavMeshSurface>(FindObjectsSortMode.None);
             Assert.AreEqual(1, surfaces.Length);

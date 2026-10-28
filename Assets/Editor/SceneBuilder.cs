@@ -13,6 +13,7 @@ namespace TiffanyGame.EditorTools
     public static class SceneBuilder
     {
         public const string ScenePath = "Assets/Scenes/Main.unity";
+        public const float FireBallHeight = 1.5f;
         const float SlopeAngle = 8f;
         const float PatchHeight = 0.1f;
         const float PatchElevation = 0.03f;
@@ -37,7 +38,8 @@ namespace TiffanyGame.EditorTools
             var route = RouteBuilder.BuildRoute(world, player, storm, out var memories, out var skyRoute);
             var viewCamera = CreateCamera(player);
             BakeNavMesh(world);
-            playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute);
+            playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute,
+                viewCamera.GetComponent<FollowCamera>());
             route.GetComponent<WitchChapterTracker>().witch = playerLight.witch;
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
             respawn.witch = playerLight.witch;
@@ -209,7 +211,8 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static WitchController BuildWitch(Transform zoneRoot, Transform player, Transform captureRoot, Vector3[] route)
+        static WitchController BuildWitch(Transform zoneRoot, Transform player, Transform captureRoot, Vector3[] route,
+            FollowCamera followCamera)
         {
             var witch = new GameObject("Witch");
             witch.transform.SetParent(zoneRoot, false);
@@ -226,8 +229,11 @@ namespace TiffanyGame.EditorTools
             controller.figureStand = stand;
             controller.figureCrouch = crouch;
             controller.fireLight = WitchBuilder.BuildFireBall(witch.transform, out var ball);
-            ball.transform.localPosition = Vector3.up * 1.5f;
+            ball.transform.localPosition = Vector3.up * FireBallHeight;
             controller.fireBall = ball;
+            var viewDirection = Quaternion.Euler(0f, followCamera.yaw, 0f) * Vector3.forward;
+            var flyingOffset = Vector3.forward * followCamera.lookAhead - viewDirection * 2f
+                + Vector3.up * RouteBuilder.SkyHeight;
 
             var liveStop = new GameObject("Witch 0 Live");
             liveStop.transform.SetParent(captureRoot, false);
@@ -243,20 +249,28 @@ namespace TiffanyGame.EditorTools
                 stop.transform.SetParent(captureRoot, false);
                 stop.transform.position = SurfacePoint(0f, -4f);
                 var capture = stop.AddComponent<CaptureStop>();
-                capture.overrideCamera = states[i] == WitchState.Flying;
-                if (capture.overrideCamera)
-                {
-                    capture.cameraPosition = SurfacePoint(0f, -4f) + new Vector3(0f, 8f, -34f);
-                    capture.cameraRotation = Quaternion.LookRotation(Vector3.forward);
-                }
+                capture.overrideCamera = false;
                 capture.wait = 1.5f;
                 var stage = stop.AddComponent<WitchCaptureStage>();
                 stage.state = states[i];
                 stage.fireLit = stage.state == WitchState.Flying || stage.state == WitchState.TakingOff;
-                stage.witchOffset = stage.state == WitchState.Flying ? new Vector3(0f, 14f, 6f)
+                stage.witchOffset = stage.state == WitchState.Flying ? flyingOffset
                     : stage.state == WitchState.TakingOff ? new Vector3(2f, 3f, 5f)
                     : stage.state == WitchState.Landing ? new Vector3(2f, 2.5f, 6f) : new Vector3(1.5f, 0f, 3f);
             }
+
+            var litStop = new GameObject("Witch 9 Flying Lit");
+            litStop.transform.SetParent(captureRoot, false);
+            litStop.transform.position = SurfacePoint(-5f, 1.5f);
+            var litCapture = litStop.AddComponent<CaptureStop>();
+            litCapture.overrideCamera = false;
+            litCapture.wait = 1.5f;
+            var litWitch = litStop.AddComponent<WitchCaptureStage>();
+            litWitch.state = WitchState.Flying;
+            litWitch.fireLit = true;
+            litWitch.witchOffset = flyingOffset;
+            var litLight = litStop.AddComponent<LightCaptureStage>();
+            litLight.hideWitch = false;
             return controller;
         }
 

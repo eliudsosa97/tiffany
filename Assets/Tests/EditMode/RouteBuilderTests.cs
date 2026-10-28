@@ -174,11 +174,12 @@ namespace TiffanyGame.Tests
         [Test]
         public void FlightRouteVisitsEveryClearingAtCruiseHeightInOrder()
         {
+            Assert.Greater(RouteBuilder.SkyHeight, 7f + 0.5f);
             Assert.AreEqual(8, skyRoute.Length);
             for (int i = 0; i < skyRoute.Length; i++)
             {
                 Vector3 offset = skyRoute[i] - route.GetChild(i).position;
-                Assert.AreEqual(Vector3.up * 14f, offset);
+                Assert.AreEqual(Vector3.up * RouteBuilder.SkyHeight, offset);
             }
         }
 
