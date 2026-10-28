@@ -13,6 +13,16 @@ namespace TiffanyGame.Tests
             GameInput.ClearOverrides();
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void InteractOverrideControlsPressAndCanBeCleared(bool pressed)
+        {
+            GameInput.InteractOverride = pressed;
+            Assert.That(GameInput.InteractPressed, Is.EqualTo(pressed));
+            GameInput.ClearOverrides();
+            Assert.That(GameInput.InteractOverride, Is.Null);
+        }
+
         [TestCase(0f, 0f)]
         [TestCase(0.6f, -0.4f)]
         public void AimOverrideControlsStickSuppressesPointerAndCanBeCleared(float x, float y)

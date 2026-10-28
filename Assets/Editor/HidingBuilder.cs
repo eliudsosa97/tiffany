@@ -27,7 +27,8 @@ namespace TiffanyGame.EditorTools
             Object.DestroyImmediate(visual.GetComponent<Collider>());
             visual.GetComponent<Renderer>().sharedMaterial = GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f));
             var hiding = player.gameObject.AddComponent<PlayerHiding>();
-            hiding.body = player.GetComponentsInChildren<Renderer>();
+            hiding.body = PlayerHiding.BodyRenderers(player.gameObject);
+            hiding.gameInterface = Object.FindAnyObjectByType<GameInterface>();
             var stop = new GameObject("Stop 10 Hidden");
             stop.transform.SetParent(zone, false);
             stop.transform.SetPositionAndRotation(position, player.transform.rotation);

@@ -8,11 +8,18 @@ namespace TiffanyGame
         public bool Hidden { get; private set; }
         public float searchRadius = 0.6f;
         public Renderer[] body = System.Array.Empty<Renderer>();
+        public GameInterface gameInterface;
         readonly Collider[] overlaps = new Collider[32];
         WitchController[] witches;
         PlayerController player;
         CharacterController controller;
         Vector3 entryPosition;
+
+        public static Renderer[] BodyRenderers(GameObject player)
+        {
+            return System.Array.FindAll(player.GetComponentsInChildren<Renderer>(),
+                renderer => !(renderer is ParticleSystemRenderer));
+        }
 
         void Start() => Initialize();
 
@@ -26,7 +33,7 @@ namespace TiffanyGame
 
         void Update()
         {
-            if (GameInput.InteractPressed)
+            if ((gameInterface == null || !gameInterface.IsFrozen) && GameInput.InteractPressed)
             {
                 HideVolume volume = null;
                 int count = Physics.OverlapSphereNonAlloc(transform.position, searchRadius, overlaps,
