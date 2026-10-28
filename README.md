@@ -1,8 +1,8 @@
-# El Velador
+# Tiffany
 
 Juego de terror y sigilo para la Spooky Game Jam de Hybridge (26 al 30 de octubre de 2026).
 
-Es Día de Muertos. Eres el alma de una niña que despierta en un cerro sin saber que está muerta. Hace un año se la llevó la bruja del cerro, y esta noche sale a buscarla otra vez: volando como bola de fuego ve tu luz, y en el suelo oye tus pasos y se lanza sobre ti. Sube a oscuras con Tyler, tu perro, recupera tus recuerdos y guía a tu familia hasta la verdad.
+Es Día de Muertos. Eres Tiffany, el alma de una niña que despierta en un cerro sin saber que está muerta. Hace un año se la llevó la bruja del cerro, y esta noche sale a buscarla otra vez: volando como bola de fuego ve tu luz, y en el suelo oye tus pasos y se lanza sobre ti. Sube a oscuras con Tyler, tu perro, recupera tus recuerdos y guía a tu familia hasta la verdad.
 
 - Motor: Unity 6.3 LTS (`6000.3.27f1`) con Universal Render Pipeline.
 - Plataforma: navegador (WebGL), publicado en itch.io.

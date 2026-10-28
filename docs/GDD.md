@@ -1,4 +1,4 @@
-# El Velador · Documento de diseño
+# Tiffany · Documento de diseño
 
 | | |
 | --- | --- |
@@ -9,11 +9,9 @@
 | Controles | Teclado y ratón, o control |
 | Jam | Spooky Game Jam de Hybridge, 26 al 30 de octubre de 2026 |
 
-"El Velador" es el título provisional. El nombre de la niña está pendiente. Mientras tanto el documento dice "la niña".
-
 ## 1. Resumen
 
-Es Día de Muertos. Una niña despierta de noche en un cerro y no sabe que está muerta. Hace un año subió sola a llevarle flores a su abuela, y en la tumba la esperaba su abuela. No era ella. Era la bruja del cerro, que se la llevó. La bruja vive de las almas de los niños y las guarda en su fuego: las bolas de fuego que se ven volar sobre el cerro son ellos. Esta noche la familia de la niña le puso una ofrenda por primera vez, el llamado la sacó del fuego, y la bruja sale a buscarla.
+Es Día de Muertos. Tiffany, una niña de nueve años, despierta de noche en un cerro y no sabe que está muerta. Hace un año subió sola a llevarle flores a su abuela, y en la tumba la esperaba su abuela. No era ella. Era la bruja del cerro, que se la llevó. La bruja vive de las almas de los niños y las guarda en su fuego: las bolas de fuego que se ven volar sobre el cerro son ellos. Esta noche la familia de Tiffany le puso una ofrenda por primera vez, el llamado la sacó del fuego, y la bruja sale a buscarla.
 
 La niña sube el cerro a oscuras con Tyler, su perro, recupera cinco recuerdos de esa noche y con cada uno gana un poder. Con los cinco sabe dónde quedó su cuerpo. En la capilla de la cima se manifiesta ante su familia y los guía hasta él. Al encontrar los cuerpos, las almas del fuego quedan libres y la bruja se consume.
 
@@ -21,7 +19,7 @@ El juego es de esconderse de algo que no puedes dañar. La bruja caza de dos for
 
 ## 2. Cómo cumple el reto
 
-| Requisito | En El Velador |
+| Requisito | En Tiffany |
 | --- | --- |
 | Protagonista sobrenatural | Juegas como el alma de una niña que regresa en Día de Muertos. |
 | Llega al mundo humano con un propósito | La ofrenda de su familia la llama. Viene a encontrar su cuerpo y a liberar a los niños del fuego. |
@@ -34,7 +32,7 @@ El juego es de esconderse de algo que no puedes dañar. La bruja caza de dos for
 
 ### Hace un año
 
-La niña subió sola al cerro en Día de Muertos a llevarle flores a la tumba de su abuela. Tyler, su perro, la siguió. En la tumba estaba su abuela, esperándola, y le ofreció acompañarla de regreso porque ya estaba oscuro. No era su abuela. La bruja se las llevó a ella y a Tyler, y escondió los cuerpos en el panteón viejo, más arriba. El alma de la niña quedó en su fuego con las de otros niños.
+Tiffany subió sola al cerro en Día de Muertos a llevarle flores a la tumba de su abuela. Tyler, su perro, la siguió. En la tumba estaba su abuela, esperándola, y le ofreció acompañarla de regreso porque ya estaba oscuro. No era su abuela. La bruja se las llevó a ella y a Tyler, y escondió los cuerpos en el panteón viejo, más arriba. El alma de la niña quedó en su fuego con las de otros niños.
 
 Su familia la buscó durante meses. En el cerro siguen los carteles de SE BUSCA y las veladoras que dejaron por el camino.
 
@@ -42,7 +40,7 @@ Su familia la buscó durante meses. En el cerro siguen los carteles de SE BUSCA 
 
 Este año la familia le pone por primera vez una ofrenda en la capilla de la cima. El llamado la saca del fuego. Despierta en el cerro sin recordar nada, porque su memoria se quedó en el fuego. Lo descubre en los primeros dos minutos: en la tumba de su abuela, junto a la foto de la abuela, está la suya.
 
-La bruja sabe que se le escapó y sale a buscarla. Los niños de su fuego susurran el nombre de la niña cuando ella está cerca.
+La bruja sabe que se le escapó y sale a buscarla. Los niños de su fuego susurran "Tiffany" cuando la bruja está cerca.
 
 ### El final
 
@@ -50,7 +48,7 @@ Con los cinco recuerdos, la niña sabe dónde está su cuerpo. Sube a la capilla
 
 ### Personajes
 
-- **La niña.** Alma de unos nueve años. Brilla tenue. No ataca a nadie: se esconde, distrae y se manifiesta.
+- **Tiffany.** Alma de una niña de nueve años. Brilla tenue. No ataca a nadie: se esconde, distrae y se manifiesta.
 - **La bruja.** La bruja del cerro. Es la única enemiga del juego y no se le puede dañar. Ver 6.8.
 - **Tyler.** Su perro, un jack russell terrier. También murió esa noche y ahora es un alma que la guía y le ladra a la bruja. Su pelo blanco se ve en la oscuridad.
 - **La familia.** Los vivos. Pusieron las veladoras y la ofrenda. Aparecen en la capilla al final.
@@ -165,7 +163,7 @@ Es alta, de más de dos metros, y flaca hasta el hueso. Su cuerpo no es simétri
 
 **Volando** es una bola de fuego. Recorre el cielo del cerro e ilumina el suelo debajo de ella. Ve la luz de la niña desde lejos y no oye nada. Si pasa encima y estás a cielo abierto, su propio fuego te descubre.
 
-**En el suelo** es el monstruo. Oye tus pasos, te huele de cerca y a oscuras casi no ve. Puede imitar voces: llama a la niña con la voz de su mamá.
+**En el suelo** es el monstruo. Oye tus pasos, te huele de cerca y a oscuras casi no ve. Puede imitar voces: llama a Tiffany con la voz de su mamá.
 
 | Estado | Qué hace | Cómo lo notas |
 | --- | --- | --- |
@@ -239,7 +237,7 @@ Los recuerdos cambian de registro: el mundo se desatura y los dibujos son de cra
 - **La bruja.** El fuego que crepita y zumba al volar, el golpe al aterrizar, sus pasos irregulares, el crujido de huesos antes de cada embestida y la voz que imita. Una risa, muy rara vez.
 - **Tyler.** Gemidos, gruñidos y ladridos, grabados del perro real.
 - **Tensión.** Latidos que se aceleran con el pánico y con la cercanía de la bruja. Música de tensión mínima en el acecho y la persecución.
-- **Susurros.** Los niños del fuego dicen el nombre de la niña cuando la bruja está cerca.
+- **Susurros.** Los niños del fuego dicen "Tiffany" cuando la bruja está cerca.
 
 ## 11. Interfaz
 
@@ -270,8 +268,3 @@ Si el tiempo no alcanza, se recorta en este orden: la tormenta queda solo en la 
 - Clau (clauperspectiva): dirección de arte y narrativa de los recuerdos, dibujos.
 
 El uso de inteligencia artificial está declarado por área en [USO-DE-IA.md](../USO-DE-IA.md). Los créditos de recursos externos están en [CREDITS.md](../CREDITS.md).
-
-## 15. Pendiente
-
-- Título definitivo del juego.
-- Nombre de la niña.

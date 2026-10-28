@@ -67,9 +67,9 @@ $UNITY -batchmode -projectPath . -runTests -testPlatform EditMode -testResults T
 $UNITY -batchmode -projectPath . -executeMethod ElVelador.EditorTools.BuildTools.BuildWeb -logFile -
 $UNITY -batchmode -projectPath . -executeMethod ElVelador.EditorTools.BuildTools.BuildMac -logFile -
 # Recorrido con capturas del build de Mac
-"Builds/Mac/el-velador.app/Contents/MacOS/El Velador" -autocapture <carpeta> -screen-width 1600 -screen-height 900 -screen-fullscreen 0
+"Builds/Mac/el-velador.app/Contents/MacOS/Tiffany" -autocapture <carpeta> -screen-width 1600 -screen-height 900 -screen-fullscreen 0
 # Video: cuadros PNG a 30 fps durante los segundos indicados
-"Builds/Mac/el-velador.app/Contents/MacOS/El Velador" -capturevideo <carpeta> -captureseconds 10 -screen-width 1600 -screen-height 900 -screen-fullscreen 0
+"Builds/Mac/el-velador.app/Contents/MacOS/Tiffany" -capturevideo <carpeta> -captureseconds 10 -screen-width 1600 -screen-height 900 -screen-fullscreen 0
 ```
 
 Si el editor está abierto, el modo batch falla porque el proyecto queda bloqueado.
