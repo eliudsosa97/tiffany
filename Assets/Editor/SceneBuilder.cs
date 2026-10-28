@@ -80,7 +80,7 @@ namespace TiffanyGame.EditorTools
             var normal = rotation * Vector3.up;
             var slope = CreatePrimitive("Hillside", PrimitiveType.Cube, root,
                 -normal * 0.5f, new Vector3(60f, 1f, 60f),
-                GeneratedMaterials.Get("Hillside", new Color(0.095f, 0.11f, 0.14f)));
+                GeneratedMaterials.GetTextured("Hillside", new Color(0.095f, 0.11f, 0.14f), "dry_ground_rocks", 20f));
             slope.transform.rotation = rotation;
 
             var colors = new[]
@@ -92,9 +92,18 @@ namespace TiffanyGame.EditorTools
                 new Color(0.64f, 0.37f, 0.13f),
                 new Color(0.30f, 0.13f, 0.085f)
             };
+            var textures = new[]
+            {
+                "dry_ground_rocks",
+                "dry_ground_rocks",
+                "rock_boulder_dry",
+                "gravel_ground_01",
+                "dry_decay_leaves",
+                "burned_ground_01"
+            };
             var types = (GroundType[])Enum.GetValues(typeof(GroundType));
-            if (colors.Length != types.Length)
-                throw new InvalidOperationException($"{GameInfo.LogPrefix} Cada GroundType necesita su color y su lugar en la zona de prueba.");
+            if (colors.Length != types.Length || textures.Length != types.Length)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} Cada GroundType necesita su color, su textura y su lugar en la zona de prueba.");
             for (int i = 0; i < types.Length; i++)
             {
                 var type = types[i];
@@ -103,7 +112,7 @@ namespace TiffanyGame.EditorTools
                 var top = SurfacePoint(x, alongSlope) + normal * PatchElevation;
                 var patch = CreatePrimitive($"Ground {type}", PrimitiveType.Cube, root,
                     top - normal * (PatchHeight * 0.5f), new Vector3(10f, PatchHeight, 10f),
-                    GeneratedMaterials.Get($"Ground{type}", colors[i]));
+                    GeneratedMaterials.GetTextured($"Ground{type}", colors[i], textures[i], 3.5f));
                 patch.transform.rotation = rotation;
                 patch.AddComponent<GroundSurface>().type = type;
 

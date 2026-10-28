@@ -1,0 +1,5 @@
+Texturas de Poly Haven (https://polyhaven.com), licencia CC0 1.0 Universal.
+https://polyhaven.com/license
+
+dry_decay_leaves, gravel_ground_01, burned_ground_01, dry_ground_rocks, rock_boulder_dry
+Resolución 1K, mapas diffuse y normal (OpenGL).
