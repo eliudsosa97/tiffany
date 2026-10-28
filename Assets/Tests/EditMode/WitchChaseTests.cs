@@ -172,6 +172,21 @@ namespace ElVelador.Tests
         }
 
         [Test]
+        public void SafeZoneEndsChaseAndRequiresWarningOnCloseExit()
+        {
+            Vector3 target = p.PlayerPosition;
+            Step(0f, WitchState.WindUp);
+            p.PlayerInSafeZone = true;
+            Assert.AreEqual(target, Step(0.1f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            p.PlayerPosition = p.WitchPosition + Vector3.right * 0.5f;
+            Assert.AreEqual(target, Step(0.1f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Assert.Greater(Vector3.Distance(p.WitchPosition, target), profile.ArriveDistance);
+            Assert.Less(p.DistanceToPlayer, profile.CatchDistance);
+            p.PlayerInSafeZone = false;
+            Step(0f, WitchState.WindUp);
+        }
+
+        [Test]
         public void VanishingStopsFollowingAndPreventsSprintCapture()
         {
             Recover();

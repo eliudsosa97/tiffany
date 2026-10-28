@@ -58,6 +58,7 @@ namespace ElVelador
                     if (chasing || targetIsPlayer) hasTarget = false;
                     chasing = false;
                 }
+                if (p.PlayerInSafeZone) chasing = false;
                 if (noiseHeard || detected)
                 {
                     target = detected ? p.PlayerPosition : p.NoisePosition;
