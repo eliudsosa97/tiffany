@@ -72,6 +72,16 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(12f, WitchMotion.CruiseHeight(Array.Empty<Vector3>(), Vector3.zero, 12f));
         }
 
+        [Test]
+        public void FarthestRoutePointUsesHorizontalDistanceAndKeepsRouteHeight()
+        {
+            var player = new Vector3(10f, 0f, 0f);
+            var route = new[] { new Vector3(0f, 14f, 0f), new Vector3(12f, 100f, 0f), new Vector3(-5f, 18f, 0f) };
+            Assert.AreEqual(route[2], WitchMotion.FarthestRoutePoint(route, player, Vector3.zero));
+            Assert.AreEqual(Vector3.up, WitchMotion.FarthestRoutePoint(null, player, Vector3.up));
+            Assert.AreEqual(Vector3.up, WitchMotion.FarthestRoutePoint(Array.Empty<Vector3>(), player, Vector3.up));
+        }
+
         [TestCase(0f, 100f, false)]
         [TestCase(0.5f, -100f, false)]
         [TestCase(0.51f, 100f, true)]
