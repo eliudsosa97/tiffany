@@ -24,6 +24,37 @@ namespace ElVelador.Tests
             Assert.AreEqual(1, powers.Count);
         }
 
+        [Test]
+        public void CountIncludesEachUnlockedPowerOnce()
+        {
+            var powers = new PowerSet();
+            for (int id = 1; id <= 5; id++)
+            {
+                Power power = PowerSet.ForMemory(id);
+                powers.Unlock(power);
+                powers.Unlock(power);
+                Assert.AreEqual(id, powers.Count);
+            }
+        }
+
+        [TestCase(-1)]
+        [TestCase(5)]
+        [TestCase(9)]
+        [TestCase(32)]
+        [TestCase(int.MinValue)]
+        [TestCase(int.MaxValue)]
+        public void InvalidPowerThrowsWithoutChangingUnlockedPowers(int value)
+        {
+            var powers = new PowerSet();
+            powers.Unlock(Power.Light);
+            var power = (Power)value;
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => powers.Has(power));
+            Assert.Throws<ArgumentOutOfRangeException>(() => powers.Unlock(power));
+            Assert.AreEqual(1, powers.Count);
+            Assert.IsTrue(powers.Has(Power.Light));
+        }
+
         [TestCase(0)]
         [TestCase(6)]
         public void InvalidMemoryThrows(int id)
