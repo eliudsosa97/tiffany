@@ -1,7 +1,5 @@
 # Uso de inteligencia artificial
 
-Las bases de la jam permiten IA generativa para arte, código y audio si se declara su uso y finalidad. Esta es la declaración de Tiffany. Se actualiza durante la jam.
-
 | Área | ¿Se usó IA? | Herramientas | Para qué | Qué hicimos las personas |
 | --- | --- | --- | --- | --- |
 | Código | Sí | Claude Code (Anthropic) y Codex (OpenAI) | Escribir y revisar el código C# del juego y las herramientas de editor | Eliud definió cada tarea, revisó, probó el juego y decidió qué entraba |
