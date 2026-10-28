@@ -24,5 +24,10 @@ namespace TiffanyGame
                 return powers;
             }
         }
+
+        private void Awake()
+        {
+            if (respawn == null) respawn = new RespawnPoint(transform.position);
+        }
     }
 }
