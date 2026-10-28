@@ -125,6 +125,30 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void IgnoresObjectsHiddenBehindAWall()
+        {
+            MovableObject bottle = AddObject(ThrowableKind.Bottle, new Vector3(0f, 0.2f, 6f));
+            var wall = new GameObject("Wall");
+            wall.transform.SetParent(world.transform);
+            wall.transform.position = new Vector3(0f, 1.5f, 3f);
+            wall.AddComponent<BoxCollider>().size = new Vector3(2f, 3f, 0.5f);
+            Physics.SyncTransforms();
+
+            Assert.IsFalse(poltergeist.TryMove());
+            Assert.AreEqual(100f, soul.Energy.Current);
+            Assert.IsFalse(bottle.Used);
+            Assert.AreEqual(0, publishedCount);
+
+            wall.SetActive(false);
+            Physics.SyncTransforms();
+
+            Assert.IsTrue(poltergeist.TryMove());
+            Assert.AreEqual(85f, soul.Energy.Current);
+            Assert.IsTrue(bottle.Used);
+            Assert.AreEqual(1, publishedCount);
+        }
+
+        [Test]
         public void IgnoresObjectsBeyondTwelveMeters()
         {
             MovableObject bottle = AddObject(ThrowableKind.Bottle, new Vector3(0f, 0.2f, 12.5f));
