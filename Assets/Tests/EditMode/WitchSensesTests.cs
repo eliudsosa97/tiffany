@@ -151,20 +151,109 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(Vector3.zero, p.NoisePosition);
         }
 
-        [TestCase(3f, 4f, true)]
+        [TestCase(3f, 5f, true)]
         [TestCase(4.1f, 4f, false)]
         [TestCase(3f, 2f, false)]
-        public void LatestNoiseReplacesPendingPositionAndRadius(float distance, float radius, bool expected)
+        [TestCase(3f, 4f, false)]
+        public void BestNoiseKeepsItsPositionAndRadius(float distance, float radius, bool lastWins)
         {
             input.Form = WitchForm.Grounded;
-            var first = new StepNoise(Vector3.forward, 100f);
+            var first = new StepNoise(Vector3.forward, 2f);
             var last = new StepNoise(new Vector3(distance, -10f, 0f), radius);
             senses.Hear(in first);
             senses.Hear(in last);
 
             WitchPerception p = senses.Sense(in input);
-            Assert.AreEqual(expected, p.HeardNoise);
-            Assert.AreEqual(expected ? last.Position : Vector3.zero, p.NoisePosition);
+            Assert.IsTrue(p.HeardNoise);
+            Assert.AreEqual(lastWins ? last.Position : first.Position, p.NoisePosition);
+        }
+
+        [Test]
+        public void BellWithGreaterMarginWinsOverLaterNearbyStep()
+        {
+            input.Form = WitchForm.Grounded;
+            input.WitchPosition = Vector3.zero;
+            var bell = new StepNoise(new Vector3(10f, 0f, 0f), 16f);
+            var step = new StepNoise(new Vector3(1.5f, 0f, 0f), 2f);
+            senses.Hear(in bell);
+            senses.Hear(in step);
+
+            WitchPerception p = senses.Sense(in input);
+
+            Assert.IsTrue(p.HeardNoise);
+            Assert.AreEqual(bell.Position, p.NoisePosition);
+        }
+
+        [Test]
+        public void LaterInaudibleNoiseDoesNotHideAudibleNoise()
+        {
+            input.Form = WitchForm.Grounded;
+            input.WitchPosition = Vector3.zero;
+            var audible = new StepNoise(Vector3.forward, 4f);
+            var inaudible = new StepNoise(Vector3.right * 30f, 2f);
+            senses.Hear(in audible);
+            senses.Hear(in inaudible);
+
+            WitchPerception p = senses.Sense(in input);
+
+            Assert.IsTrue(p.HeardNoise);
+            Assert.AreEqual(audible.Position, p.NoisePosition);
+        }
+
+        [Test]
+        public void FullBufferKeepsFirstAudibleNoiseWithLargerRadius()
+        {
+            input.Form = WitchForm.Grounded;
+            input.WitchPosition = Vector3.zero;
+            var audible = new StepNoise(Vector3.right * 10f, 16f);
+            senses.Hear(in audible);
+            for (int i = 0; i < 8; i++)
+            {
+                var inaudible = new StepNoise(Vector3.forward * (30f + i), 2f);
+                senses.Hear(in inaudible);
+            }
+
+            WitchPerception p = senses.Sense(in input);
+
+            Assert.IsTrue(p.HeardNoise);
+            Assert.AreEqual(audible.Position, p.NoisePosition);
+        }
+
+        [Test]
+        public void FullBufferReplacesSmallestRadiusWithLouderNoise()
+        {
+            input.Form = WitchForm.Grounded;
+            input.WitchPosition = Vector3.zero;
+            for (int i = 0; i < 8; i++)
+            {
+                var inaudible = new StepNoise(Vector3.forward * 30f, i + 1f);
+                senses.Hear(in inaudible);
+            }
+            var audible = new StepNoise(Vector3.right * 10f, 16f);
+            senses.Hear(in audible);
+
+            WitchPerception p = senses.Sense(in input);
+
+            Assert.IsTrue(p.HeardNoise);
+            Assert.AreEqual(audible.Position, p.NoisePosition);
+        }
+
+        [Test]
+        public void FlyingConsumesAllPendingNoisesBeforeGroundedSense()
+        {
+            var first = new StepNoise(Vector3.forward, 16f);
+            var second = new StepNoise(Vector3.right, 4f);
+            senses.Hear(in first);
+            senses.Hear(in second);
+
+            WitchPerception flying = senses.Sense(in input);
+            input.Form = WitchForm.Grounded;
+            WitchPerception grounded = senses.Sense(in input);
+
+            Assert.IsFalse(flying.HeardNoise);
+            Assert.AreEqual(Vector3.zero, flying.NoisePosition);
+            Assert.IsFalse(grounded.HeardNoise);
+            Assert.AreEqual(Vector3.zero, grounded.NoisePosition);
         }
 
         [Test]
