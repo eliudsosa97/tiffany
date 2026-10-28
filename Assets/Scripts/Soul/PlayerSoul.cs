@@ -9,8 +9,10 @@ namespace TiffanyGame
 
         private SoulEnergy energy;
         private PowerSet powers;
+        private RespawnPoint respawn;
 
         public SoulEnergy Energy => energy ?? (energy = new SoulEnergy(startEnergy));
+        public RespawnPoint Respawn => respawn ?? (respawn = new RespawnPoint(transform.position));
 
         public PowerSet Powers
         {

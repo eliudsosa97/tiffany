@@ -132,7 +132,7 @@ namespace TiffanyGame
             if (Decision.State == WitchState.Landing)
             {
                 verticalTarget = GroundPosition(SafeZones.PushOut(entryPosition, landingMargin));
-                if (TrySampleNavMesh(verticalTarget, 6f, out var hit) && !SafeZones.Contains(hit.position))
+                if (TrySampleNavMesh(verticalTarget, 6f, out var hit))
                     verticalTarget = hit.position;
             }
             else if (Decision.State == WitchState.TakingOff)
