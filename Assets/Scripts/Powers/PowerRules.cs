@@ -5,6 +5,7 @@ namespace TiffanyGame
     public static class PowerRules
     {
         public const float MoveRange = 12f;
+        public const float KindleRange = 2f;
 
         public static bool CanUseLight(PowerSet powers, SoulEnergy energy)
         {

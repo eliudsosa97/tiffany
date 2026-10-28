@@ -9,8 +9,10 @@ namespace TiffanyGame
         public Transform glow;
         public WitchController witch;
         public bool startOn;
+        public float visibility = 1f;
         public float pitch = 35f;
         public float flashBoost = 4f;
+        public float intensityScale = 1f;
         public LayerMask groundMask = Physics.DefaultRaycastLayers;
 
         public SoulLight State { get; private set; }
@@ -56,7 +58,8 @@ namespace TiffanyGame
                 ? lit.point : transform.position + direction * (spot.range * 0.5f);
 
             bool visible = State.Visible;
-            spot.enabled = visible;
+            bool lightVisible = visible && visibility > 0f;
+            spot.enabled = lightVisible;
             float size = SoulLight.Size(soul.Energy.Current);
             if (visible)
             {
@@ -65,10 +68,10 @@ namespace TiffanyGame
                 spot.innerSpotAngle = baseInnerAngle * shrink;
                 spot.range = baseRange * size;
                 spot.intensity = baseIntensity * SoulLight.Flicker(soul.Energy.Current, Time.time)
-                    * (State.IsFlashing ? flashBoost : 1f);
+                    * (State.IsFlashing ? flashBoost : 1f) * visibility * intensityScale;
             }
-            if (glow.gameObject.activeSelf != visible) glow.gameObject.SetActive(visible);
-            glow.localScale = baseGlowScale * size;
+            if (glow.gameObject.activeSelf != lightVisible) glow.gameObject.SetActive(lightVisible);
+            glow.localScale = baseGlowScale * size * visibility;
 
             if (witch != null)
             {

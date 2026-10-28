@@ -28,6 +28,8 @@ namespace TiffanyGame
             return true;
         }
 
+        public void Cancel() => Remaining = 0f;
+
         public void Tick(float dt)
         {
             if (IsActive && dt > 0f)

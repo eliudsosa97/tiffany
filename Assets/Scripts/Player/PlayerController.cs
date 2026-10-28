@@ -9,6 +9,8 @@ namespace TiffanyGame
         public bool raining;
         public float acceleration = 25f;
         public float turnSpeed = 720f;
+        public float returnTurnSpeed = 300f;
+        public float backwardSpeedFactor = 0.7f;
         public float gravity = 20f;
 
         public Gait CurrentGait { get; private set; }
@@ -21,6 +23,7 @@ namespace TiffanyGame
         Collider lastGroundCollider;
         GroundType lastGroundType = GroundType.Dirt;
         AimSource aimSource;
+        PlayerFacing.TurnState facingTurn;
 
         void Awake()
         {
@@ -40,6 +43,7 @@ namespace TiffanyGame
         {
             horizontalVelocity = Vector3.zero;
             verticalVelocity = 0f;
+            facingTurn = default;
         }
 
         void Update()
@@ -48,7 +52,9 @@ namespace TiffanyGame
             float dt = Time.deltaTime;
             float yaw = viewCamera != null ? viewCamera.transform.eulerAngles.y : 0f;
             var direction = PlayerMotion.CameraRelative(GameInput.Move, yaw);
-            var targetVelocity = direction * PlayerMotion.Speed(inputGait);
+            float speedFactor = PlayerFacing.SpeedFactor(direction, transform.forward,
+                PlayerFacing.FacesMovement(inputGait, direction), backwardSpeedFactor);
+            var targetVelocity = direction * (PlayerMotion.Speed(inputGait) * speedFactor);
             horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, acceleration * dt);
             CurrentGait = PlayerMotion.NoiseGait(CurrentGait, targetVelocity.magnitude, horizontalVelocity.magnitude);
 
@@ -65,7 +71,7 @@ namespace TiffanyGame
                 NoiseBus.Publish(new StepNoise(transform.position, NoiseModel.StepRadius(ground, CurrentGait, raining)));
             }
 
-            TurnTowardsAim(direction, yaw, dt);
+            TurnTowardsAim(inputGait, direction, yaw, dt);
         }
 
         GroundType FindGround()
@@ -91,28 +97,28 @@ namespace TiffanyGame
             return lastGroundType;
         }
 
-        void TurnTowardsAim(Vector3 moveDirection, float yaw, float dt)
+        void TurnTowardsAim(Gait inputGait, Vector3 moveDirection, float yaw, float dt)
         {
             aimSource = PlayerAim.NextSource(aimSource, GameInput.AimStick, GameInput.PointerMoved,
                 GameInput.AimOverride == null);
+            bool running = PlayerFacing.FacesMovement(inputGait, moveDirection);
             var stickDirection = PlayerMotion.CameraRelative(GameInput.AimStick, yaw);
             var pointerOffset = Vector3.zero;
 
-            if (aimSource == AimSource.Pointer)
+            if (!running && aimSource == AimSource.Pointer && viewCamera != null)
             {
-                if (viewCamera == null) return;
                 var plane = new Plane(Vector3.up, transform.position);
                 var ray = viewCamera.ScreenPointToRay(GameInput.PointerPosition);
-                if (!plane.Raycast(ray, out float distance)) return;
-                pointerOffset = ray.GetPoint(distance) - transform.position;
+                if (plane.Raycast(ray, out float distance)) pointerOffset = ray.GetPoint(distance) - transform.position;
             }
 
-            if (PlayerAim.TryDirection(aimSource, moveDirection, stickDirection, pointerOffset, out var direction))
-            {
-                var rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
-                transform.rotation = Quaternion.RotateTowards(rotation,
-                    Quaternion.LookRotation(direction), turnSpeed * dt);
-            }
+            var direction = moveDirection;
+            bool hasDirection = running || PlayerAim.TryDirection(aimSource, moveDirection, stickDirection,
+                pointerOffset, out direction);
+            var rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+            var target = hasDirection ? Quaternion.LookRotation(direction) : rotation;
+            float speed = facingTurn.Speed(running, Quaternion.Angle(rotation, target), turnSpeed, returnTurnSpeed);
+            if (hasDirection) transform.rotation = Quaternion.RotateTowards(rotation, target, speed * dt);
         }
     }
 }

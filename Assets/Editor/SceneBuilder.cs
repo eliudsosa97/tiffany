@@ -5,6 +5,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 namespace TiffanyGame.EditorTools
@@ -25,16 +26,19 @@ namespace TiffanyGame.EditorTools
             CreateMoon();
             var spawn = BuildTestZone();
             var player = CreatePlayer(spawn, out var playerLight);
-            CreateCamera(player);
+            var viewCamera = CreateCamera(player);
             playerLight.witch = BuildWitch(spawn.parent, player.transform);
+            var tyler = BuildTyler(spawn.parent, player.transform);
             var storm = StormBuilder.BuildStorm(player.transform, spawn);
             var firstCandle = BuildCandles(spawn.parent, player.GetComponent<PlayerSoul>(), storm);
-            BuildInterface(out var caughtFade);
+            var gameInterface = BuildInterface(out var caughtFade);
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
             respawn.witch = playerLight.witch;
             respawn.overlay = caughtFade;
             BuildLightStops(spawn.parent);
             HidingBuilder.BuildHideTest(spawn.parent, player);
+            MemoryBuilder.Build(spawn.parent, player, gameInterface, tyler, viewCamera);
+            PanicBuilder.BuildPanic(spawn, playerLight, tyler);
             var candleStop = new GameObject("Candle 1 Safe");
             candleStop.transform.SetParent(spawn.parent, false);
             candleStop.transform.position = SurfacePoint(-5f, 1.5f);
@@ -42,6 +46,7 @@ namespace TiffanyGame.EditorTools
             capture.overrideCamera = false;
             capture.wait = 1.5f;
             candleStop.AddComponent<LightCaptureStage>().energy = SoulEnergy.Max;
+            PowerBuilder.BuildPowers(playerLight, spawn.parent, storm);
             var caughtStop = new GameObject("Witch 8 Caught");
             caughtStop.transform.SetParent(spawn.parent, false);
             caughtStop.transform.position = spawn.position;
@@ -241,42 +246,55 @@ namespace TiffanyGame.EditorTools
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
         {
             CandleSpot first = null;
-            var glassMaterial = GeneratedMaterials.Get("CandleGlass", new Color(0.5f, 0.16f, 0.07f), smoothness: 0.8f);
-            var flameMaterial = GeneratedMaterials.Get("CandleFlame", new Color(1f, 0.78f, 0.3f), unlit: true);
             for (int i = 0; i < 2; i++)
             {
-                var root = new GameObject($"Family Candle {i + 1}");
-                root.transform.SetParent(zoneRoot, false);
-                root.transform.position = SurfacePoint(i == 0 ? -5f : 5f, 4f);
-                var obstacle = root.AddComponent<NavMeshObstacle>();
-                var spot = root.AddComponent<CandleSpot>();
+                var spot = CreateCandle(zoneRoot, $"Family Candle {i + 1}", SurfacePoint(i == 0 ? -5f : 5f, 4f),
+                    CandleKind.Family, true, soul, storm);
                 if (i == 0) first = spot;
-                spot.kind = CandleKind.Family;
-                spot.player = soul;
-                spot.storm = storm;
-                obstacle.shape = NavMeshObstacleShape.Capsule;
-                obstacle.radius = spot.radius;
-                obstacle.height = 2f;
-                obstacle.center = Vector3.up;
-                obstacle.carving = true;
-                obstacle.carveOnlyStationary = true;
-                CreatePrimitive("Glass", PrimitiveType.Cylinder, root.transform,
-                    Vector3.up * 0.11f, new Vector3(0.14f, 0.11f, 0.14f), glassMaterial);
-                var flame = CreatePrimitive("Flame", PrimitiveType.Sphere, root.transform,
-                    Vector3.up * 0.26f, new Vector3(0.06f, 0.1f, 0.06f), flameMaterial);
-                UnityEngine.Object.DestroyImmediate(flame.GetComponent<SphereCollider>());
-                var light = new GameObject("Candle Light").AddComponent<Light>();
-                light.transform.SetParent(root.transform, false);
-                light.transform.localPosition = Vector3.up * 0.35f;
-                light.type = LightType.Point;
-                light.color = new Color(1f, 0.62f, 0.3f);
-                light.range = 5f;
-                light.intensity = 4f;
-                light.shadows = LightShadows.None;
-                light.renderMode = LightRenderMode.Auto;
-                spot.flame = light;
             }
             return first;
+        }
+
+        internal static CandleSpot CreateCandle(Transform parent, string name, Vector3 position,
+            CandleKind kind, bool startLit, PlayerSoul soul, Storm storm)
+        {
+            var glassMaterial = GeneratedMaterials.Get("CandleGlass", new Color(0.5f, 0.16f, 0.07f), smoothness: 0.8f);
+            var flameMaterial = GeneratedMaterials.Get("CandleFlame", new Color(1f, 0.78f, 0.3f), unlit: true);
+            var root = new GameObject(name);
+            root.transform.SetParent(parent, false);
+            root.transform.position = position;
+            var obstacle = root.AddComponent<NavMeshObstacle>();
+            var spot = root.AddComponent<CandleSpot>();
+            spot.kind = kind;
+            spot.startLit = startLit;
+            spot.player = soul;
+            spot.storm = storm;
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = spot.radius;
+            obstacle.height = 2f;
+            obstacle.center = Vector3.up;
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = true;
+            obstacle.enabled = startLit;
+            CreatePrimitive("Glass", PrimitiveType.Cylinder, root.transform,
+                Vector3.up * 0.11f, new Vector3(0.14f, 0.11f, 0.14f), glassMaterial);
+            var flame = CreatePrimitive("Flame", PrimitiveType.Sphere, root.transform,
+                Vector3.up * 0.26f, new Vector3(0.06f, 0.1f, 0.06f), flameMaterial);
+            UnityEngine.Object.DestroyImmediate(flame.GetComponent<SphereCollider>());
+            spot.flameMesh = flame.GetComponent<Renderer>();
+            spot.flameMesh.enabled = startLit;
+            var light = new GameObject("Candle Light").AddComponent<Light>();
+            light.transform.SetParent(root.transform, false);
+            light.transform.localPosition = Vector3.up * 0.35f;
+            light.type = LightType.Point;
+            light.color = new Color(1f, 0.62f, 0.3f);
+            light.range = 5f;
+            light.intensity = 4f;
+            light.shadows = LightShadows.None;
+            light.renderMode = LightRenderMode.Auto;
+            light.enabled = startLit;
+            spot.flame = light;
+            return spot;
         }
 
         static void BuildLightStops(Transform zoneRoot)
@@ -296,7 +314,57 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static Vector3 SurfacePoint(float x, float alongSlope)
+        static TylerController BuildTyler(Transform zoneRoot, Transform player)
+        {
+            var tyler = new GameObject("Tyler");
+            tyler.transform.SetParent(zoneRoot, false);
+            tyler.transform.position = player.position - player.forward * 1.5f;
+            var agent = tyler.AddComponent<NavMeshAgent>();
+            agent.radius = 0.25f;
+            agent.height = 0.6f;
+            agent.avoidancePriority = 99;
+            agent.enabled = false;
+            var controller = tyler.AddComponent<TylerController>();
+            controller.player = player;
+            controller.witch = zoneRoot.GetComponentInChildren<WitchController>();
+            controller.figure = TylerBuilder.BuildFigure(tyler.transform, out var head, out var stand, out var crouch);
+            controller.head = head;
+            controller.standBody = stand;
+            controller.crouchBody = crouch;
+            controller.voice = tyler.AddComponent<AudioSource>();
+            controller.voice.spatialBlend = 0f;
+            controller.voice.playOnAwake = false;
+            var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl" };
+            var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl };
+            for (int i = 0; i < reactions.Length; i++)
+            {
+                var stop = new GameObject(names[i]);
+                stop.transform.SetParent(zoneRoot, false);
+                stop.transform.position = SurfacePoint(-6f, 4f);
+                var capture = stop.AddComponent<CaptureStop>();
+                var stage = stop.AddComponent<TylerCaptureStage>();
+                stage.reaction = reactions[i];
+                stage.lightTyler = i != 0;
+                stage.witchOffset = reactions[i] == TylerReaction.Whine
+                    ? new Vector3(0f, 12f, 16f) : new Vector3(0f, 0f, 10f);
+                Vector3 position = stage.GetTylerPosition(stop.transform);
+                Vector3 target = TylerPoses.For(stage.reaction).FaceWitch
+                    ? stop.transform.position + stop.transform.rotation * stage.witchOffset
+                    : stage.reaction == TylerReaction.Guide ? SurfacePoint(15f, 20f) : stop.transform.position;
+                Vector3 direction = Vector3.ProjectOnPlane(target - position, Vector3.up).normalized;
+                Vector3 side = Vector3.Cross(Vector3.up, direction);
+                Vector3 toPlayer = Vector3.ProjectOnPlane(stop.transform.position - position, Vector3.up);
+                if (Vector3.Dot(side, toPlayer) > 0f) side = -side;
+                Vector3 cameraOffset = (side - toPlayer.normalized * 0.35f).normalized * 3f;
+                capture.overrideCamera = true;
+                capture.cameraPosition = TylerCaptureStage.GroundPosition(position + cameraOffset) + Vector3.up * 1.2f;
+                Vector3 focus = position + toPlayer * 0.25f + Vector3.up * 0.4f;
+                capture.cameraRotation = Quaternion.LookRotation(focus - capture.cameraPosition);
+            }
+            return controller;
+        }
+
+        internal static Vector3 SurfacePoint(float x, float alongSlope)
         {
             float angle = SlopeAngle * Mathf.Deg2Rad;
             float z = alongSlope * Mathf.Cos(angle);
@@ -357,11 +425,12 @@ namespace TiffanyGame.EditorTools
             return player.AddComponent<PlayerController>();
         }
 
-        static void CreateCamera(PlayerController player)
+        static Camera CreateCamera(PlayerController player)
         {
             var cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
             var camera = cameraObject.AddComponent<Camera>();
+            cameraObject.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = false;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = RenderSettings.fogColor;
             camera.farClipPlane = 80f;
@@ -371,6 +440,7 @@ namespace TiffanyGame.EditorTools
             camera.fieldOfView = follow.fieldOfView;
             follow.Snap();
             player.viewCamera = camera;
+            return camera;
         }
 
         static GameInterface BuildInterface(out Image caughtFade)

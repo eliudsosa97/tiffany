@@ -90,7 +90,7 @@ namespace TiffanyGame
         {
             if (!catalog.TryGet(memoryId, out var memory) || !pages.Add(memory)) return false;
             if (memoryId >= 1 && memoryId <= 5)
-                notice.Enqueue(InterfaceTexts.PowerNotice(PowerSet.ForMemory(memoryId)), InterfaceTexts.PowerNoticeSeconds);
+                ShowPowerNotice(PowerSet.ForMemory(memoryId));
             pages.ShowFirstOf(memoryId);
             pageDirty = true;
             RefreshNotebook();
@@ -98,10 +98,24 @@ namespace TiffanyGame
             return true;
         }
 
+        public bool TryGetMemory(int memoryId, out MemoryData memory) => catalog.TryGet(memoryId, out memory);
+
+        public void ShowPowerNotice(Power power)
+        {
+            notice.Enqueue(InterfaceTexts.PowerNotice(power), InterfaceTexts.PowerNoticeSeconds);
+            RefreshLines();
+        }
+
         public void ShowSubtitle(string text, float seconds)
         {
             subtitle.Enqueue(text, seconds);
             RefreshLines();
+        }
+
+        public void ReplaceSubtitle(string text, float seconds)
+        {
+            subtitle.Clear();
+            ShowSubtitle(text, seconds);
         }
 
         public void TogglePause()

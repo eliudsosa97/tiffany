@@ -11,6 +11,7 @@ namespace TiffanyGame
         public PlayerSoul player;
         public Storm storm;
         public Light flame;
+        public Renderer flameMesh;
 
         public CandleSite Site { get; private set; }
         public Candle Candle => Site.Candle;
@@ -52,6 +53,7 @@ namespace TiffanyGame
             }
             if (obstacle != null) obstacle.enabled = safe;
             if (flame != null) flame.enabled = Candle.IsLit;
+            if (flameMesh != null && flameMesh.enabled != Candle.IsLit) flameMesh.enabled = Candle.IsLit;
         }
     }
 }
