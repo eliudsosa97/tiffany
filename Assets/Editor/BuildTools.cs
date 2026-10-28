@@ -21,6 +21,15 @@ namespace TiffanyGame.EditorTools
         [MenuItem("Tiffany/Build Mac")]
         public static void BuildMac() => Run(BuildTarget.StandaloneOSX, "Builds/Mac/tiffany.app");
 
+        public static System.Action<BuildTargetGroup, BuildTarget> switchTarget =
+            (group, target) => EditorUserBuildSettings.SwitchActiveBuildTarget(group, target);
+
+        // Compilar WebGL con otra plataforma activa deja la web sin las variantes de luz de URP.
+        public static void UseTarget(BuildTarget active, BuildTarget target)
+        {
+            if (active != target) switchTarget(BuildPipeline.GetBuildTargetGroup(target), target);
+        }
+
         static void Run(BuildTarget target, string path)
         {
             var scenes = new List<string>();
@@ -36,6 +45,7 @@ namespace TiffanyGame.EditorTools
                 return;
             }
 
+            UseTarget(EditorUserBuildSettings.activeBuildTarget, target);
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = scenes.ToArray(),
