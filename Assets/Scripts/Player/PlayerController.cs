@@ -14,6 +14,7 @@ namespace TiffanyGame
         public float gravity = 20f;
 
         public Gait CurrentGait { get; private set; }
+        public event System.Action<GroundType, Gait> Stepped;
 
         CharacterController controller;
         StepCadence cadence;
@@ -69,6 +70,7 @@ namespace TiffanyGame
             {
                 var ground = FindGround();
                 NoiseBus.Publish(new StepNoise(transform.position, NoiseModel.StepRadius(ground, CurrentGait, raining)));
+                Stepped?.Invoke(ground, CurrentGait);
             }
 
             TurnTowardsAim(inputGait, direction, yaw, dt);

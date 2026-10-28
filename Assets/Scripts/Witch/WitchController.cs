@@ -9,7 +9,7 @@ namespace TiffanyGame
     {
         public Transform player;
         public Vector3[] skyRoute;
-        public Chapter chapter = Chapter.Ravine;
+        public Chapter chapter = Chapter.Stable;
         public WitchSenseProfile senses = new WitchSenseProfile();
         public GameObject figure;
         public GameObject fireBall;
@@ -29,6 +29,7 @@ namespace TiffanyGame
         public bool hearingMuted;
 
         public WitchDecision Decision { get; private set; }
+        public WitchProfile Profile => profile;
         public event Action Caught;
 
         private NavMeshAgent agent;
@@ -64,15 +65,11 @@ namespace TiffanyGame
         private void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
-            agent.enabled = false;
-            witchSenses = new WitchSenses(senses);
-            profile = WitchProfiles.For(chapter);
-            brain = new WitchBrain(profile, skyRoute);
             hits = new RaycastHit[32];
             noiseHandler = Hear;
             if (figure != null) animator = figure.GetComponent<Animator>();
             if (fireLight != null) baseFireIntensity = fireLight.intensity;
-            Decision = new WitchDecision { State = WitchState.Flying, Form = WitchForm.Flying, FireLit = true };
+            InitializeBrain();
         }
 
         private void OnEnable() => NoiseBus.Published += noiseHandler;
@@ -87,6 +84,76 @@ namespace TiffanyGame
         }
 
         public void Flash() => flashed = true;
+
+        public void ResetBrain()
+        {
+            InitializeBrain();
+            if (profile.GroundChase)
+            {
+                PlaceForGroundChase();
+            }
+            else
+            {
+                Vector3 fallback = transform.position;
+                fallback.y = WitchMotion.CruiseHeight(skyRoute, fallback, fallback.y + 12f);
+                transform.position = WitchMotion.FarthestRoutePoint(skyRoute,
+                    player != null ? player.position : transform.position, fallback) + Vector3.up * profile.FlightHeightOffset;
+            }
+            ApplyView();
+            Debug.Log($"{GameInfo.LogPrefix} Bruja: {(profile.GroundChase ? "retoma la persecución a pie" : "vuelve a la ruta")}");
+        }
+
+        public void BeginReturn()
+        {
+            chapter = Chapter.Return;
+            ResetBrain();
+        }
+
+        public void SetChapter(Chapter next)
+        {
+            if (next <= chapter) return;
+            if (next == Chapter.Return)
+            {
+                BeginReturn();
+                return;
+            }
+            profile = WitchProfiles.For(next);
+            brain.SetProfile(profile);
+            chapter = next;
+        }
+
+        private void InitializeBrain()
+        {
+            profile = WitchProfiles.For(chapter);
+            brain = new WitchBrain(profile, skyRoute);
+            witchSenses = new WitchSenses(senses);
+            agent.enabled = false;
+            hasDestination = hasPose = flashed = false;
+            stateTime = 0f;
+            Decision = new WitchDecision
+            {
+                State = profile.GroundChase ? WitchState.Stalking : WitchState.Flying,
+                Form = profile.GroundChase ? WitchForm.Grounded : WitchForm.Flying,
+                FireLit = !profile.GroundChase
+            };
+        }
+
+        private void PlaceForGroundChase()
+        {
+            if (player == null) return;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 offset = Quaternion.AngleAxis(i * 45f, Vector3.up) * -player.forward * 12f;
+                if (!SafeZones.TryPushOut(player.position + offset, landingMargin, out var entry)
+                    || !NavMeshPlacement.TrySample(entry, 6f, agent.areaMask, out var hit)
+                    || SafeZones.Contains(hit.position)) continue;
+                Vector3 separation = hit.position - player.position;
+                separation.y = 0f;
+                if (separation.sqrMagnitude < profile.SprintTriggerDistance * profile.SprintTriggerDistance) continue;
+                transform.position = hit.position;
+                return;
+            }
+        }
 
         private void Hear(StepNoise noise) => witchSenses.Hear(in noise, transform.position);
 
@@ -144,13 +211,14 @@ namespace TiffanyGame
             if (Decision.State == WitchState.Landing)
             {
                 verticalTarget = GroundPosition(SafeZones.PushOut(entryPosition, landingMargin));
-                if (TrySampleNavMesh(verticalTarget, 6f, out var hit))
+                if (NavMeshPlacement.TrySample(verticalTarget, 6f, agent.areaMask, out var hit))
                     verticalTarget = hit.position;
             }
             else if (Decision.State == WitchState.TakingOff)
             {
                 verticalTarget = entryPosition;
-                verticalTarget.y = WitchMotion.CruiseHeight(skyRoute, entryPosition, entryPosition.y + 12f);
+                verticalTarget.y = WitchMotion.CruiseHeight(skyRoute, entryPosition, entryPosition.y + 12f)
+                    + profile.FlightHeightOffset;
             }
             else if (Decision.State == WitchState.Caught)
             {
@@ -199,37 +267,10 @@ namespace TiffanyGame
 
         private bool EnableAgent()
         {
-            if (agent.enabled)
-            {
-                if (agent.isOnNavMesh) return true;
-                agent.enabled = false;
-            }
-            if (!TrySampleNavMesh(transform.position, 3f, out var hit))
-            {
-                if (!warnedMissingNavMesh)
-                {
-                    Debug.LogWarning($"{GameInfo.LogPrefix} La bruja no encontró NavMesh cerca de {transform.position}.");
-                    warnedMissingNavMesh = true;
-                }
-                return false;
-            }
-            transform.position = hit.position;
-            agent.enabled = true;
-            agent.Warp(hit.position);
-            hasDestination = false;
-            if (agent.isOnNavMesh) return true;
-            agent.enabled = false;
-            return false;
-        }
-
-        private bool TrySampleNavMesh(Vector3 position, float radius, out NavMeshHit hit)
-        {
-            for (; radius <= 24f; radius *= 2f)
-            {
-                if (NavMesh.SamplePosition(position, out hit, radius, agent.areaMask)) return true;
-            }
-            hit = default;
-            return false;
+            bool ready = NavMeshPlacement.EnsureOnNavMesh(agent, transform, ref warnedMissingNavMesh,
+                GameInfo.LogPrefix + " La bruja no encontró NavMesh cerca de {0}.", out bool repositioned);
+            if (repositioned) hasDestination = false;
+            return ready;
         }
 
         private void Stalk()

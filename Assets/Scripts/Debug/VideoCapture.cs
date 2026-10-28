@@ -13,6 +13,9 @@ namespace TiffanyGame
         float seconds = 10f;
         int previousCaptureFramerate;
         bool captureFramerateChanged;
+        bool quitOnFinish = true;
+
+        public static bool ShouldQuit(string[] args) => System.Array.IndexOf(args, "-playthrough") < 0;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
@@ -38,12 +41,15 @@ namespace TiffanyGame
             var capture = go.AddComponent<VideoCapture>();
             capture.directory = directory;
             capture.seconds = seconds;
+            capture.quitOnFinish = ShouldQuit(args);
 #endif
         }
 
         IEnumerator Start()
         {
             if (string.IsNullOrEmpty(directory)) yield break;
+            var gameInterface = FindAnyObjectByType<GameInterface>();
+            if (gameInterface != null) gameInterface.StartGame();
             yield return null;
             Directory.CreateDirectory(directory);
             previousCaptureFramerate = Time.captureFramerate;
@@ -61,7 +67,7 @@ namespace TiffanyGame
             RestoreCaptureFramerate();
             yield return new WaitForSecondsRealtime(1f);
             Debug.Log($"{GameInfo.LogPrefix} Video terminado: {totalFrames} cuadros en {directory}.");
-            Application.Quit();
+            if (quitOnFinish) Application.Quit();
         }
 
         void OnDisable() => RestoreCaptureFramerate();

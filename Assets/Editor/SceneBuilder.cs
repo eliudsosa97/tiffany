@@ -7,12 +7,14 @@ using UnityEngine.AI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
+using static TiffanyGame.EditorTools.AudioBuilder;
 
 namespace TiffanyGame.EditorTools
 {
     public static class SceneBuilder
     {
         public const string ScenePath = "Assets/Scenes/Main.unity";
+        public const float FireBallHeight = 1.5f;
         const float SlopeAngle = 8f;
         const float PatchHeight = 0.1f;
         const float PatchElevation = 0.03f;
@@ -24,24 +26,60 @@ namespace TiffanyGame.EditorTools
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             ConfigureNight();
             CreateMoon();
+            var world = new GameObject("World").transform;
             var spawn = BuildTestZone();
+            var testZone = spawn.parent;
+            testZone.SetParent(world, false);
             var player = CreatePlayer(spawn, out var playerLight);
-            var viewCamera = CreateCamera(player);
-            playerLight.witch = BuildWitch(spawn.parent, player.transform);
-            var tyler = BuildTyler(spawn.parent, player.transform);
             var storm = StormBuilder.BuildStorm(player.transform, spawn);
-            BuildCandles(spawn.parent, player.GetComponent<PlayerSoul>(), storm);
-            var gameInterface = BuildInterface();
-            BuildLightStops(spawn.parent);
-            HidingBuilder.BuildHideTest(spawn.parent, player);
-            MemoryBuilder.Build(spawn.parent, player, gameInterface, tyler, viewCamera);
+            var firstCandle = BuildCandles(testZone, player.GetComponent<PlayerSoul>(), storm);
+            var gameInterface = BuildInterface(out var caughtFade);
+            BuildLightStops(testZone);
+            HidingBuilder.BuildHideTest(testZone, player);
+            var route = RouteBuilder.BuildRoute(world, player, storm, out var memories, out var skyRoute);
+            var viewCamera = CreateCamera(player);
+            BakeNavMesh(world);
+            playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute,
+                viewCamera.GetComponent<FollowCamera>());
+            route.GetComponent<WitchChapterTracker>().witch = playerLight.witch;
+            var respawn = player.gameObject.AddComponent<PlayerRespawn>();
+            respawn.witch = playerLight.witch;
+            respawn.overlay = caughtFade;
+            BuildEnding(route.GetChild(7), player.GetComponent<PlayerSoul>(), playerLight.witch, gameInterface);
+            var tyler = BuildTyler(route.GetChild(0), player.transform, testZone, memories[0]);
+            var ball = route.GetChild(0).Find("Ball");
+            tyler.transform.position = ball.position + new Vector3(1.5f, -0.2f, 0f);
+            MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories, ball: ball);
+            PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
+            var ambience = BuildForestAmbience(player.transform, route, playerLight.witch);
+            ambience.music = BuildTensionMusic(playerLight.witch, player.transform);
+            var heartbeat = player.gameObject.AddComponent<Heartbeat>();
+            heartbeat.panic = player.GetComponent<PanicController>();
+            heartbeat.witch = playerLight.witch;
+            heartbeat.source = player.gameObject.AddComponent<AudioSource>();
+            heartbeat.source.playOnAwake = false;
+            heartbeat.source.spatialBlend = 0f;
+            const string heartbeatPath = "Assets/Audio/Sfx/heartbeat.wav";
+            heartbeat.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(heartbeatPath);
+            if (heartbeat.clip == null)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el audio de latidos: {heartbeatPath}");
             var candleStop = new GameObject("Candle 1 Safe");
-            candleStop.transform.SetParent(spawn.parent, false);
+            candleStop.transform.SetParent(testZone, false);
             candleStop.transform.position = SurfacePoint(-5f, 1.5f);
             var capture = candleStop.AddComponent<CaptureStop>();
             capture.overrideCamera = false;
             capture.wait = 1.5f;
             candleStop.AddComponent<LightCaptureStage>().energy = SoulEnergy.Max;
+            PowerBuilder.BuildPowers(playerLight, route.GetChild(0), storm);
+            var caughtStop = new GameObject("Witch 8 Caught");
+            caughtStop.transform.SetParent(spawn.parent, false);
+            caughtStop.transform.position = spawn.position;
+            var caughtCapture = caughtStop.AddComponent<CaptureStop>();
+            caughtCapture.overrideCamera = false;
+            caughtCapture.wait = CaughtSequence.FireDuration + CaughtSequence.FadeOutDuration + CaughtSequence.FadeInDuration * 0.5f;
+            caughtStop.AddComponent<CaughtCaptureStage>().spot = firstCandle;
+            BuildWitchVoice(playerLight.witch, tyler);
+            BuildWitchAudio(playerLight.witch, player.transform);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -133,6 +171,7 @@ namespace TiffanyGame.EditorTools
                 stop.transform.SetParent(root, false);
                 stop.transform.position = top;
                 stop.AddComponent<CaptureStop>().overrideCamera = false;
+                stop.AddComponent<WitchAwayStage>();
             }
 
             CreateBorder("West Border", root, SurfacePoint(-30f, 0f) + normal,
@@ -162,8 +201,12 @@ namespace TiffanyGame.EditorTools
             var existing = AssetDatabase.LoadAssetAtPath<NavMeshData>(path);
             if (existing != null)
             {
+                surface.RemoveData();
+                var generated = surface.navMeshData;
                 EditorUtility.CopySerialized(surface.navMeshData, existing);
                 surface.navMeshData = existing;
+                UnityEngine.Object.DestroyImmediate(generated);
+                surface.AddData();
                 EditorUtility.SetDirty(existing);
             }
             else
@@ -172,19 +215,12 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static WitchController BuildWitch(Transform zoneRoot, Transform player)
+        static WitchController BuildWitch(Transform zoneRoot, Transform player, Transform captureRoot, Vector3[] route,
+            FollowCamera followCamera)
         {
-            BakeNavMesh(zoneRoot);
-            var route = new[]
-            {
-                SurfacePoint(-20f, -20f) + Vector3.up * 14f,
-                SurfacePoint(20f, -20f) + Vector3.up * 14f,
-                SurfacePoint(20f, 20f) + Vector3.up * 14f,
-                SurfacePoint(-20f, 20f) + Vector3.up * 14f
-            };
             var witch = new GameObject("Witch");
             witch.transform.SetParent(zoneRoot, false);
-            witch.transform.position = route[0];
+            witch.transform.position = route[0] + Vector3.up * WitchProfiles.For(Chapter.Cemetery).FlightHeightOffset;
             var agent = witch.AddComponent<NavMeshAgent>();
             agent.radius = 0.35f;
             agent.height = 2.3f;
@@ -192,14 +228,17 @@ namespace TiffanyGame.EditorTools
             var controller = witch.AddComponent<WitchController>();
             controller.player = player;
             controller.skyRoute = route;
-            controller.chapter = Chapter.Ravine;
+            controller.chapter = Chapter.Cemetery;
             controller.figure = WitchBuilder.BuildFigure(witch.transform);
             controller.fireLight = WitchBuilder.BuildFireBall(witch.transform, out var ball);
-            ball.transform.localPosition = Vector3.up * 1.5f;
+            ball.transform.localPosition = Vector3.up * FireBallHeight;
             controller.fireBall = ball;
+            var viewDirection = Quaternion.Euler(0f, followCamera.yaw, 0f) * Vector3.forward;
+            var flyingOffset = Vector3.forward * followCamera.lookAhead - viewDirection * 2f
+                + Vector3.up * RouteBuilder.SkyHeight;
 
             var liveStop = new GameObject("Witch 0 Live");
-            liveStop.transform.SetParent(zoneRoot, false);
+            liveStop.transform.SetParent(captureRoot, false);
             liveStop.transform.position = SurfacePoint(0f, -4f);
             liveStop.AddComponent<CaptureStop>().wait = 6f;
             liveStop.AddComponent<WitchCaptureStage>().live = true;
@@ -209,62 +248,187 @@ namespace TiffanyGame.EditorTools
             for (int i = 0; i < states.Length; i++)
             {
                 var stop = new GameObject($"Witch {i + 1} {states[i]}");
-                stop.transform.SetParent(zoneRoot, false);
+                stop.transform.SetParent(captureRoot, false);
                 stop.transform.position = SurfacePoint(0f, -4f);
                 var capture = stop.AddComponent<CaptureStop>();
-                capture.overrideCamera = states[i] == WitchState.Flying;
-                if (capture.overrideCamera)
-                {
-                    capture.cameraPosition = SurfacePoint(0f, -4f) + new Vector3(0f, 8f, -34f);
-                    capture.cameraRotation = Quaternion.LookRotation(Vector3.forward);
-                }
+                capture.overrideCamera = false;
                 capture.wait = 1.5f;
                 var stage = stop.AddComponent<WitchCaptureStage>();
                 stage.state = states[i];
                 stage.fireLit = stage.state == WitchState.Flying || stage.state == WitchState.TakingOff;
-                stage.witchOffset = stage.state == WitchState.Flying ? new Vector3(0f, 14f, 6f)
+                stage.witchOffset = stage.state == WitchState.Flying ? flyingOffset
                     : stage.state == WitchState.TakingOff ? new Vector3(2f, 3f, 5f)
                     : stage.state == WitchState.Landing ? new Vector3(2f, 2.5f, 6f) : new Vector3(1.5f, 0f, 3f);
             }
+
+            var litStop = new GameObject("Witch 9 Flying Lit");
+            litStop.transform.SetParent(captureRoot, false);
+            litStop.transform.position = SurfacePoint(-5f, 1.5f);
+            var litCapture = litStop.AddComponent<CaptureStop>();
+            litCapture.overrideCamera = false;
+            litCapture.wait = 1.5f;
+            var litWitch = litStop.AddComponent<WitchCaptureStage>();
+            litWitch.state = WitchState.Flying;
+            litWitch.fireLit = true;
+            litWitch.witchOffset = flyingOffset;
+            var litLight = litStop.AddComponent<LightCaptureStage>();
+            litLight.hideWitch = false;
             return controller;
         }
 
-        static void BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
+        static void BuildWitchVoice(WitchController witch, TylerController tyler)
+        {
+            var voice = witch.gameObject.AddComponent<WitchVoice>();
+            voice.witch = witch;
+            voice.tyler = tyler;
+            voice.source = witch.gameObject.AddComponent<AudioSource>();
+            voice.echo = witch.gameObject.AddComponent<AudioSource>();
+            foreach (var source in new[] { voice.source, voice.echo })
+            {
+                source.playOnAwake = false;
+                source.spatialBlend = 1f;
+                source.rolloffMode = AudioRolloffMode.Linear;
+                // El AudioListener va en la cámara, a unos 36 m de Tiffany.
+                source.minDistance = 30f;
+                source.maxDistance = 71f;
+            }
+            voice.barks = new AudioClip[4];
+            for (int i = 0; i < voice.barks.Length; i++)
+            {
+                string path = $"Assets/Audio/Sfx/bark_{i + 1}.wav";
+                voice.barks[i] = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+                if (voice.barks[i] == null)
+                    throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el ladrido: {path}");
+            }
+        }
+
+        static void BuildWitchAudio(WitchController witch, Transform player)
+        {
+            var audio = witch.gameObject.AddComponent<WitchAudio>();
+            audio.witch = witch;
+            audio.player = player;
+            audio.fireLoop = witch.gameObject.AddComponent<AudioSource>();
+            audio.breathLoop = witch.gameObject.AddComponent<AudioSource>();
+            audio.oneShot = witch.gameObject.AddComponent<AudioSource>();
+            foreach (var source in new[] { audio.fireLoop, audio.breathLoop, audio.oneShot })
+            {
+                source.playOnAwake = false;
+                source.spatialBlend = 0f;
+            }
+            audio.fireLoop.loop = audio.breathLoop.loop = true;
+            audio.fireLoop.clip = LoadClip("fireball");
+            audio.breathLoop.clip = LoadClip("witch_breath");
+            (audio.land, audio.crack, audio.whoosh) = (LoadClip("witch_land"), LoadClip("witch_crack"), LoadClip("witch_whoosh"));
+            audio.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
+            audio.cackles = new[] { LoadClip("cackle_1"), LoadClip("cackle_2"), LoadClip("cackle_3") };
+        }
+
+        static TensionMusic BuildTensionMusic(WitchController witch, Transform player)
+        {
+            var root = new GameObject("Tension Music");
+            var music = root.AddComponent<TensionMusic>();
+            (music.witch, music.player, music.hiding) = (witch, player, player.GetComponent<PlayerHiding>());
+            music.drone = root.AddComponent<AudioSource>();
+            music.pulse = root.AddComponent<AudioSource>();
+            foreach (var source in new[] { music.drone, music.pulse })
+                (source.loop, source.playOnAwake, source.spatialBlend, source.volume) = (true, false, 0f, 0f);
+            (music.drone.clip, music.pulse.clip) = (LoadClip("tension_drone"), LoadClip("tension_pulse"));
+            return music;
+        }
+
+        static ForestAmbience BuildForestAmbience(Transform player, Transform route, WitchController witch)
+        {
+            var root = new GameObject("Forest Ambience");
+            var audio = root.AddComponent<ForestAmbience>();
+            (audio.player, audio.witch, audio.panic) = (player, witch, player.GetComponent<PanicController>());
+            audio.clearings = route.GetComponent<WitchChapterTracker>().clearings;
+            audio.loopClips = new[] { LoadClip("crickets"), LoadClip("wind"), LoadClip("leaves"), LoadClip("frogs"), LoadClip("lake_water") };
+            audio.loops = new AudioSource[AmbienceMix.LayerCount];
+            for (int i = 0; i < audio.loops.Length; i++)
+            {
+                var source = root.AddComponent<AudioSource>();
+                (source.loop, source.playOnAwake, source.spatialBlend, source.clip) = (true, false, 0f, audio.loopClips[i]);
+                audio.loops[i] = source;
+            }
+            audio.calls = root.AddComponent<AudioSource>();
+            (audio.calls.playOnAwake, audio.calls.spatialBlend) = (false, 0f);
+            (audio.owl, audio.barnOwl, audio.coyote) = (LoadClip("owl"), LoadClip("lechuza"), LoadClip("coyote"));
+            audio.howls = new[] { LoadClip("distant_howl_1"), LoadClip("distant_howl_2"), LoadClip("distant_howl_3") };
+            return audio;
+        }
+
+        static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
+        {
+            CandleSpot first = null;
+            for (int i = 0; i < 2; i++)
+            {
+                var spot = CreateCandle(zoneRoot, $"Family Candle {i + 1}", SurfacePoint(i == 0 ? -5f : 5f, 4f),
+                    CandleKind.Family, true, soul, storm);
+                if (i == 0) first = spot;
+            }
+            return first;
+        }
+
+        static void BuildEnding(Transform house, PlayerSoul soul, WitchController witch, GameInterface gameInterface)
+        {
+            var ending = house.Find("Window Candle").gameObject.AddComponent<EndingController>();
+            ending.soul = soul;
+            ending.witch = witch;
+            ending.gameInterface = gameInterface;
+            for (int i = 0; i < 2; i++)
+            {
+                var stop = new GameObject(i == 0 ? "Ending 1 Fade" : "Ending 2 Credits");
+                stop.transform.SetParent(house, false);
+                stop.transform.position = new Vector3(ending.transform.position.x, house.position.y, ending.transform.position.z - 1.5f);
+                var capture = stop.AddComponent<CaptureStop>();
+                capture.overrideCamera = false;
+                capture.wait = 0.5f;
+                var stage = stop.AddComponent<EndingCaptureStage>();
+                stage.ending = ending;
+                stage.credits = i == 1;
+            }
+        }
+
+        internal static CandleSpot CreateCandle(Transform parent, string name, Vector3 position,
+            CandleKind kind, bool startLit, PlayerSoul soul, Storm storm)
         {
             var glassMaterial = GeneratedMaterials.Get("CandleGlass", new Color(0.5f, 0.16f, 0.07f), smoothness: 0.8f);
             var flameMaterial = GeneratedMaterials.Get("CandleFlame", new Color(1f, 0.78f, 0.3f), unlit: true);
-            for (int i = 0; i < 2; i++)
-            {
-                var root = new GameObject($"Family Candle {i + 1}");
-                root.transform.SetParent(zoneRoot, false);
-                root.transform.position = SurfacePoint(i == 0 ? -5f : 5f, 4f);
-                var obstacle = root.AddComponent<NavMeshObstacle>();
-                var spot = root.AddComponent<CandleSpot>();
-                spot.kind = CandleKind.Family;
-                spot.player = soul;
-                spot.storm = storm;
-                obstacle.shape = NavMeshObstacleShape.Capsule;
-                obstacle.radius = spot.radius;
-                obstacle.height = 2f;
-                obstacle.center = Vector3.up;
-                obstacle.carving = true;
-                obstacle.carveOnlyStationary = true;
-                CreatePrimitive("Glass", PrimitiveType.Cylinder, root.transform,
-                    Vector3.up * 0.11f, new Vector3(0.14f, 0.11f, 0.14f), glassMaterial);
-                var flame = CreatePrimitive("Flame", PrimitiveType.Sphere, root.transform,
-                    Vector3.up * 0.26f, new Vector3(0.06f, 0.1f, 0.06f), flameMaterial);
-                UnityEngine.Object.DestroyImmediate(flame.GetComponent<SphereCollider>());
-                var light = new GameObject("Candle Light").AddComponent<Light>();
-                light.transform.SetParent(root.transform, false);
-                light.transform.localPosition = Vector3.up * 0.35f;
-                light.type = LightType.Point;
-                light.color = new Color(1f, 0.62f, 0.3f);
-                light.range = 5f;
-                light.intensity = 4f;
-                light.shadows = LightShadows.None;
-                light.renderMode = LightRenderMode.Auto;
-                spot.flame = light;
-            }
+            var root = new GameObject(name);
+            root.transform.SetParent(parent, false);
+            root.transform.position = position;
+            var obstacle = root.AddComponent<NavMeshObstacle>();
+            var spot = root.AddComponent<CandleSpot>();
+            spot.kind = kind;
+            spot.startLit = startLit;
+            spot.player = soul;
+            spot.storm = storm;
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = spot.radius;
+            obstacle.height = 2f;
+            obstacle.center = Vector3.up;
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = true;
+            obstacle.enabled = startLit;
+            CreatePrimitive("Glass", PrimitiveType.Cylinder, root.transform,
+                Vector3.up * 0.11f, new Vector3(0.14f, 0.11f, 0.14f), glassMaterial);
+            var flame = CreatePrimitive("Flame", PrimitiveType.Sphere, root.transform,
+                Vector3.up * 0.26f, new Vector3(0.06f, 0.1f, 0.06f), flameMaterial);
+            UnityEngine.Object.DestroyImmediate(flame.GetComponent<SphereCollider>());
+            spot.flameMesh = flame.GetComponent<Renderer>();
+            spot.flameMesh.enabled = startLit;
+            var light = new GameObject("Candle Light").AddComponent<Light>();
+            light.transform.SetParent(root.transform, false);
+            light.transform.localPosition = Vector3.up * 0.35f;
+            light.type = LightType.Point;
+            light.color = new Color(1f, 0.62f, 0.3f);
+            light.range = 5f;
+            light.intensity = 4f;
+            light.shadows = LightShadows.None;
+            light.renderMode = LightRenderMode.Auto;
+            light.enabled = startLit;
+            spot.flame = light;
+            return spot;
         }
 
         static void BuildLightStops(Transform zoneRoot)
@@ -284,7 +448,7 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static TylerController BuildTyler(Transform zoneRoot, Transform player)
+        static TylerController BuildTyler(Transform zoneRoot, Transform player, Transform captureRoot, Transform nextMemory)
         {
             var tyler = new GameObject("Tyler");
             tyler.transform.SetParent(zoneRoot, false);
@@ -296,7 +460,10 @@ namespace TiffanyGame.EditorTools
             agent.enabled = false;
             var controller = tyler.AddComponent<TylerController>();
             controller.player = player;
+            controller.soul = player.GetComponent<PlayerSoul>();
+            controller.shareLight = TylerBuilder.BuildShareLight(tyler.transform);
             controller.witch = zoneRoot.GetComponentInChildren<WitchController>();
+            controller.nextMemory = nextMemory;
             controller.figure = TylerBuilder.BuildFigure(tyler.transform, out var head, out var stand, out var crouch);
             controller.head = head;
             controller.standBody = stand;
@@ -304,23 +471,33 @@ namespace TiffanyGame.EditorTools
             controller.voice = tyler.AddComponent<AudioSource>();
             controller.voice.spatialBlend = 0f;
             controller.voice.playOnAwake = false;
-            var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl" };
-            var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl };
+            controller.barkClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/bark_1.wav");
+            controller.growlClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/growl_1.wav");
+            var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl", "Tyler 5 Shares Light" };
+            var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl, TylerReaction.None };
             for (int i = 0; i < reactions.Length; i++)
             {
                 var stop = new GameObject(names[i]);
-                stop.transform.SetParent(zoneRoot, false);
-                stop.transform.position = SurfacePoint(-6f, 4f);
+                stop.transform.SetParent(captureRoot, false);
+                stop.transform.position = i == 4 ? SurfacePoint(0f, 0f) : SurfacePoint(-6f, 4f);
                 var capture = stop.AddComponent<CaptureStop>();
                 var stage = stop.AddComponent<TylerCaptureStage>();
                 stage.reaction = reactions[i];
-                stage.lightTyler = i != 0;
+                stage.lightTyler = i > 0 && i < 4;
+                stage.shareLight = i == 4;
+                if (stage.lightTyler)
+                {
+                    stage.fillLight = TylerBuilder.BuildShareLight(stop.transform);
+                    stage.fillLight.name = "Tyler Capture Light";
+                    stage.fillLight.intensity = 2f;
+                }
+                if (stage.shareLight) stop.AddComponent<LightCaptureStage>().energy = 0f;
                 stage.witchOffset = reactions[i] == TylerReaction.Whine
                     ? new Vector3(0f, 12f, 16f) : new Vector3(0f, 0f, 10f);
                 Vector3 position = stage.GetTylerPosition(stop.transform);
                 Vector3 target = TylerPoses.For(stage.reaction).FaceWitch
                     ? stop.transform.position + stop.transform.rotation * stage.witchOffset
-                    : stage.reaction == TylerReaction.Guide ? SurfacePoint(15f, 20f) : stop.transform.position;
+                    : stage.reaction == TylerReaction.Guide ? nextMemory.position : stop.transform.position;
                 Vector3 direction = Vector3.ProjectOnPlane(target - position, Vector3.up).normalized;
                 Vector3 side = Vector3.Cross(Vector3.up, direction);
                 Vector3 toPlayer = Vector3.ProjectOnPlane(stop.transform.position - position, Vector3.up);
@@ -331,6 +508,7 @@ namespace TiffanyGame.EditorTools
                 Vector3 focus = position + toPlayer * 0.25f + Vector3.up * 0.4f;
                 capture.cameraRotation = Quaternion.LookRotation(focus - capture.cameraPosition);
             }
+            tyler.SetActive(false);
             return controller;
         }
 
@@ -341,7 +519,7 @@ namespace TiffanyGame.EditorTools
             return new Vector3(x, z * Mathf.Tan(angle), z);
         }
 
-        static void CreateBorder(string name, Transform parent, Vector3 position,
+        internal static void CreateBorder(string name, Transform parent, Vector3 position,
             Quaternion rotation, Vector3 size)
         {
             var border = new GameObject(name);
@@ -392,7 +570,9 @@ namespace TiffanyGame.EditorTools
             playerLight.glow = glow.transform;
             playerLight.startOn = false;
             playerLight.pitch = 42f;
-            return player.AddComponent<PlayerController>();
+            var movement = player.AddComponent<PlayerController>();
+            AudioBuilder.BuildFootsteps(movement);
+            return movement;
         }
 
         static Camera CreateCamera(PlayerController player)
@@ -413,7 +593,7 @@ namespace TiffanyGame.EditorTools
             return camera;
         }
 
-        static GameInterface BuildInterface()
+        static GameInterface BuildInterface(out Image caughtFade)
         {
             var root = new GameObject("Interface", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
             root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
@@ -424,6 +604,8 @@ namespace TiffanyGame.EditorTools
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var ui = root.AddComponent<GameInterface>();
 
+            caughtFade = InterfacePanel("Caught Fade", root.transform, 1f).GetComponent<Image>();
+            caughtFade.gameObject.SetActive(false);
             ui.noticeText = InterfaceText("Power Notice", root.transform, font, "", 42,
                 new Vector2(0.12f, 0.65f), new Vector2(0.88f, 0.74f));
             ui.noticeText.color = new Color(1f, 0.87f, 0.63f);
@@ -459,6 +641,23 @@ namespace TiffanyGame.EditorTools
                 new Vector2(0.15f, 0.025f), new Vector2(0.85f, 0.085f));
             ui.notebookEmpty = InterfaceText("Empty", notebook, font, InterfaceTexts.NotebookEmpty, 44,
                 new Vector2(0.1f, 0.4f), new Vector2(0.9f, 0.6f));
+
+            ui.endingPanel = InterfacePanel("Ending", root.transform, 0f).GetComponent<Image>();
+            ui.endingPanel.color = new Color(1f, 1f, 1f, 0f);
+            ui.endingText = InterfaceText("Ending Text", ui.endingPanel.transform, font, "", 48,
+                new Vector2(0.12f, 0.2f), new Vector2(0.88f, 0.8f));
+            ui.endingText.color = new Color(0.12f, 0.12f, 0.12f);
+            ui.endingPanel.gameObject.SetActive(false);
+
+            ui.titlePanel = InterfacePanel("Title", root.transform, 0.9f);
+            var title = InterfaceText("Title", ui.titlePanel.transform, font, InterfaceTexts.Title, 108,
+                new Vector2(0.1f, 0.59f), new Vector2(0.9f, 0.79f));
+            title.color = new Color(1f, 0.87f, 0.63f);
+            InterfaceText("Start Hint", ui.titlePanel.transform, font, InterfaceTexts.StartHint, 32,
+                new Vector2(0.1f, 0.48f), new Vector2(0.9f, 0.57f));
+            var controls = InterfaceText("Controls", ui.titlePanel.transform, font, InterfaceTexts.Controls, 28,
+                new Vector2(0.1f, 0.08f), new Vector2(0.9f, 0.39f));
+            controls.lineSpacing = 1.25f;
 
             ui.memoryAssets = LoadInterfaceAssets<TextAsset>("t:TextAsset", "Assets/Data/Memories");
             ui.drawings = LoadInterfaceAssets<Texture2D>("t:Texture2D", "Assets/Art/Memories");
@@ -514,7 +713,7 @@ namespace TiffanyGame.EditorTools
             return text;
         }
 
-        static GameObject CreatePrimitive(string name, PrimitiveType type, Transform parent,
+        internal static GameObject CreatePrimitive(string name, PrimitiveType type, Transform parent,
             Vector3 position, Vector3 scale, Material material)
         {
             var instance = GameObject.CreatePrimitive(type);

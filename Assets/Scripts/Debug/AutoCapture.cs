@@ -38,6 +38,9 @@ namespace TiffanyGame
             Directory.CreateDirectory(directory);
             Debug.Log($"{GameInfo.LogPrefix} Calidad: {QualitySettings.names[QualitySettings.GetQualityLevel()]}, pipeline: "
                 + (GraphicsSettings.currentRenderPipeline != null ? GraphicsSettings.currentRenderPipeline.name : "ninguno"));
+            var gameInterface = FindAnyObjectByType<GameInterface>();
+            yield return Capture("00_title");
+            if (gameInterface != null) gameInterface.StartGame();
             yield return new WaitForSecondsRealtime(2f);
             yield return Capture("00_start");
 
@@ -50,6 +53,19 @@ namespace TiffanyGame
             for (int i = 0; i < stops.Length; i++)
             {
                 var stop = stops[i];
+                var echoStage = stop.GetComponent<EchoCaptureStage>();
+                if (echoStage != null)
+                {
+                    if (!echoStage.Apply())
+                        Debug.LogError($"{GameInfo.LogPrefix} No se pudo preparar {stop.name}.");
+                    else
+                    {
+                        yield return new WaitForSeconds(stop.wait);
+                        yield return Capture($"{i + 1:00}_{stop.name}");
+                        echoStage.Clear();
+                    }
+                    continue;
+                }
                 if (player != null)
                 {
                     bool controllerWasEnabled = controller != null && controller.enabled;
@@ -71,6 +87,8 @@ namespace TiffanyGame
                     followCamera.Snap();
                 }
 
+                var awayStage = stop.GetComponent<WitchAwayStage>();
+                if (awayStage != null) awayStage.Apply();
                 var witchStage = stop.GetComponent<WitchCaptureStage>();
                 if (witchStage != null && player != null) witchStage.Apply(player.transform);
                 var tylerStage = stop.GetComponent<TylerCaptureStage>();
@@ -81,8 +99,16 @@ namespace TiffanyGame
                 if (lightStage != null && player != null) lightStage.Apply(player.transform);
                 var hideStage = stop.GetComponent<HideCaptureStage>();
                 if (hideStage != null) hideStage.Apply();
+                var powerStage = stop.GetComponent<PowerCaptureStage>();
+                if (powerStage != null && player != null) powerStage.Apply(player.transform);
                 var memoryStage = stop.GetComponent<MemoryCaptureStage>();
                 if (memoryStage != null) memoryStage.Apply();
+                var panicStage = stop.GetComponent<PanicCaptureStage>();
+                if (panicStage != null && player != null) panicStage.Apply(player.transform);
+                var caughtStage = stop.GetComponent<CaughtCaptureStage>();
+                if (caughtStage != null && player != null) caughtStage.Apply(player.transform);
+                var endingStage = stop.GetComponent<EndingCaptureStage>();
+                if (endingStage != null) endingStage.Apply();
                 yield return new WaitForSecondsRealtime(stop.wait);
                 yield return Capture($"{i + 1:00}_{stop.name}");
                 if (witchStage != null) witchStage.Clear();
@@ -90,11 +116,15 @@ namespace TiffanyGame
                 if (stormStage != null) stormStage.Clear();
                 if (lightStage != null) lightStage.Clear();
                 if (hideStage != null) hideStage.Clear();
+                if (powerStage != null) powerStage.Clear();
                 if (memoryStage != null) memoryStage.Clear();
+                if (panicStage != null) panicStage.Clear();
+                if (caughtStage != null) yield return caughtStage.Clear();
+                if (endingStage != null) endingStage.Clear();
+                if (awayStage != null) awayStage.Clear();
             }
 
             int captureCount = stops.Length + 1;
-            var gameInterface = FindAnyObjectByType<GameInterface>();
             if (gameInterface != null)
             {
                 gameInterface.MemoryFound(2);
@@ -115,7 +145,7 @@ namespace TiffanyGame
                 gameInterface.TogglePause();
             }
 
-            Debug.Log($"{GameInfo.LogPrefix} Recorrido terminado: {captureCount} capturas en {directory}.");
+            Debug.Log($"{GameInfo.LogPrefix} Recorrido terminado: {captureCount + 1} capturas en {directory}.");
             yield return new WaitForSecondsRealtime(1f);
             GameInput.ClearOverrides();
             Application.Quit();

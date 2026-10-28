@@ -14,18 +14,23 @@ namespace TiffanyGame
         public GameObject standBody;
         public GameObject crouchBody;
         public AudioSource voice;
+        public AudioClip barkClip;
         public AudioClip whineClip;
         public AudioClip growlClip;
         public Animator animator;
+        public Light shareLight;
+        public PlayerSoul soul;
+        public ShareMode shareMode = ShareMode.LightOnly;
         public float repathThreshold = 0.5f;
         public float nearPlayerRadius = 6f;
 
         public TylerReaction Reaction { get; private set; }
+        public bool SharingLight { get; private set; }
         public bool NearPlayer
         {
             get
             {
-                if (player == null) return false;
+                if (!isActiveAndEnabled || player == null) return false;
                 Vector3 offset = player.position - transform.position;
                 offset.y = 0f;
                 return offset.sqrMagnitude < nearPlayerRadius * nearPlayerRadius;
@@ -43,6 +48,8 @@ namespace TiffanyGame
         }
 
         private Tyler brain;
+        private readonly TylerLightShare lightShare = new TylerLightShare();
+        private bool heardMimic;
         private NavMeshAgent agent;
         private Vector3 previousPlayerPosition;
         private Vector3 lastDestination;
@@ -85,6 +92,8 @@ namespace TiffanyGame
         private void OnDisable()
         {
             if (agent != null) agent.enabled = false;
+            lightShare.Tick(0f, shareMode, false, false, false, 0f, out _);
+            SetSharingLight(false);
         }
 
         private void Start()
@@ -97,8 +106,30 @@ namespace TiffanyGame
             if (player != null) previousPlayerPosition = player.position;
         }
 
+        public void Appear(Vector3 near)
+        {
+            if (agent == null) agent = GetComponent<NavMeshAgent>();
+            agent.enabled = false;
+            Vector3 forward = player != null ? player.forward : Vector3.forward;
+            transform.position = near - forward * TylerMotion.FollowDistance;
+            gameObject.SetActive(true);
+            EnableAgent();
+            if (voice != null && barkClip != null) voice.PlayOneShot(barkClip);
+        }
+
+        public void HearMimic()
+        {
+            if (isActiveAndEnabled) heardMimic = true;
+        }
+
         private void Update()
         {
+            bool sharing = lightShare.Tick(Time.deltaTime, shareMode,
+                soul != null && soul.Energy.IsEmpty, soul != null && NearPlayer,
+                soul != null && soul.RechargingAtCandle, soul != null ? soul.Energy.Current : 0f,
+                out float recharge);
+            if (recharge > 0f) soul.Energy.Recharge(recharge / SoulCosts.RechargePerSecond);
+            SetSharingLight(sharing);
             float speed = Speed;
             idleSeconds = speed > TylerMotion.StillSpeed ? 0f : idleSeconds + Time.deltaTime;
             if (player == null)
@@ -108,6 +139,8 @@ namespace TiffanyGame
             }
             Vector3 playerPosition = player.position;
             var inputs = TylerInputs.None;
+            inputs.HeardMimic = heardMimic;
+            heardMimic = false;
             inputs.PlayerStill = TylerMotion.IsStill(previousPlayerPosition, playerPosition, Time.deltaTime);
             previousPlayerPosition = playerPosition;
             if (witch != null)
@@ -122,6 +155,15 @@ namespace TiffanyGame
             ApplyPose(pose);
             if (witch != null) FaceWitch(pose, witch.transform.position);
             ApplyAnimation(speed);
+        }
+
+        private void SetSharingLight(bool sharing)
+        {
+            if (SharingLight == sharing) return;
+            SharingLight = sharing;
+            if (shareLight != null) shareLight.enabled = sharing;
+            Debug.Log(sharing ? GameInfo.LogPrefix + " Tyler comparte su luz"
+                : GameInfo.LogPrefix + " Tyler deja de compartir su luz");
         }
 
         private void EnterReaction(TylerReaction reaction)
@@ -162,35 +204,10 @@ namespace TiffanyGame
 
         private bool EnableAgent()
         {
-            if (agent.enabled)
-            {
-                if (agent.isOnNavMesh) return true;
-                agent.enabled = false;
-            }
-            if (!TrySampleNavMesh(transform.position, 3f, out var hit))
-            {
-                if (!warnedMissingNavMesh)
-                {
-                    Debug.LogWarning(GameInfo.LogPrefix + " Tyler no encontró NavMesh cerca.");
-                    warnedMissingNavMesh = true;
-                }
-                return false;
-            }
-            transform.position = hit.position;
-            agent.enabled = true;
-            agent.Warp(hit.position);
-            hasDestination = false;
-            if (agent.isOnNavMesh) return true;
-            agent.enabled = false;
-            return false;
-        }
-
-        private bool TrySampleNavMesh(Vector3 position, float radius, out NavMeshHit hit)
-        {
-            for (; radius <= 24f; radius *= 2f)
-                if (NavMesh.SamplePosition(position, out hit, radius, agent.areaMask)) return true;
-            hit = default;
-            return false;
+            bool ready = NavMeshPlacement.EnsureOnNavMesh(agent, transform, ref warnedMissingNavMesh,
+                GameInfo.LogPrefix + " Tyler no encontró NavMesh cerca.", out bool repositioned);
+            if (repositioned) hasDestination = false;
+            return ready;
         }
 
         public void ShowReaction(TylerReaction reaction, Vector3 witchPosition)

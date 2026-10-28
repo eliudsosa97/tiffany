@@ -6,7 +6,7 @@ namespace TiffanyGame
 {
     public sealed class WitchBrain
     {
-        private readonly WitchProfile profile;
+        private WitchProfile profile;
         private readonly Vector3[] route;
         private WitchState state = WitchState.Flying;
         private int routeIndex;
@@ -26,6 +26,7 @@ namespace TiffanyGame
         public WitchBrain(WitchProfile profile, IReadOnlyList<Vector3> skyRoute)
         {
             this.profile = profile ?? throw new ArgumentNullException(nameof(profile));
+            if (profile.GroundChase) state = WitchState.Stalking;
             route = new Vector3[skyRoute?.Count ?? 0];
             for (int i = 0; i < route.Length; i++)
             {
@@ -41,7 +42,8 @@ namespace TiffanyGame
             bool noiseHeard = p.HeardNoise && !p.HearingMuted;
             bool noiseFromPlayer = noiseHeard && HorizontalDistance(p.NoisePosition, p.PlayerPosition) <= profile.PlayerNoiseMatch;
             if (p.PlayerVanished && noiseFromPlayer) noiseHeard = false;
-            bool detected = trackable && (p.SeesPlayer || p.SmellsPlayer || noiseFromPlayer || (p.PlayerHidden && sawHiding));
+            bool detected = trackable && (profile.GroundChase || p.SeesPlayer || p.SmellsPlayer
+                || noiseFromPlayer || (p.PlayerHidden && sawHiding));
             bool lostEdge = (p.PlayerVanished && !wasVanished) || (p.PlayerHidden && !wasHidden && !sawHiding);
             wasHidden = p.PlayerHidden;
             wasVanished = p.PlayerVanished;
@@ -80,6 +82,9 @@ namespace TiffanyGame
             return Decide(in p);
         }
 
+        public void SetProfile(WitchProfile next) =>
+            profile = next ?? throw new ArgumentNullException(nameof(next));
+
         private void Advance(in WitchPerception p, bool trackable, bool detected)
         {
             switch (state)
@@ -110,7 +115,7 @@ namespace TiffanyGame
                         hasTarget = false;
                         chasing = false;
                     }
-                    if (timeWithoutPerception >= profile.LoseTrackTime && !p.Raining)
+                    if (timeWithoutPerception >= profile.LoseTrackTime && !p.Raining && !profile.GroundChase)
                     {
                         hasTarget = false;
                         Enter(WitchState.TakingOff, p.WitchPosition);
@@ -158,7 +163,7 @@ namespace TiffanyGame
                         routeIndex = 0;
                         for (int i = 1; i < route.Length; i++)
                         {
-                            if ((route[i] - p.WitchPosition).sqrMagnitude < (route[routeIndex] - p.WitchPosition).sqrMagnitude)
+                            if ((FlightPoint(i) - p.WitchPosition).sqrMagnitude < (FlightPoint(routeIndex) - p.WitchPosition).sqrMagnitude)
                             {
                                 routeIndex = i;
                             }
@@ -174,13 +179,14 @@ namespace TiffanyGame
 
         private void AdvanceFlying(in WitchPerception p)
         {
-            if (p.Raining)
+            if (p.Raining && profile.CanLand)
             {
                 hasTarget = false;
                 Enter(WitchState.Landing, p.WitchPosition);
                 return;
             }
-            bool seesTarget = p.SeesPlayerLight || (p.SeesPlayer && !p.PlayerVanished && !p.PlayerHidden && !p.PlayerInSafeZone);
+            bool seesTarget = p.SeesPlayerLight || (profile.CanLand && p.SeesPlayer
+                && !p.PlayerVanished && !p.PlayerHidden && !p.PlayerInSafeZone);
             if (seesTarget)
             {
                 target = p.SeesPlayerLight ? p.PlayerLightPosition : p.PlayerPosition;
@@ -201,7 +207,7 @@ namespace TiffanyGame
                     hasTarget = false;
                 }
             }
-            if (!hasTarget && route.Length > 0 && Vector3.Distance(p.WitchPosition, route[routeIndex]) <= profile.ArriveDistance)
+            if (!hasTarget && route.Length > 0 && Vector3.Distance(p.WitchPosition, FlightPoint(routeIndex)) <= profile.ArriveDistance)
             {
                 routeIndex = (routeIndex + 1) % route.Length;
             }
@@ -220,9 +226,8 @@ namespace TiffanyGame
             switch (state)
             {
                 case WitchState.Flying:
-                    float cruiseHeight = route.Length > 0 ? route[routeIndex].y : p.WitchPosition.y;
-                    decision.MoveTarget = hasTarget ? new Vector3(target.x, cruiseHeight, target.z)
-                        : route.Length > 0 ? route[routeIndex] : p.WitchPosition;
+                    Vector3 patrolPoint = route.Length > 0 ? FlightPoint(routeIndex) : p.WitchPosition;
+                    decision.MoveTarget = hasTarget ? new Vector3(target.x, patrolPoint.y, target.z) : patrolPoint;
                     decision.Speed = profile.FlySpeed;
                     break;
                 case WitchState.Landing:
@@ -231,7 +236,7 @@ namespace TiffanyGame
                     break;
                 case WitchState.Stalking:
                     decision.MoveTarget = hasTarget ? target : p.WitchPosition;
-                    decision.Speed = hasTarget ? (chasing ? profile.FollowSpeed : profile.StalkSpeed) : 0f;
+                    decision.Speed = hasTarget ? (chasing || profile.GroundChase ? profile.FollowSpeed : profile.StalkSpeed) : 0f;
                     decision.VoiceLure = profile.UsesVoiceLure && !chasing;
                     break;
                 case WitchState.WindUp:
@@ -255,6 +260,8 @@ namespace TiffanyGame
             if (next == WitchState.WindUp) chasing = true;
             if (next == WitchState.Stunned || next == WitchState.TakingOff || next == WitchState.Landing) chasing = false;
         }
+
+        private Vector3 FlightPoint(int index) => route[index] + Vector3.up * profile.FlightHeightOffset;
 
         private static float HorizontalDistance(Vector3 from, Vector3 to)
         {

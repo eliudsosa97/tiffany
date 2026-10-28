@@ -18,12 +18,13 @@ namespace TiffanyGame.Tests
             GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
             GameInput.SlowOverride = GameInput.RunOverride = false;
             yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Single);
-            tyler = Object.FindAnyObjectByType<TylerController>();
+            tyler = Object.FindAnyObjectByType<TylerController>(FindObjectsInactive.Include);
             Assert.IsNotNull(tyler);
             Assert.IsNotNull(tyler.witch);
             tyler.witch.enabled = false;
             tyler.witch.GetComponent<NavMeshAgent>().enabled = false;
             tyler.witch.transform.position = Vector3.one * 1000f;
+            tyler.Appear(tyler.player.position);
             yield return null;
         }
 
@@ -65,19 +66,48 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator MimicIsIgnoredWhileInactiveAndHeardAfterAppearing()
+        {
+            tyler.gameObject.SetActive(false);
+            tyler.HearMimic();
+            tyler.Appear(tyler.player.position);
+            tyler.witch.transform.position = tyler.transform.position + Vector3.forward * 25f;
+            yield return null;
+            Assert.AreEqual(TylerReaction.Whine, tyler.Reaction);
+
+            tyler.HearMimic();
+            yield return null;
+            Assert.AreEqual(TylerReaction.Growl, tyler.Reaction);
+        }
+
+        [UnityTest]
         public IEnumerator CaptureStagesRestoreControllerAndNavigation()
         {
             var stages = Object.FindObjectsByType<TylerCaptureStage>(FindObjectsSortMode.None);
-            Assert.AreEqual(4, stages.Length);
+            Assert.AreEqual(5, stages.Length);
             foreach (var stage in stages)
             {
+                tyler.gameObject.SetActive(false);
                 stage.Apply(tyler.player);
-                Assert.IsFalse(tyler.enabled);
+                var lightStage = stage.GetComponent<LightCaptureStage>();
+                if (lightStage != null) lightStage.Apply(tyler.player);
+                Assert.IsTrue(tyler.gameObject.activeSelf);
+                Assert.AreEqual(stage.shareLight, tyler.enabled);
                 Assert.IsFalse(tyler.GetComponent<NavMeshAgent>().enabled);
                 Assert.AreEqual(stage.reaction, tyler.Reaction);
                 Assert.AreEqual(stage.reaction == TylerReaction.Growl, tyler.crouchBody.activeSelf);
                 Assert.AreEqual(stage.reaction != TylerReaction.Growl, tyler.standBody.activeSelf);
+                if (stage.shareLight)
+                {
+                    Assert.IsFalse(stage.lightTyler);
+                    Assert.IsNull(stage.fillLight);
+                    yield return null;
+                    Assert.IsTrue(tyler.SharingLight && tyler.shareLight.enabled);
+                    Assert.AreEqual(0f, tyler.soul.Energy.Current);
+                }
                 stage.Clear();
+                if (stage.shareLight) Assert.IsFalse(tyler.SharingLight || tyler.shareLight.enabled);
+                if (lightStage != null) lightStage.Clear();
                 yield return null;
                 Assert.IsTrue(tyler.enabled && tyler.GetComponent<NavMeshAgent>().isOnNavMesh);
             }

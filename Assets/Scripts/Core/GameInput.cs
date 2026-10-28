@@ -12,7 +12,11 @@ namespace TiffanyGame
         public static bool? RunOverride;
         public static Vector2? AimOverride;
         public static bool? InteractOverride;
+        public static bool? LightToggleOverride;
         public static bool? FlashOverride;
+        public static bool? KindleOverride;
+        public static bool? PoltergeistOverride;
+        public static bool? FadeOverride;
 
         static bool commandWasPressed;
         static FocusClickFilter focusClickFilter = new FocusClickFilter(true, float.NegativeInfinity, false);
@@ -41,7 +45,11 @@ namespace TiffanyGame
             RunOverride = null;
             AimOverride = null;
             InteractOverride = null;
+            LightToggleOverride = null;
             FlashOverride = null;
+            KindleOverride = null;
+            PoltergeistOverride = null;
+            FadeOverride = null;
         }
 
         static bool CommandHeld(Keyboard keyboard) =>
@@ -128,21 +136,37 @@ namespace TiffanyGame
             }
         }
 
-        public static bool LightTogglePressed => KeyPressed(Key.F) ||
-            Mouse.current?.rightButton.wasPressedThisFrame == true || Gamepad.current?.buttonNorth.wasPressedThisFrame == true;
+        public static bool LightTogglePressed => LightToggleOverride ?? (KeyPressed(Key.F) ||
+            Mouse.current?.rightButton.wasPressedThisFrame == true || Gamepad.current?.buttonNorth.wasPressedThisFrame == true);
 
         public static bool FlashPressed => FlashOverride ??
             (focusClickFilter.Accept(Mouse.current?.leftButton.wasPressedThisFrame == true, Time.realtimeSinceStartup) ||
             Gamepad.current?.rightTrigger.wasPressedThisFrame == true);
 
-        public static bool KindlePressed => KeyPressed(Key.Q) || Gamepad.current?.buttonWest.wasPressedThisFrame == true;
+        public static bool KindlePressed => KindleOverride ??
+            (KeyPressed(Key.Q) || Gamepad.current?.buttonWest.wasPressedThisFrame == true);
 
-        public static bool PoltergeistPressed => KeyPressed(Key.E) || Gamepad.current?.buttonEast.wasPressedThisFrame == true;
+        public static bool PoltergeistPressed => PoltergeistOverride ??
+            (KeyPressed(Key.E) || Gamepad.current?.buttonEast.wasPressedThisFrame == true);
 
-        public static bool FadePressed => KeyPressed(Key.R) || Gamepad.current?.rightShoulder.wasPressedThisFrame == true;
+        public static bool FadePressed => FadeOverride ??
+            (KeyPressed(Key.R) || Gamepad.current?.rightShoulder.wasPressedThisFrame == true);
 
         public static bool InteractPressed => InteractOverride ??
             (KeyPressed(Key.Space) || Gamepad.current?.buttonSouth.wasPressedThisFrame == true);
+
+        public static bool StartPressed
+        {
+            get
+            {
+                bool clicked = Mouse.current?.leftButton.wasPressedThisFrame == true;
+                // El clic de inicio también cuenta como primer clic de foco en WebGL.
+                if (clicked) focusClickFilter.Accept(true, Time.realtimeSinceStartup);
+                return KeyPressed(Key.Space) || KeyPressed(Key.Enter) || clicked ||
+                    Gamepad.current?.startButton.wasPressedThisFrame == true ||
+                    Gamepad.current?.buttonSouth.wasPressedThisFrame == true;
+            }
+        }
 
         public static bool NotebookPressed => KeyPressed(Key.Tab) || Gamepad.current?.selectButton.wasPressedThisFrame == true;
 

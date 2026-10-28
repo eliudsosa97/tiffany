@@ -1,0 +1,136 @@
+{
+  "id": 1,
+  "duration": 12,
+  "girl": {
+    "position": {"x": 0, "y": 0, "z": 0},
+    "rotation": {"x": 0, "y": 0, "z": 0},
+    "scale": {"x": 1, "y": 1, "z": 1},
+    "appear": 0,
+    "disappear": 10.8,
+    "points": [
+      {"time": 0, "position": {"x": 0, "y": 0, "z": -0.6}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 0.58, "z": 1}},
+      {"time": 2, "position": {"x": 0, "y": 0, "z": -0.6}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 0.58, "z": 1}},
+      {"time": 3, "position": {"x": 0, "y": 0, "z": -0.6}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 5.8, "position": {"x": 0, "y": 0, "z": -0.6}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 6.4, "position": {"x": 0, "y": 0, "z": -0.6}, "rotation": {"x": 0, "y": 35, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 10.6, "position": {"x": 3.5, "y": 0, "z": 4.8}, "rotation": {"x": 0, "y": 35, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}}
+    ]
+  },
+  "tyler": {
+    "position": {"x": 0, "y": 0, "z": 0},
+    "rotation": {"x": 0, "y": 0, "z": 0},
+    "scale": {"x": 1, "y": 1, "z": 1},
+    "appear": 0,
+    "disappear": 7.4,
+    "points": [
+      {"time": 0, "position": {"x": 1, "y": 0, "z": -0.4}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 0.5, "z": 1}},
+      {"time": 3, "position": {"x": 1, "y": 0, "z": -0.4}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 0.5, "z": 1}},
+      {"time": 3.4, "position": {"x": 1, "y": 0, "z": -0.4}, "rotation": {"x": 0, "y": 35, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 4.4, "position": {"x": 1, "y": 0, "z": -0.4}, "rotation": {"x": 0, "y": 35, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 7.2, "position": {"x": 4, "y": 0, "z": 4.8}, "rotation": {"x": 0, "y": 35, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}}
+    ]
+  },
+  "subtitles": [
+    {"time": 5.8, "duration": 2, "text": "¡Tyler!"}
+  ],
+  "sounds": [
+    {
+      "clip": "bark_1",
+      "time": 3.6,
+      "duration": 0.5,
+      "pitch": 1,
+      "volume": 0.8,
+      "panStereo": 0,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "copies": []
+    }
+  ],
+  "props": [
+    {
+      "type": "grave",
+      "parent": "",
+      "position": {"x": 0, "y": 0, "z": 1},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "flowers",
+      "parent": "",
+      "position": {"x": 0, "y": 0.12, "z": 0.6},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "ball",
+      "parent": "",
+      "position": {"x": 1.3, "y": 0.12, "z": -0.1},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "arm",
+      "parent": "girl",
+      "position": {"x": 0.25, "y": 0.86, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": [
+        {"time": 0, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": -60, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 2, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": -60, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 3, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 140}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 3.4, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 165}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 3.8, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 130}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 4.2, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 165}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 4.8, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 6.4, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": -45, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 10.6, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": -45, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}}
+      ]
+    },
+    {
+      "type": "arm",
+      "parent": "girl",
+      "position": {"x": -0.25, "y": 0.86, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": [
+        {"time": 0, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": -50, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 2, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": -50, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 3, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}}
+      ]
+    },
+    {
+      "type": "shoe",
+      "parent": "girl",
+      "position": {"x": -0.12, "y": 0.07, "z": 0.07},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "shoe",
+      "parent": "girl",
+      "position": {"x": 0.12, "y": 0.07, "z": 0.07},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    }
+  ],
+  "blackout": {"time": 0, "duration": 0}
+}

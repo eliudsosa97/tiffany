@@ -5,10 +5,14 @@ using UnityEngine.UI;
 
 namespace TiffanyGame
 {
+    [DefaultExecutionOrder(-200)]
     public sealed class GameInterface : MonoBehaviour
     {
+        public static bool SkipTitle;
+
         public TextAsset[] memoryAssets;
         public Texture2D[] drawings;
+        public GameObject titlePanel;
         public GameObject pausePanel;
         public GameObject notebookPanel;
         public RawImage drawingImage;
@@ -19,6 +23,8 @@ namespace TiffanyGame
         public Text notebookEmpty;
         public Text noticeText;
         public Text subtitleText;
+        public Image endingPanel;
+        public Text endingText;
 
         MemoryCatalog catalog;
         Dictionary<string, Texture2D> textures;
@@ -27,20 +33,24 @@ namespace TiffanyGame
         NotebookPages pages;
         TimedLine notice;
         TimedLine subtitle;
+        TimedLine echoSubtitle;
+        bool showingEcho;
         InterfaceScreen? appliedScreen;
         bool? appliedFrozen;
         bool pageDirty = true;
         int noticeVersion = -1;
         int subtitleVersion = -1;
+        int startFrame = -1;
 
         public InterfaceScreen Screen => flow.Screen;
-        public bool IsFrozen => flow.IsFrozen;
+        public bool IsFrozen => flow.IsFrozen || Time.frameCount == startFrame;
 
         void Awake()
         {
-            flow = new InterfaceFlow();
+            flow = new InterfaceFlow(!SkipTitle);
             notice = new TimedLine();
             subtitle = new TimedLine();
+            echoSubtitle = new TimedLine();
             pausePanel.SetActive(false);
             notebookPanel.SetActive(false);
             LoadMemories(memoryAssets, drawings);
@@ -69,8 +79,15 @@ namespace TiffanyGame
 
         void Update()
         {
-            if (GameInput.PausePressed) flow.PressPause();
-            if (GameInput.NotebookPressed) flow.PressNotebook();
+            if (Screen == InterfaceScreen.Title)
+            {
+                if (GameInput.StartPressed) StartGame();
+            }
+            else if (Time.frameCount != startFrame)
+            {
+                if (GameInput.PausePressed) flow.PressPause();
+                if (GameInput.NotebookPressed) flow.PressNotebook();
+            }
             ApplyScreen();
             if (Screen == InterfaceScreen.Notebook)
             {
@@ -80,8 +97,12 @@ namespace TiffanyGame
 
             if (!IsFrozen)
             {
-                notice.Tick(Time.deltaTime);
-                subtitle.Tick(Time.deltaTime);
+                if (showingEcho) echoSubtitle.Tick(Time.deltaTime);
+                else
+                {
+                    notice.Tick(Time.deltaTime);
+                    subtitle.Tick(Time.deltaTime);
+                }
             }
             RefreshLines();
         }
@@ -108,20 +129,60 @@ namespace TiffanyGame
 
         public void ShowSubtitle(string text, float seconds)
         {
-            subtitle.Enqueue(text, seconds);
+            (showingEcho ? echoSubtitle : subtitle).Enqueue(text, seconds);
             RefreshLines();
         }
 
         public void ReplaceSubtitle(string text, float seconds)
         {
-            subtitle.Clear();
+            (showingEcho ? echoSubtitle : subtitle).Clear();
             ShowSubtitle(text, seconds);
+        }
+
+        public void BeginEcho()
+        {
+            showingEcho = true;
+            echoSubtitle.Clear();
+            RefreshEchoLines();
+        }
+
+        public void EndEcho()
+        {
+            showingEcho = false;
+            echoSubtitle.Clear();
+            RefreshEchoLines();
+        }
+
+        void RefreshEchoLines()
+        {
+            subtitleVersion = -1;
+            appliedScreen = null;
+            ApplyScreen();
+            RefreshLines();
+        }
+
+        public void StartGame()
+        {
+            if (Screen != InterfaceScreen.Title) return;
+            startFrame = Time.frameCount;
+            flow.PressStart();
+            ApplyScreen();
         }
 
         public void TogglePause()
         {
             flow.PressPause();
             ApplyScreen();
+        }
+
+        public void ShowEnding(EndingRules ending)
+        {
+            flow.SetEnding(ending.Stage != EndingStage.Idle);
+            ApplyScreen();
+            endingPanel.gameObject.SetActive(ending.Stage != EndingStage.Idle);
+            endingPanel.color = new Color(1f, 1f, 1f, ending.FadeAlpha);
+            endingText.text = ending.Stage == EndingStage.Credits ? InterfaceTexts.EndingCredits
+                : ending.Stage == EndingStage.Text ? InterfaceTexts.EndingStory : string.Empty;
         }
 
         public void ToggleNotebook()
@@ -157,10 +218,12 @@ namespace TiffanyGame
                 appliedFrozen = IsFrozen;
             }
             if (appliedScreen == Screen) return;
+            if (titlePanel != null) titlePanel.SetActive(Screen == InterfaceScreen.Title);
             pausePanel.SetActive(Screen == InterfaceScreen.Paused);
             notebookPanel.SetActive(Screen == InterfaceScreen.Notebook);
-            noticeText.gameObject.SetActive(Screen != InterfaceScreen.Notebook);
-            subtitleText.gameObject.SetActive(Screen != InterfaceScreen.Notebook);
+            bool showLines = Screen == InterfaceScreen.Playing || Screen == InterfaceScreen.Paused;
+            noticeText.gameObject.SetActive(!showingEcho && showLines);
+            subtitleText.gameObject.SetActive(showLines);
             appliedScreen = Screen;
             pageDirty = true;
             RefreshNotebook();
@@ -202,10 +265,11 @@ namespace TiffanyGame
                 noticeText.text = notice.Text;
                 noticeVersion = notice.Version;
             }
-            if (subtitleVersion != subtitle.Version)
+            var line = showingEcho ? echoSubtitle : subtitle;
+            if (subtitleVersion != line.Version)
             {
-                subtitleText.text = subtitle.Text;
-                subtitleVersion = subtitle.Version;
+                subtitleText.text = line.Text;
+                subtitleVersion = line.Version;
             }
         }
 

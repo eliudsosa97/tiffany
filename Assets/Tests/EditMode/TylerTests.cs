@@ -98,6 +98,32 @@ namespace TiffanyGame.Tests
             Check(2.9f, TylerReaction.None);
         }
 
+        [Test]
+        public void MimicGrowlExpiresAndCannotRetriggerBeforeMinimumInterval()
+        {
+            inputs.WitchDistance = 25f;
+            inputs.WitchForm = WitchForm.Grounded;
+            Check(0f, TylerReaction.None);
+            inputs.HeardMimic = true;
+            Check(0f, TylerReaction.Growl);
+            Check(Tyler.MimicDuration * 0.5f, TylerReaction.Growl);
+            Check(Tyler.MimicDuration * 0.5f, TylerReaction.None);
+            Check(Tyler.MimicInterval - Tyler.MimicDuration - 0.25f, TylerReaction.None);
+            Check(0.25f, TylerReaction.Growl);
+            inputs.HeardMimic = false;
+            Check(Tyler.MimicDuration, TylerReaction.None);
+        }
+
+        [TestCase(30f)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NaN)]
+        public void DistantOrMissingMimicDoesNotGrowl(float distance)
+        {
+            inputs.WitchDistance = distance;
+            inputs.HeardMimic = true;
+            Check(0f, TylerReaction.None);
+        }
+
         private void Check(float dt, TylerReaction expected)
         {
             Assert.AreEqual(expected, tyler.Tick(dt, in inputs));

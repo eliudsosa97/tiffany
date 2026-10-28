@@ -1,0 +1,156 @@
+{
+  "id": 4,
+  "duration": 12,
+  "girl": {
+    "position": {"x": 0, "y": 0, "z": 0},
+    "rotation": {"x": 0, "y": 0, "z": 0},
+    "scale": {"x": 1, "y": 1, "z": 1},
+    "appear": 0,
+    "disappear": 11.4,
+    "points": [
+      {"time": 0, "position": {"x": 0, "y": 0, "z": -3.2}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 3, "position": {"x": 0, "y": 0, "z": -0.2}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 4, "position": {"x": 0, "y": -0.22, "z": -0.2}, "rotation": {"x": -8, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 4.6, "position": {"x": 0, "y": -0.22, "z": -0.2}, "rotation": {"x": -12, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 5.2, "position": {"x": 0, "y": 0, "z": -0.5}, "rotation": {"x": -10, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 6.1, "position": {"x": 0, "y": 0, "z": -1.3}, "rotation": {"x": -8, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 6.8, "position": {"x": 0.3, "y": 0, "z": -1.5}, "rotation": {"x": 0, "y": 45, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 7.4, "position": {"x": 0.65, "y": 0.07, "z": -0.9}, "rotation": {"x": 0, "y": 45, "z": 6}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 8, "position": {"x": 1, "y": 0, "z": -0.3}, "rotation": {"x": 0, "y": 45, "z": -5}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 8.6, "position": {"x": 1.4, "y": 0.07, "z": 0.3}, "rotation": {"x": 0, "y": 45, "z": 6}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 9.2, "position": {"x": 1.8, "y": 0, "z": 0.9}, "rotation": {"x": 0, "y": 45, "z": -5}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 9.8, "position": {"x": 2.2, "y": 0.07, "z": 1.5}, "rotation": {"x": 0, "y": 45, "z": 6}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 10.4, "position": {"x": 2.6, "y": 0, "z": 2.1}, "rotation": {"x": 0, "y": 45, "z": -5}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 11.2, "position": {"x": 3.2, "y": 0.07, "z": 2.8}, "rotation": {"x": 0, "y": 45, "z": 6}, "scale": {"x": 1, "y": 1, "z": 1}}
+    ]
+  },
+  "tyler": {
+    "position": {"x": 0, "y": 0, "z": 0},
+    "rotation": {"x": 0, "y": 0, "z": 0},
+    "scale": {"x": 1, "y": 1, "z": 1},
+    "appear": 0,
+    "disappear": 0,
+    "points": []
+  },
+  "subtitles": [],
+  "sounds": [
+    {
+      "clip": "human_bark",
+      "time": 5.4,
+      "duration": 0.28,
+      "pitch": 1,
+      "volume": 0.8,
+      "panStereo": 0,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "copies": []
+    },
+    {
+      "clip": "bark_4",
+      "time": 5.4,
+      "duration": 0.8,
+      "pitch": 0.5,
+      "volume": 0.35,
+      "panStereo": 0,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "copies": []
+    },
+    {
+      "clip": "human_bark",
+      "time": 8.5,
+      "duration": 0.3,
+      "pitch": 0.92,
+      "volume": 0.4,
+      "panStereo": 0,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "copies": [
+        {"delay": 0.3, "volume": 0.15, "panStereo": 0.6, "pitch": 0.85}
+      ]
+    }
+  ],
+  "props": [
+    {
+      "type": "door",
+      "parent": "",
+      "position": {"x": 0, "y": 0, "z": -1.8},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "mud",
+      "parent": "",
+      "position": {"x": 0, "y": 0.02, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "shoe",
+      "parent": "",
+      "position": {"x": 0.12, "y": 0.05, "z": -0.13},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 4.6,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "arm",
+      "parent": "girl",
+      "position": {"x": 0.25, "y": 0.86, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": [
+        {"time": 0, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 4.6, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 5.4, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": -25, "y": 0, "z": 65}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 6.8, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": -20, "y": 0, "z": 15}, "scale": {"x": 1, "y": 1, "z": 1}}
+      ]
+    },
+    {
+      "type": "arm",
+      "parent": "girl",
+      "position": {"x": -0.25, "y": 0.86, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": [
+        {"time": 0, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 4.6, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 5.4, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": -25, "y": 0, "z": -65}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 6.8, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": -20, "y": 0, "z": -15}, "scale": {"x": 1, "y": 1, "z": 1}}
+      ]
+    },
+    {
+      "type": "shoe",
+      "parent": "girl",
+      "position": {"x": -0.12, "y": 0.07, "z": 0.07},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "shoe",
+      "parent": "girl",
+      "position": {"x": 0.12, "y": 0.07, "z": 0.07},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 4.6,
+      "points": []
+    }
+  ],
+  "blackout": {"time": 0, "duration": 0}
+}
