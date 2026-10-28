@@ -5,6 +5,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 namespace TiffanyGame.EditorTools
@@ -25,14 +26,15 @@ namespace TiffanyGame.EditorTools
             CreateMoon();
             var spawn = BuildTestZone();
             var player = CreatePlayer(spawn, out var playerLight);
-            CreateCamera(player);
+            var viewCamera = CreateCamera(player);
             playerLight.witch = BuildWitch(spawn.parent, player.transform);
-            BuildTyler(spawn.parent, player.transform);
+            var tyler = BuildTyler(spawn.parent, player.transform);
             var storm = StormBuilder.BuildStorm(player.transform, spawn);
             BuildCandles(spawn.parent, player.GetComponent<PlayerSoul>(), storm);
-            BuildInterface();
+            var gameInterface = BuildInterface();
             BuildLightStops(spawn.parent);
             HidingBuilder.BuildHideTest(spawn.parent, player);
+            MemoryBuilder.Build(spawn.parent, player, gameInterface, tyler, viewCamera);
             var candleStop = new GameObject("Candle 1 Safe");
             candleStop.transform.SetParent(spawn.parent, false);
             candleStop.transform.position = SurfacePoint(-5f, 1.5f);
@@ -284,7 +286,7 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static void BuildTyler(Transform zoneRoot, Transform player)
+        static TylerController BuildTyler(Transform zoneRoot, Transform player)
         {
             var tyler = new GameObject("Tyler");
             tyler.transform.SetParent(zoneRoot, false);
@@ -304,11 +306,6 @@ namespace TiffanyGame.EditorTools
             controller.voice = tyler.AddComponent<AudioSource>();
             controller.voice.spatialBlend = 0f;
             controller.voice.playOnAwake = false;
-            var marker = new GameObject("Memory Marker").transform;
-            marker.SetParent(zoneRoot, false);
-            marker.position = SurfacePoint(15f, 20f);
-            controller.nextMemory = marker;
-
             var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl" };
             var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl };
             for (int i = 0; i < reactions.Length; i++)
@@ -325,7 +322,7 @@ namespace TiffanyGame.EditorTools
                 Vector3 position = stage.GetTylerPosition(stop.transform);
                 Vector3 target = TylerPoses.For(stage.reaction).FaceWitch
                     ? stop.transform.position + stop.transform.rotation * stage.witchOffset
-                    : stage.reaction == TylerReaction.Guide ? marker.position : stop.transform.position;
+                    : stage.reaction == TylerReaction.Guide ? SurfacePoint(15f, 20f) : stop.transform.position;
                 Vector3 direction = Vector3.ProjectOnPlane(target - position, Vector3.up).normalized;
                 Vector3 side = Vector3.Cross(Vector3.up, direction);
                 Vector3 toPlayer = Vector3.ProjectOnPlane(stop.transform.position - position, Vector3.up);
@@ -336,9 +333,10 @@ namespace TiffanyGame.EditorTools
                 Vector3 focus = position + toPlayer * 0.25f + Vector3.up * 0.4f;
                 capture.cameraRotation = Quaternion.LookRotation(focus - capture.cameraPosition);
             }
+            return controller;
         }
 
-        static Vector3 SurfacePoint(float x, float alongSlope)
+        internal static Vector3 SurfacePoint(float x, float alongSlope)
         {
             float angle = SlopeAngle * Mathf.Deg2Rad;
             float z = alongSlope * Mathf.Cos(angle);
@@ -399,11 +397,12 @@ namespace TiffanyGame.EditorTools
             return player.AddComponent<PlayerController>();
         }
 
-        static void CreateCamera(PlayerController player)
+        static Camera CreateCamera(PlayerController player)
         {
             var cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
             var camera = cameraObject.AddComponent<Camera>();
+            cameraObject.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = false;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = RenderSettings.fogColor;
             camera.farClipPlane = 80f;
@@ -413,6 +412,7 @@ namespace TiffanyGame.EditorTools
             camera.fieldOfView = follow.fieldOfView;
             follow.Snap();
             player.viewCamera = camera;
+            return camera;
         }
 
         static GameInterface BuildInterface()
