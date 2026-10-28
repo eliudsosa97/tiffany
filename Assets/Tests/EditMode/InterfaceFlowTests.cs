@@ -24,11 +24,11 @@ namespace TiffanyGame.Tests
             Assert.That(flow.IsFrozen, Is.EqualTo(frozen));
         }
 
-        [TestCase(Power.Light, "Tu luz te obedece")]
-        [TestCase(Power.Candles, "Puedes encender veladoras")]
-        [TestCase(Power.Poltergeist, "Puedes mover objetos")]
-        [TestCase(Power.Vanish, "Puedes desvanecerte")]
-        [TestCase(Power.Manifest, "Puedes manifestarte")]
+        [TestCase(Power.Light, "Tu luz te obedece · F prende y apaga, clic para el destello")]
+        [TestCase(Power.Candles, "Puedes encender veladoras · Q")]
+        [TestCase(Power.Poltergeist, "Puedes mover cosas · E")]
+        [TestCase(Power.Vanish, "Puedes desvanecerte · R")]
+        [TestCase(Power.Manifest, "Tu familia puede verte")]
         public void PowerNoticeMatchesPower(Power power, string expected) =>
             Assert.That(InterfaceTexts.PowerNotice(power), Is.EqualTo(expected));
 
