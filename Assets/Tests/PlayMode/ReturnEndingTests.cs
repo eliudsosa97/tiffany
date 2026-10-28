@@ -64,7 +64,7 @@ namespace TiffanyGame.Tests
             {
                 LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo {id} encontrado");
                 Assert.IsTrue(collector.Collect(id));
-                Assert.AreEqual(Chapter.Ravine, witch.chapter);
+                Assert.AreEqual(Chapter.Cemetery, witch.chapter);
             }
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo 5 encontrado");
@@ -101,6 +101,10 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator FifthMemoryDuringLandingStartsReturnNearTheHut()
         {
+            MovePlayer(route.GetChild(4).position - Vector3.forward * 12f);
+            yield return null;
+            yield return null;
+            Assert.AreEqual(Chapter.WitchHut, witch.chapter);
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Landing");
             Object.FindAnyObjectByType<Storm>().raining = true;
             float deadline = Time.realtimeSinceStartup + 2f;
@@ -225,6 +229,11 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(EndingStage.Fade, ending.Rules.Stage);
             Assert.IsFalse(witch.gameObject.activeSelf);
             Assert.IsTrue(ui.endingPanel.gameObject.activeInHierarchy);
+            Assert.IsFalse(ui.titlePanel.activeSelf);
+            Assert.IsFalse(ui.pausePanel.activeSelf);
+            Assert.IsFalse(ui.notebookPanel.activeSelf);
+            Assert.IsFalse(ui.noticeText.gameObject.activeSelf);
+            Assert.IsFalse(ui.subtitleText.gameObject.activeSelf);
             Assert.AreEqual(InterfaceScreen.Ending, ui.Screen);
             Assert.AreEqual(0f, Time.timeScale);
             Assert.IsEmpty(ui.endingText.text);
@@ -233,7 +242,12 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(Vector2.one, ui.endingPanel.rectTransform.anchorMax);
             ui.TogglePause();
             ui.ToggleNotebook();
+            ui.StartGame();
             Assert.AreEqual(InterfaceScreen.Ending, ui.Screen);
+            Assert.IsTrue(ui.endingPanel.gameObject.activeInHierarchy);
+            Assert.IsFalse(ui.titlePanel.activeSelf);
+            Assert.IsTrue(ui.IsFrozen);
+            Assert.IsTrue(AudioListener.pause);
             float deadline = Time.realtimeSinceStartup + EndingRules.FadeSeconds + 2f;
             while (ending.Rules.Stage == EndingStage.Fade && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.AreEqual(EndingStage.Text, ending.Rules.Stage);

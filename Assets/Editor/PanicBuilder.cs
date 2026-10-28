@@ -1,5 +1,5 @@
-using UnityEditor;
 using UnityEngine;
+using static TiffanyGame.EditorTools.AudioBuilder;
 
 namespace TiffanyGame.EditorTools
 {
@@ -29,15 +29,6 @@ namespace TiffanyGame.EditorTools
                 stop.AddComponent<LightCaptureStage>();
                 stop.AddComponent<PanicCaptureStage>().level = levels[i];
             }
-        }
-
-        private static AudioClip LoadClip(string name)
-        {
-            string path = $"Assets/Audio/Sfx/{name}.wav";
-            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
-            if (clip == null)
-                throw new System.InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el audio de pánico: {path}");
-            return clip;
         }
     }
 }

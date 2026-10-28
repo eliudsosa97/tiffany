@@ -9,7 +9,7 @@ namespace TiffanyGame
     {
         public Transform player;
         public Vector3[] skyRoute;
-        public Chapter chapter = Chapter.Ravine;
+        public Chapter chapter = Chapter.Stable;
         public WitchSenseProfile senses = new WitchSenseProfile();
         public GameObject figure;
         public GameObject figureStand;
@@ -84,7 +84,7 @@ namespace TiffanyGame
                 Vector3 fallback = transform.position;
                 fallback.y = WitchMotion.CruiseHeight(skyRoute, fallback, fallback.y + 12f);
                 transform.position = WitchMotion.FarthestRoutePoint(skyRoute,
-                    player != null ? player.position : transform.position, fallback);
+                    player != null ? player.position : transform.position, fallback) + Vector3.up * profile.FlightHeightOffset;
             }
             ApplyView();
             Debug.Log($"{GameInfo.LogPrefix} Bruja: {(profile.GroundChase ? "retoma la persecución a pie" : "vuelve a la ruta")}");
@@ -94,6 +94,19 @@ namespace TiffanyGame
         {
             chapter = Chapter.Return;
             ResetBrain();
+        }
+
+        public void SetChapter(Chapter next)
+        {
+            if (next <= chapter) return;
+            if (next == Chapter.Return)
+            {
+                BeginReturn();
+                return;
+            }
+            profile = WitchProfiles.For(next);
+            brain.SetProfile(profile);
+            chapter = next;
         }
 
         private void InitializeBrain()
@@ -191,7 +204,8 @@ namespace TiffanyGame
             else if (Decision.State == WitchState.TakingOff)
             {
                 verticalTarget = entryPosition;
-                verticalTarget.y = WitchMotion.CruiseHeight(skyRoute, entryPosition, entryPosition.y + 12f);
+                verticalTarget.y = WitchMotion.CruiseHeight(skyRoute, entryPosition, entryPosition.y + 12f)
+                    + profile.FlightHeightOffset;
             }
             else if (Decision.State == WitchState.Caught)
             {

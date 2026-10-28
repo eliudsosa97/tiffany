@@ -5,6 +5,58 @@ namespace TiffanyGame.Tests
 {
     public sealed class InterfaceFlowTests
     {
+        [TestCase(false, InterfaceScreen.Playing)]
+        [TestCase(true, InterfaceScreen.Title)]
+        public void ConstructorSelectsInitialScreen(bool startOnTitle, InterfaceScreen screen)
+        {
+            var flow = new InterfaceFlow(startOnTitle);
+            Assert.That(flow.Screen, Is.EqualTo(screen));
+            Assert.That(flow.IsFrozen, Is.EqualTo(startOnTitle));
+        }
+
+        [TestCase("")]
+        [TestCase("P")]
+        [TestCase("N")]
+        [TestCase("PNNP")]
+        public void TitleStaysFrozenUntilStart(string inputs)
+        {
+            var flow = new InterfaceFlow(true);
+            foreach (char input in inputs)
+            {
+                if (input == 'P') flow.PressPause();
+                else flow.PressNotebook();
+            }
+            Assert.That(flow.Screen, Is.EqualTo(InterfaceScreen.Title));
+            Assert.That(flow.IsFrozen, Is.True);
+            flow.PressStart();
+            Assert.That(flow.Screen, Is.EqualTo(InterfaceScreen.Playing));
+            Assert.That(flow.IsFrozen, Is.False);
+        }
+
+        [TestCase(InterfaceScreen.Playing)]
+        [TestCase(InterfaceScreen.Paused)]
+        [TestCase(InterfaceScreen.Notebook)]
+        [TestCase(InterfaceScreen.Ending)]
+        public void StartDoesNothingOutsideTitle(InterfaceScreen screen)
+        {
+            var flow = new InterfaceFlow();
+            if (screen == InterfaceScreen.Paused) flow.PressPause();
+            if (screen == InterfaceScreen.Notebook) flow.PressNotebook();
+            if (screen == InterfaceScreen.Ending) flow.SetEnding(true);
+            flow.PressStart();
+            Assert.That(flow.Screen, Is.EqualTo(screen));
+            Assert.That(flow.IsFrozen, Is.EqualTo(screen != InterfaceScreen.Playing));
+        }
+
+        [Test]
+        public void InactiveEndingDoesNotDismissTitle()
+        {
+            var flow = new InterfaceFlow(true);
+            flow.SetEnding(false);
+            Assert.That(flow.Screen, Is.EqualTo(InterfaceScreen.Title));
+            Assert.That(flow.IsFrozen, Is.True);
+        }
+
         [TestCase("", InterfaceScreen.Playing, false)]
         [TestCase("P", InterfaceScreen.Paused, true)]
         [TestCase("PP", InterfaceScreen.Playing, false)]

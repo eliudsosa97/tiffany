@@ -30,6 +30,11 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/wind.wav` | [Halloween - Graveyard At Night Howling Wind](https://freesound.org/s/159509/) | mistersherlock | CC0 |
 | `Assets/Audio/Sfx/crickets.wav` | [Crickets At Night - Clean sound](https://freesound.org/s/522298/) | Defelozedd94 | CC0 |
 | `Assets/Audio/Sfx/step_1.wav` a `step_4.wav` | [Footsteps_6_Dirt_shoe](https://freesound.org/s/353799/) | monte32 | CC0 |
+| `Assets/Audio/Sfx/step_grass_1.wav` a `step_grass_4.wav` | [footsteps grass](https://freesound.org/s/206030/) | Yuval | CC0 |
+| `Assets/Audio/Sfx/step_slab_1.wav` a `step_slab_4.wav` | [Footsteps - Stone, Rock, Concrete, Cement](https://freesound.org/s/813622/) | SecureSubset | CC0 |
+| `Assets/Audio/Sfx/step_gravel_1.wav` a `step_gravel_4.wav` | [Footsteps Dirt Gravel](https://freesound.org/s/352870/) | PotatokingXII | CC0 |
+| `Assets/Audio/Sfx/step_leaves_1.wav` a `step_leaves_4.wav` | [Forest dry leaves walk.](https://freesound.org/s/274833/) | rempen | CC0 |
+| `Assets/Audio/Sfx/step_branches_1.wav` a `step_branches_4.wav` | [Foot on branches and twigs](https://freesound.org/s/610126/) | xkeril | CC0 |
 | `Assets/Audio/Sfx/monster_step_1.wav` | [Monster Footsteps 01](https://freesound.org/s/339439/) | juansua990 | CC0 |
 | `Assets/Audio/Sfx/fireball.wav` | [Fireball](https://freesound.org/s/683179/) | NearTheAtmoshphere | CC0 |
 | `Assets/Audio/Sfx/cackle_1.wav` | [Witch's Laugh](https://freesound.org/s/348142/) | NikoMyth | CC0 |

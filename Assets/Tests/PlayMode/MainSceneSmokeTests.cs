@@ -50,6 +50,18 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(player);
             Assert.IsNotNull(player.GetComponent<PlayerController>());
             Assert.IsNotNull(player.GetComponent<CharacterController>());
+            var footsteps = player.GetComponent<PlayerFootsteps>();
+            Assert.IsNotNull(footsteps);
+            Assert.IsNotNull(footsteps.source);
+            Assert.AreEqual(0f, footsteps.source.spatialBlend);
+            Assert.IsFalse(footsteps.source.playOnAwake);
+            Assert.AreNotSame(player.GetComponent<Heartbeat>().source, footsteps.source);
+            foreach (var clips in new[] { footsteps.dirt, footsteps.grass, footsteps.slab,
+                footsteps.gravel, footsteps.leaves, footsteps.branches })
+            {
+                Assert.That(clips, Has.Length.EqualTo(4));
+                Assert.That(clips, Has.All.Not.Null);
+            }
             var witch = Object.FindAnyObjectByType<WitchController>();
             Assert.IsNotNull(witch);
             var light = player.GetComponent<PlayerLight>();
@@ -253,12 +265,15 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator WalkingInMainScenePublishesStepsAndCameraFollows()
         {
+            Object.FindAnyObjectByType<TylerController>().enabled = false;
             var player = GameObject.FindGameObjectWithTag("Player");
             Assert.IsNotNull(player);
             var viewCamera = Camera.main;
             Assert.IsNotNull(viewCamera);
             var initialPlayerPosition = player.transform.position;
             var initialCameraPosition = viewCamera.transform.position;
+            var footsteps = player.GetComponent<PlayerFootsteps>();
+            int initialSteps = footsteps.Steps;
 
             GameInput.MoveOverride = Vector2.up;
 
@@ -269,6 +284,7 @@ namespace TiffanyGame.Tests
 
             Assert.Greater(HorizontalDistance(player.transform.position, initialPlayerPosition), 2f);
             Assert.That(steps.Count, Is.GreaterThanOrEqualTo(3));
+            Assert.AreEqual(steps.Count, footsteps.Steps - initialSteps);
             foreach (var step in steps) Assert.Greater(step.Radius, 0f);
             Assert.Greater(HorizontalDistance(viewCamera.transform.position, initialCameraPosition), 0f);
             Assert.That(HorizontalDistance(viewCamera.transform.position, player.transform.position),

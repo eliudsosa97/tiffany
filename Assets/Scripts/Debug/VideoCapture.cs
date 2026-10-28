@@ -44,6 +44,8 @@ namespace TiffanyGame
         IEnumerator Start()
         {
             if (string.IsNullOrEmpty(directory)) yield break;
+            var gameInterface = FindAnyObjectByType<GameInterface>();
+            if (gameInterface != null) gameInterface.StartGame();
             yield return null;
             Directory.CreateDirectory(directory);
             previousCaptureFramerate = Time.captureFramerate;

@@ -186,7 +186,7 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator FlashInsideConeDoesNotReportStunForFlyingWitch()
         {
-            CreateWitch(Chapter.Grave);
+            CreateWitch(Chapter.Cemetery);
             yield return null;
             Assert.AreEqual(WitchForm.Flying, controller.Decision.Form);
             Assert.IsTrue(controller.playerLightOn);
@@ -243,7 +243,7 @@ namespace TiffanyGame.Tests
         public IEnumerator CaptureRestoresStateAndHandlesScheduledFlash(
             [ValueSource(nameof(CaptureFlashCases))] bool clearBeforeFlash)
         {
-            CreateWitch(Chapter.Grave);
+            CreateWitch(Chapter.Cemetery);
             yield return null;
             playerLight.Toggle();
             var stop = new GameObject("Light Capture");
@@ -322,7 +322,7 @@ namespace TiffanyGame.Tests
         {
             player.SetActive(false);
             CreatePlayer(true);
-            CreateWitch(Chapter.Grave);
+            CreateWitch(Chapter.Cemetery);
             yield return null;
             Assert.IsTrue(playerLight.State.IsOn && controller.playerLightOn);
             var volume = AddBox("Hide Volume", Vector3.up * 0.75f, Vector3.one * 1.5f)
@@ -379,7 +379,7 @@ namespace TiffanyGame.Tests
             return collider;
         }
 
-        private void CreateWitch(Chapter chapter = Chapter.Ravine)
+        private void CreateWitch(Chapter chapter = Chapter.Stable)
         {
             surface = ground.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;

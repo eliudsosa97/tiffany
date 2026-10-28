@@ -38,6 +38,7 @@ namespace TiffanyGame.EditorTools
             var viewCamera = CreateCamera(player);
             BakeNavMesh(world);
             playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute);
+            route.GetComponent<WitchChapterTracker>().witch = playerLight.witch;
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
             respawn.witch = playerLight.witch;
             respawn.overlay = caughtFade;
@@ -212,7 +213,7 @@ namespace TiffanyGame.EditorTools
         {
             var witch = new GameObject("Witch");
             witch.transform.SetParent(zoneRoot, false);
-            witch.transform.position = route[0];
+            witch.transform.position = route[0] + Vector3.up * WitchProfiles.For(Chapter.Cemetery).FlightHeightOffset;
             var agent = witch.AddComponent<NavMeshAgent>();
             agent.radius = 0.35f;
             agent.height = 2.3f;
@@ -220,7 +221,7 @@ namespace TiffanyGame.EditorTools
             var controller = witch.AddComponent<WitchController>();
             controller.player = player;
             controller.skyRoute = route;
-            controller.chapter = Chapter.Ravine;
+            controller.chapter = Chapter.Cemetery;
             controller.figure = WitchBuilder.BuildFigure(witch.transform, out var stand, out var crouch);
             controller.figureStand = stand;
             controller.figureCrouch = crouch;
@@ -488,7 +489,9 @@ namespace TiffanyGame.EditorTools
             playerLight.glow = glow.transform;
             playerLight.startOn = false;
             playerLight.pitch = 42f;
-            return player.AddComponent<PlayerController>();
+            var movement = player.AddComponent<PlayerController>();
+            AudioBuilder.BuildFootsteps(movement);
+            return movement;
         }
 
         static Camera CreateCamera(PlayerController player)
@@ -564,6 +567,16 @@ namespace TiffanyGame.EditorTools
                 new Vector2(0.12f, 0.2f), new Vector2(0.88f, 0.8f));
             ui.endingText.color = new Color(0.12f, 0.12f, 0.12f);
             ui.endingPanel.gameObject.SetActive(false);
+
+            ui.titlePanel = InterfacePanel("Title", root.transform, 0.9f);
+            var title = InterfaceText("Title", ui.titlePanel.transform, font, InterfaceTexts.Title, 108,
+                new Vector2(0.1f, 0.59f), new Vector2(0.9f, 0.79f));
+            title.color = new Color(1f, 0.87f, 0.63f);
+            InterfaceText("Start Hint", ui.titlePanel.transform, font, InterfaceTexts.StartHint, 32,
+                new Vector2(0.1f, 0.48f), new Vector2(0.9f, 0.57f));
+            var controls = InterfaceText("Controls", ui.titlePanel.transform, font, InterfaceTexts.Controls, 28,
+                new Vector2(0.1f, 0.08f), new Vector2(0.9f, 0.39f));
+            controls.lineSpacing = 1.25f;
 
             ui.memoryAssets = LoadInterfaceAssets<TextAsset>("t:TextAsset", "Assets/Data/Memories");
             ui.drawings = LoadInterfaceAssets<Texture2D>("t:Texture2D", "Assets/Art/Memories");
