@@ -19,7 +19,7 @@ namespace TiffanyGame.EditorTools
         public static Transform BuildRoute(Transform parent, PlayerController player, Storm storm,
             out Transform[] memories, out Vector3[] skyRoute)
         {
-            var route = Root("Route", parent, new Vector3(72f, 0f, 0f));
+            var route = Root("Route", parent, new Vector3(160f, 0f, 0f));
             var names = new[] { "Cemetery", "Water Plant", "Train Tracks", "Stable", "Witch Hut", "Lake", "Road", "Tiffany House" };
             var grounds = new[] { GroundType.Grass, GroundType.Slab, GroundType.Gravel, GroundType.Branches,
                 GroundType.Leaves, GroundType.Grass, GroundType.Slab, GroundType.Dirt };
@@ -27,6 +27,7 @@ namespace TiffanyGame.EditorTools
             var structure = GeneratedMaterials.Get("RouteStructure", new Color(0.4f, 0.4f, 0.4f));
             var dark = GeneratedMaterials.Get("RouteForest", new Color(0.09f, 0.09f, 0.09f));
             var bush = GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f));
+            var terrain = new RouteTerrain();
             memories = new Transform[5];
             var tracker = route.gameObject.AddComponent<WitchChapterTracker>();
             tracker.player = player.transform;
@@ -38,7 +39,7 @@ namespace TiffanyGame.EditorTools
                 if (i == 5) WaterBuilder.BuildLake(clearing, floor);
                 else Ground("Ground", clearing, Vector3.zero, new Vector2(ClearingSize, ClearingSize), grounds[i], floor);
                 BuildEdges(clearing, i);
-                if (i < names.Length - 1) BuildPath(clearing, i, floor, dark, structure);
+                if (i < names.Length - 1) BuildPath(clearing, i, floor, structure, terrain);
                 Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush);
                 if (i < memories.Length) memories[i] = Root("Memory Point", clearing, memoryPosition);
 
@@ -52,8 +53,7 @@ namespace TiffanyGame.EditorTools
                     clearing.TransformPoint(candlePosition), CandleKind.Family, true, player.GetComponent<PlayerSoul>(), storm);
             }
 
-            BuildGate(route.GetChild(7), structure);
-            Part("Cliff", route.GetChild(5), new Vector3(-12f, 3.5f, 28f), new Vector3(16f, 7f, 10f), structure);
+            TerrainBuilder.Build(route, terrain, floor, structure, dark);
             var spawn = Root("Spawn", route.GetChild(0), new Vector3(0f, 0f, -13f));
             spawn.rotation = Quaternion.LookRotation(memories[0].position - spawn.position);
             player.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
@@ -81,93 +81,28 @@ namespace TiffanyGame.EditorTools
 
         static void BuildEdges(Transform clearing, int index)
         {
-            float half = ClearingSize * 0.5f;
-            var openings = RouteLayout.Openings(index);
-            var normals = new[] { Vector3.left, Vector3.right, Vector3.back, Vector3.forward };
-            var names = new[] { "West Border", "East Border", "South Border", "North Border" };
-            for (int edge = 0; edge < normals.Length; edge++)
-            {
-                Vector3 normal = normals[edge];
-                Vector3 tangent = new Vector3(normal.z, 0f, -normal.x);
-                var gaps = new List<float>();
-                foreach (Vector3 opening in openings)
-                {
-                    Vector3 local = opening - RouteLayout.Clearing(index);
-                    if (Mathf.Abs(Vector3.Dot(local, normal) - half) < 0.001f) gaps.Add(Vector3.Dot(local, tangent));
-                }
-                gaps.Sort();
-                float start = -half;
-                for (int piece = 0; piece <= gaps.Count; piece++)
-                {
-                    float end = piece < gaps.Count ? gaps[piece] - PathWidth * 0.5f : half;
-                    if (end > start)
-                        SceneBuilder.CreateBorder($"{names[edge]} {piece}", clearing,
-                            clearing.TransformPoint(normal * half + tangent * ((start + end) * 0.5f) + Vector3.up * 1.5f),
-                            clearing.rotation * Quaternion.LookRotation(normal), new Vector3(end - start, 3f, 0.5f));
-                    if (piece < gaps.Count) start = gaps[piece] + PathWidth * 0.5f;
-                }
-            }
             ForestBuilder.Populate(clearing, 17389 + index, ClearingSize, PathWidth,
                 ForestBuilder.RouteExclusions(index), ForestBuilder.RouteViewPoints(index));
         }
 
-        static void BuildPath(Transform clearing, int index, Material floor, Material forest, Material stone)
+        static void BuildPath(Transform clearing, int index, Material floor, Material stone, RouteTerrain terrain)
         {
             var points = RouteLayout.Path(index);
             Vector3 center = PathMidpoint(points);
+            center.y = terrain.Height(center.x, center.z);
             var path = Root("Path to Next Clearing", clearing, center - RouteLayout.Clearing(index));
             RouteLayout.RiverSpan(out var riverStart, out var riverEnd);
             for (int i = 1; i < points.Length; i++)
             {
                 Vector3 a = points[i - 1], b = points[i];
-                Vector3 delta = b - a;
-                Quaternion rotation = Quaternion.LookRotation(delta);
-                float horizontal = Vector3.ProjectOnPlane(delta, Vector3.up).magnitude;
-                Vector3 start = a - delta / horizontal * JointExtension(points, i - 1);
-                Vector3 end = b + delta / horizontal * JointExtension(points, i);
-                Vector3 middle = (start + end) * 0.5f - center;
-                bool river = a == riverStart && b == riverEnd;
-                if (river)
+                if (a == riverStart && b == riverEnd)
                 {
                     var crossing = Root("River Crossing", path, (a + b) * 0.5f - center);
-                    crossing.localRotation = rotation;
-                    WaterBuilder.BuildRiver(crossing, PathWidth, delta.magnitude, floor, stone);
+                    crossing.localRotation = Quaternion.LookRotation(b - a);
+                    WaterBuilder.BuildRiver(crossing, PathWidth, Vector3.Distance(a, b), floor, stone);
                 }
-                else
-                {
-                    var ground = Part($"Ground {i}", path, middle - rotation * Vector3.up * 0.25f,
-                        new Vector3(PathWidth, 0.5f, Vector3.Distance(start, end)), floor);
-                    ground.transform.localRotation = rotation;
-                    ground.AddComponent<GroundSurface>().type = GroundType.Dirt;
-                }
-                for (int side = -1; side <= 1; side += 2)
-                    SceneBuilder.CreateBorder($"Border {i} {side}", path,
-                        path.TransformPoint(middle + rotation * new Vector3(side * (PathWidth * 0.5f + 0.25f), 1.5f, 0f)),
-                        path.rotation * rotation, new Vector3(0.5f, 3f, Vector3.Distance(start, end) + 0.5f));
-                if (i < points.Length - 1)
-                {
-                    Vector3 incoming = Vector3.ProjectOnPlane(delta, Vector3.up).normalized;
-                    Vector3 outgoing = Vector3.ProjectOnPlane(points[i + 1] - b, Vector3.up).normalized;
-                    float turn = Vector3.Angle(incoming, outgoing) * Mathf.Deg2Rad;
-                    var joint = Part($"Joint {i}", path, b - center - Vector3.up * 0.25f,
-                        new Vector3(PathWidth, 0.5f, Mathf.Max(0.2f, PathWidth * Mathf.Sin(turn * 0.5f))), floor);
-                    joint.transform.localRotation = Quaternion.LookRotation(incoming + outgoing);
-                    joint.AddComponent<GroundSurface>().type = GroundType.Dirt;
-                }
-                if (i != 1 && i != points.Length - 1) continue;
-                for (int side = -1; side <= 1; side += 2)
-                    Part($"Trunk {i} {side}", path, (a + b) * 0.5f - center + Vector3.up * 3f
-                        + Quaternion.LookRotation(Vector3.ProjectOnPlane(delta, Vector3.up)) * Vector3.right * (side * 3.6f),
-                        new Vector3(1.2f, 6f, 1.2f), forest);
+                else TerrainBuilder.PathFloor(path, $"Ground {i}", a, b, center, terrain, floor);
             }
-        }
-
-        static float JointExtension(Vector3[] points, int index)
-        {
-            if (index == 0 || index == points.Length - 1) return 0.05f;
-            Vector3 a = Vector3.ProjectOnPlane(points[index] - points[index - 1], Vector3.up);
-            Vector3 b = Vector3.ProjectOnPlane(points[index + 1] - points[index], Vector3.up);
-            return PathWidth * 0.5f * Mathf.Tan(Vector3.Angle(a, b) * Mathf.Deg2Rad * 0.5f);
         }
 
         static Vector3 PathMidpoint(Vector3[] points)
@@ -182,24 +117,6 @@ namespace TiffanyGame.EditorTools
                 distance -= length;
             }
             return points[points.Length - 1];
-        }
-
-        static void BuildGate(Transform house, Material material)
-        {
-            RouteLayout.Gate(out var position, out float yaw, out float width);
-            var gate = Root("Gate", house, position - RouteLayout.Clearing(7));
-            gate.localRotation = Quaternion.Euler(0f, yaw, 0f);
-            var collider = gate.gameObject.AddComponent<BoxCollider>();
-            collider.center = Vector3.up * 1.5f;
-            collider.size = new Vector3(width, 3f, 0.4f);
-            int bars = Mathf.CeilToInt(width / 2f);
-            for (int i = 0; i <= bars; i++)
-                GatePart($"Bar {i}", new Vector3(Mathf.Lerp(-width * 0.5f, width * 0.5f, (float)i / bars), 1.5f, 0f),
-                    new Vector3(0.12f, 3f, 0.12f));
-            for (int i = 0; i < 2; i++)
-                GatePart($"Rail {i}", new Vector3(0f, 0.6f + i * 1.8f, 0f), new Vector3(width, 0.12f, 0.12f));
-            void GatePart(string name, Vector3 local, Vector3 size) =>
-                Object.DestroyImmediate(Part(name, gate, local, size, material).GetComponent<Collider>());
         }
 
         static Vector3[] BuildSkyRoute(Transform route, Transform[] clearings)
@@ -377,8 +294,11 @@ namespace TiffanyGame.EditorTools
         static GameObject Part(string name, Transform parent, Vector3 position, Vector3 size, Material material) =>
             SceneBuilder.CreatePrimitive(name, PrimitiveType.Cube, parent, position, size, material);
 
-        static void Ground(string name, Transform parent, Vector3 position, Vector2 size, GroundType type, Material material) =>
-            Part(name, parent, position - Vector3.up * 0.25f, new Vector3(size.x, 0.5f, size.y), material)
-                .AddComponent<GroundSurface>().type = type;
+        static void Ground(string name, Transform parent, Vector3 position, Vector2 size, GroundType type, Material material)
+        {
+            var ground = Part(name, parent, position - Vector3.up * 0.02f, new Vector3(size.x, 0.06f, size.y), material);
+            ground.AddComponent<GroundSurface>().type = type;
+            TerrainBuilder.HideFloor(ground);
+        }
     }
 }

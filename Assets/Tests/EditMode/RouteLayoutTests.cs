@@ -48,7 +48,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void HutIsTheHighestClearingAndTheReturnDescends()
+        public void HutIsTheHighestClearingAndTheReturnReachesTheFlatRoad()
         {
             float summit = RouteLayout.Clearing(4).y;
             Assert.AreEqual(0f, RouteLayout.Clearing(0).y, Tolerance);
@@ -58,8 +58,8 @@ namespace TiffanyGame.Tests
                 if (i != 4) Assert.Less(RouteLayout.Clearing(i).y, summit);
             for (int i = 1; i <= 4; i++)
                 Assert.Greater(RouteLayout.Clearing(i).y, RouteLayout.Clearing(i - 1).y);
-            for (int i = 5; i < RouteLayout.Count; i++)
-                Assert.Less(RouteLayout.Clearing(i).y, RouteLayout.Clearing(i - 1).y);
+            Assert.AreEqual(6f, summit - RouteLayout.Clearing(5).y, Tolerance);
+            for (int i = 5; i < RouteLayout.Count; i++) Assert.AreEqual(0f, RouteLayout.Clearing(i).y, Tolerance);
         }
 
         [Test]
@@ -108,7 +108,7 @@ namespace TiffanyGame.Tests
             AssertPerpendicular(path[path.Length - 1], path[path.Length - 2], RouteLayout.Clearing(from + 1));
             float length = 0f;
             for (int i = 1; i < path.Length; i++) length += Vector3.Distance(path[i - 1], path[i]);
-            Assert.That(length, Is.InRange(16f, 45f));
+            Assert.That(length, from == 4 ? Is.InRange(110f, 130f) : Is.InRange(16f, 45f));
             float deviation = 0f;
             for (int i = 1; i < path.Length - 1; i++)
                 deviation = Mathf.Max(deviation, PointDistance(Xz(path[i]), Xz(path[0]), Xz(path[path.Length - 1])));
@@ -128,7 +128,6 @@ namespace TiffanyGame.Tests
                     Assert.Greater(Vector2.Distance(Xz(path[i - 1]), Xz(path[i])), Tolerance);
                     float slope = RouteLayout.Slope(path[i - 1], path[i]);
                     Assert.LessOrEqual(slope, RouteLayout.MaxSlopeDegrees + Tolerance, $"Sendero {from}, tramo {i}");
-                    if (slope > Tolerance) Assert.GreaterOrEqual(slope, 3f - Tolerance, $"Sendero {from}, tramo {i}");
                     float rise = path[i].y - path[i - 1].y;
                     float totalRise = RouteLayout.Clearing(from + 1).y - RouteLayout.Clearing(from).y;
                     Assert.GreaterOrEqual(rise * totalRise, -Tolerance);
@@ -179,23 +178,20 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void GateCrossesTheGapBetweenHouseAndCemeteryOutsideBothClearings()
+        public void GateClosesTheNorthSouthFenceBetweenHouseAndCemetery()
         {
+            var terrain = new RouteTerrain();
             RouteLayout.Gate(out var position, out float yaw, out float width);
-            Vector3 cemetery = RouteLayout.Clearing(0), house = RouteLayout.Clearing(7);
-            Vector2 direction = Xz(house - cemetery);
-            float fraction = Vector2.Dot(Xz(position - cemetery), direction) / direction.sqrMagnitude;
-            Assert.That(fraction, Is.GreaterThan(0f).And.LessThan(1f));
-            Assert.AreEqual(0f, PointDistance(Xz(position), Xz(cemetery), Xz(house)), Tolerance);
-            Assert.AreEqual(Mathf.Lerp(cemetery.y, house.y, fraction), position.y, Tolerance);
-            Assert.GreaterOrEqual(width, RouteLayout.PathWidth + 2f);
-            Vector2 axis = Xz(Quaternion.Euler(0f, yaw, 0f) * Vector3.right);
-            Assert.GreaterOrEqual(width + Tolerance, RouteLayout.ClearingSize * (Mathf.Abs(axis.x) + Mathf.Abs(axis.y)));
-            Assert.AreEqual(0f, Vector2.Dot(axis, direction.normalized), Tolerance);
+            Assert.AreEqual(terrain.FenceStart.x, position.x, Tolerance);
+            Assert.AreEqual(terrain.Road.center.y, position.z, Tolerance);
+            Assert.Greater(position.x, RouteLayout.Clearing(7).x + 18f);
+            Assert.Less(position.x, RouteLayout.Clearing(0).x - 18f);
+            Assert.AreEqual(90f, yaw);
+            Assert.AreEqual(RouteTerrain.RoadWidth, width);
+            Vector2 axis = Vector2.down;
             Vector2 a = Xz(position) - axis * width * 0.5f, b = Xz(position) + axis * width * 0.5f;
-            Assert.AreEqual(0f, SegmentDistance(a, b, Xz(cemetery), Xz(house)), Tolerance);
-            Assert.IsFalse(IntersectsSquare(a, b, Xz(cemetery), RouteLayout.ClearingSize * 0.5f));
-            Assert.IsFalse(IntersectsSquare(a, b, Xz(house), RouteLayout.ClearingSize * 0.5f));
+            Assert.IsFalse(IntersectsSquare(a, b, Xz(RouteLayout.Clearing(0)), 18f));
+            Assert.IsFalse(IntersectsSquare(a, b, Xz(RouteLayout.Clearing(7)), 18f));
         }
 
         [Test]

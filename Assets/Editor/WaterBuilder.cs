@@ -5,25 +5,35 @@ namespace TiffanyGame.EditorTools
 {
     public static class WaterBuilder
     {
-        public const float RiverWidth = 4f;
-        public const float CrossingWidth = 1.6f;
+        public const float RiverWidth = RouteTerrain.RiverWidth;
+        public const float CrossingWidth = RouteTerrain.CrossingWidth;
         public const float StoneLength = 0.9f;
         public const float StoneTop = 0.12f;
 
         public static void BuildLake(Transform clearing, Material floor)
         {
-            Bank("West Bank", clearing, new Vector3(-7.5f, 0f, 0f), new Vector2(21f, 36f), GroundType.Grass, floor);
-            Bank("East Bank", clearing, new Vector3(16.5f, 0f, 0f), new Vector2(3f, 36f), GroundType.Grass, floor);
-            Bank("South Bank", clearing, new Vector3(9f, 0f, -13f), new Vector2(12f, 10f), GroundType.Grass, floor);
-            Bank("North Bank", clearing, new Vector3(9f, 0f, 16f), new Vector2(12f, 4f), GroundType.Grass, floor);
-            Water("Water", clearing, new Vector3(9f, -0.15f, 3f), new Vector2(12f, 22f), "lake_loop");
-            for (int side = -1; side <= 1; side += 2)
+            Bank("Ground", clearing, Vector3.zero, new Vector2(36f, 36f), GroundType.Grass, floor);
+            var center = RouteTerrain.LakeCenter;
+            var origin = RouteLayout.Clearing(5);
+            Water("Water", clearing, new Vector3(center.x - origin.x, -0.15f, center.y - origin.z),
+                RouteTerrain.LakeRadius * 2f, "lake_loop");
+            var vertices = new Vector3[97];
+            var triangles = new int[96 * 3];
+            for (int i = 0; i < 96; i++)
             {
-                Block($"Lake Bank X {side}", clearing, new Vector3(9f + side * 6f, 1.5f, 3f), new Vector3(0.5f, 3f, 22.5f));
-                Block($"Lake Bank Z {side}", clearing, new Vector3(9f, 1.5f, 3f + side * 11f), new Vector3(12.5f, 3f, 0.5f));
+                float angle = i * Mathf.PI * 2f / 96f;
+                vertices[i + 1] = new Vector3(Mathf.Cos(angle) * RouteTerrain.LakeRadius.x, 0f,
+                    Mathf.Sin(angle) * RouteTerrain.LakeRadius.y);
+                triangles[i * 3] = 0;
+                triangles[i * 3 + 1] = (i + 1) % 96 + 1;
+                triangles[i * 3 + 2] = i + 1;
             }
-            Capture("Water 1 Lake", clearing, new Vector3(2.3f, 0f, 1f), 60f,
-                new Vector3(-20f, 34f, 26f), new Vector3(7f, 0.4f, 5f));
+            var water = clearing.Find("Water");
+            water.localScale = Vector3.one;
+            water.GetComponent<MeshFilter>().sharedMesh = TerrainBuilder.SaveMesh("Lake Water", vertices, triangles);
+            water.GetComponent<AudioSource>().maxDistance = 120f;
+            Capture("Water 1 Lake", clearing, new Vector3(2.3f, 0f, 1f), 240f,
+                new Vector3(-24f, 38f, 12f), new Vector3(-24f, 0.4f, -12f));
         }
 
         public static void BuildRiver(Transform path, float pathWidth, float pathLength, Material floor, Material stone)
@@ -104,9 +114,13 @@ namespace TiffanyGame.EditorTools
             return root;
         }
 
-        static void Bank(string name, Transform parent, Vector3 position, Vector2 size, GroundType ground, Material material) =>
-            SceneBuilder.CreatePrimitive(name, PrimitiveType.Cube, parent, position - Vector3.up * 0.25f,
-                new Vector3(size.x, 0.5f, size.y), material).AddComponent<GroundSurface>().type = ground;
+        static void Bank(string name, Transform parent, Vector3 position, Vector2 size, GroundType ground, Material material)
+        {
+            var floor = SceneBuilder.CreatePrimitive(name, PrimitiveType.Cube, parent, position - Vector3.up * 0.02f,
+                new Vector3(size.x, 0.06f, size.y), material);
+            floor.AddComponent<GroundSurface>().type = ground;
+            TerrainBuilder.HideFloor(floor);
+        }
 
         static void Block(string name, Transform parent, Vector3 position, Vector3 size) =>
             SceneBuilder.CreateBorder(name, parent, parent.TransformPoint(position), parent.rotation, size);

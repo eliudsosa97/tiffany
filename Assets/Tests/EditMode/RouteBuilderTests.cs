@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 
 namespace TiffanyGame.Tests
 {
-    public sealed class RouteBuilderTests
+    public sealed partial class RouteBuilderTests
     {
         const string TempFolder = "Assets/RouteBuilderTestTemp";
         GameObject root;
@@ -56,7 +56,8 @@ namespace TiffanyGame.Tests
             var groundTypes = new[] { GroundType.Grass, GroundType.Slab, GroundType.Gravel, GroundType.Branches,
                 GroundType.Leaves, GroundType.Grass, GroundType.Slab, GroundType.Dirt };
             Assert.AreEqual("Route", route.name);
-            Assert.AreEqual(8, route.childCount);
+            Assert.AreEqual(RouteLayout.Count + 1, route.childCount);
+            Assert.IsNotNull(route.Find("Landscape/Terrain"));
             var captures = route.GetComponentsInChildren<CaptureStop>();
             Assert.AreEqual(10, captures.Length, "Ocho claros y dos vistas del agua.");
             captures = System.Array.FindAll(captures, capture => capture.name.StartsWith("Route "));
@@ -212,6 +213,8 @@ namespace TiffanyGame.Tests
             var surface = route.gameObject.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;
             surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            surface.overrideVoxelSize = true;
+            surface.voxelSize = 0.1f;
             surface.BuildNavMesh();
             navMeshData = surface.navMeshData;
             Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
@@ -238,11 +241,11 @@ namespace TiffanyGame.Tests
         [Test]
         public void RouteUsesFewStaticRenderersSavedUrpMaterialsAndOnlyCandleLights()
         {
-            Assert.Less(route.GetComponentsInChildren<Transform>(true).Length, 600);
+            Assert.Less(route.GetComponentsInChildren<Transform>(true).Length, 7000);
             var renderers = route.GetComponentsInChildren<Renderer>(true);
             Assert.IsNotEmpty(renderers);
-            foreach (Transform clearing in route)
-                Assert.LessOrEqual(clearing.GetComponentsInChildren<Renderer>(true).Length, 200, clearing.name);
+            for (int i = 0; i < RouteLayout.Count; i++)
+                Assert.LessOrEqual(route.GetChild(i).GetComponentsInChildren<Renderer>(true).Length, 200, route.GetChild(i).name);
             Assert.AreEqual(4, System.Array.FindAll(renderers,
                 renderer => renderer.GetComponentInParent<HideVolume>() != null).Length);
             foreach (var renderer in renderers)
@@ -271,29 +274,31 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void PathsJoinClearingsWithFiveMeterOpeningsAndClosedOuterEdges()
+        public void PathsJoinIrregularClearingsWithOpeningsAndClosedOuterEdges()
         {
-            var normals = new[] { Vector3.left, Vector3.right, Vector3.back, Vector3.forward };
+            var terrain = new RouteTerrain();
+            var borders = route.Find("Landscape/Walkable Boundary").GetComponentsInChildren<Collider>();
             for (int i = 0; i < RouteLayout.Count; i++)
             {
                 var clearing = route.GetChild(i);
-                var openings = new System.Collections.Generic.List<Vector3>();
-                if (i > 0)
+                Vector3 center = RouteLayout.Clearing(i);
+                for (int degrees = 0; degrees < 360; degrees += 10)
                 {
-                    var previous = RouteLayout.Path(i - 1);
-                    openings.Add(previous[previous.Length - 1] - RouteLayout.Clearing(i));
+                    float angle = degrees * Mathf.Deg2Rad;
+                    var normal = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                    float radius = terrain.ClearingRadius(i, angle);
+                    Vector3 beyond = center + normal * (radius + 1f);
+                    if (terrain.IsWalkable(beyond.x, beyond.z)) continue;
+                    var ray = new Ray(clearing.TransformPoint(normal * (radius - 1f) + Vector3.up), normal);
+                    Assert.IsTrue(System.Array.Exists(borders, border => border.Raycast(ray, out _, 2.2f)), $"Borde {i}/{degrees}");
                 }
-                if (i < RouteLayout.Count - 1) openings.Add(RouteLayout.Path(i)[0] - RouteLayout.Clearing(i));
-                foreach (Vector3 normal in normals)
+                foreach (Vector3 opening in RouteLayout.Openings(i))
                 {
-                    Vector3 tangent = Vector3.Cross(Vector3.up, normal);
-                    for (float offset = -17.75f; offset < 18f; offset += 0.5f)
-                    {
-                        Vector3 point = normal * 18f + tangent * offset;
-                        bool open = openings.Exists(opening => Vector3.Distance(opening, point) < RouteLayout.PathWidth * 0.5f);
-                        Assert.AreEqual(!open, HitsRoute(clearing.TransformPoint(point - normal + Vector3.up), normal, 2f),
-                            $"{clearing.name}, borde {normal}, posición {offset}");
-                    }
+                    Vector3 local = opening - center;
+                    Vector3 normal = Mathf.Abs(local.x) > Mathf.Abs(local.z)
+                        ? Vector3.right * Mathf.Sign(local.x) : Vector3.forward * Mathf.Sign(local.z);
+                    var ray = new Ray(route.TransformPoint(opening - normal * 2f + Vector3.up), normal);
+                    Assert.IsFalse(System.Array.Exists(borders, border => border.Raycast(ray, out _, 4f)), $"Entrada {i}");
                 }
                 foreach (Transform child in clearing)
                     if (child.TryGetComponent<GroundSurface>(out var surface))
@@ -305,6 +310,7 @@ namespace TiffanyGame.Tests
                         Assert.GreaterOrEqual(bounds.min.z - clearing.position.z, -18f - 0.001f);
                     }
                 Assert.AreEqual(i < RouteLayout.Count - 1, clearing.Find("Path to Next Clearing") != null);
+                Assert.IsFalse(clearing.Find("Ground").GetComponent<Renderer>().enabled);
             }
         }
 
@@ -331,9 +337,6 @@ namespace TiffanyGame.Tests
                         Assert.IsTrue(FloorHeights(floors, point, out _, out _), $"Hueco en sendero {from}, tramo {i}, {point}");
                     }
                     if (i == path.Length - 1) continue;
-                    var joint = pathRoot.Find($"Joint {i}");
-                    Assert.IsNotNull(joint);
-                    Assert.AreEqual(Vector3.up, joint.up);
                     for (float x = -3f; x <= 3f; x += 0.25f)
                     for (float z = -3f; z <= 3f; z += 0.25f)
                     {
@@ -362,23 +365,30 @@ namespace TiffanyGame.Tests
         [Test]
         public void GateAndCliffAreSolidAndTheBakedRouteConnectsEveryClearingWithoutAShortcut()
         {
-            var gate = route.GetChild(7).Find("Gate");
-            var cliff = route.GetChild(5).Find("Cliff");
+            var gate = route.Find("Landscape/Fence/Closed Gate");
             Assert.IsNotNull(gate.GetComponent<Collider>());
             Assert.IsFalse(gate.GetComponent<Collider>().isTrigger);
-            RouteLayout.Gate(out var position, out float yaw, out float width);
+            RouteLayout.Gate(out var position, out _, out float width);
             Assert.Less(Vector3.Distance(route.TransformPoint(position), gate.position), 0.001f);
-            Assert.Less(Quaternion.Angle(route.rotation * Quaternion.Euler(0f, yaw, 0f), gate.rotation), 0.001f);
-            Assert.AreEqual(width, gate.GetComponent<BoxCollider>().size.x, 0.001f);
-            var cliffCollider = cliff.GetComponent<Collider>();
-            Assert.IsNotNull(cliffCollider);
-            Assert.IsFalse(cliffCollider.isTrigger);
-            Assert.That(cliffCollider.bounds.size.y, Is.InRange(6f, 8f));
-            Assert.Greater(cliffCollider.bounds.min.z, route.GetChild(5).position.z + 18f);
-            Assert.AreEqual(route.GetChild(5).position.y, cliffCollider.bounds.min.y, 0.001f);
+            Assert.AreEqual(width, gate.GetComponent<BoxCollider>().size.z, 0.001f);
+            Assert.IsNull(route.GetChild(5).Find("Cliff"));
+            Assert.IsNull(route.GetChild(7).Find("Gate"));
+            var terrainColliders = route.Find("Landscape/Terrain").GetComponentsInChildren<MeshCollider>();
+            float SurfaceHeight(Vector2 point)
+            {
+                var ray = new Ray(route.TransformPoint(new Vector3(point.x, 20f, point.y)), Vector3.down);
+                foreach (var collider in terrainColliders)
+                    if (collider.Raycast(ray, out var hit, 40f)) return route.InverseTransformPoint(hit.point).y;
+                Assert.Fail("Falta terreno bajo el acantilado.");
+                return 0f;
+            }
+            Assert.GreaterOrEqual(SurfaceHeight(RouteTerrain.Plateau) - RouteLayout.Clearing(5).y, 5.99f);
+            Assert.Less(SurfaceHeight(RouteTerrain.CliffFoot), 1.5f);
             var surface = route.gameObject.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;
             surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            surface.overrideVoxelSize = true;
+            surface.voxelSize = 0.1f;
             surface.layerMask = ~LayerMask.GetMask(ForestLayout.CoverLayer, "Ignore Raycast");
             surface.BuildNavMesh();
             navMeshData = surface.navMeshData;
@@ -413,11 +423,19 @@ namespace TiffanyGame.Tests
             var lake = route.GetChild(5);
             var water = lake.Find("Water");
             Assert.IsNull(water.GetComponent<Collider>());
-            Assert.IsFalse(HitsRoute(water.position + Vector3.up * 2f, Vector3.down, 4f));
-            Assert.IsTrue(HitsRoute(lake.TransformPoint(new Vector3(0f, 1f, 3f)), Vector3.right, 9f));
-            Assert.IsTrue(HitsRoute(lake.TransformPoint(new Vector3(17f, 1f, 3f)), Vector3.left, 8f));
-            Assert.IsTrue(HitsRoute(lake.TransformPoint(new Vector3(9f, 1f, -12f)), Vector3.forward, 10f));
-            Assert.IsTrue(HitsRoute(lake.TransformPoint(new Vector3(9f, 1f, 17f)), Vector3.back, 8f));
+            Assert.Greater(water.GetComponent<Renderer>().bounds.size.x, 100f);
+            Assert.Greater(water.GetComponent<Renderer>().bounds.size.z, 90f);
+            Assert.IsTrue(HitsRoute(water.position + Vector3.up * 2f, Vector3.down, 7f));
+            var shores = route.Find("Landscape/Lake Banks").GetComponentsInChildren<Collider>();
+            for (int degrees = 0; degrees < 360; degrees += 15)
+            {
+                float angle = degrees * Mathf.Deg2Rad;
+                var point = RouteTerrain.LakeCenter + new Vector2(Mathf.Cos(angle) * RouteTerrain.LakeRadius.x,
+                    Mathf.Sin(angle) * RouteTerrain.LakeRadius.y);
+                var normal = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                var ray = new Ray(route.TransformPoint(new Vector3(point.x, 1f, point.y) + normal * 2f), -normal);
+                Assert.IsTrue(System.Array.Exists(shores, shore => shore.Raycast(ray, out _, 4f)));
+            }
         }
 
         [Test]
@@ -448,7 +466,7 @@ namespace TiffanyGame.Tests
             for (int side = -1; side <= 1; side += 2)
             {
                 Assert.IsTrue(HitsRoute(river.TransformPoint(new Vector3(side * 1.8f, 0.6f, -3f)), Vector3.forward, 2f));
-                Assert.IsFalse(HitsRoute(river.TransformPoint(new Vector3(side * 1.8f, 2f, 0f)), Vector3.down, 4f));
+                Assert.IsTrue(HitsRoute(river.TransformPoint(new Vector3(side * 1.8f, 2f, 0f)), Vector3.down, 4f));
             }
             Assert.IsFalse(HitsRoute(river.TransformPoint(new Vector3(0f, 0.6f, -3f)), Vector3.forward, 6f));
         }
@@ -473,9 +491,10 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(1f, source.spatialBlend);
                 Assert.AreEqual(AudioRolloffMode.Linear, source.rolloffMode);
                 Assert.AreEqual(36f, source.minDistance, "La cámara y su AudioListener van a unos 36 m de Tiffany.");
-                Assert.AreEqual(60f, source.maxDistance);
+                Assert.AreEqual(water == lake ? 120f : 60f, source.maxDistance);
             }
             var lakeStop = route.GetChild(5).Find("Water 1 Lake");
+            Assert.Less(Vector3.Distance(lakeStop.GetComponent<CaptureStop>().cameraPosition, lake.position), 80f);
             var riverStop = river.parent.Find("Water 2 Crossing");
             foreach (var stop in new[] { lakeStop, riverStop })
             {
@@ -511,7 +530,11 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(3, roofCount);
             Assert.AreEqual(2, tankCount);
             foreach (var ground in route.GetComponentsInChildren<GroundSurface>())
-                Assert.IsNull(ground.GetComponentInParent<NavMeshModifier>(), ground.name);
+            {
+                var modifier = ground.GetComponentInParent<NavMeshModifier>();
+                if (ground.name.EndsWith(" Wild")) Assert.AreEqual(notWalkable, modifier.area);
+                else if (modifier != null) Assert.IsTrue(modifier.ignoreFromBuild, ground.name);
+            }
         }
 
         [TestCase(3, "Barn", 5f)]
@@ -574,7 +597,10 @@ namespace TiffanyGame.Tests
                     {
                         if (!renderer.enabled || renderer.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
                         if (spot != null && renderer.transform.IsChildOf(spot.transform)) continue;
-                        Assert.IsFalse(renderer.bounds.IntersectRay(ray, out float distance) && distance < direction.magnitude,
+                        bool blocked = renderer.TryGetComponent<MeshCollider>(out var mesh)
+                            ? mesh.Raycast(ray, out _, direction.magnitude)
+                            : renderer.bounds.IntersectRay(ray, out float distance) && distance < direction.magnitude;
+                        Assert.IsFalse(blocked,
                             $"{clearing.name}: {renderer.name}, yaw {yaw}, objetivo {target}");
                     }
                 }
