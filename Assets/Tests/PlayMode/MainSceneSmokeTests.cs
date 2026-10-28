@@ -267,7 +267,12 @@ namespace TiffanyGame.Tests
             var river = route.GetChild(4).Find("Path to Next Clearing/River");
             foreach (float side in new[] { -1.8f, 1.8f })
                 Assert.IsFalse(NavMesh.SamplePosition(river.TransformPoint(new Vector3(side, 0f, 0f)), out _, 0.25f, NavMesh.AllAreas));
-            Assert.IsTrue(NavMesh.SamplePosition(river.position, out _, 0.3f, NavMesh.AllAreas));
+            var logBounds = river.Find("Log").GetComponent<Collider>().bounds;
+            var logTop = new Vector3(logBounds.center.x, logBounds.max.y, logBounds.center.z);
+            // El NavMesh sigue la superficie elevada del tronco, no el origen del río.
+            Assert.IsTrue(NavMesh.SamplePosition(logTop, out var crossing, 0.3f, NavMesh.AllAreas));
+            Assert.IsTrue(NavMesh.CalculatePath(from.position, crossing.position, NavMesh.AllAreas, path));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
             yield return null;
             LogAssert.NoUnexpectedReceived();
         }
@@ -404,8 +409,8 @@ namespace TiffanyGame.Tests
 
         static Transform PrepareRiverWalk(out PlayerController player)
         {
-            Object.FindAnyObjectByType<WitchController>().gameObject.SetActive(false);
-            Object.FindAnyObjectByType<TylerController>().gameObject.SetActive(false);
+            Object.FindAnyObjectByType<WitchController>(FindObjectsInactive.Include).gameObject.SetActive(false);
+            Object.FindAnyObjectByType<TylerController>(FindObjectsInactive.Include).gameObject.SetActive(false);
             Object.FindAnyObjectByType<Storm>().raining = false;
             player = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerController>();
             var follow = player.viewCamera.GetComponent<FollowCamera>();
