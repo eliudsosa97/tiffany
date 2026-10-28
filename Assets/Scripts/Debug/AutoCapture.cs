@@ -1,6 +1,7 @@
 using System.Collections;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace TiffanyGame
 {
@@ -15,6 +16,14 @@ namespace TiffanyGame
             return;
 #else
             var args = System.Environment.GetCommandLineArgs();
+            // -screen-quality no cambia la calidad en el player de Mac.
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] != "-capturequality") continue;
+                int level = System.Array.IndexOf(QualitySettings.names, args[i + 1]);
+                if (level >= 0) QualitySettings.SetQualityLevel(level, true);
+                else Debug.LogWarning($"{GameInfo.LogPrefix} No existe la calidad '{args[i + 1]}'.");
+            }
             for (int i = 0; i < args.Length - 1; i++)
             {
                 if (args[i] != "-autocapture") continue;
@@ -35,6 +44,8 @@ namespace TiffanyGame
             GameInput.RunOverride = false;
             GameInput.AimOverride = Vector2.zero;
             Directory.CreateDirectory(directory);
+            Debug.Log($"{GameInfo.LogPrefix} Calidad: {QualitySettings.names[QualitySettings.GetQualityLevel()]}, pipeline: "
+                + (GraphicsSettings.currentRenderPipeline != null ? GraphicsSettings.currentRenderPipeline.name : "ninguno"));
             yield return new WaitForSecondsRealtime(2f);
             yield return Capture("00_start");
 

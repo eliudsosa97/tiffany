@@ -13,6 +13,7 @@ namespace TiffanyGame
         private PlayerLight playerLight;
         private WitchController hiddenWitch;
         private Coroutine flashRoutine;
+        private bool turnedOn;
 
         public void Apply(Transform player)
         {
@@ -21,7 +22,8 @@ namespace TiffanyGame
             soul = player.GetComponent<PlayerSoul>();
             if (playerLight == null || soul == null) return;
             soul.Energy.ResetTo(energy);
-            if (!playerLight.State.IsOn) playerLight.Toggle();
+            turnedOn = !playerLight.State.IsOn;
+            if (turnedOn) playerLight.Toggle();
             if (hideWitch && playerLight.witch != null && playerLight.witch.gameObject.activeSelf)
             {
                 hiddenWitch = playerLight.witch;
@@ -34,9 +36,28 @@ namespace TiffanyGame
         {
             if (flashRoutine != null) StopCoroutine(flashRoutine);
             flashRoutine = null;
-            if (hiddenWitch != null) hiddenWitch.gameObject.SetActive(true);
-            hiddenWitch = null;
             if (soul != null) soul.Energy.ResetTo(SoulEnergy.Max);
+            if (turnedOn && playerLight != null && playerLight.State.IsOn) playerLight.Toggle();
+            turnedOn = false;
+            if (hiddenWitch != null)
+            {
+                if (playerLight.State.Visible) StartCoroutine(ShowWitchWhenDark(hiddenWitch));
+                else ShowWitch(hiddenWitch);
+            }
+            hiddenWitch = null;
+        }
+
+        // Con la luz que vio en el último cuadro, la bruja la fija como objetivo y aterriza.
+        private IEnumerator ShowWitchWhenDark(WitchController witch)
+        {
+            while (playerLight.State.Visible) yield return null;
+            ShowWitch(witch);
+        }
+
+        private static void ShowWitch(WitchController witch)
+        {
+            witch.playerLightOn = false;
+            witch.gameObject.SetActive(true);
         }
 
         private IEnumerator FlashBeforeCapture()

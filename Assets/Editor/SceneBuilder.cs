@@ -292,7 +292,7 @@ namespace TiffanyGame.EditorTools
             playerLight = player.AddComponent<PlayerLight>();
             playerLight.spot = spot;
             playerLight.glow = glow.transform;
-            playerLight.startOn = true;
+            playerLight.startOn = false;
             playerLight.pitch = 42f;
             return player.AddComponent<PlayerController>();
         }

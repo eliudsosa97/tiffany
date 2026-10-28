@@ -85,7 +85,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(0f, playerLight.LitPoint.y, 0.01f);
             Vector3 offset = playerLight.LitPoint - player.transform.position;
             offset.y = 0f;
-            Assert.That(offset.magnitude, Is.InRange(1f, 11f));
+            Assert.AreEqual(2.4f / Mathf.Tan(playerLight.pitch * Mathf.Deg2Rad) - 0.3f, offset.magnitude, 0.2f);
             Assert.Greater(Vector3.Dot(offset, player.transform.forward), 0f);
         }
 
@@ -251,8 +251,12 @@ namespace TiffanyGame.Tests
             }
             stage.Clear();
             Assert.AreEqual(SoulEnergy.Max, soul.Energy.Current);
-            Assert.IsTrue(controller.gameObject.activeSelf);
+            Assert.IsFalse(playerLight.State.IsOn);
+            Assert.AreEqual(clearBeforeFlash, controller.gameObject.activeSelf);
+            if (clearBeforeFlash) Assert.IsFalse(controller.playerLightOn);
             yield return new WaitForSeconds(0.6f);
+            Assert.IsTrue(controller.gameObject.activeSelf);
+            Assert.IsFalse(controller.playerLightOn);
             Assert.Greater(soul.Energy.Current, 98f);
             Assert.IsFalse(playerLight.State.IsFlashing);
         }

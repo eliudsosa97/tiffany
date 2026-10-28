@@ -20,6 +20,7 @@ namespace TiffanyGame
         private float baseIntensity;
         private float baseRange;
         private float baseAngle;
+        private float baseInnerAngle;
         private Vector3 baseGlowScale;
         private RaycastHit[] hits;
 
@@ -29,6 +30,7 @@ namespace TiffanyGame
             baseIntensity = spot.intensity;
             baseRange = spot.range;
             baseAngle = spot.spotAngle;
+            baseInnerAngle = spot.innerSpotAngle;
             baseGlowScale = glow.localScale;
             hits = new RaycastHit[8];
         }
@@ -41,9 +43,9 @@ namespace TiffanyGame
 
         private void Update()
         {
+            State.Tick(Time.deltaTime);
             if (GameInput.LightTogglePressed) Toggle();
             if (GameInput.FlashPressed) TryFlash();
-            State.Tick(Time.deltaTime);
 
             Vector3 normal = CastGround(transform.position + Vector3.up, Vector3.down, Mathf.Infinity, out var ground)
                 ? ground.normal : Vector3.up;
@@ -58,7 +60,9 @@ namespace TiffanyGame
             float size = SoulLight.Size(soul.Energy.Current);
             if (visible)
             {
-                spot.spotAngle = baseAngle * Mathf.Lerp(0.7f, 1f, (size - SoulLight.MinSize) / (1f - SoulLight.MinSize));
+                float shrink = Mathf.Lerp(0.7f, 1f, (size - SoulLight.MinSize) / (1f - SoulLight.MinSize));
+                spot.spotAngle = baseAngle * shrink;
+                spot.innerSpotAngle = baseInnerAngle * shrink;
                 spot.range = baseRange * size;
                 spot.intensity = baseIntensity * SoulLight.Flicker(soul.Energy.Current, Time.time)
                     * (State.IsFlashing ? flashBoost : 1f);
@@ -77,7 +81,8 @@ namespace TiffanyGame
 
         public bool TryFlash()
         {
-            bool grounded = witch != null && witch.Decision.Form == WitchForm.Grounded;
+            bool grounded = witch != null && witch.Decision.Form == WitchForm.Grounded
+                && witch.Decision.State != WitchState.Caught;
             bool inCone = witch != null && SoulLight.InCone(transform.position, transform.forward,
                 witch.transform.position, baseRange, baseAngle * 0.5f);
             if (!State.TryFlash(grounded, inCone, out bool stuns)) return false;
