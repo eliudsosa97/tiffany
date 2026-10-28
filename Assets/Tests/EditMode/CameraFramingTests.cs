@@ -50,11 +50,24 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(expected, CameraFraming.MaxVisibleHeight(10f, 60f, 60f, 1f, offset), 1e-4f);
         }
 
-        [TestCase(0f)]
-        [TestCase(-2f)]
-        public void FireBallIsInFrameAboveTiffany(float offsetAlongView)
+        const float FireBallRadius = 0.45f;
+
+        [Test]
+        public void WholeFireBallShowsRightAboveTiffanyWhenSheFacesAway()
         {
-            Assert.LessOrEqual(RouteBuilder.SkyHeight + SceneBuilder.FireBallHeight, VisibleHeight(offsetAlongView));
+            AssertFireBallInFrame(-followCamera.lookAhead);
+        }
+
+        [Test]
+        public void WholeFireBallShowsWithinThreeAndAHalfMetersWhenSheFacesTheCamera()
+        {
+            AssertFireBallInFrame(followCamera.lookAhead - 3.5f);
+        }
+
+        void AssertFireBallInFrame(float offsetAlongView)
+        {
+            float top = RouteBuilder.SkyHeight + SceneBuilder.FireBallHeight + FireBallRadius;
+            Assert.LessOrEqual(top, VisibleHeight(offsetAlongView));
         }
 
         float VisibleHeight(float offsetAlongView) => CameraFraming.MaxVisibleHeight(followCamera.distance,
