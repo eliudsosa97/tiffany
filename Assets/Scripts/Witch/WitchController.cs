@@ -76,6 +76,22 @@ namespace TiffanyGame
 
         public void Flash() => flashed = true;
 
+        public void ResetBrain()
+        {
+            brain = new WitchBrain(profile, skyRoute);
+            witchSenses = new WitchSenses(senses);
+            agent.enabled = false;
+            hasDestination = hasPose = flashed = false;
+            stateTime = 0f;
+            Vector3 fallback = transform.position;
+            fallback.y = WitchMotion.CruiseHeight(skyRoute, fallback, fallback.y + 12f);
+            transform.position = WitchMotion.FarthestRoutePoint(skyRoute,
+                player != null ? player.position : transform.position, fallback);
+            Decision = new WitchDecision { State = WitchState.Flying, Form = WitchForm.Flying, FireLit = true };
+            ApplyView();
+            Debug.Log($"{GameInfo.LogPrefix} Bruja: vuelve a la ruta");
+        }
+
         private void Hear(StepNoise noise) => witchSenses.Hear(in noise);
 
         private void Update()
