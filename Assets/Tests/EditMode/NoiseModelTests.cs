@@ -2,7 +2,7 @@ using System;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace ElVelador.Tests
+namespace TiffanyGame.Tests
 {
     public class NoiseModelTests
     {

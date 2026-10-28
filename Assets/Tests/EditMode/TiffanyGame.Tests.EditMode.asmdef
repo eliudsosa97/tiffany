@@ -1,8 +1,8 @@
 {
-    "name": "ElVelador.Tests.EditMode",
-    "rootNamespace": "ElVelador.Tests",
+    "name": "TiffanyGame.Tests.EditMode",
+    "rootNamespace": "TiffanyGame.Tests",
     "references": [
-        "ElVelador",
+        "TiffanyGame",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

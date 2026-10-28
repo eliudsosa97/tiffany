@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace ElVelador
+namespace TiffanyGame
 {
     public enum AimSource { Move, Stick, Pointer }
 

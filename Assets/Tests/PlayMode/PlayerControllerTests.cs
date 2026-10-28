@@ -4,7 +4,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace ElVelador.Tests
+namespace TiffanyGame.Tests
 {
     public class PlayerControllerTests
     {

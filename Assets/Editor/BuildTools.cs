@@ -3,11 +3,11 @@ using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
-namespace ElVelador.EditorTools
+namespace TiffanyGame.EditorTools
 {
     public static class BuildTools
     {
-        [MenuItem("El Velador/Build Web")]
+        [MenuItem("Tiffany/Build Web")]
         public static void BuildWeb()
         {
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
@@ -16,8 +16,8 @@ namespace ElVelador.EditorTools
             Run(BuildTarget.WebGL, "Builds/Web");
         }
 
-        [MenuItem("El Velador/Build Mac")]
-        public static void BuildMac() => Run(BuildTarget.StandaloneOSX, "Builds/Mac/el-velador.app");
+        [MenuItem("Tiffany/Build Mac")]
+        public static void BuildMac() => Run(BuildTarget.StandaloneOSX, "Builds/Mac/tiffany.app");
 
         static void Run(BuildTarget target, string path)
         {

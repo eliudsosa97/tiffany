@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace ElVelador
+namespace TiffanyGame
 {
     [RequireComponent(typeof(Camera))]
     public class FollowCamera : MonoBehaviour

@@ -13,7 +13,7 @@ Juego de terror y sigilo en Unity 6.3 LTS `6000.3.27f1` con URP. Sale para naveg
 
 ## Convenciones de código
 
-- Todo el código vive en el namespace `ElVelador`. Las herramientas de editor en `ElVelador.EditorTools` y los tests en `ElVelador.Tests`.
+- Todo el código vive en el namespace `TiffanyGame`. Las herramientas de editor en `TiffanyGame.EditorTools` y los tests en `TiffanyGame.Tests`.
 - La lógica va en clases de C# simples y testeables (ruido, energía del alma, pánico, estados de la bruja, recuerdos, poderes). Los `MonoBehaviour` son delgados: leen la escena, llaman a la lógica y aplican el resultado.
 - Solo Input System (el input viejo está apagado). La entrada se lee a través de una sola clase, `GameInput`.
 - UI con `UnityEngine.UI.Text` y la fuente `LegacyRuntime.ttf`. Sin TextMeshPro.
@@ -60,16 +60,16 @@ Con el editor de Unity cerrado. En macOS, `UNITY` suele ser `/Applications/Unity
 
 ```sh
 # Regenerar la escena
-$UNITY -batchmode -projectPath . -executeMethod ElVelador.EditorTools.SceneBuilder.BuildFromCommandLine -logFile -
+$UNITY -batchmode -projectPath . -executeMethod TiffanyGame.EditorTools.SceneBuilder.BuildFromCommandLine -logFile -
 # Tests
 $UNITY -batchmode -projectPath . -runTests -testPlatform EditMode -testResults TestResults.xml -logFile -
 # Builds
-$UNITY -batchmode -projectPath . -executeMethod ElVelador.EditorTools.BuildTools.BuildWeb -logFile -
-$UNITY -batchmode -projectPath . -executeMethod ElVelador.EditorTools.BuildTools.BuildMac -logFile -
+$UNITY -batchmode -projectPath . -executeMethod TiffanyGame.EditorTools.BuildTools.BuildWeb -logFile -
+$UNITY -batchmode -projectPath . -executeMethod TiffanyGame.EditorTools.BuildTools.BuildMac -logFile -
 # Recorrido con capturas del build de Mac
-"Builds/Mac/el-velador.app/Contents/MacOS/Tiffany" -autocapture <carpeta> -screen-width 1600 -screen-height 900 -screen-fullscreen 0
+"Builds/Mac/tiffany.app/Contents/MacOS/Tiffany" -autocapture <carpeta> -screen-width 1600 -screen-height 900 -screen-fullscreen 0
 # Video: cuadros PNG a 30 fps durante los segundos indicados
-"Builds/Mac/el-velador.app/Contents/MacOS/Tiffany" -capturevideo <carpeta> -captureseconds 10 -screen-width 1600 -screen-height 900 -screen-fullscreen 0
+"Builds/Mac/tiffany.app/Contents/MacOS/Tiffany" -capturevideo <carpeta> -captureseconds 10 -screen-width 1600 -screen-height 900 -screen-fullscreen 0
 ```
 
 Si el editor está abierto, el modo batch falla porque el proyecto queda bloqueado.
