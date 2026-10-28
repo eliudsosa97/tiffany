@@ -99,6 +99,10 @@ namespace TiffanyGame.Tests
                 var body = movable.GetComponent<Rigidbody>();
                 Assert.IsNotNull(body);
                 Assert.IsTrue(body.isKinematic);
+                Assert.IsNotNull(movable.sound);
+                Assert.IsNotNull(movable.sound.clip);
+                Assert.AreEqual(movable.kind.ToString().ToLowerInvariant(), movable.sound.clip.name);
+                Assert.AreEqual(0f, movable.sound.spatialBlend);
             }
 
             float expectedEnergy = soul.Energy.Current - 15f;

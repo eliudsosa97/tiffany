@@ -1,4 +1,5 @@
 using System;
+using UnityEditor;
 using UnityEngine;
 
 namespace TiffanyGame.EditorTools
@@ -82,6 +83,7 @@ namespace TiffanyGame.EditorTools
         static void BuildObject(Transform parent, ThrowableKind kind, Vector3 position,
             float width, float height, float mass, Color color)
         {
+            var clip = LoadClip(kind.ToString().ToLowerInvariant());
             Physics.SyncTransforms();
             if (Physics.Raycast(position + Vector3.up * 20f, Vector3.down, out var ground,
                 Mathf.Infinity, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) position.y = ground.point.y;
@@ -97,7 +99,24 @@ namespace TiffanyGame.EditorTools
             var body = instance.AddComponent<Rigidbody>();
             body.mass = mass;
             body.isKinematic = true;
-            instance.AddComponent<MovableObject>().kind = kind;
+            var sound = instance.AddComponent<AudioSource>();
+            sound.clip = clip;
+            sound.playOnAwake = false;
+            sound.loop = false;
+            sound.spatialBlend = 0f;
+            sound.volume = 0.8f;
+            var movable = instance.AddComponent<MovableObject>();
+            movable.kind = kind;
+            movable.sound = sound;
+        }
+
+        static AudioClip LoadClip(string name)
+        {
+            string path = $"Assets/Audio/Sfx/{name}.wav";
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+            if (clip == null)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el audio del objeto: {path}");
+            return clip;
         }
     }
 }
