@@ -68,7 +68,9 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(names[i], captures[i].name);
                 Assert.IsTrue(captures[i].transform.IsChildOf(clearing));
                 Assert.IsFalse(captures[i].overrideCamera);
-                Assert.AreEqual(i == 4 || i == 5 ? 2 : 1, clearing.GetComponentsInChildren<CaptureStop>().Length);
+                Assert.AreEqual(i == 5 ? 3 : 1, clearing.GetComponentsInChildren<CaptureStop>().Length);
+                Assert.AreEqual(RouteLayout.Clearing(i), clearing.localPosition);
+                Assert.AreEqual(Quaternion.identity, clearing.localRotation);
                 var ground = clearing.GetComponentInChildren<GroundSurface>();
                 Assert.AreEqual(groundTypes[i], ground.type);
                 Assert.AreEqual(36f, ground.GetComponent<Collider>().bounds.size.z);
@@ -175,15 +177,33 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void TrainRailsRunNorthSouth()
+        {
+            var tracks = route.GetChild(2).Find("Tracks");
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var rail = tracks.Find($"Rail {side}").GetComponent<Collider>();
+                Assert.Greater(rail.bounds.size.z, rail.bounds.size.x * 10f);
+                Assert.AreEqual(GroundType.Gravel, GroundSurface.TypeOf(rail));
+            }
+        }
+
+        [Test]
         public void FlightRouteVisitsEveryClearingAtCruiseHeightInOrder()
         {
             Assert.Greater(RouteBuilder.SkyHeight, 7f + 0.5f);
-            Assert.AreEqual(8, skyRoute.Length);
-            for (int i = 0; i < skyRoute.Length; i++)
+            Assert.GreaterOrEqual(skyRoute.Length, 8);
+            int cursor = 0;
+            for (int i = 0; i < RouteLayout.Count; i++)
             {
-                Vector3 offset = skyRoute[i] - route.GetChild(i).position;
-                Assert.AreEqual(Vector3.up * RouteBuilder.SkyHeight, offset);
+                Vector3 expected = route.GetChild(i).position + Vector3.up * RouteBuilder.SkyHeight;
+                int index = System.Array.FindIndex(skyRoute, cursor, point => Vector3.Distance(point, expected) < 0.001f);
+                Assert.GreaterOrEqual(index, cursor, route.GetChild(i).name);
+                cursor = index + 1;
             }
+            for (int i = 0; i < skyRoute.Length; i++)
+                Assert.IsFalse(HitsRoute(skyRoute[i], (skyRoute[(i + 1) % skyRoute.Length] - skyRoute[i]).normalized,
+                    Vector3.Distance(skyRoute[i], skyRoute[(i + 1) % skyRoute.Length])), $"Vuelo {i}");
         }
 
         [Test]
@@ -253,28 +273,138 @@ namespace TiffanyGame.Tests
         [Test]
         public void PathsJoinClearingsWithFiveMeterOpeningsAndClosedOuterEdges()
         {
-            for (int i = 0; i < 8; i++)
+            var normals = new[] { Vector3.left, Vector3.right, Vector3.back, Vector3.forward };
+            for (int i = 0; i < RouteLayout.Count; i++)
             {
                 var clearing = route.GetChild(i);
-                Assert.IsTrue(HitsRoute(clearing.position + Vector3.up, Vector3.left, 19f));
-                Assert.IsTrue(HitsRoute(clearing.position + Vector3.up, Vector3.right, 19f));
-                if (i == 7) continue;
-                var pathRoot = clearing.Find("Path to Next Clearing");
-                var path = pathRoot.Find(i == 4 ? "South Bank" : "Ground").GetComponent<Collider>().bounds;
-                if (i == 4) path.Encapsulate(pathRoot.Find("North Bank").GetComponent<Collider>().bounds);
-                Assert.AreEqual(5f, path.size.x);
-                Assert.AreEqual(clearing.position.z + 18f, path.min.z);
-                Assert.AreEqual(route.GetChild(i + 1).position.z - 18f, path.max.z);
-                for (int side = -1; side <= 1; side += 2)
+                var openings = new System.Collections.Generic.List<Vector3>();
+                if (i > 0)
                 {
-                    Vector3 exit = clearing.position + new Vector3(side * 2f, 1f, 17f);
-                    Vector3 entrance = route.GetChild(i + 1).position + new Vector3(side * 2f, 1f, -19f);
-                    Assert.IsFalse(HitsRoute(exit, Vector3.forward, 2f));
-                    Assert.IsFalse(HitsRoute(entrance, Vector3.forward, 2f));
+                    var previous = RouteLayout.Path(i - 1);
+                    openings.Add(previous[previous.Length - 1] - RouteLayout.Clearing(i));
+                }
+                if (i < RouteLayout.Count - 1) openings.Add(RouteLayout.Path(i)[0] - RouteLayout.Clearing(i));
+                foreach (Vector3 normal in normals)
+                {
+                    Vector3 tangent = Vector3.Cross(Vector3.up, normal);
+                    for (float offset = -17.75f; offset < 18f; offset += 0.5f)
+                    {
+                        Vector3 point = normal * 18f + tangent * offset;
+                        bool open = openings.Exists(opening => Vector3.Distance(opening, point) < RouteLayout.PathWidth * 0.5f);
+                        Assert.AreEqual(!open, HitsRoute(clearing.TransformPoint(point - normal + Vector3.up), normal, 2f),
+                            $"{clearing.name}, borde {normal}, posición {offset}");
+                    }
+                }
+                foreach (Transform child in clearing)
+                    if (child.TryGetComponent<GroundSurface>(out var surface))
+                    {
+                        var bounds = surface.GetComponent<Collider>().bounds;
+                        Assert.LessOrEqual(bounds.max.x - clearing.position.x, 18f + 0.001f);
+                        Assert.GreaterOrEqual(bounds.min.x - clearing.position.x, -18f - 0.001f);
+                        Assert.LessOrEqual(bounds.max.z - clearing.position.z, 18f + 0.001f);
+                        Assert.GreaterOrEqual(bounds.min.z - clearing.position.z, -18f - 0.001f);
+                    }
+                Assert.AreEqual(i < RouteLayout.Count - 1, clearing.Find("Path to Next Clearing") != null);
+            }
+        }
+
+        [Test]
+        public void DirtPathFloorsCoverEverySegmentAndTheirJointsHaveNoStepAboveFifteenCentimeters()
+        {
+            RouteLayout.RiverSpan(out var riverStart, out var riverEnd);
+            for (int from = 0; from < RouteLayout.Count - 1; from++)
+            {
+                var path = RouteLayout.Path(from);
+                var pathRoot = route.GetChild(from).Find("Path to Next Clearing");
+                var floors = pathRoot.GetComponentsInChildren<GroundSurface>();
+                for (int i = 1; i < path.Length; i++)
+                {
+                    Vector3 a = path[i - 1], b = path[i];
+                    bool river = a == riverStart && b == riverEnd;
+                    Vector3 side = Vector3.Cross(Vector3.up, b - a).normalized;
+                    int samples = Mathf.CeilToInt(Vector3.Distance(a, b) * 4f);
+                    for (int sample = 0; sample <= samples; sample++)
+                    for (int lane = -1; lane <= 1; lane++)
+                    {
+                        if (river) continue;
+                        Vector3 point = route.TransformPoint(Vector3.Lerp(a, b, (float)sample / samples) + side * (lane * 2f));
+                        Assert.IsTrue(FloorHeights(floors, point, out _, out _), $"Hueco en sendero {from}, tramo {i}, {point}");
+                    }
+                    if (i == path.Length - 1) continue;
+                    var joint = pathRoot.Find($"Joint {i}");
+                    Assert.IsNotNull(joint);
+                    Assert.AreEqual(Vector3.up, joint.up);
+                    for (float x = -3f; x <= 3f; x += 0.25f)
+                    for (float z = -3f; z <= 3f; z += 0.25f)
+                    {
+                        Vector3 point = route.TransformPoint(b + new Vector3(x, 0f, z));
+                        if (FloorHeights(floors, point, out float low, out float high))
+                            Assert.LessOrEqual(high - low, 0.15f + 0.001f, $"Unión {from}/{i}, {point}");
+                    }
                 }
             }
-            Assert.IsTrue(HitsRoute(route.GetChild(0).position + new Vector3(0f, 1f, -17f), Vector3.back, 2f));
-            Assert.IsTrue(HitsRoute(route.GetChild(7).position + new Vector3(0f, 1f, 17f), Vector3.forward, 2f));
+        }
+
+        static bool FloorHeights(GroundSurface[] floors, Vector3 point, out float low, out float high)
+        {
+            low = float.PositiveInfinity;
+            high = float.NegativeInfinity;
+            foreach (var floor in floors)
+                if (floor.GetComponent<Collider>().Raycast(new Ray(point + Vector3.up * 2f, Vector3.down), out var hit, 4f)
+                    && hit.normal.y > 0.99f)
+                {
+                    low = Mathf.Min(low, hit.point.y);
+                    high = Mathf.Max(high, hit.point.y);
+                }
+            return low <= high;
+        }
+
+        [Test]
+        public void GateAndCliffAreSolidAndTheBakedRouteConnectsEveryClearingWithoutAShortcut()
+        {
+            var gate = route.GetChild(7).Find("Gate");
+            var cliff = route.GetChild(5).Find("Cliff");
+            Assert.IsNotNull(gate.GetComponent<Collider>());
+            Assert.IsFalse(gate.GetComponent<Collider>().isTrigger);
+            RouteLayout.Gate(out var position, out float yaw, out float width);
+            Assert.Less(Vector3.Distance(route.TransformPoint(position), gate.position), 0.001f);
+            Assert.Less(Quaternion.Angle(route.rotation * Quaternion.Euler(0f, yaw, 0f), gate.rotation), 0.001f);
+            Assert.AreEqual(width, gate.GetComponent<BoxCollider>().size.x, 0.001f);
+            var cliffCollider = cliff.GetComponent<Collider>();
+            Assert.IsNotNull(cliffCollider);
+            Assert.IsFalse(cliffCollider.isTrigger);
+            Assert.That(cliffCollider.bounds.size.y, Is.InRange(6f, 8f));
+            Assert.Greater(cliffCollider.bounds.min.z, route.GetChild(5).position.z + 18f);
+            Assert.AreEqual(route.GetChild(5).position.y, cliffCollider.bounds.min.y, 0.001f);
+            var surface = route.gameObject.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.Children;
+            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            surface.layerMask = ~LayerMask.GetMask(ForestLayout.CoverLayer, "Ignore Raycast");
+            surface.BuildNavMesh();
+            navMeshData = surface.navMeshData;
+            var path = new NavMeshPath();
+            Assert.IsTrue(NavMesh.SamplePosition(player.transform.position, out var start, 0.5f, NavMesh.AllAreas));
+            Vector3 last = start.position;
+            for (int i = 1; i < RouteLayout.Count; i++)
+            {
+                Assert.IsTrue(NavMesh.SamplePosition(route.GetChild(i).TransformPoint(Vector3.back * 13f), out var end, 0.5f, NavMesh.AllAreas));
+                Assert.IsTrue(NavMesh.CalculatePath(last, end.position, NavMesh.AllAreas, path), $"Claro {i}");
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, $"Claro {i}");
+                last = end.position;
+            }
+            Assert.IsFalse(NavMesh.SamplePosition(gate.position, out _, 1f, NavMesh.AllAreas));
+            Assert.IsTrue(NavMesh.CalculatePath(last, start.position, NavMesh.AllAreas, path));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
+            float length = 0f;
+            var corners = path.corners;
+            for (int i = 1; i < corners.Length; i++)
+            {
+                Vector3 delta = corners[i] - corners[i - 1];
+                length += delta.magnitude;
+                Assert.IsFalse(gate.GetComponent<Collider>().Raycast(new Ray(corners[i - 1] + Vector3.up * 0.6f, delta.normalized),
+                    out _, delta.magnitude));
+            }
+            Assert.Greater(length, Vector3.Distance(last, start.position) * 2f);
         }
 
         [Test]
@@ -293,17 +423,25 @@ namespace TiffanyGame.Tests
         [Test]
         public void RiverHasFiveGravelStonesOneBranchLogAndBlocksWaterBesideTheCrossing()
         {
-            var river = route.GetChild(4).Find("Path to Next Clearing/River");
+            var river = route.GetChild(5).Find("Path to Next Clearing/River Crossing/River");
             Assert.IsNotNull(river);
             Assert.IsNull(river.Find("Water").GetComponent<Collider>());
             Assert.IsNull(river.parent.Find("Ground"));
+            RouteLayout.RiverSpan(out var start, out var end);
+            Assert.Less(Vector3.Distance(route.TransformPoint((start + end) * 0.5f), river.position), 0.001f);
+            Assert.Greater(Vector3.Dot(river.forward, (end - start).normalized), 0.999f);
+            foreach (var surface in river.parent.parent.GetComponentsInChildren<GroundSurface>())
+                if (surface.type == GroundType.Dirt)
+                    for (int z = -1; z <= 1; z++)
+                        Assert.IsFalse(surface.GetComponent<Collider>().Raycast(
+                            new Ray(river.TransformPoint(new Vector3(0f, 2f, z)), Vector3.down), out _, 4f), surface.name);
             var surfaces = river.GetComponentsInChildren<GroundSurface>();
             Assert.AreEqual(6, surfaces.Length);
             for (int i = 1; i <= 5; i++)
             {
                 var stone = river.Find($"Stone {i}").GetComponent<BoxCollider>();
                 Assert.AreEqual(GroundType.Gravel, GroundSurface.TypeOf(stone));
-                Assert.AreEqual(WaterBuilder.StoneTop, stone.bounds.max.y, 0.001f);
+                Assert.AreEqual(river.position.y + WaterBuilder.StoneTop, stone.bounds.max.y, 0.001f);
                 Assert.Greater(stone.size.z, CrossingLayout.MaxWalkingSpacing);
             }
             Assert.AreEqual(GroundType.Branches, river.Find("Log").GetComponent<GroundSurface>().type);
@@ -319,7 +457,7 @@ namespace TiffanyGame.Tests
         public void WaterHasSavedShaderPositionedLoopsAndLitCaptureStops()
         {
             var lake = route.GetChild(5).Find("Water");
-            var river = route.GetChild(4).Find("Path to Next Clearing/River/Water");
+            var river = route.GetChild(5).Find("Path to Next Clearing/River Crossing/River/Water");
             foreach (var water in new[] { lake, river })
             {
                 var material = water.GetComponent<Renderer>().sharedMaterial;
@@ -345,19 +483,21 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(stop.GetComponent<CaptureStop>().overrideCamera);
             }
             Assert.IsTrue(HitsRoute(riverStop.position + Vector3.up, Vector3.down, 1.1f));
-            Assert.AreEqual(WaterBuilder.StoneTop, riverStop.position.y, 0.001f);
+            Assert.AreEqual(WaterBuilder.StoneTop, riverStop.localPosition.y, 0.001f);
         }
 
         [Test]
-        public void RoofsTanksAndAllElevatedCollidersAreNotWalkable()
+        public void ObstaclesStayOffNavMeshAndElevatedGroundSurfacesRemainWalkable()
         {
             int roofCount = 0;
             int tankCount = 0;
             int notWalkable = NavMesh.GetAreaFromName("Not Walkable");
             Assert.GreaterOrEqual(notWalkable, 0);
-            foreach (var collider in route.GetComponentsInChildren<Collider>())
+            foreach (Transform clearing in route)
+            foreach (var collider in clearing.GetComponentsInChildren<Collider>())
             {
-                if (collider.isTrigger || collider.bounds.max.y <= route.position.y + 1f) continue;
+                if (collider.isTrigger || collider.TryGetComponent<GroundSurface>(out _)) continue;
+                if (collider.bounds.max.y <= clearing.position.y + 1f && collider.bounds.size.y <= 1f) continue;
                 var modifier = collider.GetComponent<NavMeshModifier>();
                 Assert.IsNotNull(modifier, collider.name);
                 Assert.IsTrue(modifier.isActiveAndEnabled, collider.name);

@@ -42,6 +42,12 @@ namespace TiffanyGame.Tests
             var zones = new List<(Vector2 center, float radius)>(ForestBuilder.RouteExclusions(index));
             zones.Add((new Vector2(11f, -4f), 3f));
             ForestBuilder.Populate(root.transform, 17389 + index, 36f, 5f, zones.ToArray());
+            foreach (Vector3 opening in RouteLayout.Openings(index))
+            {
+                Vector3 local = opening - RouteLayout.Clearing(index);
+                for (int sample = 0; sample <= 40; sample++)
+                    zones.Add((new Vector2(local.x, local.z) * (sample / 40f), RouteLayout.PathWidth * 0.5f));
+            }
             var filters = root.GetComponentsInChildren<MeshFilter>();
             Assert.IsNotEmpty(filters);
             foreach (var filter in filters)

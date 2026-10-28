@@ -10,6 +10,16 @@ namespace TiffanyGame.EditorTools
         {
             var zones = new List<(Vector2, float)>();
             void Add(float x, float z, float radius) => zones.Add((new Vector2(x, z), radius));
+            foreach (Vector3 opening in RouteLayout.Openings(index))
+            {
+                Vector3 local = opening - RouteLayout.Clearing(index);
+                int steps = Mathf.CeilToInt(local.magnitude);
+                for (int i = 0; i <= steps; i++)
+                {
+                    Vector3 point = local * ((float)i / steps);
+                    Add(point.x, point.z, RouteLayout.PathWidth * 0.5f + 0.5f);
+                }
+            }
             Add(-6f, -8f, 3.5f);
             Add(0f, index == 0 ? -3.2f : index == 1 ? -1f : index == 2 ? -3f : 3f, 2f);
             switch (index)
@@ -31,7 +41,7 @@ namespace TiffanyGame.EditorTools
                     Add(6f, -1.5f, 2.3f);
                     break;
                 case 2:
-                    for (int x = -12; x <= 12; x += 6) Add(x, 0f, 4f);
+                    for (int z = -12; z <= 12; z += 6) Add(0f, z, 4f);
                     Add(6f, -4f, 2.3f);
                     break;
                 case 3: Add(0f, 5f, 9.5f); break;
