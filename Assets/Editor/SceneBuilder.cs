@@ -30,8 +30,11 @@ namespace TiffanyGame.EditorTools
             playerLight.witch = BuildWitch(spawn.parent, player.transform);
             var tyler = BuildTyler(spawn.parent, player.transform);
             var storm = StormBuilder.BuildStorm(player.transform, spawn);
-            BuildCandles(spawn.parent, player.GetComponent<PlayerSoul>(), storm);
-            var gameInterface = BuildInterface();
+            var firstCandle = BuildCandles(spawn.parent, player.GetComponent<PlayerSoul>(), storm);
+            var gameInterface = BuildInterface(out var caughtFade);
+            var respawn = player.gameObject.AddComponent<PlayerRespawn>();
+            respawn.witch = playerLight.witch;
+            respawn.overlay = caughtFade;
             BuildLightStops(spawn.parent);
             HidingBuilder.BuildHideTest(spawn.parent, player);
             MemoryBuilder.Build(spawn.parent, player, gameInterface, tyler, viewCamera);
@@ -44,6 +47,13 @@ namespace TiffanyGame.EditorTools
             capture.wait = 1.5f;
             candleStop.AddComponent<LightCaptureStage>().energy = SoulEnergy.Max;
             PowerBuilder.BuildPowers(playerLight, spawn.parent, storm);
+            var caughtStop = new GameObject("Witch 8 Caught");
+            caughtStop.transform.SetParent(spawn.parent, false);
+            caughtStop.transform.position = spawn.position;
+            var caughtCapture = caughtStop.AddComponent<CaptureStop>();
+            caughtCapture.overrideCamera = false;
+            caughtCapture.wait = CaughtSequence.FireDuration + CaughtSequence.FadeOutDuration + CaughtSequence.FadeInDuration * 0.5f;
+            caughtStop.AddComponent<CaughtCaptureStage>().spot = firstCandle;
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -233,13 +243,16 @@ namespace TiffanyGame.EditorTools
             return controller;
         }
 
-        static void BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
+        static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
         {
+            CandleSpot first = null;
             for (int i = 0; i < 2; i++)
             {
-                CreateCandle(zoneRoot, $"Family Candle {i + 1}", SurfacePoint(i == 0 ? -5f : 5f, 4f),
+                var spot = CreateCandle(zoneRoot, $"Family Candle {i + 1}", SurfacePoint(i == 0 ? -5f : 5f, 4f),
                     CandleKind.Family, true, soul, storm);
+                if (i == 0) first = spot;
             }
+            return first;
         }
 
         internal static CandleSpot CreateCandle(Transform parent, string name, Vector3 position,
@@ -430,7 +443,7 @@ namespace TiffanyGame.EditorTools
             return camera;
         }
 
-        static GameInterface BuildInterface()
+        static GameInterface BuildInterface(out Image caughtFade)
         {
             var root = new GameObject("Interface", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
             root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
@@ -441,6 +454,8 @@ namespace TiffanyGame.EditorTools
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var ui = root.AddComponent<GameInterface>();
 
+            caughtFade = InterfacePanel("Caught Fade", root.transform, 1f).GetComponent<Image>();
+            caughtFade.gameObject.SetActive(false);
             ui.noticeText = InterfaceText("Power Notice", root.transform, font, "", 42,
                 new Vector2(0.12f, 0.65f), new Vector2(0.88f, 0.74f));
             ui.noticeText.color = new Color(1f, 0.87f, 0.63f);
