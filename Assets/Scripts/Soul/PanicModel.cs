@@ -6,11 +6,11 @@ namespace ElVelador
     public sealed class PanicModel
     {
         public const float StepsThreshold = 0.5f;
-        public const float FalseLanternsThreshold = 0.75f;
+        public const float FalseFiresThreshold = 0.75f;
         public const float ChildrenThreshold = 0.9f;
         public const float DarknessRise = 0.012f;
-        public const float VeladorRiseMax = 0.06f;
-        public const float VeladorRadius = 20f;
+        public const float WitchRiseMax = 0.06f;
+        public const float WitchRadius = 20f;
         public const float WhispersRise = 0.03f;
         public const float DarknessMultiplier = 1.5f;
         public const float SafeLightCalm = 0.1f;
@@ -21,7 +21,7 @@ namespace ElVelador
 
         public PanicStage Stage =>
             Level >= ChildrenThreshold ? PanicStage.Children :
-            Level >= FalseLanternsThreshold ? PanicStage.FalseLanterns :
+            Level >= FalseFiresThreshold ? PanicStage.FalseFires :
             Level >= StepsThreshold ? PanicStage.Steps :
             PanicStage.Calm;
 
@@ -33,10 +33,10 @@ namespace ElVelador
             }
 
             float rise = 0f;
-            float distance = inputs.VeladorDistance;
-            if (distance >= 0f && distance < VeladorRadius)
+            float distance = inputs.WitchDistance;
+            if (distance >= 0f && distance < WitchRadius)
             {
-                rise += VeladorRiseMax * (1f - distance / VeladorRadius);
+                rise += WitchRiseMax * (1f - distance / WitchRadius);
             }
 
             if (inputs.HearingWhispers)

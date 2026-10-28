@@ -3,12 +3,12 @@ namespace ElVelador
     public struct PanicInputs
     {
         public bool InDarkness;
-        public float VeladorDistance;
+        public float WitchDistance;
         public bool HearingWhispers;
         public bool InSafeLight;
         public bool HiddenAndStill;
         public bool DogNear;
 
-        public static PanicInputs None => new PanicInputs { VeladorDistance = float.PositiveInfinity };
+        public static PanicInputs None => new PanicInputs { WitchDistance = float.PositiveInfinity };
     }
 }
