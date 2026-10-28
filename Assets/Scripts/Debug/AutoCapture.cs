@@ -81,6 +81,8 @@ namespace TiffanyGame
                 if (lightStage != null && player != null) lightStage.Apply(player.transform);
                 var hideStage = stop.GetComponent<HideCaptureStage>();
                 if (hideStage != null) hideStage.Apply();
+                var powerStage = stop.GetComponent<PowerCaptureStage>();
+                if (powerStage != null && player != null) powerStage.Apply(player.transform);
                 yield return new WaitForSecondsRealtime(stop.wait);
                 yield return Capture($"{i + 1:00}_{stop.name}");
                 if (witchStage != null) witchStage.Clear();
@@ -88,6 +90,7 @@ namespace TiffanyGame
                 if (stormStage != null) stormStage.Clear();
                 if (lightStage != null) lightStage.Clear();
                 if (hideStage != null) hideStage.Clear();
+                if (powerStage != null) powerStage.Clear();
             }
 
             int captureCount = stops.Length + 1;
