@@ -1,0 +1,224 @@
+using System;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Rendering;
+
+namespace TiffanyGame.EditorTools
+{
+    public static class SceneBuilder
+    {
+        public const string ScenePath = "Assets/Scenes/Main.unity";
+        const string MaterialFolder = "Assets/Scenes/Generated/Materials";
+        const float SlopeAngle = 8f;
+        const float PatchHeight = 0.1f;
+        const float PatchElevation = 0.03f;
+
+        [MenuItem("Tiffany/Build Scene")]
+        public static void Build()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            ConfigureNight();
+            CreateMoon();
+            var spawn = BuildTestZone();
+            var player = CreatePlayer(spawn);
+            CreateCamera(player);
+            SaveScene();
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            AssetDatabase.SaveAssets();
+            Debug.Log($"{GameInfo.LogPrefix} Escena generada en {ScenePath}.");
+        }
+
+        public static void BuildFromCommandLine()
+        {
+            try
+            {
+                Build();
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorApplication.Exit(1);
+            }
+        }
+
+        static void ConfigureNight()
+        {
+            RenderSettings.skybox = null;
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.025f, 0.035f, 0.065f);
+            RenderSettings.reflectionIntensity = 0f;
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = new Color(0.025f, 0.035f, 0.055f);
+            RenderSettings.fogStartDistance = 45f;
+            RenderSettings.fogEndDistance = 90f;
+        }
+
+        static void CreateMoon()
+        {
+            var moon = new GameObject("Moon").AddComponent<Light>();
+            moon.type = LightType.Directional;
+            moon.color = new Color(0.7f, 0.8f, 1f);
+            moon.intensity = 0.32f;
+            moon.shadows = LightShadows.Soft;
+            moon.transform.rotation = Quaternion.Euler(35f, -30f, 0f);
+            RenderSettings.sun = moon;
+        }
+
+        static Transform BuildTestZone()
+        {
+            var root = new GameObject("Test Zone").transform;
+            var rotation = Quaternion.Euler(-SlopeAngle, 0f, 0f);
+            var normal = rotation * Vector3.up;
+            var slope = CreatePrimitive("Hillside", PrimitiveType.Cube, root,
+                -normal * 0.5f, new Vector3(60f, 1f, 60f),
+                GetMaterial("Hillside", new Color(0.095f, 0.11f, 0.14f)));
+            slope.transform.rotation = rotation;
+
+            var colors = new[]
+            {
+                new Color(0.46f, 0.30f, 0.18f),
+                new Color(0.28f, 0.39f, 0.23f),
+                new Color(0.44f, 0.48f, 0.52f),
+                new Color(0.65f, 0.60f, 0.49f),
+                new Color(0.64f, 0.37f, 0.13f),
+                new Color(0.30f, 0.13f, 0.085f)
+            };
+            var types = (GroundType[])Enum.GetValues(typeof(GroundType));
+            for (int i = 0; i < types.Length; i++)
+            {
+                var type = types[i];
+                float x = (i % 3 - 1) * 15f;
+                float alongSlope = i / 3 == 0 ? -9f : 9f;
+                var top = SurfacePoint(x, alongSlope) + normal * PatchElevation;
+                var patch = CreatePrimitive($"Ground {type}", PrimitiveType.Cube, root,
+                    top - normal * (PatchHeight * 0.5f), new Vector3(10f, PatchHeight, 10f),
+                    GetMaterial($"Ground{type}", colors[i]));
+                patch.transform.rotation = rotation;
+                patch.AddComponent<GroundSurface>().type = type;
+
+                var stop = new GameObject($"Stop {i + 1} {type}");
+                stop.transform.SetParent(root, false);
+                stop.transform.position = top;
+                stop.AddComponent<CaptureStop>().overrideCamera = false;
+            }
+
+            CreateBorder("West Border", root, SurfacePoint(-30f, 0f) + normal,
+                rotation, new Vector3(0.5f, 2f, 60.5f));
+            CreateBorder("East Border", root, SurfacePoint(30f, 0f) + normal,
+                rotation, new Vector3(0.5f, 2f, 60.5f));
+            CreateBorder("Lower Border", root, SurfacePoint(0f, -30f) + normal,
+                rotation, new Vector3(60.5f, 2f, 0.5f));
+            CreateBorder("Upper Border", root, SurfacePoint(0f, 30f) + normal,
+                rotation, new Vector3(60.5f, 2f, 0.5f));
+
+            var spawn = new GameObject("Spawn").transform;
+            spawn.SetParent(root, false);
+            spawn.position = SurfacePoint(0f, 0f);
+            return spawn;
+        }
+
+        static Vector3 SurfacePoint(float x, float alongSlope)
+        {
+            float angle = SlopeAngle * Mathf.Deg2Rad;
+            float z = alongSlope * Mathf.Cos(angle);
+            return new Vector3(x, z * Mathf.Tan(angle), z);
+        }
+
+        static void CreateBorder(string name, Transform parent, Vector3 position,
+            Quaternion rotation, Vector3 size)
+        {
+            var border = new GameObject(name);
+            border.transform.SetParent(parent, false);
+            border.transform.SetPositionAndRotation(position, rotation);
+            border.AddComponent<BoxCollider>().size = size;
+        }
+
+        static PlayerController CreatePlayer(Transform spawn)
+        {
+            var player = new GameObject("Tiffany");
+            player.tag = "Player";
+            player.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
+            var controller = player.AddComponent<CharacterController>();
+            controller.height = 1.2f;
+            controller.radius = 0.25f;
+            controller.center = new Vector3(0f, 0.6f, 0f);
+
+            var body = CreatePrimitive("Body", PrimitiveType.Capsule, player.transform,
+                new Vector3(0f, 0.6f, 0f), new Vector3(0.5f, 0.6f, 0.5f),
+                GetMaterial("TiffanyBody", new Color(0.86f, 0.86f, 0.72f)));
+            UnityEngine.Object.DestroyImmediate(body.GetComponent<CapsuleCollider>());
+            var facing = CreatePrimitive("Facing", PrimitiveType.Cube, player.transform,
+                new Vector3(0f, 0.97f, 0.26f), new Vector3(0.18f, 0.14f, 0.18f),
+                GetMaterial("TiffanyFacing", new Color(0.8f, 0.43f, 0.16f)));
+            UnityEngine.Object.DestroyImmediate(facing.GetComponent<BoxCollider>());
+            return player.AddComponent<PlayerController>();
+        }
+
+        static void CreateCamera(PlayerController player)
+        {
+            var cameraObject = new GameObject("Main Camera");
+            cameraObject.tag = "MainCamera";
+            var camera = cameraObject.AddComponent<Camera>();
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = RenderSettings.fogColor;
+            camera.farClipPlane = 80f;
+            cameraObject.AddComponent<AudioListener>();
+            var follow = cameraObject.AddComponent<FollowCamera>();
+            follow.target = player.transform;
+            camera.fieldOfView = follow.fieldOfView;
+            follow.Snap();
+            player.viewCamera = camera;
+        }
+
+        static GameObject CreatePrimitive(string name, PrimitiveType type, Transform parent,
+            Vector3 position, Vector3 scale, Material material)
+        {
+            var instance = GameObject.CreatePrimitive(type);
+            instance.name = name;
+            instance.transform.SetParent(parent, false);
+            instance.transform.localPosition = position;
+            instance.transform.localScale = scale;
+            instance.GetComponent<Renderer>().sharedMaterial = material;
+            return instance;
+        }
+
+        static Material GetMaterial(string name, Color color)
+        {
+            EnsureFolder(MaterialFolder);
+            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el shader URP/Lit.");
+
+            string path = $"{MaterialFolder}/{name}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool isNew = material == null;
+            if (isNew) material = new Material(shader) { name = name };
+            else material.shader = shader;
+
+            material.SetColor("_BaseColor", color);
+            material.SetFloat("_Smoothness", 0.08f);
+            material.SetFloat("_Metallic", 0f);
+            if (isNew) AssetDatabase.CreateAsset(material, path);
+            else EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        static void EnsureFolder(string path)
+        {
+            if (AssetDatabase.IsValidFolder(path)) return;
+            int separator = path.LastIndexOf('/');
+            string parent = path.Substring(0, separator);
+            EnsureFolder(parent);
+            AssetDatabase.CreateFolder(parent, path.Substring(separator + 1));
+        }
+
+        static void SaveScene()
+        {
+            if (!EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), ScenePath))
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se pudo guardar la escena en {ScenePath}.");
+        }
+    }
+}
