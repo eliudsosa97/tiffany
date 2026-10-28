@@ -16,6 +16,7 @@ namespace TiffanyGame.Tests
         PlayerController player;
         Storm storm;
         Vector3[] skyRoute;
+        NavMeshData navMeshData;
         string previousMaterialFolder;
 
         [SetUp]
@@ -42,6 +43,7 @@ namespace TiffanyGame.Tests
         public void TearDown()
         {
             Object.DestroyImmediate(root);
+            if (navMeshData != null) Object.DestroyImmediate(navMeshData);
             AssetDatabase.DeleteAsset(TempFolder);
             GeneratedMaterials.folder = previousMaterialFolder;
         }
@@ -184,12 +186,43 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void FirstFiveClearingsHaveHidesReachableFromThePathOnBakedNavMesh()
+        {
+            var surface = route.gameObject.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.Children;
+            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            surface.BuildNavMesh();
+            navMeshData = surface.navMeshData;
+            Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
+            var path = new NavMeshPath();
+            for (int i = 0; i < 5; i++)
+            {
+                var clearing = route.GetChild(i);
+                var hides = clearing.GetComponentsInChildren<HideVolume>();
+                Assert.AreEqual(1, hides.Length, clearing.name);
+                var hide = hides[0];
+                Assert.IsTrue(hide.GetComponent<Collider>().isTrigger, hide.name);
+                Assert.AreEqual(LayerMask.NameToLayer("Ignore Raycast"), hide.gameObject.layer);
+                Assert.IsTrue(NavMesh.SamplePosition(clearing.TransformPoint(new Vector3(0f, 0f, -13f)),
+                    out var start, 0.5f, NavMesh.AllAreas), clearing.name);
+                foreach (var entry in new[] { hide.HidePoint, hide.HidePoint + Vector3.left * 1.2f })
+                {
+                    Assert.IsTrue(NavMesh.SamplePosition(entry, out var end, 0.5f, NavMesh.AllAreas), hide.name);
+                    Assert.IsTrue(NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path), hide.name);
+                    Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, hide.name);
+                }
+            }
+        }
+
+        [Test]
         public void RouteUsesFewStaticRenderersSavedUrpMaterialsAndOnlyCandleLights()
         {
             Assert.Less(route.GetComponentsInChildren<Transform>(true).Length, 600);
             var renderers = route.GetComponentsInChildren<Renderer>(true);
             Assert.IsNotEmpty(renderers);
             Assert.Less(renderers.Length, 300);
+            Assert.AreEqual(4, System.Array.FindAll(renderers,
+                renderer => renderer.GetComponentInParent<HideVolume>() != null).Length);
             foreach (var renderer in renderers)
             {
                 Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic), renderer.name);
@@ -309,14 +342,20 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(HitsRoute(shelter.position + Vector3.up * 0.6f, Vector3.back, depth * 0.5f + 1f));
         }
 
-        [TestCase(3)]
-        [TestCase(4)]
-        [TestCase(7)]
-        public void FollowCameraSeesPlayerAndMemoryInsideShelters(int index)
+        [TestCase(3, false)]
+        [TestCase(4, false)]
+        [TestCase(7, false)]
+        [TestCase(0, true)]
+        [TestCase(1, true)]
+        [TestCase(2, true)]
+        [TestCase(3, true)]
+        [TestCase(4, true)]
+        public void FollowCameraSeesPlayerNearMemoriesAndHides(int index, bool atHide)
         {
             var clearing = route.GetChild(index);
-            var spot = clearing.GetComponentInChildren<MemorySpot>();
-            Vector3 position = spot != null ? spot.transform.position : clearing.TransformPoint(new Vector3(0f, 0f, 3f));
+            var spot = atHide ? null : clearing.GetComponentInChildren<MemorySpot>();
+            Vector3 position = atHide ? clearing.GetComponentInChildren<HideVolume>().HidePoint + Vector3.left * 1.2f
+                : spot != null ? spot.transform.position : clearing.TransformPoint(new Vector3(0f, 0f, 3f));
             Vector3 marker = spot != null ? spot.visual.GetComponent<Renderer>().bounds.center : position + Vector3.up * 0.18f;
             var camera = new GameObject("Follow Camera").AddComponent<FollowCamera>();
             camera.transform.SetParent(root.transform, false);

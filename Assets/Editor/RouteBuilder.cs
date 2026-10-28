@@ -26,6 +26,7 @@ namespace TiffanyGame.EditorTools
             var floor = GeneratedMaterials.Get("RouteGround", new Color(0.25f, 0.25f, 0.25f));
             var structure = GeneratedMaterials.Get("RouteStructure", new Color(0.4f, 0.4f, 0.4f));
             var dark = GeneratedMaterials.Get("RouteForest", new Color(0.09f, 0.09f, 0.09f));
+            var bush = GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f));
             memories = new Transform[5];
             skyRoute = new Vector3[names.Length];
             var tracker = route.gameObject.AddComponent<WitchChapterTracker>();
@@ -39,7 +40,7 @@ namespace TiffanyGame.EditorTools
                 else Ground("Ground", clearing, Vector3.zero, new Vector2(ClearingSize, ClearingSize), grounds[i], floor);
                 BuildEdges(clearing, i, dark);
                 if (i < names.Length - 1) BuildPath(clearing, floor, dark);
-                Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark);
+                Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush);
                 if (i < memories.Length) memories[i] = Root("Memory Point", clearing, memoryPosition);
                 skyRoute[i] = clearing.position + Vector3.up * SkyHeight;
 
@@ -118,12 +119,13 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static Vector3 BuildLandmark(int index, Transform clearing, Material structure, Material dark)
+        static Vector3 BuildLandmark(int index, Transform clearing, Material structure, Material dark, Material bush)
         {
             switch (index)
             {
                 case 0:
                     BuildCemetery(clearing, structure);
+                    HidingBuilder.BuildHideSpot(clearing, "Hide Gravestone", new Vector3(-9f, 0f, 5f), null);
                     return new Vector3(0f, 0f, -3.2f);
                 case 1:
                     var fence = Root("Fence", clearing, Vector3.zero);
@@ -134,6 +136,7 @@ namespace TiffanyGame.EditorTools
                     for (int side = -1; side <= 1; side += 2)
                         SceneBuilder.CreatePrimitive($"Tank {side}", PrimitiveType.Cylinder, clearing,
                             new Vector3(side * 7f, 3f, 8f), new Vector3(5f, 3f, 5f), structure);
+                    HidingBuilder.BuildHideSpot(clearing, "Hide Fence Bush", new Vector3(6f, 0f, -1.5f), bush);
                     return new Vector3(0f, 0f, -1f);
                 case 2:
                     var tracks = Root("Tracks", clearing, Vector3.zero);
@@ -143,12 +146,15 @@ namespace TiffanyGame.EditorTools
                     for (int side = -1; side <= 1; side += 2)
                         Part($"Rail {side}", tracks, new Vector3(0f, 0.1f, side * 1.6f),
                             new Vector3(28f, 0.2f, 0.15f), dark).AddComponent<GroundSurface>().type = GroundType.Gravel;
+                    HidingBuilder.BuildHideSpot(clearing, "Hide Tracks Bush", new Vector3(6f, 0f, -4f), bush);
                     return new Vector3(0f, 0f, -3f);
                 case 3:
                     BuildShelter("Barn", clearing, 14f, 10f, 5f, structure);
+                    HidingBuilder.BuildHideSpot(clearing, "Hide Stable Crate", new Vector3(-4.5f, 0f, 7f), structure, PrimitiveType.Cube);
                     return new Vector3(0f, 0f, 3f);
                 case 4:
                     BuildShelter("Hut", clearing, 8f, 8f, 3.5f, structure);
+                    HidingBuilder.BuildHideSpot(clearing, "Hide Hut Bush", new Vector3(-6f, 0f, 3f), bush);
                     return new Vector3(0f, 0f, 3f);
                 case 6:
                     Part("Asphalt", clearing, new Vector3(0f, 0.02f, 0f), new Vector3(35f, 0.04f, 8f), dark)
@@ -226,7 +232,7 @@ namespace TiffanyGame.EditorTools
             GraveyardModel("Tiffany Gravestone", "gravestone-bevel", clearing, new Vector3(0f, 0f, -2f), 1.6f, material);
             var models = new[] { "gravestone-round", "gravestone-broken", "gravestone-cross", "cross", "cross-wood", "gravestone-bevel" };
             for (int i = 0; i < models.Length; i++)
-                GraveyardModel($"Grave {i + 1}", models[i], clearing, new Vector3(i % 2 == 0 ? -9f : 9f, 0f, 3f + i / 2 * 5f), 1.5f, material);
+                GraveyardModel($"Grave {i + 1}", models[i], clearing, new Vector3(i % 2 == 0 ? -9f : 9f, 0f, 3f + i / 2 * 5f), i == 0 ? 2f : 1.5f, material);
             for (int side = -1; side <= 1; side += 2)
             {
                 GraveyardModel($"Iron Fence {side}", "iron-fence-damaged", clearing, new Vector3(side * 5f, 0f, -16f), 1.8f, material);

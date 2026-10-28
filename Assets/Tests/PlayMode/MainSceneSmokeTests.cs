@@ -178,6 +178,37 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator RouteHideEntersAndLeavesThroughInteraction()
+        {
+            var hide = GameObject.Find("Route").transform.GetChild(3).GetComponentInChildren<HideVolume>();
+            Assert.IsNotNull(hide);
+            var hiding = Object.FindAnyObjectByType<PlayerHiding>();
+            hiding.gameInterface.StartGame();
+            var controller = hiding.GetComponent<CharacterController>();
+            controller.enabled = false;
+            hiding.transform.position = hide.HidePoint + Vector3.left * 1.2f;
+            controller.enabled = true;
+            Physics.SyncTransforms();
+            yield return null;
+            Vector3 entry = hiding.transform.position;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Escondida");
+            GameInput.InteractOverride = true;
+            yield return null;
+            GameInput.InteractOverride = false;
+            Assert.IsTrue(hiding.Hidden);
+            Assert.Less(Vector3.Distance(hide.HidePoint, hiding.transform.position), 0.001f);
+            yield return null;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Fuera del escondite");
+            GameInput.InteractOverride = true;
+            yield return null;
+            GameInput.InteractOverride = false;
+            Assert.IsFalse(hiding.Hidden);
+            Assert.Less(Vector3.Distance(entry, hiding.transform.position), 0.05f);
+            Assert.IsTrue(hiding.GetComponent<PlayerController>().enabled && controller.enabled);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator RouteSharesOneNavMeshAndStartsTheCastInTheCemetery()
         {
             var route = GameObject.Find("Route").transform;
@@ -186,6 +217,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(55, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
                 "47 paradas de escena, una vista previa, cinco ecos y dos de la pelota.");
             Assert.AreEqual(19, route.GetComponentsInChildren<CaptureStop>().Length);
+            Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
+            Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
             Assert.AreEqual(12, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length);
             foreach (var movable in MovableObject.Active) Assert.IsTrue(movable.transform.IsChildOf(cemetery));
             var player = GameObject.FindGameObjectWithTag("Player");
@@ -223,6 +256,12 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(NavMesh.SamplePosition(route.GetChild(i).position, out var to, 1f, NavMesh.AllAreas));
                 Assert.IsTrue(NavMesh.CalculatePath(from.position, to.position, NavMesh.AllAreas, path));
                 Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, route.GetChild(i).name);
+            }
+            foreach (var hide in route.GetComponentsInChildren<HideVolume>())
+            {
+                Assert.IsTrue(NavMesh.SamplePosition(hide.HidePoint, out var entry, 0.5f, NavMesh.AllAreas), hide.name);
+                Assert.IsTrue(NavMesh.CalculatePath(from.position, entry.position, NavMesh.AllAreas, path), hide.name);
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, hide.name);
             }
             Assert.IsFalse(NavMesh.SamplePosition(route.GetChild(5).Find("Water").position, out _, 1f, NavMesh.AllAreas));
             yield return null;

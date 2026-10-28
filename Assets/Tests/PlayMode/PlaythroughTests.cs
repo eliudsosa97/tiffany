@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -138,7 +139,7 @@ namespace TiffanyGame.Tests
             var navigation = new PlaythroughNavigation();
             var targets = new[]
             {
-                PlaythroughMilestone.Memory2, PlaythroughMilestone.Kindle, PlaythroughMilestone.Memory3,
+                PlaythroughMilestone.Hide, PlaythroughMilestone.Memory2, PlaythroughMilestone.Kindle, PlaythroughMilestone.Memory3,
                 PlaythroughMilestone.MoveObject, PlaythroughMilestone.Memory4, PlaythroughMilestone.Memory5,
                 PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
             };
@@ -180,8 +181,9 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator DisconnectedHideIsReportedAndBothHideStepsAreSkipped()
         {
-            var hide = Object.FindAnyObjectByType<HideVolume>();
-            hide.transform.SetParent(GameObject.Find("Route").transform.GetChild(0), true);
+            foreach (var hide in Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None))
+                hide.transform.position += Vector3.right * 1000f;
+            Physics.SyncTransforms();
             var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Hide, PlaythroughMilestone.LeaveHide });
             ExpectMilestone("faltante: escondite alcanzable por NavMesh desde la ruta");
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Tiffany\] Partida completa con faltantes en \d+\.\ds: escondite alcanzable por NavMesh desde la ruta$"));
@@ -197,19 +199,22 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator ReachableHideIsUsedThroughInput()
+        public IEnumerator ReachableRouteHideIsPreferredToCloserTestHideThroughInput()
         {
-            var hide = Object.FindAnyObjectByType<HideVolume>();
             var route = GameObject.Find("Route").transform;
-            hide.transform.position = route.GetChild(0).TransformPoint(new Vector3(6f, 0f, -6f));
+            var hide = route.GetChild(0).GetComponentInChildren<HideVolume>();
+            var testHide = GameObject.Find("Test Zone/Hide Test").GetComponent<HideVolume>();
+            testHide.transform.position = Object.FindAnyObjectByType<PlayerHiding>().transform.position + Vector3.right * 2f;
             Physics.SyncTransforms();
             var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Hide, PlaythroughMilestone.LeaveHide }, 15f);
             var scene = new PlaythroughScene();
             scene.Prepare(plan, _ => { });
             scene.Select(PlaythroughMilestone.Hide);
+            Assert.IsTrue(NavMesh.SamplePosition(testHide.HidePoint, out _, 0.5f, NavMesh.AllAreas));
+            Assert.IsTrue(new PlaythroughNavigation().Calculate(scene.Position, testHide.HidePoint));
+            Assert.Less(Vector3.Distance(testHide.HidePoint, scene.Position), Vector3.Distance(hide.HidePoint, scene.Position));
             Assert.AreEqual(hide.HidePoint, scene.Target);
             Assert.IsNull(scene.Observe().MissingContent);
-            ExpectMilestone("escondite más cercano de la escena: " + Regex.Escape(hide.name));
             ExpectMilestone("entrar al escondite");
             ExpectMilestone("salir del escondite");
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Tiffany\] Partida completa en \d+\.\ds$"));
@@ -220,7 +225,7 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(plan.Finished);
             Assert.AreEqual(0, plan.ExitCode, plan.FailureReason);
             Assert.IsEmpty(plan.MissingContent);
-            Assert.AreEqual(1, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
+            Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
             Assert.IsFalse(Object.FindAnyObjectByType<PlayerHiding>().Hidden);
         }
 
