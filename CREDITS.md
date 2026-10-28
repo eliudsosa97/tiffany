@@ -40,3 +40,8 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 
 | Recurso | Origen | Autor | Licencia |
 | --- | --- | --- | --- |
+| `Assets/Art/CC0/PolyHaven/dry_ground_rocks/` (tierra y ladera) | [Dry Ground Rocks](https://polyhaven.com/a/dry_ground_rocks) | Poly Haven | CC0 |
+| `Assets/Art/CC0/PolyHaven/gravel_ground_01/` (grava) | [Gravel Ground 01](https://polyhaven.com/a/gravel_ground_01) | Poly Haven | CC0 |
+| `Assets/Art/CC0/PolyHaven/dry_decay_leaves/` (hojarasca) | [Dry Decay Leaves](https://polyhaven.com/a/dry_decay_leaves) | Poly Haven | CC0 |
+| `Assets/Art/CC0/PolyHaven/burned_ground_01/` (ramas secas) | [Burned Ground 01](https://polyhaven.com/a/burned_ground_01) | Poly Haven | CC0 |
+| `Assets/Art/CC0/PolyHaven/rock_boulder_dry/` (losas) | [Rock Boulder Dry](https://polyhaven.com/a/rock_boulder_dry) | Poly Haven | CC0 |

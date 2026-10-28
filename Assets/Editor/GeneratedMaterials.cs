@@ -34,6 +34,31 @@ namespace TiffanyGame.EditorTools
             return material;
         }
 
+        public static Material GetTextured(string name, Color tint, string textureName, float tiling, float smoothness = 0.08f)
+        {
+            string textureFolder = $"Assets/Art/CC0/PolyHaven/{textureName}";
+            string diffusePath = $"{textureFolder}/{textureName}_diff.jpg";
+            string normalPath = $"{textureFolder}/{textureName}_nor_gl.jpg";
+            var diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(diffusePath);
+            if (diffuse == null)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró la textura difusa en '{diffusePath}'.");
+            var normal = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+            if (normal == null)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró la textura normal en '{normalPath}'.");
+
+            var material = Get(name, tint, smoothness: smoothness);
+            material.SetTexture("_BaseMap", diffuse);
+            material.mainTexture = diffuse;
+            material.SetTexture("_BumpMap", normal);
+            material.EnableKeyword("_NORMALMAP");
+            material.SetFloat("_BumpScale", 1f);
+            var scale = new Vector2(tiling, tiling);
+            material.mainTextureScale = scale;
+            material.SetTextureScale("_BumpMap", scale);
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
         public static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path)) return;
