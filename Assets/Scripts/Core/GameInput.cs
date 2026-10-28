@@ -14,6 +14,9 @@ namespace TiffanyGame
         public static bool? InteractOverride;
         public static bool? LightToggleOverride;
         public static bool? FlashOverride;
+        public static bool? KindleOverride;
+        public static bool? PoltergeistOverride;
+        public static bool? FadeOverride;
 
         static bool commandWasPressed;
         static FocusClickFilter focusClickFilter = new FocusClickFilter(true, float.NegativeInfinity, false);
@@ -44,6 +47,9 @@ namespace TiffanyGame
             InteractOverride = null;
             LightToggleOverride = null;
             FlashOverride = null;
+            KindleOverride = null;
+            PoltergeistOverride = null;
+            FadeOverride = null;
         }
 
         static bool CommandHeld(Keyboard keyboard) =>
@@ -137,11 +143,14 @@ namespace TiffanyGame
             (focusClickFilter.Accept(Mouse.current?.leftButton.wasPressedThisFrame == true, Time.realtimeSinceStartup) ||
             Gamepad.current?.rightTrigger.wasPressedThisFrame == true);
 
-        public static bool KindlePressed => KeyPressed(Key.Q) || Gamepad.current?.buttonWest.wasPressedThisFrame == true;
+        public static bool KindlePressed => KindleOverride ??
+            (KeyPressed(Key.Q) || Gamepad.current?.buttonWest.wasPressedThisFrame == true);
 
-        public static bool PoltergeistPressed => KeyPressed(Key.E) || Gamepad.current?.buttonEast.wasPressedThisFrame == true;
+        public static bool PoltergeistPressed => PoltergeistOverride ??
+            (KeyPressed(Key.E) || Gamepad.current?.buttonEast.wasPressedThisFrame == true);
 
-        public static bool FadePressed => KeyPressed(Key.R) || Gamepad.current?.rightShoulder.wasPressedThisFrame == true;
+        public static bool FadePressed => FadeOverride ??
+            (KeyPressed(Key.R) || Gamepad.current?.rightShoulder.wasPressedThisFrame == true);
 
         public static bool InteractPressed => InteractOverride ??
             (KeyPressed(Key.Space) || Gamepad.current?.buttonSouth.wasPressedThisFrame == true);

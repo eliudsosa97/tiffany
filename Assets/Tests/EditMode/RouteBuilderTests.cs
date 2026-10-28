@@ -16,6 +16,7 @@ namespace TiffanyGame.Tests
         PlayerController player;
         Storm storm;
         Vector3[] skyRoute;
+        NavMeshData navMeshData;
         string previousMaterialFolder;
 
         [SetUp]
@@ -42,6 +43,7 @@ namespace TiffanyGame.Tests
         public void TearDown()
         {
             Object.DestroyImmediate(root);
+            if (navMeshData != null) Object.DestroyImmediate(navMeshData);
             AssetDatabase.DeleteAsset(TempFolder);
             GeneratedMaterials.folder = previousMaterialFolder;
         }
@@ -86,7 +88,7 @@ namespace TiffanyGame.Tests
         public void FiveMemoriesBelongToTheirClearingsAndEchoesStayOutsideTheRoute()
         {
             var collector = player.GetComponent<MemoryCollector>();
-            Assert.AreEqual(5, collector.spots.Length);
+            Assert.AreEqual(6, collector.spots.Length);
             var echoes = root.transform.Find("Memory Echoes");
             Assert.IsNotNull(echoes);
             Assert.IsFalse(echoes.IsChildOf(route));
@@ -94,10 +96,12 @@ namespace TiffanyGame.Tests
             for (int i = 0; i < 8; i++)
             {
                 var spots = route.GetChild(i).GetComponentsInChildren<MemorySpot>();
-                Assert.AreEqual(i < 5 ? 1 : 0, spots.Length);
+                Assert.AreEqual(i == 0 ? 2 : i < 5 ? 1 : 0, spots.Length);
                 if (i >= 5) continue;
                 Assert.AreEqual(i + 1, spots[0].memoryId);
-                Assert.AreSame(spots[0], collector.spots[i]);
+                Assert.AreEqual(MemorySpotKind.Memory, spots[0].kind);
+                Assert.AreSame(spots[0], collector.spots[i == 0 ? 0 : i + 1]);
+                if (i == 0) Assert.AreSame(spots[1], collector.spots[1]);
                 var echo = spots[0].echoPlayer;
                 Assert.IsNotNull(echo);
                 Assert.AreSame(echoes, echo.stageRoot.transform.parent);
@@ -113,18 +117,27 @@ namespace TiffanyGame.Tests
             var ball = route.GetChild(0).Find("Ball");
             Assert.IsNotNull(ball);
             Assert.IsNull(ball.GetComponentInChildren<MemorySpot>());
+            Assert.AreEqual(MemorySpotKind.Ball, collector.spots[1].kind);
+            Assert.AreEqual(MemoryProgress.BallId, collector.spots[1].memoryId);
+            Assert.AreSame(ball.gameObject, collector.spots[1].visual);
+            Assert.AreEqual(ball.position, collector.spots[1].transform.position);
+            Assert.IsNull(collector.spots[1].echoPlayer);
             var stages = root.GetComponentsInChildren<MemoryCaptureStage>();
-            Assert.AreEqual(1, stages.Length);
-            Assert.AreEqual("Memory 0 Spot", stages[0].name);
-            Assert.IsFalse(stages[0].collect);
+            Assert.AreEqual(3, stages.Length);
+            CollectionAssert.AreEquivalent(new[] { "Memory 0 Spot", "Ball 0 Before", "Ball 1 Tyler" },
+                System.Array.ConvertAll(stages, stage => stage.name));
             foreach (var stage in stages)
             {
+                bool isBall = stage.name.StartsWith("Ball ");
                 Assert.AreSame(collector, stage.collector);
-                Assert.AreSame(collector.spots[0], stage.spot);
+                Assert.AreSame(collector.spots[isBall ? 1 : 0], stage.spot);
+                Assert.AreEqual(stage.name == "Ball 1 Tyler", stage.collect);
+                Assert.IsFalse(stage.transform.IsChildOf(route));
                 Assert.Less(Vector3.Distance(stage.transform.position, stage.spot.transform.position), 2f);
                 var capture = stage.GetComponent<CaptureStop>();
                 Assert.IsTrue(capture.overrideCamera);
-                Vector3 toSpot = (stage.spot.transform.position - capture.cameraPosition).normalized;
+                Vector3 focus = isBall ? stage.transform.position : stage.spot.transform.position;
+                Vector3 toSpot = (focus - capture.cameraPosition).normalized;
                 Assert.Greater(Vector3.Dot(capture.cameraRotation * Vector3.forward, toSpot), 0.99f);
             }
             var echoStages = root.GetComponentsInChildren<EchoCaptureStage>();
@@ -134,7 +147,8 @@ namespace TiffanyGame.Tests
             {
                 Assert.IsTrue(ids.Add(stage.spot.memoryId));
                 Assert.AreSame(collector, stage.collector);
-                Assert.AreSame(collector.spots[stage.spot.memoryId - 1], stage.spot);
+                Assert.AreSame(System.Array.Find(collector.spots, spot => spot.memoryId == stage.spot.memoryId), stage.spot);
+                Assert.AreEqual(MemorySpotKind.Memory, stage.spot.kind);
                 Assert.Less(Vector3.Distance(stage.transform.position, stage.spot.transform.position), 6f);
                 Assert.IsTrue(stage.spot.echoPlayer.ground.Raycast(
                     new Ray(stage.transform.position + Vector3.up * 3f, Vector3.down), out var hit, 6f));
@@ -163,11 +177,41 @@ namespace TiffanyGame.Tests
         [Test]
         public void FlightRouteVisitsEveryClearingAtCruiseHeightInOrder()
         {
+            Assert.Greater(RouteBuilder.SkyHeight, 7f + 0.5f);
             Assert.AreEqual(8, skyRoute.Length);
             for (int i = 0; i < skyRoute.Length; i++)
             {
                 Vector3 offset = skyRoute[i] - route.GetChild(i).position;
-                Assert.AreEqual(Vector3.up * 14f, offset);
+                Assert.AreEqual(Vector3.up * RouteBuilder.SkyHeight, offset);
+            }
+        }
+
+        [Test]
+        public void FirstFiveClearingsHaveHidesReachableFromThePathOnBakedNavMesh()
+        {
+            var surface = route.gameObject.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.Children;
+            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            surface.BuildNavMesh();
+            navMeshData = surface.navMeshData;
+            Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
+            var path = new NavMeshPath();
+            for (int i = 0; i < 5; i++)
+            {
+                var clearing = route.GetChild(i);
+                var hides = clearing.GetComponentsInChildren<HideVolume>();
+                Assert.AreEqual(1, hides.Length, clearing.name);
+                var hide = hides[0];
+                Assert.IsTrue(hide.GetComponent<Collider>().isTrigger, hide.name);
+                Assert.AreEqual(LayerMask.NameToLayer("Ignore Raycast"), hide.gameObject.layer);
+                Assert.IsTrue(NavMesh.SamplePosition(clearing.TransformPoint(new Vector3(0f, 0f, -13f)),
+                    out var start, 0.5f, NavMesh.AllAreas), clearing.name);
+                foreach (var entry in new[] { hide.HidePoint, hide.HidePoint + Vector3.left * 1.2f })
+                {
+                    Assert.IsTrue(NavMesh.SamplePosition(entry, out var end, 0.5f, NavMesh.AllAreas), hide.name);
+                    Assert.IsTrue(NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path), hide.name);
+                    Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, hide.name);
+                }
             }
         }
 
@@ -178,6 +222,8 @@ namespace TiffanyGame.Tests
             var renderers = route.GetComponentsInChildren<Renderer>(true);
             Assert.IsNotEmpty(renderers);
             Assert.Less(renderers.Length, 300);
+            Assert.AreEqual(4, System.Array.FindAll(renderers,
+                renderer => renderer.GetComponentInParent<HideVolume>() != null).Length);
             foreach (var renderer in renderers)
             {
                 Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic), renderer.name);
@@ -356,14 +402,20 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(HitsRoute(shelter.position + Vector3.up * 0.6f, Vector3.back, depth * 0.5f + 1f));
         }
 
-        [TestCase(3)]
-        [TestCase(4)]
-        [TestCase(7)]
-        public void FollowCameraSeesPlayerAndMemoryInsideShelters(int index)
+        [TestCase(3, false)]
+        [TestCase(4, false)]
+        [TestCase(7, false)]
+        [TestCase(0, true)]
+        [TestCase(1, true)]
+        [TestCase(2, true)]
+        [TestCase(3, true)]
+        [TestCase(4, true)]
+        public void FollowCameraSeesPlayerNearMemoriesAndHides(int index, bool atHide)
         {
             var clearing = route.GetChild(index);
-            var spot = clearing.GetComponentInChildren<MemorySpot>();
-            Vector3 position = spot != null ? spot.transform.position : clearing.TransformPoint(new Vector3(0f, 0f, 3f));
+            var spot = atHide ? null : clearing.GetComponentInChildren<MemorySpot>();
+            Vector3 position = atHide ? clearing.GetComponentInChildren<HideVolume>().HidePoint + Vector3.left * 1.2f
+                : spot != null ? spot.transform.position : clearing.TransformPoint(new Vector3(0f, 0f, 3f));
             Vector3 marker = spot != null ? spot.visual.GetComponent<Renderer>().bounds.center : position + Vector3.up * 0.18f;
             var camera = new GameObject("Follow Camera").AddComponent<FollowCamera>();
             camera.transform.SetParent(root.transform, false);

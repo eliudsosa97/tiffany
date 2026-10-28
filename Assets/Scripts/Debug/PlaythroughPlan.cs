@@ -1,0 +1,219 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace TiffanyGame
+{
+    public enum PlaythroughMilestone
+    {
+        Memory1, Ball, Light, Flash, Kindle, MoveObject, Hide, LeaveHide, Memory2, Recharge2,
+        Memory3, Recharge3, Memory4, Recharge4, Vanish, Memory5,
+        Capture, Respawn, LakeCandle, Road, Manifest
+    }
+
+    public struct PlaythroughObservation
+    {
+        public Vector3 Position;
+        public bool AtTarget, MemoryFound, BallCollected, LightOn, Flashing, Hidden;
+        public bool CandleLit, ObjectMoved, Vanished, CheckpointReached, Respawning, AtRespawn, Credits, Frozen;
+        public float Energy;
+        public string MissingContent;
+    }
+
+    public struct PlaythroughCommand
+    {
+        public bool Move, Repath, Interact, ToggleLight, Flash, Kindle, MoveObject, Vanish, ForceRespawn;
+    }
+
+    public sealed class PlaythroughPlan
+    {
+        public const float DefaultTimeout = 90f;
+        public const float CaptureTimeout = 40f;
+        public const float StuckSeconds = 3f;
+        public const float ProgressDistance = 1f;
+        const float PressInterval = 0.3f;
+        readonly PlaythroughMilestone[] milestones;
+        readonly List<string> missingContent = new List<string>();
+        readonly float timeout;
+        Vector3 progressPosition;
+        float stalledSeconds, pressCooldown;
+        bool trackingMovement, forceRequested;
+
+        public int CompletedCount { get; private set; }
+        public int Count => milestones.Length;
+        public PlaythroughMilestone Current => milestones[Math.Min(CompletedCount, Count - 1)];
+        public float Elapsed { get; private set; }
+        public float MilestoneElapsed { get; private set; }
+        public bool Finished { get; private set; }
+        public int ExitCode { get; private set; } = -1;
+        public string FailureReason { get; private set; }
+        public string FirstConsoleError { get; private set; }
+        public IReadOnlyList<string> MissingContent => missingContent;
+
+        public PlaythroughPlan(PlaythroughMilestone[] milestones = null, float timeout = DefaultTimeout)
+        {
+            if (!(timeout > 0f) || float.IsInfinity(timeout)) throw new ArgumentOutOfRangeException(nameof(timeout));
+            this.timeout = timeout;
+            this.milestones = milestones == null
+                ? (PlaythroughMilestone[])Enum.GetValues(typeof(PlaythroughMilestone))
+                : (PlaythroughMilestone[])milestones.Clone();
+            if (Count == 0) throw new ArgumentException("La partida necesita hitos.", nameof(milestones));
+        }
+
+        public bool Includes(PlaythroughMilestone milestone) => Array.IndexOf(milestones, milestone) >= 0;
+
+        public void RecordConsoleError(string message)
+        {
+            if (!Finished && FirstConsoleError == null) FirstConsoleError = message;
+        }
+
+        public void Fail(string reason)
+        {
+            if (Finished) return;
+            FailureReason = FirstConsoleError == null ? reason : reason + ". Primer error de consola: " + FirstConsoleError;
+            Finished = true;
+            ExitCode = 1;
+        }
+
+        public PlaythroughCommand Tick(float dt, in PlaythroughObservation observation)
+        {
+            if (Finished) return default;
+            if (!(dt >= 0f) || float.IsInfinity(dt)) throw new ArgumentOutOfRangeException(nameof(dt));
+            Elapsed += dt;
+            MilestoneElapsed += dt;
+            pressCooldown -= dt;
+            if (MilestoneElapsed >= timeout)
+            {
+                Fail("tiempo límite agotado");
+                return default;
+            }
+            if (observation.MissingContent != null || Satisfied(in observation))
+            {
+                bool skipLeaveHide = Current == PlaythroughMilestone.Hide && observation.MissingContent != null;
+                if (observation.MissingContent != null && !missingContent.Contains(observation.MissingContent))
+                    missingContent.Add(observation.MissingContent);
+                CompletedCount++;
+                if (skipLeaveHide && CompletedCount < Count && Current == PlaythroughMilestone.LeaveHide) CompletedCount++;
+                if (CompletedCount == Count)
+                {
+                    if (FirstConsoleError != null) Fail("error de consola durante la partida");
+                    else { Finished = true; ExitCode = missingContent.Count == 0 ? 0 : 2; }
+                }
+                MilestoneElapsed = stalledSeconds = pressCooldown = 0f;
+                trackingMovement = forceRequested = false;
+                return default;
+            }
+
+            var command = new PlaythroughCommand();
+            if (observation.Frozen || observation.Respawning) return command;
+            command.Move = NeedsNavigation(Current) && !observation.AtTarget;
+            command.Repath = CheckStuck(dt, observation.Position, command.Move);
+            bool press = pressCooldown <= 0f;
+            bool wantsLight = Current == PlaythroughMilestone.Light || Current == PlaythroughMilestone.MoveObject
+                || (Current == PlaythroughMilestone.Capture && observation.AtTarget);
+            command.ToggleLight = press && observation.LightOn != wantsLight;
+            if (observation.AtTarget && press)
+            {
+                command.Interact = MemoryId(Current) > 0 || Current == PlaythroughMilestone.Ball || Current == PlaythroughMilestone.Hide
+                    || Current == PlaythroughMilestone.LeaveHide || Current == PlaythroughMilestone.Manifest;
+                command.Flash = Current == PlaythroughMilestone.Flash;
+                command.Kindle = Current == PlaythroughMilestone.Kindle;
+                command.MoveObject = Current == PlaythroughMilestone.MoveObject;
+                command.Vanish = Current == PlaythroughMilestone.Vanish;
+            }
+            if (Current == PlaythroughMilestone.Capture && MilestoneElapsed >= CaptureTimeout && !forceRequested)
+            {
+                command.ForceRespawn = true;
+                forceRequested = true;
+            }
+            if (press) pressCooldown = PressInterval;
+            return command;
+        }
+
+        bool Satisfied(in PlaythroughObservation o)
+        {
+            if (MemoryId(Current) > 0) return o.MemoryFound;
+            switch (Current)
+            {
+                case PlaythroughMilestone.Ball: return o.AtTarget && o.BallCollected;
+                case PlaythroughMilestone.Light: return o.LightOn;
+                case PlaythroughMilestone.Flash: return o.Flashing;
+                case PlaythroughMilestone.Hide: return o.Hidden;
+                case PlaythroughMilestone.LeaveHide: return !o.Hidden;
+                case PlaythroughMilestone.Kindle: return o.CandleLit;
+                case PlaythroughMilestone.MoveObject: return o.ObjectMoved;
+                case PlaythroughMilestone.Vanish: return o.Vanished;
+                case PlaythroughMilestone.Recharge2:
+                case PlaythroughMilestone.Recharge3:
+                case PlaythroughMilestone.Recharge4:
+                case PlaythroughMilestone.LakeCandle: return o.CheckpointReached && o.Energy >= SoulEnergy.Max - 1f;
+                case PlaythroughMilestone.Capture: return o.Respawning;
+                case PlaythroughMilestone.Respawn: return !o.Respawning && o.AtRespawn;
+                case PlaythroughMilestone.Road: return o.AtTarget;
+                case PlaythroughMilestone.Manifest: return o.Credits;
+                default: return false;
+            }
+        }
+
+        bool CheckStuck(float dt, Vector3 position, bool moving)
+        {
+            if (!moving) { trackingMovement = false; stalledSeconds = 0f; return false; }
+            if (!trackingMovement || HorizontalDistance(progressPosition, position) >= ProgressDistance)
+            {
+                progressPosition = position;
+                trackingMovement = true;
+                stalledSeconds = 0f;
+                return false;
+            }
+            stalledSeconds += dt;
+            if (stalledSeconds < StuckSeconds) return false;
+            stalledSeconds = 0f;
+            progressPosition = position;
+            return true;
+        }
+
+        public static bool NeedsNavigation(PlaythroughMilestone milestone) =>
+            milestone != PlaythroughMilestone.Light && milestone != PlaythroughMilestone.Flash
+            && milestone != PlaythroughMilestone.LeaveHide && milestone != PlaythroughMilestone.Vanish
+            && milestone != PlaythroughMilestone.Capture && milestone != PlaythroughMilestone.Respawn;
+
+        public static int MemoryId(PlaythroughMilestone milestone) => milestone switch
+        {
+            PlaythroughMilestone.Memory1 => 1, PlaythroughMilestone.Memory2 => 2,
+            PlaythroughMilestone.Memory3 => 3, PlaythroughMilestone.Memory4 => 4,
+            PlaythroughMilestone.Memory5 => 5, _ => 0
+        };
+
+        public static float HorizontalDistance(Vector3 a, Vector3 b)
+        {
+            a.y = b.y = 0f;
+            return Vector3.Distance(a, b);
+        }
+
+        public static string Label(PlaythroughMilestone milestone) => milestone switch
+        {
+            PlaythroughMilestone.Memory1 => "lápida (recuerdo 1)",
+            PlaythroughMilestone.Ball => "recoger la pelota",
+            PlaythroughMilestone.Light => "luz",
+            PlaythroughMilestone.Flash => "destello",
+            PlaythroughMilestone.Hide => "entrar al escondite",
+            PlaythroughMilestone.LeaveHide => "salir del escondite",
+            PlaythroughMilestone.Memory2 => "listón (recuerdo 2)",
+            PlaythroughMilestone.Recharge2 => "veladora de la planta de agua",
+            PlaythroughMilestone.Kindle => "encender una veladora",
+            PlaythroughMilestone.Memory3 => "muñeca (recuerdo 3)",
+            PlaythroughMilestone.Recharge3 => "veladora de las vías",
+            PlaythroughMilestone.MoveObject => "mover un objeto",
+            PlaythroughMilestone.Memory4 => "zapato (recuerdo 4)",
+            PlaythroughMilestone.Recharge4 => "veladora del establo",
+            PlaythroughMilestone.Vanish => "desvanecerse",
+            PlaythroughMilestone.Memory5 => "brazalete (recuerdo 5)",
+            PlaythroughMilestone.LakeCandle => "veladora del lago",
+            PlaythroughMilestone.Capture => "captura durante el regreso",
+            PlaythroughMilestone.Respawn => "reaparición en la última veladora",
+            PlaythroughMilestone.Road => "carretera",
+            PlaythroughMilestone.Manifest => "manifestarse en casa y créditos",
+            _ => throw new ArgumentOutOfRangeException(nameof(milestone))
+        };
+    }
+}

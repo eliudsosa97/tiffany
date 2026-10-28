@@ -11,7 +11,7 @@ namespace TiffanyGame
         public AudioSource cueSource;
         public AudioClip[] fakeSteps;
         public AudioClip[] whispers;
-        public AudioClip sob;
+        public AudioClip[] sobs;
 
         public PanicModel Model { get; } = new PanicModel();
         public float Level => Model.Level;
@@ -63,11 +63,7 @@ namespace TiffanyGame
             if (cues.Sob)
             {
                 NoiseBus.Publish(new StepNoise(position, PanicEffects.SobRadius));
-                if (cueSource != null && sob != null)
-                {
-                    cueSource.panStereo = 0f;
-                    cueSource.PlayOneShot(sob);
-                }
+                PlayCue(sobs, 0f);
                 Debug.Log(GameInfo.LogPrefix + " Sollozo");
             }
         }

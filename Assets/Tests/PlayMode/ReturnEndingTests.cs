@@ -43,6 +43,8 @@ namespace TiffanyGame.Tests
             Assert.AreSame(witch, ending.witch);
             Assert.AreSame(ui, ending.gameInterface);
             Assert.AreSame(route.GetChild(7).Find("Window Candle"), ending.transform);
+            collector.tyler.Appear(soul.transform.position);
+            yield return null;
         }
 
         [UnityTearDown]
@@ -67,13 +69,13 @@ namespace TiffanyGame.Tests
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo 5 encontrado");
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Tyler: None");
-            MovePlayer(collector.spots[4].transform.position - Vector3.forward * 0.5f);
+            MovePlayer(FindMemorySpot(5).transform.position - Vector3.forward * 0.5f);
             GameInput.InteractOverride = true;
             yield return null;
             yield return null;
             GameInput.InteractOverride = false;
             Assert.IsTrue(soul.Powers.Has(Power.Manifest));
-            Assert.IsFalse(collector.spots[4].visual.activeSelf);
+            Assert.IsFalse(FindMemorySpot(5).visual.activeSelf);
             Assert.IsFalse(collector.Collect(5));
             Assert.AreEqual(Chapter.Return, witch.chapter);
             Assert.AreEqual(WitchForm.Grounded, witch.Decision.Form);
@@ -108,7 +110,7 @@ namespace TiffanyGame.Tests
             float deadline = Time.realtimeSinceStartup + 2f;
             while (witch.Decision.State != WitchState.Landing && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.AreEqual(WitchState.Landing, witch.Decision.State);
-            MovePlayer(collector.spots[4].transform.position);
+            MovePlayer(FindMemorySpot(5).transform.position);
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo 5 encontrado");
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Tyler: None");
@@ -290,6 +292,14 @@ namespace TiffanyGame.Tests
                 Assert.IsFalse(AudioListener.pause);
             }
             LogAssert.NoUnexpectedReceived();
+        }
+
+        MemorySpot FindMemorySpot(int memoryId)
+        {
+            foreach (var spot in collector.spots)
+                if (spot != null && spot.memoryId == memoryId) return spot;
+            Assert.Fail($"No se encontró el recuerdo {memoryId}.");
+            return null;
         }
 
         void MovePlayer(Vector3 position)

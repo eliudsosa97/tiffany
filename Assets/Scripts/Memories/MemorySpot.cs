@@ -2,10 +2,13 @@ using UnityEngine;
 
 namespace TiffanyGame
 {
+    public enum MemorySpotKind { Memory, Ball }
+
     [RequireComponent(typeof(SphereCollider))]
     public sealed class MemorySpot : MonoBehaviour
     {
         public int memoryId;
+        public MemorySpotKind kind;
         public GameObject visual;
         public EchoPlayer echoPlayer;
 
