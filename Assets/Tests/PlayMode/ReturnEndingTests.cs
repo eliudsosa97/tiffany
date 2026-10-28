@@ -4,10 +4,11 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using LogAssert = TiffanyGame.Tests.TiffanyLogs;
 
 namespace TiffanyGame.Tests
 {
-    public sealed class ReturnEndingTests
+    public sealed class ReturnEndingTests : TiffanyLogTests
     {
         MemoryCollector collector;
         PlayerSoul soul;

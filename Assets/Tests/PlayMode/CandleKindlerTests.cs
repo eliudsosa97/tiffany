@@ -2,10 +2,11 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using LogAssert = TiffanyGame.Tests.TiffanyLogs;
 
 namespace TiffanyGame.Tests
 {
-    public sealed class CandleKindlerTests
+    public sealed class CandleKindlerTests : TiffanyLogTests
     {
         private GameObject world;
         private PlayerSoul soul;

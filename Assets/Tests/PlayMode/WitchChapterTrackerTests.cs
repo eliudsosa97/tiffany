@@ -3,10 +3,11 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using LogAssert = TiffanyGame.Tests.TiffanyLogs;
 
 namespace TiffanyGame.Tests
 {
-    public sealed class WitchChapterTrackerTests
+    public sealed class WitchChapterTrackerTests : TiffanyLogTests
     {
         private WitchChapterTracker tracker;
         private WitchController witch;

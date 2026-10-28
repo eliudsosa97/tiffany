@@ -4,10 +4,11 @@ using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.TestTools;
+using LogAssert = TiffanyGame.Tests.TiffanyLogs;
 
 namespace TiffanyGame.Tests
 {
-    public sealed class WitchControllerTests
+    public sealed class WitchControllerTests : TiffanyLogTests
     {
         private GameObject world;
         private GameObject ground;
