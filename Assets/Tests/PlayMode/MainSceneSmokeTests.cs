@@ -213,10 +213,10 @@ namespace TiffanyGame.Tests
             var route = GameObject.Find("Route").transform;
             var cemetery = route.GetChild(0);
             Assert.AreEqual(8, route.childCount);
-            Assert.AreEqual(56, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
+            Assert.AreEqual(58, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
                 "48 paradas de escena (46 base, Witch 9 Flying Lit y Tyler 5 Shares Light), " +
-                "una vista previa, cinco ecos y dos de la pelota.");
-            Assert.AreEqual(19, route.GetComponentsInChildren<CaptureStop>().Length);
+                "una vista previa, cinco ecos, dos de la pelota y dos vistas del agua.");
+            Assert.AreEqual(21, route.GetComponentsInChildren<CaptureStop>().Length, "19 paradas previas y dos vistas del agua.");
             Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
             Assert.AreEqual(12, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length);
@@ -264,6 +264,15 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, hide.name);
             }
             Assert.IsFalse(NavMesh.SamplePosition(route.GetChild(5).Find("Water").position, out _, 1f, NavMesh.AllAreas));
+            var river = route.GetChild(4).Find("Path to Next Clearing/River");
+            foreach (float side in new[] { -1.8f, 1.8f })
+                Assert.IsFalse(NavMesh.SamplePosition(river.TransformPoint(new Vector3(side, 0f, 0f)), out _, 0.25f, NavMesh.AllAreas));
+            var logBounds = river.Find("Log").GetComponent<Collider>().bounds;
+            var logTop = new Vector3(logBounds.center.x, logBounds.max.y, logBounds.center.z);
+            // El NavMesh sigue la superficie elevada del tronco, no el origen del río.
+            Assert.IsTrue(NavMesh.SamplePosition(logTop, out var crossing, 0.3f, NavMesh.AllAreas));
+            Assert.IsTrue(NavMesh.CalculatePath(from.position, crossing.position, NavMesh.AllAreas, path));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
             yield return null;
             LogAssert.NoUnexpectedReceived();
         }
@@ -330,6 +339,84 @@ namespace TiffanyGame.Tests
             Assert.That(HorizontalDistance(viewCamera.transform.position, player.transform.position),
                 Is.EqualTo(followingDistance).Within(1f));
             LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator TiffanyWalksAcrossRiverBothWaysWithoutFallingAndPublishesGravelAndBranches()
+        {
+            var river = PrepareRiverWalk(out var player);
+            var body = player.GetComponent<CharacterController>();
+            var water = river.Find("Water").GetComponent<Renderer>().bounds;
+            float minimumHeight = river.Find("Stone 1").GetComponent<Collider>().bounds.max.y - 0.15f;
+            foreach (int direction in new[] { 1, -1 })
+            {
+                GameInput.MoveOverride = Vector2.zero;
+                body.enabled = false;
+                player.transform.SetPositionAndRotation(river.TransformPoint(new Vector3(0f, 0.03f, -3f * direction)),
+                    Quaternion.LookRotation(Vector3.forward * direction));
+                body.enabled = true;
+                Physics.SyncTransforms();
+                yield return new WaitForSeconds(0.15f);
+                steps.Clear();
+                GameInput.MoveOverride = Vector2.up * direction;
+                float deadline = Time.time + 5f;
+                while (river.InverseTransformPoint(player.transform.position).z * direction < 3f && Time.time < deadline)
+                {
+                    yield return null;
+                    Assert.GreaterOrEqual(player.transform.position.y, minimumHeight, "Tiffany cayó por debajo del cruce.");
+                    Assert.AreEqual(Gait.Walk, player.CurrentGait);
+                }
+                GameInput.MoveOverride = Vector2.zero;
+                Assert.GreaterOrEqual(river.InverseTransformPoint(player.transform.position).z * direction, 3f,
+                    "Tiffany no llegó a la otra orilla caminando.");
+                bool gravel = false;
+                bool branches = false;
+                foreach (var step in steps)
+                {
+                    if (step.Position.z < water.min.z || step.Position.z > water.max.z) continue;
+                    gravel |= Mathf.Approximately(step.Radius, NoiseModel.GravelRadius);
+                    branches |= Mathf.Approximately(step.Radius, NoiseModel.BranchesRadius);
+                }
+                Assert.IsTrue(gravel, "NoiseBus no publicó pasos de grava sobre el río.");
+                Assert.IsTrue(branches, "NoiseBus no publicó pasos de ramas sobre el tronco.");
+            }
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator TiffanyCannotWalkIntoRiverOutsideTheCrossing()
+        {
+            var river = PrepareRiverWalk(out var player);
+            var body = player.GetComponent<CharacterController>();
+            foreach (float side in new[] { -1.8f, 1.8f })
+            {
+                GameInput.MoveOverride = Vector2.zero;
+                body.enabled = false;
+                player.transform.SetPositionAndRotation(river.TransformPoint(new Vector3(side, 0.03f, -3f)), Quaternion.identity);
+                body.enabled = true;
+                Physics.SyncTransforms();
+                yield return new WaitForSeconds(0.15f);
+                GameInput.MoveOverride = Vector2.up;
+                yield return new WaitForSeconds(1.5f);
+                var position = river.InverseTransformPoint(player.transform.position);
+                Assert.That(position.z, Is.InRange(-2.5f, -2f), "El agua debe detener a Tiffany antes de entrar.");
+                Assert.AreEqual(side, position.x, 0.05f);
+                Assert.GreaterOrEqual(position.y, -0.03f);
+            }
+            GameInput.MoveOverride = Vector2.zero;
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        static Transform PrepareRiverWalk(out PlayerController player)
+        {
+            Object.FindAnyObjectByType<WitchController>(FindObjectsInactive.Include).gameObject.SetActive(false);
+            Object.FindAnyObjectByType<TylerController>(FindObjectsInactive.Include).gameObject.SetActive(false);
+            Object.FindAnyObjectByType<Storm>().raining = false;
+            player = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerController>();
+            var follow = player.viewCamera.GetComponent<FollowCamera>();
+            follow.enabled = false;
+            player.viewCamera.transform.rotation = Quaternion.Euler(45f, 0f, 0f);
+            return GameObject.Find("Route").transform.GetChild(4).Find("Path to Next Clearing/River");
         }
 
         void RecordStep(StepNoise noise)

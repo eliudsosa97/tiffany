@@ -58,7 +58,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual("Route", route.name);
             Assert.AreEqual(8, route.childCount);
             var captures = route.GetComponentsInChildren<CaptureStop>();
-            Assert.AreEqual(8, captures.Length);
+            Assert.AreEqual(10, captures.Length, "Ocho claros y dos vistas del agua.");
+            captures = System.Array.FindAll(captures, capture => capture.name.StartsWith("Route "));
             System.Array.Sort(captures, (a, b) => string.CompareOrdinal(a.name, b.name));
             for (int i = 0; i < names.Length; i++)
             {
@@ -67,7 +68,7 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(names[i], captures[i].name);
                 Assert.IsTrue(captures[i].transform.IsChildOf(clearing));
                 Assert.IsFalse(captures[i].overrideCamera);
-                Assert.AreEqual(1, clearing.GetComponentsInChildren<CaptureStop>().Length);
+                Assert.AreEqual(i == 4 || i == 5 ? 2 : 1, clearing.GetComponentsInChildren<CaptureStop>().Length);
                 var ground = clearing.GetComponentInChildren<GroundSurface>();
                 Assert.AreEqual(groundTypes[i], ground.type);
                 Assert.AreEqual(36f, ground.GetComponent<Collider>().bounds.size.z);
@@ -257,7 +258,9 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(HitsRoute(clearing.position + Vector3.up, Vector3.left, 19f));
                 Assert.IsTrue(HitsRoute(clearing.position + Vector3.up, Vector3.right, 19f));
                 if (i == 7) continue;
-                var path = clearing.Find("Path to Next Clearing/Ground").GetComponent<Collider>().bounds;
+                var pathRoot = clearing.Find("Path to Next Clearing");
+                var path = pathRoot.Find(i == 4 ? "South Bank" : "Ground").GetComponent<Collider>().bounds;
+                if (i == 4) path.Encapsulate(pathRoot.Find("North Bank").GetComponent<Collider>().bounds);
                 Assert.AreEqual(5f, path.size.x);
                 Assert.AreEqual(clearing.position.z + 18f, path.min.z);
                 Assert.AreEqual(route.GetChild(i + 1).position.z - 18f, path.max.z);
@@ -284,6 +287,64 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(HitsRoute(lake.TransformPoint(new Vector3(17f, 1f, 3f)), Vector3.left, 8f));
             Assert.IsTrue(HitsRoute(lake.TransformPoint(new Vector3(9f, 1f, -12f)), Vector3.forward, 10f));
             Assert.IsTrue(HitsRoute(lake.TransformPoint(new Vector3(9f, 1f, 17f)), Vector3.back, 8f));
+        }
+
+        [Test]
+        public void RiverHasFiveGravelStonesOneBranchLogAndBlocksWaterBesideTheCrossing()
+        {
+            var river = route.GetChild(4).Find("Path to Next Clearing/River");
+            Assert.IsNotNull(river);
+            Assert.IsNull(river.Find("Water").GetComponent<Collider>());
+            Assert.IsNull(river.parent.Find("Ground"));
+            var surfaces = river.GetComponentsInChildren<GroundSurface>();
+            Assert.AreEqual(6, surfaces.Length);
+            for (int i = 1; i <= 5; i++)
+            {
+                var stone = river.Find($"Stone {i}").GetComponent<BoxCollider>();
+                Assert.AreEqual(GroundType.Gravel, GroundSurface.TypeOf(stone));
+                Assert.AreEqual(WaterBuilder.StoneTop, stone.bounds.max.y, 0.001f);
+                Assert.Greater(stone.size.z, CrossingLayout.MaxWalkingSpacing);
+            }
+            Assert.AreEqual(GroundType.Branches, river.Find("Log").GetComponent<GroundSurface>().type);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Assert.IsTrue(HitsRoute(river.TransformPoint(new Vector3(side * 1.8f, 0.6f, -3f)), Vector3.forward, 2f));
+                Assert.IsFalse(HitsRoute(river.TransformPoint(new Vector3(side * 1.8f, 2f, 0f)), Vector3.down, 4f));
+            }
+            Assert.IsFalse(HitsRoute(river.TransformPoint(new Vector3(0f, 0.6f, -3f)), Vector3.forward, 6f));
+        }
+
+        [Test]
+        public void WaterHasSavedShaderPositionedLoopsAndLitCaptureStops()
+        {
+            var lake = route.GetChild(5).Find("Water");
+            var river = route.GetChild(4).Find("Path to Next Clearing/River/Water");
+            foreach (var water in new[] { lake, river })
+            {
+                var material = water.GetComponent<Renderer>().sharedMaterial;
+                Assert.IsTrue(AssetDatabase.Contains(material));
+                Assert.AreEqual("Universal Render Pipeline/Tiffany Water", material.shader.name);
+                Assert.IsFalse(ShaderUtil.ShaderHasError(material.shader));
+                Assert.Less(material.GetColor("_BaseColor").a, 1f);
+                var source = water.GetComponent<AudioSource>();
+                Assert.IsNotNull(source.clip);
+                Assert.AreEqual(water == lake ? "lake_loop" : "river_loop", source.clip.name);
+                Assert.IsTrue(source.loop);
+                Assert.IsTrue(source.playOnAwake);
+                Assert.AreEqual(1f, source.spatialBlend);
+                Assert.AreEqual(AudioRolloffMode.Linear, source.rolloffMode);
+                Assert.AreEqual(36f, source.minDistance, "La cámara y su AudioListener van a unos 36 m de Tiffany.");
+                Assert.AreEqual(60f, source.maxDistance);
+            }
+            var lakeStop = route.GetChild(5).Find("Water 1 Lake");
+            var riverStop = river.parent.Find("Water 2 Crossing");
+            foreach (var stop in new[] { lakeStop, riverStop })
+            {
+                Assert.IsNotNull(stop.GetComponent<LightCaptureStage>());
+                Assert.IsTrue(stop.GetComponent<CaptureStop>().overrideCamera);
+            }
+            Assert.IsTrue(HitsRoute(riverStop.position + Vector3.up, Vector3.down, 1.1f));
+            Assert.AreEqual(WaterBuilder.StoneTop, riverStop.position.y, 0.001f);
         }
 
         [Test]

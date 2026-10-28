@@ -58,6 +58,30 @@ namespace TiffanyGame.EditorTools
             return material;
         }
 
+        public static Material GetWater(bool river = false)
+        {
+            EnsureFolder(folder);
+            var shader = Shader.Find("Universal Render Pipeline/Tiffany Water");
+            if (shader == null)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el shader del agua.");
+            string name = river ? "RiverWater" : "RouteWater";
+            string path = $"{folder}/{name}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool isNew = material == null;
+            if (isNew) material = new Material(shader) { name = name };
+            else material.shader = shader;
+            material.SetColor("_BaseColor", new Color(0.004f, 0.008f, 0.014f, 0.99f));
+            material.SetFloat("_WaveScale", 1.35f);
+            material.SetFloat("_WaveStrength", 0.24f);
+            material.SetFloat("_WaveSpeed", river ? 0.7f : 0.22f);
+            material.SetVector("_FlowDirection", river ? new Vector4(1f, 0f, 0f, 0f) : new Vector4(0.45f, 0.28f, 0f, 0f));
+            material.SetFloat("_SpecularPower", 192f);
+            material.SetFloat("_SpecularStrength", 0.4f);
+            if (isNew) AssetDatabase.CreateAsset(material, path);
+            else EditorUtility.SetDirty(material);
+            return material;
+        }
+
         public static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path)) return;

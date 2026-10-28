@@ -17,6 +17,8 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/thunder_1.wav` | [Thunder](https://freesound.org/s/244053/) | lennyboy | CC0 |
 | `Assets/Audio/Sfx/thunder_2.wav` | [thunder](https://freesound.org/s/193170/) | netaj | CC0 |
 | `Assets/Audio/Sfx/rain.wav` | [Rain light 2 (rural)](https://freesound.org/s/200273/) | jmbphilmes | CC0 |
+| `Assets/Audio/Sfx/river_loop.wav` | [Ambiance_River_Flow_Small_Loop_Stereo.wav](https://freesound.org/s/479321/) | Nox_Sound | CC0 |
+| `Assets/Audio/Sfx/lake_loop.wav` | [Water_Lapping_River.wav](https://freesound.org/s/318064/) | ceich93 | CC0 |
 | `Assets/Audio/Sfx/heartbeat.wav` | [Single Heartbeat Clean HQ](https://freesound.org/s/22440/) | Lunardrive | CC0 |
 | `Assets/Audio/Sfx/growl_1.wav` | [Animal Dog Growl 01](https://freesound.org/s/625500/) | abhisheky948 | CC0 |
 | `Assets/Audio/Sfx/growl_2.wav` | [growl](https://freesound.org/s/13789/) | wingz | CC0 |

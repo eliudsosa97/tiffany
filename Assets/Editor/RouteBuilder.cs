@@ -36,10 +36,10 @@ namespace TiffanyGame.EditorTools
             {
                 var clearing = Root($"Route {i + 1} {names[i]}", route, new Vector3(108f, 0f, i * Spacing));
                 tracker.clearings[i] = clearing;
-                if (i == 5) BuildLake(clearing, floor);
+                if (i == 5) WaterBuilder.BuildLake(clearing, floor);
                 else Ground("Ground", clearing, Vector3.zero, new Vector2(ClearingSize, ClearingSize), grounds[i], floor);
                 BuildEdges(clearing, i, dark);
-                if (i < names.Length - 1) BuildPath(clearing, floor, dark);
+                if (i < names.Length - 1) BuildPath(clearing, floor, dark, structure, i == 4);
                 Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush);
                 if (i < memories.Length) memories[i] = Root("Memory Point", clearing, memoryPosition);
                 skyRoute[i] = clearing.position + Vector3.up * SkyHeight;
@@ -105,11 +105,12 @@ namespace TiffanyGame.EditorTools
                 }
         }
 
-        static void BuildPath(Transform clearing, Material floor, Material forest)
+        static void BuildPath(Transform clearing, Material floor, Material forest, Material stone, bool river)
         {
             float length = Spacing - ClearingSize;
             var path = Root("Path to Next Clearing", clearing, new Vector3(0f, 0f, Spacing * 0.5f));
-            Ground("Ground", path, Vector3.zero, new Vector2(PathWidth, length), GroundType.Dirt, floor);
+            if (river) WaterBuilder.BuildRiver(path, PathWidth, length, floor, stone);
+            else Ground("Ground", path, Vector3.zero, new Vector2(PathWidth, length), GroundType.Dirt, floor);
             for (int side = -1; side <= 1; side += 2)
             {
                 Border($"Border {side}", path, new Vector3(side * (PathWidth * 0.5f + 0.25f), 1.5f, 0f),
@@ -204,22 +205,6 @@ namespace TiffanyGame.EditorTools
             var collider = wall.GetComponent<BoxCollider>();
             collider.size = new Vector3(1f, height / size.y, 1f);
             collider.center = Vector3.up * ((height / size.y - 1f) * 0.5f);
-        }
-
-        static void BuildLake(Transform clearing, Material floor)
-        {
-            Ground("West Bank", clearing, new Vector3(-7.5f, 0f, 0f), new Vector2(21f, 36f), GroundType.Grass, floor);
-            Ground("East Bank", clearing, new Vector3(16.5f, 0f, 0f), new Vector2(3f, 36f), GroundType.Grass, floor);
-            Ground("South Bank", clearing, new Vector3(9f, 0f, -13f), new Vector2(12f, 10f), GroundType.Grass, floor);
-            Ground("North Bank", clearing, new Vector3(9f, 0f, 16f), new Vector2(12f, 4f), GroundType.Grass, floor);
-            var water = SceneBuilder.CreatePrimitive("Water", PrimitiveType.Plane, clearing, new Vector3(9f, -0.15f, 3f),
-                new Vector3(1.2f, 1f, 2.2f), GeneratedMaterials.Get("RouteWater", new Color(0.025f, 0.025f, 0.025f), smoothness: 0.7f));
-            Object.DestroyImmediate(water.GetComponent<Collider>());
-            for (int side = -1; side <= 1; side += 2)
-            {
-                Border($"Lake Bank X {side}", clearing, new Vector3(9f + side * 6f, 1.5f, 3f), new Vector3(0.5f, 3f, 22.5f));
-                Border($"Lake Bank Z {side}", clearing, new Vector3(9f, 1.5f, 3f + side * 11f), new Vector3(12.5f, 3f, 0.5f));
-            }
         }
 
         static void BuildCemetery(Transform clearing, Material ballMaterial)
