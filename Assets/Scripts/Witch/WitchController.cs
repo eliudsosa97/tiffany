@@ -16,6 +16,7 @@ namespace TiffanyGame
         public Light fireLight;
         public LayerMask sightMask = Physics.DefaultRaycastLayers;
         public LayerMask coverMask = Physics.DefaultRaycastLayers;
+        public LayerMask groundMask = Physics.DefaultRaycastLayers;
         public float sprintRadius = 0.4f;
         public float landingMargin = 1f;
         public float repathThreshold = 0.5f;
@@ -79,17 +80,21 @@ namespace TiffanyGame
             Vector3 playerPosition = player.position;
             Vector3 sightOrigin = position + Vector3.up * 1.6f;
             Vector3 sightDirection = playerPosition + Vector3.up - sightOrigin;
-            bool blocked = Physics.Raycast(sightOrigin, sightDirection, out var sightHit,
+            int count = Physics.RaycastNonAlloc(sightOrigin, sightDirection, hits,
                 sightDirection.magnitude, sightMask, QueryTriggerInteraction.Ignore);
+            bool lineOfSight = !ClosestWorldHit(count, out var sightHit, false)
+                || sightHit.collider.transform.IsChildOf(player);
+            count = Physics.RaycastNonAlloc(playerPosition + Vector3.up * 2f, Vector3.up, hits,
+                40f, coverMask, QueryTriggerInteraction.Ignore);
+            bool underCover = ClosestWorldHit(count, out _);
             var inputs = new WitchSenseInputs
             {
                 WitchPosition = position,
                 Form = Decision.Form,
                 FireLit = Decision.FireLit,
                 PlayerPosition = playerPosition,
-                PlayerUnderCover = Physics.Raycast(playerPosition + Vector3.up * 2f, Vector3.up,
-                    40f, coverMask, QueryTriggerInteraction.Ignore),
-                LineOfSight = !blocked || sightHit.collider.transform.IsChildOf(player),
+                PlayerUnderCover = underCover,
+                LineOfSight = lineOfSight,
                 PlayerLightOn = playerLightOn,
                 PlayerLightPosition = playerLightPosition,
                 PlayerInSafeZone = SafeZones.Contains(playerPosition),
@@ -103,7 +108,11 @@ namespace TiffanyGame
             WitchState previousState = Decision.State;
             Decision = brain.Tick(dt, witchSenses.Sense(in inputs));
             stateTime += dt;
-            if (Decision.State != previousState) EnterState();
+            if (Decision.State != previousState)
+            {
+                if (previousState == WitchState.Landing) transform.position = verticalTarget;
+                EnterState();
+            }
             ApplyMovement(dt);
             ApplyView();
         }
@@ -115,7 +124,7 @@ namespace TiffanyGame
             if (Decision.State == WitchState.Landing)
             {
                 verticalTarget = GroundPosition(SafeZones.PushOut(entryPosition, landingMargin));
-                if (NavMesh.SamplePosition(verticalTarget, out var hit, 6f, agent.areaMask))
+                if (TrySampleNavMesh(verticalTarget, 6f, out var hit) && !SafeZones.Contains(hit.position))
                     verticalTarget = hit.position;
             }
             else if (Decision.State == WitchState.TakingOff)
@@ -170,16 +179,29 @@ namespace TiffanyGame
 
         private bool EnableAgent()
         {
-            if (!agent.enabled)
+            if (agent.enabled)
             {
-                Vector3 position = transform.position;
-                if (NavMesh.SamplePosition(position, out var hit, 3f, agent.areaMask)) position = hit.position;
-                transform.position = position;
-                agent.enabled = true;
-                agent.Warp(position);
-                hasDestination = false;
+                if (agent.isOnNavMesh) return true;
+                agent.enabled = false;
             }
-            return agent.isOnNavMesh;
+            if (!TrySampleNavMesh(transform.position, 3f, out var hit)) return false;
+            transform.position = hit.position;
+            agent.enabled = true;
+            agent.Warp(hit.position);
+            hasDestination = false;
+            if (agent.isOnNavMesh) return true;
+            agent.enabled = false;
+            return false;
+        }
+
+        private bool TrySampleNavMesh(Vector3 position, float radius, out NavMeshHit hit)
+        {
+            for (; radius <= 24f; radius *= 2f)
+            {
+                if (NavMesh.SamplePosition(position, out hit, radius, agent.areaMask)) return true;
+            }
+            hit = default;
+            return false;
         }
 
         private void Stalk()
@@ -210,25 +232,27 @@ namespace TiffanyGame
                 if (ClosestWorldHit(count, out var hit)) freeDistance = hit.distance;
             }
             Vector3 next = WitchMotion.SprintStep(position, Decision.MoveTarget, Decision.Speed, dt, freeDistance);
+            if (NavMesh.SamplePosition(position, out _, 1f, agent.areaMask)
+                && NavMesh.Raycast(position, next, out var edge, agent.areaMask)) next = edge.position;
             if (!SafeZones.Contains(next)) transform.position = GroundPosition(next);
         }
 
         private Vector3 GroundPosition(Vector3 position)
         {
             int count = Physics.RaycastNonAlloc(position + Vector3.up * 2f, Vector3.down, hits,
-                Mathf.Infinity, sightMask, QueryTriggerInteraction.Ignore);
+                Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
             if (ClosestWorldHit(count, out var hit)) position.y = hit.point.y;
             return position;
         }
 
-        private bool ClosestWorldHit(int count, out RaycastHit closest)
+        private bool ClosestWorldHit(int count, out RaycastHit closest, bool ignorePlayer = true)
         {
             closest = default;
             float distance = float.PositiveInfinity;
             for (int i = 0; i < count; i++)
             {
                 RaycastHit hit = hits[i];
-                if (hit.collider.transform.IsChildOf(player) || hit.collider.transform.IsChildOf(transform)
+                if ((ignorePlayer && hit.collider.transform.IsChildOf(player)) || hit.collider.transform.IsChildOf(transform)
                     || hit.distance >= distance) continue;
                 closest = hit;
                 distance = hit.distance;
