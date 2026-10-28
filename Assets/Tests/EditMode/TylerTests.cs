@@ -1,0 +1,101 @@
+using NUnit.Framework;
+
+namespace ElVelador.Tests
+{
+    public sealed class TylerTests
+    {
+        private Tyler tyler;
+        private TylerInputs inputs;
+
+        [SetUp]
+        public void SetUp()
+        {
+            tyler = new Tyler();
+            inputs = default;
+        }
+
+        [Test]
+        public void StillnessGuidesUntilMovementRestartsTheDelay()
+        {
+            Assert.AreEqual(TylerReaction.None, tyler.Reaction);
+            inputs.PlayerStill = true;
+            Check(2.9f, TylerReaction.None);
+            Check(0.2f, TylerReaction.Guide);
+            Check(5f, TylerReaction.Guide);
+            inputs.PlayerStill = false;
+            Check(0f, TylerReaction.None);
+            inputs.PlayerStill = true;
+            Check(2.9f, TylerReaction.None);
+            Check(0.2f, TylerReaction.Guide);
+        }
+
+        [TestCase(WitchForm.Grounded, 19.9f, TylerReaction.Growl)]
+        [TestCase(WitchForm.Grounded, 20f, TylerReaction.None)]
+        [TestCase(WitchForm.Grounded, 20.1f, TylerReaction.None)]
+        [TestCase(WitchForm.Flying, 29.9f, TylerReaction.Whine)]
+        [TestCase(WitchForm.Flying, 30f, TylerReaction.None)]
+        [TestCase(WitchForm.Flying, 30.1f, TylerReaction.None)]
+        [TestCase(WitchForm.Flying, 10f, TylerReaction.Whine)]
+        [TestCase(WitchForm.Grounded, -1f, TylerReaction.None)]
+        [TestCase(WitchForm.Grounded, float.NaN, TylerReaction.None)]
+        [TestCase(WitchForm.Flying, -1f, TylerReaction.None)]
+        [TestCase(WitchForm.Flying, float.NaN, TylerReaction.None)]
+        public void WitchReactionDependsOnFormAndValidDistance(WitchForm form, float distance, TylerReaction expected)
+        {
+            inputs.WitchPresent = true;
+            inputs.WitchForm = form;
+            inputs.WitchDistance = distance;
+            Check(0f, expected);
+        }
+
+        [TestCase(WitchForm.Grounded, TylerReaction.Growl)]
+        [TestCase(WitchForm.Flying, TylerReaction.Whine)]
+        public void WitchOverridesGuideWhileStillnessKeepsCounting(WitchForm form, TylerReaction expected)
+        {
+            inputs.PlayerStill = true;
+            inputs.WitchPresent = true;
+            inputs.WitchForm = form;
+            inputs.WitchDistance = 5f;
+            Check(5f, expected);
+            inputs.WitchPresent = false;
+            Check(0f, TylerReaction.Guide);
+            inputs.WitchPresent = true;
+            inputs.PlayerStill = false;
+            Check(0f, expected);
+            inputs.WitchPresent = false;
+            inputs.PlayerStill = true;
+            Check(2.9f, TylerReaction.None);
+        }
+
+        [TestCase(WitchForm.Grounded)]
+        [TestCase(WitchForm.Flying)]
+        public void AbsentWitchAtZeroDistanceDoesNotPreventGuide(WitchForm form)
+        {
+            inputs.WitchForm = form;
+            Check(5f, TylerReaction.None);
+            inputs.PlayerStill = true;
+            Check(3f, TylerReaction.Guide);
+        }
+
+        [TestCase(-1f)]
+        [TestCase(float.NaN)]
+        [TestCase(0f)]
+        public void InvalidOrZeroTimePreservesStillnessAndStillAllowsMovementReset(float dt)
+        {
+            inputs.PlayerStill = true;
+            Check(2.9f, TylerReaction.None);
+            Check(dt, TylerReaction.None);
+            Check(0.2f, TylerReaction.Guide);
+            inputs.PlayerStill = false;
+            Check(dt, TylerReaction.None);
+            inputs.PlayerStill = true;
+            Check(2.9f, TylerReaction.None);
+        }
+
+        private void Check(float dt, TylerReaction expected)
+        {
+            Assert.AreEqual(expected, tyler.Tick(dt, in inputs));
+            Assert.AreEqual(expected, tyler.Reaction);
+        }
+    }
+}
