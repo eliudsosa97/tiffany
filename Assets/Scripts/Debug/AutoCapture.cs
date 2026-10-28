@@ -91,6 +91,8 @@ namespace TiffanyGame
                 if (panicStage != null && player != null) panicStage.Apply(player.transform);
                 var caughtStage = stop.GetComponent<CaughtCaptureStage>();
                 if (caughtStage != null && player != null) caughtStage.Apply(player.transform);
+                var endingStage = stop.GetComponent<EndingCaptureStage>();
+                if (endingStage != null) endingStage.Apply();
                 yield return new WaitForSecondsRealtime(stop.wait);
                 yield return Capture($"{i + 1:00}_{stop.name}");
                 if (witchStage != null) witchStage.Clear();
@@ -102,6 +104,7 @@ namespace TiffanyGame
                 if (memoryStage != null) memoryStage.Clear();
                 if (panicStage != null) panicStage.Clear();
                 if (caughtStage != null) yield return caughtStage.Clear();
+                if (endingStage != null) endingStage.Clear();
                 if (awayStage != null) awayStage.Clear();
             }
 

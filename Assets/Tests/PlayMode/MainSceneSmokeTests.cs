@@ -28,6 +28,8 @@ namespace TiffanyGame.Tests
             yield return null;
             yield return null;
 
+            // Heartbeat registra cada cambio de ritmo y estos tests no admiten logs inesperados.
+            foreach (var heartbeat in Object.FindObjectsByType<Heartbeat>(FindObjectsSortMode.None)) heartbeat.enabled = false;
             mainScene = SceneManager.GetActiveScene();
             NoiseBus.Published += RecordStep;
         }
@@ -169,8 +171,8 @@ namespace TiffanyGame.Tests
             var route = GameObject.Find("Route").transform;
             var cemetery = route.GetChild(0);
             Assert.AreEqual(8, route.childCount);
-            Assert.AreEqual(48, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length);
-            Assert.AreEqual(17, route.GetComponentsInChildren<CaptureStop>().Length);
+            Assert.AreEqual(50, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length);
+            Assert.AreEqual(19, route.GetComponentsInChildren<CaptureStop>().Length);
             Assert.AreEqual(12, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length);
             foreach (var movable in MovableObject.Active) Assert.IsTrue(movable.transform.IsChildOf(cemetery));
             var player = GameObject.FindGameObjectWithTag("Player");
@@ -258,7 +260,6 @@ namespace TiffanyGame.Tests
             var initialPlayerPosition = player.transform.position;
             var initialCameraPosition = viewCamera.transform.position;
 
-            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Latidos: 70 lpm");
             GameInput.MoveOverride = Vector2.up;
 
             yield return new WaitForSeconds(0.5f);

@@ -71,6 +71,8 @@ namespace TiffanyGame
             }
             bool hasPower = memoryId >= 1 && memoryId <= 5;
             if (hasPower) soul.Powers.Unlock(PowerSet.ForMemory(memoryId));
+            if (RouteProgress.StartsReturn(memoryId) && soul.TryGetComponent<PlayerRespawn>(out var respawn)
+                && respawn.witch != null) respawn.witch.BeginReturn();
             if (!gameInterface.MemoryFound(memoryId) && hasPower)
                 gameInterface.ShowPowerNotice(PowerSet.ForMemory(memoryId));
             if (gameInterface.TryGetMemory(memoryId, out var memory))

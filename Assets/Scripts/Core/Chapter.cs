@@ -8,6 +8,7 @@ namespace TiffanyGame
         Trail,
         Ravine,
         OldCemetery,
-        Chapel
+        Chapel,
+        Return
     }
 }
