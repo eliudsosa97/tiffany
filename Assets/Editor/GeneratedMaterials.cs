@@ -9,7 +9,7 @@ namespace TiffanyGame.EditorTools
         public const string DefaultFolder = "Assets/Scenes/Generated/Materials";
         public static string folder = DefaultFolder;
 
-        public static Material Get(string name, Color color, bool unlit = false, float smoothness = 0.08f)
+        public static Material Get(string name, Color color, bool unlit = false, float smoothness = 0.08f, bool? instancing = null)
         {
             EnsureFolder(folder);
             string shaderName = unlit ? "Universal Render Pipeline/Unlit" : "Universal Render Pipeline/Lit";
@@ -22,8 +22,10 @@ namespace TiffanyGame.EditorTools
             bool isNew = material == null;
             if (isNew) material = new Material(shader) { name = name };
             else material.shader = shader;
+            if (instancing.HasValue) material.enableInstancing = instancing.Value;
 
             material.SetColor("_BaseColor", color);
+            material.SetColor("_Color", material.GetColor("_BaseColor"));
             if (!unlit)
             {
                 material.SetFloat("_Smoothness", smoothness);
@@ -34,7 +36,8 @@ namespace TiffanyGame.EditorTools
             return material;
         }
 
-        public static Material GetTextured(string name, Color tint, string textureName, float tiling, float smoothness = 0.08f)
+        public static Material GetTextured(string name, Color tint, string textureName, float tiling, float smoothness = 0.08f,
+            bool? instancing = null)
         {
             string textureFolder = $"Assets/Art/CC0/PolyHaven/{textureName}";
             string diffusePath = $"{textureFolder}/{textureName}_diff.jpg";
@@ -46,7 +49,7 @@ namespace TiffanyGame.EditorTools
             if (normal == null)
                 throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró la textura normal en '{normalPath}'.");
 
-            var material = Get(name, tint, smoothness: smoothness);
+            var material = Get(name, tint, smoothness: smoothness, instancing: instancing);
             material.SetTexture("_BaseMap", diffuse);
             material.SetTexture("_BumpMap", normal);
             material.EnableKeyword("_NORMALMAP");
