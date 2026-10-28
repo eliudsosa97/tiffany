@@ -258,6 +258,19 @@ namespace TiffanyGame.EditorTools
                     : stage.state == WitchState.TakingOff ? new Vector3(2f, 3f, 5f)
                     : stage.state == WitchState.Landing ? new Vector3(2f, 2.5f, 6f) : new Vector3(1.5f, 0f, 3f);
             }
+
+            var litStop = new GameObject("Witch 9 Flying Lit");
+            litStop.transform.SetParent(captureRoot, false);
+            litStop.transform.position = SurfacePoint(-5f, 1.5f);
+            var litCapture = litStop.AddComponent<CaptureStop>();
+            litCapture.overrideCamera = false;
+            litCapture.wait = 1.5f;
+            var litWitch = litStop.AddComponent<WitchCaptureStage>();
+            litWitch.state = WitchState.Flying;
+            litWitch.fireLit = true;
+            litWitch.witchOffset = flyingOffset;
+            var litLight = litStop.AddComponent<LightCaptureStage>();
+            litLight.hideWitch = false;
             return controller;
         }
 
