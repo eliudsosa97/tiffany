@@ -45,6 +45,13 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/witch_breath.wav` | [Monster breathing](https://freesound.org/s/567723/) | iut_Paris8 | CC0 |
 | `Assets/Audio/Sfx/witch_crack.wav` | [Hard Candy / Bone Crunch](https://freesound.org/s/392883/) | clif_creates | CC0 |
 | `Assets/Audio/Sfx/witch_whoosh.wav` | [Whoosh](https://freesound.org/s/60013/) | qubodup | CC0 |
+| `Assets/Audio/Sfx/owl.wav` | [Owl Hoot](https://freesound.org/s/465697/) | Breviceps | CC0 |
+| `Assets/Audio/Sfx/lechuza.wav` | [Church_Barn_Owl](https://freesound.org/s/181134/) | ikbenraar | CC0 |
+| `Assets/Audio/Sfx/coyote.wav` | [Lone Coyote](https://freesound.org/s/164268/) | Danjocross | CC0 |
+| `Assets/Audio/Sfx/distant_howl_1.wav` a `distant_howl_3.wav` | [dogs-howling-yelping-distance-far 03, 08, 04](https://freesound.org/people/Gerent/sounds/558719/) | Gerent | CC0 |
+| `Assets/Audio/Sfx/leaves.wav` | [Leaves_Rustling_Edited](https://freesound.org/s/443065/) | AmberdeMeillon | CC0 |
+| `Assets/Audio/Sfx/lake_water.wav` | [060516 lake biwa](https://freesound.org/s/390287/) | pflanigan | CC0 |
+| `Assets/Audio/Sfx/frogs.wav` | [FrogsAndCrickets_ExcerptA](https://freesound.org/s/32654/) | greysound | CC0 |
 | `Assets/Audio/Sfx/bottle.wav` | [Small_Glass_Bottle_Wood_Floor.wav](https://freesound.org/s/235602/) | tcrocker68 | CC0 |
 | `Assets/Audio/Sfx/can.wav` | [CanBounce 2.wav](https://freesound.org/s/92622/) | nigelcoop | CC0 |
 | `Assets/Audio/Sfx/pot.wav` | [Breaking pot short](https://freesound.org/s/810043/) | anna_bliss | CC0 |
