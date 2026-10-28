@@ -91,6 +91,20 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator RespawnKeepsSpawnWhenPlayerMovesBeforeFirstAccess()
+        {
+            var player = new GameObject("Spawn Test");
+            player.transform.SetParent(world.transform);
+            Vector3 spawn = new Vector3(3f, 2f, 4f);
+            player.transform.position = spawn;
+            var playerSoul = player.AddComponent<PlayerSoul>();
+            player.transform.position = new Vector3(15f, 0f, 8f);
+
+            Assert.AreEqual(spawn, playerSoul.Respawn.Position);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator CaughtReturnsToCandleOrSpawnWithHalfEnergyAndUnlocksMovement(
             [ValueSource(nameof(CandleCases))] bool touchCandle)
         {
