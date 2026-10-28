@@ -486,7 +486,9 @@ namespace TiffanyGame.EditorTools
             playerLight.glow = glow.transform;
             playerLight.startOn = false;
             playerLight.pitch = 42f;
-            return player.AddComponent<PlayerController>();
+            var movement = player.AddComponent<PlayerController>();
+            AudioBuilder.BuildFootsteps(movement);
+            return movement;
         }
 
         static Camera CreateCamera(PlayerController player)
