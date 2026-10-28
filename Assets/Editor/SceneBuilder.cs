@@ -1,7 +1,9 @@
 using System;
+using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 
 namespace TiffanyGame.EditorTools
@@ -24,6 +26,7 @@ namespace TiffanyGame.EditorTools
             var spawn = BuildTestZone();
             var player = CreatePlayer(spawn);
             CreateCamera(player);
+            BuildWitch(spawn.parent, player.transform);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -121,6 +124,63 @@ namespace TiffanyGame.EditorTools
             spawn.SetParent(root, false);
             spawn.position = SurfacePoint(0f, 0f);
             return spawn;
+        }
+
+        static void BakeNavMesh(Transform zoneRoot)
+        {
+            var surface = zoneRoot.gameObject.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.Children;
+            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            Physics.SyncTransforms();
+            surface.BuildNavMesh();
+            const string path = "Assets/Scenes/Generated/WitchNavMesh.asset";
+            EnsureFolder("Assets/Scenes/Generated");
+            if (AssetDatabase.LoadAssetAtPath<NavMeshData>(path) != null) AssetDatabase.DeleteAsset(path);
+            AssetDatabase.CreateAsset(surface.navMeshData, path);
+        }
+
+        static void BuildWitch(Transform zoneRoot, Transform player)
+        {
+            BakeNavMesh(zoneRoot);
+            var route = new[]
+            {
+                SurfacePoint(-20f, -20f) + Vector3.up * 14f,
+                SurfacePoint(20f, -20f) + Vector3.up * 14f,
+                SurfacePoint(20f, 20f) + Vector3.up * 14f,
+                SurfacePoint(-20f, 20f) + Vector3.up * 14f
+            };
+            var witch = new GameObject("Witch");
+            witch.transform.SetParent(zoneRoot, false);
+            witch.transform.position = route[0];
+            var agent = witch.AddComponent<NavMeshAgent>();
+            agent.radius = 0.35f;
+            agent.height = 2.3f;
+            agent.enabled = false;
+            var controller = witch.AddComponent<WitchController>();
+            controller.player = player;
+            controller.skyRoute = route;
+            controller.chapter = Chapter.Ravine;
+            controller.figure = WitchBuilder.BuildFigure(witch.transform);
+            controller.fireLight = WitchBuilder.BuildFireBall(witch.transform, out var ball);
+            ball.transform.localPosition = Vector3.up * 1.5f;
+            controller.fireBall = ball;
+
+            var states = new[] { WitchState.Flying, WitchState.Landing, WitchState.Stalking, WitchState.WindUp,
+                WitchState.Sprinting, WitchState.Recovering, WitchState.TakingOff };
+            for (int i = 0; i < states.Length; i++)
+            {
+                var stop = new GameObject($"Witch {i + 1} {states[i]}");
+                stop.transform.SetParent(zoneRoot, false);
+                stop.transform.position = SurfacePoint(0f, -4f);
+                var capture = stop.AddComponent<CaptureStop>();
+                capture.overrideCamera = false;
+                capture.wait = 1.5f;
+                var stage = stop.AddComponent<WitchCaptureStage>();
+                stage.state = states[i];
+                stage.fireLit = stage.state == WitchState.Flying || stage.state == WitchState.TakingOff;
+                stage.witchOffset = stage.fireLit ? new Vector3(2f, 4f, 6f)
+                    : stage.state == WitchState.Landing ? new Vector3(2f, 2.5f, 6f) : new Vector3(3f, 0f, 4f);
+            }
         }
 
         static Vector3 SurfacePoint(float x, float alongSlope)

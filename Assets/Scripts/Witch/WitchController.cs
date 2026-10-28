@@ -14,6 +14,7 @@ namespace TiffanyGame
         public GameObject figure;
         public GameObject fireBall;
         public Light fireLight;
+        public float fireFullHeight = 10f;
         public LayerMask sightMask = Physics.DefaultRaycastLayers;
         public LayerMask coverMask = Physics.DefaultRaycastLayers;
         public LayerMask groundMask = Physics.DefaultRaycastLayers;
@@ -42,6 +43,10 @@ namespace TiffanyGame
         private Vector3 verticalTarget;
         private Vector3 lastDestination;
         private bool hasDestination;
+        private float baseFireIntensity;
+        private float groundY;
+        private WitchPose lastPose;
+        private bool hasPose;
 
         private void Awake()
         {
@@ -52,6 +57,7 @@ namespace TiffanyGame
             brain = new WitchBrain(profile, skyRoute);
             hits = new RaycastHit[32];
             noiseHandler = Hear;
+            if (fireLight != null) baseFireIntensity = fireLight.intensity;
             Decision = new WitchDecision { State = WitchState.Flying, Form = WitchForm.Flying, FireLit = true };
         }
 
@@ -61,6 +67,9 @@ namespace TiffanyGame
 
         private void Start()
         {
+            int count = Physics.RaycastNonAlloc(transform.position, Vector3.down, hits,
+                Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
+            groundY = ClosestWorldHit(count, out var hit) ? hit.point.y : transform.position.y - 14f;
             if (player != null) return;
             var found = GameObject.FindGameObjectWithTag("Player");
             if (found != null) player = found.transform;
@@ -114,6 +123,7 @@ namespace TiffanyGame
                 EnterState();
             }
             ApplyMovement(dt);
+            if (Decision.Form == WitchForm.Grounded) groundY = transform.position.y;
             ApplyView();
         }
 
@@ -126,6 +136,7 @@ namespace TiffanyGame
                 verticalTarget = GroundPosition(SafeZones.PushOut(entryPosition, landingMargin));
                 if (TrySampleNavMesh(verticalTarget, 6f, out var hit) && !SafeZones.Contains(hit.position))
                     verticalTarget = hit.position;
+                groundY = verticalTarget.y;
             }
             else if (Decision.State == WitchState.TakingOff)
             {
@@ -262,12 +273,33 @@ namespace TiffanyGame
 
         private void ApplyView()
         {
-            if (fireBall != null) fireBall.SetActive(Decision.FireLit);
-            if (fireLight != null) fireLight.enabled = Decision.FireLit;
-            if (figure == null) return;
-            figure.SetActive(Decision.Form == WitchForm.Grounded);
-            figure.transform.localScale = Decision.State == WitchState.WindUp
-                ? new Vector3(1.15f, 0.75f, 1.15f) : Vector3.one;
+            ApplyPose(WitchPoses.For(Decision.State, Decision.FireLit));
+            if (fireLight != null && fireLight.enabled)
+                fireLight.intensity = WitchPoses.FireIntensity(baseFireIntensity, transform.position.y - groundY, fireFullHeight);
+        }
+
+        public void ShowPose(WitchState state, bool fireLit)
+        {
+            ApplyPose(WitchPoses.For(state, fireLit));
+            if (fireLight != null) fireLight.intensity = baseFireIntensity;
+        }
+
+        private void ApplyPose(WitchPose pose)
+        {
+            if (hasPose && lastPose.FigureVisible == pose.FigureVisible && lastPose.BallVisible == pose.BallVisible
+                && lastPose.LightOn == pose.LightOn && lastPose.FigureScale == pose.FigureScale
+                && lastPose.FigureLean == pose.FigureLean) return;
+
+            if (fireBall != null) fireBall.SetActive(pose.BallVisible);
+            if (fireLight != null) fireLight.enabled = pose.LightOn;
+            if (figure != null)
+            {
+                figure.SetActive(pose.FigureVisible);
+                figure.transform.localScale = pose.FigureScale;
+                figure.transform.localRotation = Quaternion.Euler(pose.FigureLean, 0f, 0f);
+            }
+            lastPose = pose;
+            hasPose = true;
         }
     }
 }
