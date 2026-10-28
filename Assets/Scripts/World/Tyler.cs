@@ -18,7 +18,7 @@ namespace ElVelador
             }
 
             stillTime = inputs.PlayerStill ? stillTime + dt : 0f;
-            bool validWitch = inputs.WitchPresent && inputs.WitchDistance >= 0f;
+            bool validWitch = inputs.WitchDistance >= 0f && !float.IsInfinity(inputs.WitchDistance);
             if (validWitch && inputs.WitchForm == WitchForm.Grounded && inputs.WitchDistance < GrowlRadius)
             {
                 Reaction = TylerReaction.Growl;
