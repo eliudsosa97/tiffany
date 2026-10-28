@@ -16,17 +16,9 @@ namespace TiffanyGame
         public AudioClip[] clips = Array.Empty<AudioClip>();
         public AudioSource[] sources = Array.Empty<AudioSource>();
 
-        struct Voice
-        {
-            public EchoSound Sound;
-            public float Start;
-            public float Duration;
-            public float Volume;
-        }
-
         EchoEvaluator evaluator;
+        EchoAudioEvaluator audioEvaluator;
         AudioClip[] soundClips;
-        Voice[] voices;
         int subtitleIndex = -1;
         bool loaded;
 
@@ -51,19 +43,19 @@ namespace TiffanyGame
             for (int i = 0; i < props.Length; i++)
                 if (props[i] == null) return Invalid($"falta la utilería {i}");
             soundClips = new AudioClip[data.sounds.Length];
-            int voiceCount = 0;
+            var clipLengths = new float[data.sounds.Length];
             for (int i = 0; i < data.sounds.Length; i++)
             {
                 var sound = data.sounds[i];
                 for (int j = 0; j < clips.Length; j++)
                     if (clips[j] != null && clips[j].name == sound.clip) { soundClips[i] = clips[j]; break; }
                 if (soundClips[i] == null) return Invalid($"no se encontró Assets/Audio/Sfx/{sound.clip}.wav");
-                voiceCount += 1 + sound.copies.Length;
+                clipLengths[i] = soundClips[i].length;
             }
-            if (sources.Length < voiceCount) return Invalid($"el pool requiere {voiceCount} AudioSource");
+            if (data.sounds.Length > 0 && sources.Length == 0) return Invalid("el pool requiere al menos un AudioSource");
             for (int i = 0; i < sources.Length; i++)
                 if (sources[i] == null) return Invalid($"falta el AudioSource {i}");
-            voices = new Voice[sources.Length];
+            audioEvaluator = new EchoAudioEvaluator(data.sounds, clipLengths, sources.Length);
             Data = data;
             evaluator = new EchoEvaluator(data);
             return true;
@@ -82,22 +74,24 @@ namespace TiffanyGame
             Elapsed = 0f;
             subtitleIndex = -1;
             evaluator.Reset();
+            audioEvaluator.Reset();
             IsPlaying = true;
             gameInterface.BeginEcho();
             stageRoot.SetActive(true);
-            ApplyFrame();
+            ApplyFrame(float.NegativeInfinity);
             return true;
         }
 
         void Update()
         {
             if (!IsPlaying || gameInterface.IsFrozen) return;
+            float previousTime = Elapsed;
             Elapsed = Mathf.Min(Data.duration, Elapsed + Time.deltaTime);
             if (Elapsed >= Data.duration) { Stop(); return; }
-            ApplyFrame();
+            ApplyFrame(previousTime);
         }
 
-        void ApplyFrame()
+        void ApplyFrame(float previousTime)
         {
             var frame = evaluator.Evaluate(Elapsed);
             ApplyPose(girl, frame.Girl);
@@ -111,8 +105,8 @@ namespace TiffanyGame
             }
             blackout.color = new Color(0f, 0f, 0f, frame.BlackOpacity);
             blackout.gameObject.SetActive(frame.BlackOpacity > 0f);
-            for (int i = 0; i < frame.SoundCount; i++) StartSound(frame.FirstSound + i);
-            UpdateAudio();
+            audioEvaluator.Evaluate(previousTime, Elapsed);
+            ApplyAudio();
         }
 
         static void ApplyPose(Transform target, EchoPose pose)
@@ -122,50 +116,22 @@ namespace TiffanyGame
             target.localScale = pose.Scale;
         }
 
-        void StartSound(int index)
+        void ApplyAudio()
         {
-            var sound = Data.sounds[index];
-            Schedule(sound, soundClips[index], 0f, sound.pitch, sound.volume, sound.panStereo);
-            for (int i = 0; i < sound.copies.Length; i++)
+            for (int i = 0; i < sources.Length; i++)
             {
-                var copy = sound.copies[i];
-                Schedule(sound, soundClips[index], copy.delay, copy.pitch, copy.volume, copy.panStereo);
-            }
-        }
-
-        void Schedule(EchoSound sound, AudioClip clip, float delay, float pitch, float volume, float pan)
-        {
-            float start = sound.time + delay;
-            float duration = Mathf.Min(sound.duration, clip.length / pitch);
-            if (Elapsed >= start + duration) return;
-            for (int i = 0; i < voices.Length; i++)
-            {
-                if (voices[i].Sound != null) continue;
-                voices[i] = new Voice { Sound = sound, Start = start, Duration = duration, Volume = volume };
+                var plan = audioEvaluator[i];
                 var source = sources[i];
-                source.clip = clip;
-                source.pitch = pitch;
-                source.panStereo = pan;
-                source.volume = volume * EchoEvaluator.AudioEnvelope(Elapsed - start, duration, sound.fadeIn, sound.fadeOut);
-                source.time = Mathf.Max(0f, Elapsed - start) * pitch;
-                source.PlayDelayed(Mathf.Max(0f, start - Elapsed));
-                return;
-            }
-        }
-
-        void UpdateAudio()
-        {
-            for (int i = 0; i < voices.Length; i++)
-            {
-                var voice = voices[i];
-                if (voice.Sound == null) continue;
-                float age = Elapsed - voice.Start;
-                if (age >= voice.Duration)
+                if (plan.Stop) source.Stop();
+                if (plan.Active) source.volume = plan.Volume;
+                if (plan.Play)
                 {
-                    sources[i].Stop();
-                    voices[i] = default;
+                    source.clip = soundClips[plan.SoundIndex];
+                    source.pitch = plan.Pitch;
+                    source.panStereo = plan.PanStereo;
+                    source.time = plan.ClipTime;
+                    source.PlayDelayed(plan.Delay);
                 }
-                else sources[i].volume = voice.Volume * EchoEvaluator.AudioEnvelope(age, voice.Duration, voice.Sound.fadeIn, voice.Sound.fadeOut);
             }
         }
 
@@ -175,7 +141,7 @@ namespace TiffanyGame
             IsPlaying = false;
             for (int i = 0; i < sources.Length; i++)
                 if (sources[i] != null) sources[i].Stop();
-            if (voices != null) Array.Clear(voices, 0, voices.Length);
+            audioEvaluator?.Reset();
             Hide();
         }
 

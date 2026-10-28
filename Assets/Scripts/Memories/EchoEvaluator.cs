@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace TiffanyGame
@@ -18,6 +19,134 @@ namespace TiffanyGame
         public int FirstSound;
         public int SoundCount;
         public float BlackOpacity;
+    }
+
+    public struct EchoVoicePlan
+    {
+        public bool Active;
+        public bool Play;
+        public bool Stop;
+        public int SoundIndex;
+        public float Delay;
+        public float ClipTime;
+        public float Duration;
+        public float Pitch;
+        public float Volume;
+        public float PanStereo;
+    }
+
+    public sealed class EchoAudioEvaluator
+    {
+        struct VoiceEvent : IComparable<VoiceEvent>
+        {
+            public int SoundIndex;
+            public EchoSound Sound;
+            public float Start;
+            public float Duration;
+            public float Pitch;
+            public float Volume;
+            public float Pan;
+
+            public int CompareTo(VoiceEvent other)
+            {
+                int order = Sound.time.CompareTo(other.Sound.time);
+                if (order == 0) order = Start.CompareTo(other.Start);
+                if (order == 0) order = string.CompareOrdinal(Sound.clip, other.Sound.clip);
+                if (order == 0) order = Pitch.CompareTo(other.Pitch);
+                if (order == 0) order = Volume.CompareTo(other.Volume);
+                if (order == 0) order = Pan.CompareTo(other.Pan);
+                if (order == 0) order = Duration.CompareTo(other.Duration);
+                if (order == 0) order = Sound.fadeIn.CompareTo(other.Sound.fadeIn);
+                if (order == 0) order = Sound.fadeOut.CompareTo(other.Sound.fadeOut);
+                return order;
+            }
+        }
+
+        readonly VoiceEvent[] events;
+        readonly int[] activeEvents;
+        readonly EchoVoicePlan[] plans;
+
+        public EchoVoicePlan this[int voice] => plans[voice];
+
+        public EchoAudioEvaluator(EchoSound[] sounds, float[] clipLengths, int voiceCount)
+        {
+            int count = 0;
+            for (int i = 0; i < sounds.Length; i++) count += 1 + sounds[i].copies.Length;
+            events = new VoiceEvent[count];
+            activeEvents = new int[voiceCount];
+            plans = new EchoVoicePlan[voiceCount];
+            int next = 0;
+            for (int i = 0; i < sounds.Length; i++)
+            {
+                var sound = sounds[i];
+                Add(i, 0f, sound.pitch, sound.volume, sound.panStereo);
+                for (int j = 0; j < sound.copies.Length; j++)
+                {
+                    var copy = sound.copies[j];
+                    Add(i, copy.delay, copy.pitch, copy.volume, copy.panStereo);
+                }
+            }
+            Array.Sort(events);
+            Reset();
+
+            void Add(int index, float delay, float pitch, float volume, float pan)
+            {
+                var sound = sounds[index];
+                events[next++] = new VoiceEvent
+                {
+                    SoundIndex = index, Sound = sound, Start = sound.time + delay,
+                    Duration = Mathf.Min(sound.duration, clipLengths[index] / pitch),
+                    Pitch = pitch, Volume = volume, Pan = pan
+                };
+            }
+        }
+
+        public void Reset()
+        {
+            Array.Clear(plans, 0, plans.Length);
+            for (int i = 0; i < activeEvents.Length; i++) activeEvents[i] = -1;
+        }
+
+        public void Evaluate(float previousTime, float time)
+        {
+            for (int i = 0; i < plans.Length; i++)
+            {
+                plans[i] = default;
+                if (activeEvents[i] < 0) continue;
+                var voice = events[activeEvents[i]];
+                if (time < voice.Start + voice.Duration) continue;
+                activeEvents[i] = -1;
+                plans[i].Stop = true;
+            }
+            for (int i = 0; i < events.Length && activeEvents.Length > 0; i++)
+            {
+                var voice = events[i];
+                if (voice.Sound.time <= previousTime || voice.Sound.time > time || time >= voice.Start + voice.Duration) continue;
+                int slot = 0;
+                for (int j = 0; j < activeEvents.Length; j++)
+                {
+                    if (activeEvents[j] < 0) { slot = j; break; }
+                    if (events[activeEvents[j]].Start < events[activeEvents[slot]].Start) slot = j;
+                }
+                plans[slot].Stop |= activeEvents[slot] >= 0;
+                plans[slot].Play = true;
+                activeEvents[slot] = i;
+            }
+            for (int i = 0; i < plans.Length; i++)
+            {
+                if (activeEvents[i] < 0) continue;
+                var voice = events[activeEvents[i]];
+                float age = time - voice.Start;
+                plans[i] = new EchoVoicePlan
+                {
+                    Active = true, Play = plans[i].Play, Stop = plans[i].Stop,
+                    SoundIndex = voice.SoundIndex, Delay = Mathf.Max(0f, -age),
+                    ClipTime = Mathf.Max(0f, age) * voice.Pitch, Duration = voice.Duration,
+                    Pitch = voice.Pitch, PanStereo = voice.Pan,
+                    Volume = voice.Volume * EchoEvaluator.AudioEnvelope(age, voice.Duration, voice.Sound.fadeIn, voice.Sound.fadeOut)
+                };
+            }
+        }
     }
 
     public sealed class EchoEvaluator
