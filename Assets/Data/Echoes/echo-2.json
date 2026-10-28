@@ -1,0 +1,147 @@
+{
+  "id": 2,
+  "duration": 12,
+  "girl": {
+    "position": {"x": 0, "y": 0, "z": 0},
+    "rotation": {"x": 0, "y": 0, "z": 0},
+    "scale": {"x": 1, "y": 1, "z": 1},
+    "appear": 0,
+    "disappear": 11.2,
+    "points": [
+      {"time": 0, "position": {"x": -3, "y": 0, "z": -3}, "rotation": {"x": 0, "y": 45, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 2.4, "position": {"x": 0, "y": 0, "z": -0.2}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 3, "position": {"x": 0, "y": 0, "z": -0.2}, "rotation": {"x": 0, "y": -65, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 3.7, "position": {"x": 0, "y": 0, "z": -0.2}, "rotation": {"x": 0, "y": 65, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 4.4, "position": {"x": 0, "y": 0, "z": -0.2}, "rotation": {"x": 0, "y": -30, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 5.2, "position": {"x": 0, "y": 0, "z": -0.2}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 7.3, "position": {"x": 0, "y": 0, "z": -0.2}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 7.7, "position": {"x": 0, "y": 0, "z": -0.2}, "rotation": {"x": 0, "y": 50, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 11, "position": {"x": 4, "y": 0, "z": 3.8}, "rotation": {"x": 0, "y": 50, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}}
+    ]
+  },
+  "tyler": {
+    "position": {"x": 0, "y": 0, "z": 0},
+    "rotation": {"x": 0, "y": 0, "z": 0},
+    "scale": {"x": 1, "y": 1, "z": 1},
+    "appear": 0,
+    "disappear": 0,
+    "points": []
+  },
+  "subtitles": [],
+  "sounds": [
+    {
+      "clip": "bark_2",
+      "time": 3.3,
+      "duration": 0.55,
+      "pitch": 0.98,
+      "volume": 0.28,
+      "panStereo": 0,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "copies": [
+        {"delay": 0.25, "volume": 0.17, "panStereo": -0.8, "pitch": 0.96},
+        {"delay": 0.5, "volume": 0.14, "panStereo": 0.8, "pitch": 1},
+        {"delay": 0.8, "volume": 0.11, "panStereo": -0.6, "pitch": 0.95},
+        {"delay": 1.1, "volume": 0.08, "panStereo": 0.65, "pitch": 0.98}
+      ]
+    }
+  ],
+  "props": [
+    {
+      "type": "gate",
+      "parent": "",
+      "position": {"x": 0, "y": 0, "z": 0.8},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "ribbon",
+      "parent": "girl",
+      "position": {"x": 0.15, "y": 1.1, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 5.5,
+      "points": []
+    },
+    {
+      "type": "ribbon",
+      "parent": "girl",
+      "position": {"x": 0.25, "y": 0.75, "z": 0.38},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 5.5,
+      "disappear": 6.7,
+      "points": []
+    },
+    {
+      "type": "ribbon",
+      "parent": "",
+      "position": {"x": 0.35, "y": 0.9, "z": 0.8},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 6.7,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "arm",
+      "parent": "girl",
+      "position": {"x": 0.25, "y": 0.86, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": [
+        {"time": 0, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": -40, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 2.4, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 5.2, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 5.5, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 155}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 5.9, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": -95, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 6.7, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": -95, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 7.3, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 7.7, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": -45, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}}
+      ]
+    },
+    {
+      "type": "arm",
+      "parent": "girl",
+      "position": {"x": -0.25, "y": 0.86, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": [
+        {"time": 0, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 5.2, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 5.9, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": -90, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 6.7, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": -90, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 7.3, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}}
+      ]
+    },
+    {
+      "type": "shoe",
+      "parent": "girl",
+      "position": {"x": -0.12, "y": 0.07, "z": 0.07},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "shoe",
+      "parent": "girl",
+      "position": {"x": 0.12, "y": 0.07, "z": 0.07},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    }
+  ],
+  "blackout": {"time": 0, "duration": 0}
+}

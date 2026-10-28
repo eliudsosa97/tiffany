@@ -100,5 +100,32 @@ namespace TiffanyGame.Tests
             echo.Tick(dt);
             Assert.AreEqual(0.5f, echo.Weight);
         }
+
+        [Test] public void EchoUsesItsOwnDurationAndDefaultRestartStillLastsTenSeconds()
+        {
+            var echo = new MemoryEcho();
+            echo.Start(13f);
+            echo.Tick(10f);
+            Assert.IsTrue(echo.Active);
+            Assert.AreEqual(1f, echo.Weight);
+            echo.Tick(2.5f);
+            Assert.AreEqual(0.5f, echo.Weight);
+            echo.Tick(0.5f);
+            Assert.IsFalse(echo.Active);
+            echo.Start();
+            echo.Tick(10f);
+            Assert.IsFalse(echo.Active);
+            echo.Start(15f);
+            echo.Stop();
+            Assert.IsFalse(echo.Active);
+            Assert.AreEqual(0f, echo.Weight);
+        }
+
+        [TestCase(0f)]
+        [TestCase(-1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void EchoRejectsInvalidCustomDurations(float duration) =>
+            Assert.Throws<ArgumentOutOfRangeException>(() => new MemoryEcho().Start(duration));
     }
 }
