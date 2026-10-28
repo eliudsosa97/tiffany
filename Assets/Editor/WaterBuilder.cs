@@ -79,8 +79,8 @@ namespace TiffanyGame.EditorTools
             source.playOnAwake = true;
             source.spatialBlend = 1f;
             source.rolloffMode = AudioRolloffMode.Linear;
-            source.minDistance = 2f;
-            source.maxDistance = 25f;
+            source.minDistance = 36f;
+            source.maxDistance = 60f;
             source.dopplerLevel = 0f;
             source.volume = 0.5f;
         }

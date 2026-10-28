@@ -333,7 +333,8 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(source.playOnAwake);
                 Assert.AreEqual(1f, source.spatialBlend);
                 Assert.AreEqual(AudioRolloffMode.Linear, source.rolloffMode);
-                Assert.AreEqual(25f, source.maxDistance);
+                Assert.AreEqual(36f, source.minDistance, "La cámara y su AudioListener van a unos 36 m de Tiffany.");
+                Assert.AreEqual(60f, source.maxDistance);
             }
             var lakeStop = route.GetChild(5).Find("Water 1 Lake");
             var riverStop = river.parent.Find("Water 2 Crossing");
