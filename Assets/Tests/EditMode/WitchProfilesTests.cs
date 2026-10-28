@@ -1,7 +1,7 @@
 using System;
 using NUnit.Framework;
 
-namespace ElVelador.Tests
+namespace TiffanyGame.Tests
 {
     public sealed class WitchProfilesTests
     {

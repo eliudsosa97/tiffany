@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace ElVelador
+namespace TiffanyGame
 {
     [RequireComponent(typeof(CharacterController))]
     public class PlayerController : MonoBehaviour

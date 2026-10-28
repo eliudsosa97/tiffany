@@ -1,13 +1,13 @@
 using NUnit.Framework;
 
-namespace ElVelador.Tests
+namespace TiffanyGame.Tests
 {
     public class GameInfoTests
     {
         [Test]
         public void LogPrefixNamesTheGame()
         {
-            Assert.AreEqual("[Velador]", GameInfo.LogPrefix);
+            Assert.AreEqual("[Tiffany]", GameInfo.LogPrefix);
         }
     }
 }

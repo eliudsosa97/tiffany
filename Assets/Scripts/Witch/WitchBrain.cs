@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace ElVelador
+namespace TiffanyGame
 {
     public sealed class WitchBrain
     {

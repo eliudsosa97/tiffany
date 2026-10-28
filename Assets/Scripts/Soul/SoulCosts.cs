@@ -1,4 +1,4 @@
-namespace ElVelador
+namespace TiffanyGame
 {
     public static class SoulCosts
     {

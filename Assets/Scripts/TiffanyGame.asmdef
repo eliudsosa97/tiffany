@@ -1,6 +1,6 @@
 {
-    "name": "ElVelador",
-    "rootNamespace": "ElVelador",
+    "name": "TiffanyGame",
+    "rootNamespace": "TiffanyGame",
     "references": [
         "Unity.InputSystem",
         "Unity.RenderPipelines.Core.Runtime",

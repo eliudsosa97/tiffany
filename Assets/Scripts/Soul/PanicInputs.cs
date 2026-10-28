@@ -1,4 +1,4 @@
-namespace ElVelador
+namespace TiffanyGame
 {
     public struct PanicInputs
     {

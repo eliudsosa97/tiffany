@@ -1,6 +1,6 @@
 using System;
 
-namespace ElVelador
+namespace TiffanyGame
 {
     public sealed class Vanish
     {

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace ElVelador.Tests
+namespace TiffanyGame.Tests
 {
     internal static class WitchSim
     {

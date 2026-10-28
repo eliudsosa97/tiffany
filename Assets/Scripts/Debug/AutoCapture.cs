@@ -2,7 +2,7 @@ using System.Collections;
 using System.IO;
 using UnityEngine;
 
-namespace ElVelador
+namespace TiffanyGame
 {
     public class AutoCapture : MonoBehaviour
     {

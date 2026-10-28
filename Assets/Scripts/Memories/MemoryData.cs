@@ -1,6 +1,6 @@
 using System;
 
-namespace ElVelador
+namespace TiffanyGame
 {
     // Los campos van en minúscula porque JsonUtility empareja por nombre con el JSON.
     [Serializable]

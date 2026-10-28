@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace ElVelador
+namespace TiffanyGame
 {
     public class GroundSurface : MonoBehaviour
     {

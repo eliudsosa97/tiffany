@@ -1,6 +1,6 @@
 using System;
 
-namespace ElVelador
+namespace TiffanyGame
 {
     [Serializable]
     public sealed class WitchProfile

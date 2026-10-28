@@ -3,7 +3,7 @@ using System.Globalization;
 using System.IO;
 using UnityEngine;
 
-namespace ElVelador
+namespace TiffanyGame
 {
     [DefaultExecutionOrder(-1000)]
     public class VideoCapture : MonoBehaviour
