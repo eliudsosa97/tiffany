@@ -8,6 +8,8 @@ namespace TiffanyGame
         public const float SlowSpeed = 1.1f;
         public const float WalkSpeed = 2.2f;
         public const float RunSpeed = 4f;
+        public const float SlowWalkThreshold = (SlowSpeed + WalkSpeed) / 2f;
+        public const float WalkRunThreshold = (WalkSpeed + RunSpeed) / 2f;
 
         public static Gait ResolveGait(bool slow, bool run)
         {
@@ -23,6 +25,12 @@ namespace TiffanyGame
                 Gait.Run => RunSpeed,
                 _ => throw new ArgumentOutOfRangeException(nameof(gait))
             };
+        }
+
+        public static Gait GaitForSpeed(float speed)
+        {
+            if (speed < SlowWalkThreshold) return Gait.Slow;
+            return speed < WalkRunThreshold ? Gait.Walk : Gait.Run;
         }
 
         public static Vector3 CameraRelative(Vector2 input, float cameraYawDegrees)

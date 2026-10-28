@@ -13,6 +13,30 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(expected, PlayerMotion.Speed(gait), 1e-4f);
         }
 
+        [TestCase(0f, Gait.Slow)]
+        [TestCase(0.55f, Gait.Slow)]
+        [TestCase(1.1f, Gait.Slow)]
+        [TestCase(1.64f, Gait.Slow)]
+        [TestCase(1.66f, Gait.Walk)]
+        [TestCase(2.2f, Gait.Walk)]
+        [TestCase(3.09f, Gait.Walk)]
+        [TestCase(3.11f, Gait.Run)]
+        [TestCase(4f, Gait.Run)]
+        [TestCase(PlayerMotion.SlowWalkThreshold, Gait.Walk)]
+        [TestCase(PlayerMotion.WalkRunThreshold, Gait.Run)]
+        public void GaitForSpeedUsesSpeedMidpoints(float speed, Gait expected)
+        {
+            Assert.AreEqual(expected, PlayerMotion.GaitForSpeed(speed));
+        }
+
+        [TestCase(Gait.Slow)]
+        [TestCase(Gait.Walk)]
+        [TestCase(Gait.Run)]
+        public void DesignSpeedResolvesToItsOwnGait(Gait gait)
+        {
+            Assert.AreEqual(gait, PlayerMotion.GaitForSpeed(PlayerMotion.Speed(gait)));
+        }
+
         [TestCase(false, false, Gait.Walk)]
         [TestCase(true, false, Gait.Slow)]
         [TestCase(false, true, Gait.Run)]

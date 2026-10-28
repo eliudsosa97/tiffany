@@ -38,11 +38,13 @@ namespace TiffanyGame
 
         void Update()
         {
-            CurrentGait = PlayerMotion.ResolveGait(GameInput.Slow, GameInput.Run);
+            var inputGait = PlayerMotion.ResolveGait(GameInput.Slow, GameInput.Run);
             float dt = Time.deltaTime;
             float yaw = viewCamera != null ? viewCamera.transform.eulerAngles.y : 0f;
             var direction = PlayerMotion.CameraRelative(GameInput.Move, yaw);
-            var targetVelocity = direction * PlayerMotion.Speed(CurrentGait);
+            var targetVelocity = direction * PlayerMotion.Speed(inputGait);
+            float targetSpeed = targetVelocity.magnitude;
+            if (targetSpeed > 0f) CurrentGait = PlayerMotion.GaitForSpeed(targetSpeed);
             horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, acceleration * dt);
 
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
