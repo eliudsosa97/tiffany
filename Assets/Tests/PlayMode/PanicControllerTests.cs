@@ -24,6 +24,7 @@ namespace TiffanyGame.Tests
             panic.GetComponent<PlayerController>().enabled = false;
             panic.witch.gameObject.SetActive(false);
             panic.witch.transform.position = Vector3.one * 1000f;
+            panic.tyler.Appear(panic.transform.position);
             panic.tyler.enabled = false;
             panic.tyler.transform.position = Vector3.one * 1000f;
             yield return null;
@@ -43,7 +44,7 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator ChildrenPublishSobAndShakeLightWithoutRecordedSob()
+        public IEnumerator ChildrenPlayRecordedSobPublishNoiseAndShakeLight()
         {
             Assert.AreEqual(0f, panic.cueSource.spatialBlend);
             Assert.IsFalse(panic.cueSource.playOnAwake);
@@ -51,7 +52,11 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(3, panic.whispers.Length);
             CollectionAssert.AllItemsAreNotNull(panic.fakeSteps);
             CollectionAssert.AllItemsAreNotNull(panic.whispers);
-            Assert.IsNull(panic.sob);
+            Assert.AreEqual(2, panic.sobs.Length);
+            CollectionAssert.AllItemsAreNotNull(panic.sobs);
+            Assert.AreEqual("sob_1", panic.sobs[0].name);
+            Assert.AreEqual("sob_2", panic.sobs[1].name);
+            panic.fakeSteps = panic.whispers = System.Array.Empty<AudioClip>();
             panic.Model.ResetTo(0.95f);
             if (!panic.playerLight.State.IsOn) panic.playerLight.Toggle();
             bool flickered = false;
@@ -62,6 +67,8 @@ namespace TiffanyGame.Tests
                 flickered |= panic.playerLight.intensityScale < 1f;
             }
             Assert.IsTrue(heardSob && flickered);
+            Assert.IsTrue(panic.cueSource.isPlaying);
+            Assert.AreEqual(0f, panic.cueSource.panStereo);
             panic.enabled = false;
             Assert.AreEqual(1f, panic.playerLight.intensityScale);
         }

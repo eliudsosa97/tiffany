@@ -9,13 +9,15 @@ namespace TiffanyGame.EditorTools
     {
         public static void Build(Transform zone, PlayerController player, GameInterface gameInterface,
             TylerController tyler, Camera viewCamera, Transform[] positions,
-            string profilePath = "Assets/Scenes/Generated/EchoVolumeProfile.asset")
+            string profilePath = "Assets/Scenes/Generated/EchoVolumeProfile.asset", Transform ball = null)
         {
             if (positions == null || positions.Length != 5)
                 throw new System.ArgumentException($"{GameInfo.LogPrefix} La ruta necesita cinco posiciones de recuerdos.", nameof(positions));
-            var spots = new MemorySpot[positions.Length];
-            for (int i = 0; i < spots.Length; i++)
-                spots[i] = BuildSpot(positions[i], i + 1, positions[i].position);
+            if (ball == null) ball = positions[0].parent.Find("Ball");
+            var spots = new MemorySpot[positions.Length + 1];
+            for (int i = 0; i < positions.Length; i++)
+                spots[i == 0 ? 0 : i + 1] = BuildSpot(positions[i], i + 1, positions[i].position);
+            spots[1] = BuildSpot(ball.parent, MemoryProgress.BallId, ball.position, MemorySpotKind.Ball, ball.gameObject);
             var collector = player.gameObject.AddComponent<MemoryCollector>();
             collector.soul = player.GetComponent<PlayerSoul>();
             collector.hiding = player.GetComponent<PlayerHiding>();
@@ -30,6 +32,7 @@ namespace TiffanyGame.EditorTools
             for (int i = 0; i < spots.Length; i++)
             {
                 var spot = spots[i];
+                if (spot.kind == MemorySpotKind.Ball) continue;
                 EchoBuilder.Build(spot, echoes, gameInterface, blackout);
                 EchoData.TryLoad(spot.echoPlayer.echoAsset.text, out var data, out _);
                 var stop = new GameObject($"Echo {spot.memoryId} Memory");
@@ -60,6 +63,30 @@ namespace TiffanyGame.EditorTools
             memoryStage.collector = collector;
             memoryStage.spot = spots[0];
             memoryStage.collect = false;
+            BuildBallCaptureStops(zone, collector, spots[1]);
+        }
+
+        static void BuildBallCaptureStops(Transform zone, MemoryCollector collector, MemorySpot spot)
+        {
+            Vector3 position = spot.transform.position - Vector3.forward * 1.5f;
+            Vector3 cameraPosition = position + new Vector3(4f, 3f, -3f);
+            Quaternion cameraRotation = Quaternion.LookRotation(position - cameraPosition);
+            for (int i = 0; i < 2; i++)
+            {
+                var stop = new GameObject(i == 0 ? "Ball 0 Before" : "Ball 1 Tyler");
+                stop.transform.SetParent(zone, false);
+                stop.transform.position = position;
+                var capture = stop.AddComponent<CaptureStop>();
+                capture.wait = 1.5f;
+                capture.overrideCamera = true;
+                capture.cameraPosition = cameraPosition;
+                capture.cameraRotation = cameraRotation;
+                stop.AddComponent<LightCaptureStage>().energy = SoulEnergy.Max;
+                var stage = stop.AddComponent<MemoryCaptureStage>();
+                stage.collector = collector;
+                stage.spot = spot;
+                stage.collect = i == 1;
+            }
         }
 
         static Volume BuildEchoVolume(Transform zone, string path)
@@ -90,9 +117,10 @@ namespace TiffanyGame.EditorTools
             return volume;
         }
 
-        static MemorySpot BuildSpot(Transform zone, int id, Vector3 position)
+        static MemorySpot BuildSpot(Transform zone, int id, Vector3 position,
+            MemorySpotKind kind = MemorySpotKind.Memory, GameObject visual = null)
         {
-            var root = new GameObject($"Memory {id}");
+            var root = new GameObject(kind == MemorySpotKind.Ball ? "Ball Pickup" : $"Memory {id}");
             root.transform.SetParent(zone, false);
             root.transform.position = position;
             GameObjectUtility.SetStaticEditorFlags(root, StaticEditorFlags.BatchingStatic);
@@ -101,8 +129,14 @@ namespace TiffanyGame.EditorTools
             sphere.isTrigger = true;
             var spot = root.AddComponent<MemorySpot>();
             spot.memoryId = id;
+            spot.kind = kind;
+            if (visual != null)
+            {
+                spot.visual = visual;
+                return spot;
+            }
             // Veladora provisional hasta recibir el objeto de Clau.
-            var visual = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            visual = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             visual.name = "Memory Candle";
             visual.transform.SetParent(root.transform, false);
             visual.transform.localPosition = Vector3.up * 0.18f;
