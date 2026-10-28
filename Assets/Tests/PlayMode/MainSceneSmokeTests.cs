@@ -89,6 +89,34 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator MainSceneHasSilhouettesOnlyOnTiffanyAndTyler()
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            var tyler = Object.FindAnyObjectByType<TylerController>(FindObjectsInactive.Include);
+            foreach (var figure in new[] { player.transform, tyler.figure.transform })
+            {
+                var renderers = figure.GetComponentsInChildren<Renderer>(true);
+                Assert.IsNotEmpty(renderers);
+                foreach (var renderer in renderers)
+                {
+                    var materials = renderer.sharedMaterials;
+                    Assert.AreEqual(2, materials.Length, renderer.name);
+                    Assert.IsTrue(materials[0].IsKeywordEnabled("_TIFFANY_CHARACTER"), renderer.name);
+                    Assert.AreEqual("Tiffany/Silhouette", materials[1].shader.name, renderer.name);
+                    Assert.AreEqual(1, materials[1].passCount);
+                }
+            }
+            var witch = Object.FindAnyObjectByType<WitchController>();
+            foreach (var renderer in witch.GetComponentsInChildren<Renderer>(true))
+                foreach (var material in renderer.sharedMaterials)
+                    Assert.AreNotEqual("Tiffany/Silhouette", material.shader.name, renderer.name);
+            foreach (string name in new[] { "Cover 1 Tree", "Cover 2 Building", "Cover 3 Dense Forest" })
+                Assert.IsNotNull(GameObject.Find(name)?.GetComponent<CaptureStop>(), name);
+            yield return null;
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator MainSceneHasRespawnAtCemeterySpawn()
         {
             var player = GameObject.FindGameObjectWithTag("Player");
@@ -213,9 +241,9 @@ namespace TiffanyGame.Tests
             var route = GameObject.Find("Route").transform;
             var cemetery = route.GetChild(0);
             Assert.AreEqual(8, route.childCount);
-            Assert.AreEqual(65, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
+            Assert.AreEqual(68, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
                 "58 paradas de main (48 de escena, una vista previa, cinco ecos, dos de la pelota " +
-                "y dos vistas del agua), Witch Suspicious y seis comparaciones de neblina.");
+                "y dos vistas del agua), Witch Suspicious, seis comparaciones de neblina y tres de cobertura.");
             Assert.AreEqual(21, route.GetComponentsInChildren<CaptureStop>().Length, "19 paradas previas y dos vistas del agua.");
             Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);

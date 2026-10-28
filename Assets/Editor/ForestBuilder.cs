@@ -130,8 +130,8 @@ namespace TiffanyGame.EditorTools
 
         static Material Surface(string name, Color color, string texture = null, bool foliage = false)
         {
-            var material = texture == null ? GeneratedMaterials.Get("Forest" + name, color, instancing: true)
-                : GeneratedMaterials.GetTextured("Forest" + name, color, texture, 1f, instancing: true);
+            var material = texture == null ? GeneratedMaterials.Get("Forest" + name, color, instancing: true, occluder: true)
+                : GeneratedMaterials.GetTextured("Forest" + name, color, texture, 1f, instancing: true, occluder: true);
             material.SetFloat("_Cull", foliage ? 0f : 2f);
             material.SetShaderPassEnabled("ShadowCaster", false);
             EditorUtility.SetDirty(material);

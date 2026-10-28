@@ -177,7 +177,7 @@ namespace TiffanyGame.EditorTools
                 {
                     if (!ColorUtility.TryParseHtmlString(entry.color, out var color))
                         throw new InvalidDataException($"{GameInfo.LogPrefix} Color inválido '{entry.color}' en {entry.name}.");
-                    var material = GeneratedMaterials.Get(entry.name, color, entry.unlit, entry.smoothness);
+                    var material = GeneratedMaterials.Get(entry.name, color, entry.unlit, entry.smoothness, occluder: !spec.Rigged);
                     material.SetFloat("_Metallic", entry.metallic);
                     bool transparent = entry.surface == "transparent";
                     if (transparent || material.GetFloat("_Surface") != 0f)
@@ -270,7 +270,7 @@ namespace TiffanyGame.EditorTools
                 throw new InvalidDataException($"{GameInfo.LogPrefix} Color inválido '{entry.color}' en {name}.");
             foreach (char c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
             name = name.Replace('/', '_').Replace('\\', '_');
-            var material = GeneratedMaterials.Get("Kenney" + kit + name, color);
+            var material = GeneratedMaterials.Get("Kenney" + kit + name, color, occluder: true);
             material.SetFloat("_Surface", 0f);
             material.SetFloat("_AlphaClip", 0f);
             material.SetFloat("_SrcBlend", (float)BlendMode.One);

@@ -50,6 +50,20 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void BuildingsAndForestUseOcclusionWhileGroundStaysLit()
+        {
+            foreach (var clearing in new[] { route.GetChild(3), route.GetChild(4), route.GetChild(7) })
+            {
+                string building = clearing == route.GetChild(3) ? "Barn" : clearing == route.GetChild(4) ? "Hut" : "House";
+                foreach (var renderer in clearing.Find(building).GetComponentsInChildren<Renderer>(true))
+                    Assert.AreEqual(GeneratedMaterials.OcclusionShader, renderer.sharedMaterial.shader.name, renderer.name);
+                foreach (var renderer in clearing.Find("Forest").GetComponentsInChildren<Renderer>(true))
+                    Assert.AreEqual(GeneratedMaterials.OcclusionShader, renderer.sharedMaterial.shader.name, renderer.name);
+                Assert.AreEqual("Universal Render Pipeline/Lit", clearing.Find("Ground").GetComponent<Renderer>().sharedMaterial.shader.name);
+            }
+        }
+
+        [Test]
         public void EightClearingsHaveOrderedCapturesGroundsAndWiredFamilyCandles()
         {
             var names = new[] { "Route 1 Cemetery", "Route 2 Water Plant", "Route 3 Train Tracks", "Route 4 Stable",

@@ -25,9 +25,9 @@ namespace TiffanyGame.EditorTools
             var grounds = new[] { GroundType.Grass, GroundType.Slab, GroundType.Gravel, GroundType.Branches,
                 GroundType.Leaves, GroundType.Grass, GroundType.Slab, GroundType.Dirt };
             var pathFloor = GroundMaterials.For(GroundType.Dirt);
-            var structure = GeneratedMaterials.Get("RouteStructure", new Color(0.4f, 0.4f, 0.4f));
-            var dark = GeneratedMaterials.Get("RouteForest", new Color(0.09f, 0.09f, 0.09f));
-            var bush = GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f));
+            var structure = GeneratedMaterials.Get("RouteStructure", new Color(0.4f, 0.4f, 0.4f), occluder: true);
+            var dark = GeneratedMaterials.Get("RouteForest", new Color(0.09f, 0.09f, 0.09f), occluder: true);
+            var bush = GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f), occluder: true);
             memories = new Transform[5];
             skyRoute = new Vector3[names.Length];
             var tracker = route.gameObject.AddComponent<WitchChapterTracker>();
@@ -207,7 +207,7 @@ namespace TiffanyGame.EditorTools
         {
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>($"{GraveyardFolder}/Textures/colormap.png");
             if (texture == null) throw new InvalidOperationException($"{GameInfo.LogPrefix} Falta el colormap del cementerio.");
-            var material = GeneratedMaterials.Get("RouteGraveyard", Color.white);
+            var material = GeneratedMaterials.Get("RouteGraveyard", Color.white, occluder: true);
             material.SetTexture("_BaseMap", texture);
             EditorUtility.SetDirty(material);
             GraveyardModel("Tiffany Gravestone", "gravestone-bevel", clearing, new Vector3(0f, 0f, -2f), 1.6f, material);

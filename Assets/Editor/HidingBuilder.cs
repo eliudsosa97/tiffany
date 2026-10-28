@@ -12,7 +12,7 @@ namespace TiffanyGame.EditorTools
             if (Physics.Raycast(position + Vector3.up * 30f, Vector3.down, out var hit,
                 60f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) position = hit.point;
             var volume = BuildHideSpot(zone, "Hide Test", zone.InverseTransformPoint(position),
-                GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f)));
+                GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f), occluder: true));
             var hiding = player.gameObject.AddComponent<PlayerHiding>();
             hiding.body = PlayerHiding.BodyRenderers(player.gameObject);
             hiding.gameInterface = Object.FindAnyObjectByType<GameInterface>();

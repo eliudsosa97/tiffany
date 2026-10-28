@@ -137,7 +137,7 @@ namespace TiffanyGame.Tests
                 {
                     string path = $"{ModelLibrary.kenneyMaterialRoot}/Nature/Materials/{material.name}.mat";
                     Assert.AreEqual(path, AssetDatabase.GetAssetPath(material));
-                    Assert.AreEqual("Universal Render Pipeline/Lit", material.shader.name);
+                    Assert.AreEqual(GeneratedMaterials.OcclusionShader, material.shader.name);
                     Assert.AreEqual(0f, material.GetFloat("_Surface"));
                     Assert.AreEqual(0f, material.GetFloat("_AlphaClip"));
                     Assert.IsEmpty(material.shaderKeywords);
@@ -180,7 +180,7 @@ namespace TiffanyGame.Tests
                     for (int channel = 0; channel < 4; channel++)
                         Assert.AreEqual(expected[channel], actual[channel], 1e-4f, material.name);
                     Assert.AreEqual(entry.smoothness, material.GetFloat("_Smoothness"), 1e-4f);
-                    Assert.AreEqual("Universal Render Pipeline/Lit", material.shader.name);
+                    Assert.AreEqual(GeneratedMaterials.OcclusionShader, material.shader.name);
                     Assert.AreEqual(0f, material.GetFloat("_Surface"));
                     Assert.IsNull(material.GetTexture("_BaseMap"));
                 }

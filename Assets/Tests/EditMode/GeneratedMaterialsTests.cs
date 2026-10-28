@@ -104,6 +104,28 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void OccluderKeepsSavedMapsTilingAndInstancingWhenRegenerated()
+        {
+            var material = GeneratedMaterials.GetTextured("Tree", Color.green, "pine_bark", 2f, instancing: true);
+            string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(material));
+            var diffuse = material.GetTexture("_BaseMap");
+            var normal = material.GetTexture("_BumpMap");
+            var regenerated = GeneratedMaterials.GetTextured("Tree", Color.green, "pine_bark", 2f,
+                instancing: true, occluder: true);
+            Assert.AreSame(material, regenerated);
+            Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(regenerated)));
+            Assert.AreEqual(GeneratedMaterials.OcclusionShader, material.shader.name);
+            Assert.AreSame(diffuse, material.GetTexture("_BaseMap"));
+            Assert.AreSame(normal, material.GetTexture("_BumpMap"));
+            Assert.AreEqual(Vector2.one * 2f, material.mainTextureScale);
+            Assert.IsTrue(material.IsKeywordEnabled("_NORMALMAP"));
+            Assert.IsFalse(material.IsKeywordEnabled("_TIFFANY_CHARACTER"));
+            Assert.IsTrue(material.enableInstancing);
+            foreach (string pass in new[] { "ForwardLit", "DepthOnly", "DepthNormals", "ShadowCaster" })
+                Assert.GreaterOrEqual(material.FindPass(pass), 0, pass);
+        }
+
+        [Test]
         public void GetTexturedThrowsWhenTextureDoesNotExist()
         {
             var exception = Assert.Throws<InvalidOperationException>(() =>

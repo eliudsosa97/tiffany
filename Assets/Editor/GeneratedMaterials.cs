@@ -7,12 +7,16 @@ namespace TiffanyGame.EditorTools
     public static class GeneratedMaterials
     {
         public const string DefaultFolder = "Assets/Scenes/Generated/Materials";
+        public const string OcclusionShader = "Tiffany/Occlusion Lit";
+        public const string SilhouetteShader = "Tiffany/Silhouette";
         public static string folder = DefaultFolder;
 
-        public static Material Get(string name, Color color, bool unlit = false, float smoothness = 0.08f, bool? instancing = null)
+        public static Material Get(string name, Color color, bool unlit = false, float smoothness = 0.08f,
+            bool? instancing = null, bool occluder = false)
         {
             EnsureFolder(folder);
-            string shaderName = unlit ? "Universal Render Pipeline/Unlit" : "Universal Render Pipeline/Lit";
+            string shaderName = unlit ? "Universal Render Pipeline/Unlit"
+                : occluder ? OcclusionShader : "Universal Render Pipeline/Lit";
             var shader = Shader.Find(shaderName);
             if (shader == null)
                 throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el shader '{shaderName}'.");
@@ -23,6 +27,13 @@ namespace TiffanyGame.EditorTools
             if (isNew) material = new Material(shader) { name = name };
             else material.shader = shader;
             if (instancing.HasValue) material.enableInstancing = instancing.Value;
+            material.DisableKeyword("_TIFFANY_CHARACTER");
+            material.DisableKeyword("_TIFFANY_UNLIT");
+            if (occluder)
+            {
+                material.SetFloat("_TiffanyStencil", 0f);
+                material.renderQueue = -1;
+            }
 
             material.SetColor("_BaseColor", color);
             material.SetColor("_Color", material.GetColor("_BaseColor"));
@@ -37,7 +48,7 @@ namespace TiffanyGame.EditorTools
         }
 
         public static Material GetTextured(string name, Color tint, string textureName, float tiling, float smoothness = 0.08f,
-            bool? instancing = null)
+            bool? instancing = null, bool occluder = false)
         {
             string textureFolder = $"Assets/Art/CC0/PolyHaven/{textureName}";
             string diffusePath = $"{textureFolder}/{textureName}_diff.jpg";
@@ -49,7 +60,7 @@ namespace TiffanyGame.EditorTools
             if (normal == null)
                 throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró la textura normal en '{normalPath}'.");
 
-            var material = Get(name, tint, smoothness: smoothness, instancing: instancing);
+            var material = Get(name, tint, smoothness: smoothness, instancing: instancing, occluder: occluder);
             material.SetTexture("_BaseMap", diffuse);
             material.SetTexture("_BumpMap", normal);
             material.EnableKeyword("_NORMALMAP");
@@ -116,6 +127,18 @@ namespace TiffanyGame.EditorTools
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 10;
             if (isNew) AssetDatabase.CreateAsset(material, path);
             else EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        public static Material GetSilhouette()
+        {
+            var shader = Shader.Find(SilhouetteShader);
+            if (shader == null)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el shader '{SilhouetteShader}'.");
+            var material = Get("CharacterSilhouette", new Color(0.5f, 0.62f, 0.7f, 0.45f), unlit: true);
+            material.shader = shader;
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            EditorUtility.SetDirty(material);
             return material;
         }
 
