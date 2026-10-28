@@ -51,6 +51,7 @@ namespace TiffanyGame.EditorTools
             tyler.transform.position = ball.position + new Vector3(1.5f, -0.2f, 0f);
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories, ball: ball);
             PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
+            BuildForestAmbience(player.transform, route, playerLight.witch);
             var heartbeat = player.gameObject.AddComponent<Heartbeat>();
             heartbeat.panic = player.GetComponent<PanicController>();
             heartbeat.witch = playerLight.witch;
@@ -321,6 +322,26 @@ namespace TiffanyGame.EditorTools
             (audio.land, audio.crack, audio.whoosh) = (LoadClip("witch_land"), LoadClip("witch_crack"), LoadClip("witch_whoosh"));
             audio.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
             audio.cackles = new[] { LoadClip("cackle_1"), LoadClip("cackle_2"), LoadClip("cackle_3") };
+        }
+
+        static void BuildForestAmbience(Transform player, Transform route, WitchController witch)
+        {
+            var root = new GameObject("Forest Ambience");
+            var audio = root.AddComponent<ForestAmbience>();
+            (audio.player, audio.witch, audio.panic) = (player, witch, player.GetComponent<PanicController>());
+            audio.clearings = route.GetComponent<WitchChapterTracker>().clearings;
+            audio.loopClips = new[] { LoadClip("crickets"), LoadClip("wind"), LoadClip("leaves"), LoadClip("frogs"), LoadClip("lake_water") };
+            audio.loops = new AudioSource[AmbienceMix.LayerCount];
+            for (int i = 0; i < audio.loops.Length; i++)
+            {
+                var source = root.AddComponent<AudioSource>();
+                (source.loop, source.playOnAwake, source.spatialBlend, source.clip) = (true, false, 0f, audio.loopClips[i]);
+                audio.loops[i] = source;
+            }
+            audio.calls = root.AddComponent<AudioSource>();
+            (audio.calls.playOnAwake, audio.calls.spatialBlend) = (false, 0f);
+            (audio.owl, audio.barnOwl, audio.coyote) = (LoadClip("owl"), LoadClip("lechuza"), LoadClip("coyote"));
+            audio.howls = new[] { LoadClip("distant_howl_1"), LoadClip("distant_howl_2"), LoadClip("distant_howl_3") };
         }
 
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
