@@ -1,9 +1,9 @@
 ---
 name: git-flow
-description: Reglas de commit, rama y PR de El Velador. Usar antes de cada commit, push o `gh pr create`.
+description: Reglas de commit, rama y PR de Tiffany. Usar antes de cada commit, push o `gh pr create`.
 ---
 
-# Git en El Velador
+# Git en Tiffany
 
 ## Commits
 
