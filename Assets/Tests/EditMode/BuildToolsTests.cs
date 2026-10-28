@@ -35,6 +35,17 @@ namespace TiffanyGame.Tests
                 options.extraScriptingDefines);
         }
 
+        [TestCase("TIFFANY_WEB_DEBUG", false, true)]
+        [TestCase("FOO; TIFFANY_WEB_DEBUG ;BAR", false, true)]
+        [TestCase("TIFFANY_WEB_DEBUG", true, false)]
+        [TestCase("TIFFANY_WEB_DEBUGGER;FOO", false, false)]
+        [TestCase("", false, false)]
+        [TestCase(null, false, false)]
+        public void PublicBuildRefusesTheDebugDefineInPlayerSettings(string defines, bool debug, bool leaks)
+        {
+            Assert.AreEqual(leaks, BuildTools.LeaksWebDebug(defines, debug));
+        }
+
         [Test]
         public void PublicBuildAfterDebugDoesNotInheritTheDefine()
         {

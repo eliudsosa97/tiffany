@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
@@ -28,8 +29,22 @@ namespace TiffanyGame.EditorTools
             extraScriptingDefines = debug ? new[] { WebDebugQuery.Define } : Array.Empty<string>()
         };
 
+        public static bool LeaksWebDebug(string playerDefines, bool debug)
+        {
+            if (debug || string.IsNullOrEmpty(playerDefines)) return false;
+            foreach (string define in playerDefines.Split(';'))
+                if (define.Trim() == WebDebugQuery.Define) return true;
+            return false;
+        }
+
         static void RunWeb(Action afterBuild = null, bool debug = false)
         {
+            if (LeaksWebDebug(PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.WebGL), debug))
+            {
+                Debug.LogError($"{GameInfo.LogPrefix} {WebDebugQuery.Define} está en Player Settings: la build pública abriría ?playthrough.");
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+                return;
+            }
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true;
             PlayerSettings.WebGL.template = WebTemplate;
