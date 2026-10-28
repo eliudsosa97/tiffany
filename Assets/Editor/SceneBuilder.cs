@@ -563,6 +563,16 @@ namespace TiffanyGame.EditorTools
             ui.endingText.color = new Color(0.12f, 0.12f, 0.12f);
             ui.endingPanel.gameObject.SetActive(false);
 
+            ui.titlePanel = InterfacePanel("Title", root.transform, 0.9f);
+            var title = InterfaceText("Title", ui.titlePanel.transform, font, InterfaceTexts.Title, 108,
+                new Vector2(0.1f, 0.59f), new Vector2(0.9f, 0.79f));
+            title.color = new Color(1f, 0.87f, 0.63f);
+            InterfaceText("Start Hint", ui.titlePanel.transform, font, InterfaceTexts.StartHint, 32,
+                new Vector2(0.1f, 0.48f), new Vector2(0.9f, 0.57f));
+            var controls = InterfaceText("Controls", ui.titlePanel.transform, font, InterfaceTexts.Controls, 28,
+                new Vector2(0.1f, 0.08f), new Vector2(0.9f, 0.39f));
+            controls.lineSpacing = 1.25f;
+
             ui.memoryAssets = LoadInterfaceAssets<TextAsset>("t:TextAsset", "Assets/Data/Memories");
             ui.drawings = LoadInterfaceAssets<Texture2D>("t:Texture2D", "Assets/Art/Memories");
             ui.pausePanel.SetActive(false);

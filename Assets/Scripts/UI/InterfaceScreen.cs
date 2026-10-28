@@ -5,6 +5,7 @@ namespace TiffanyGame
         Playing,
         Paused,
         Notebook,
-        Ending
+        Ending,
+        Title
     }
 }
