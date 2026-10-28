@@ -392,6 +392,29 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator ResetBrainReturnsTheWitchToTheSky()
+        {
+            witch.transform.position = Vector3.zero;
+            LightPlayerAt(Vector3.right * 6f);
+            int caughtCount = 0;
+            controller.Caught += () => caughtCount++;
+            yield return WaitForState(WitchState.Caught, 8f);
+            Assert.AreEqual(1, caughtCount);
+            controller.playerLightOn = false;
+
+            controller.ResetBrain();
+
+            Assert.AreEqual(WitchState.Flying, controller.Decision.State);
+            Assert.AreEqual(WitchForm.Flying, controller.Decision.Form);
+            Assert.AreEqual(controller.skyRoute[1], witch.transform.position);
+            Assert.IsFalse(agent.enabled);
+            Assert.IsTrue(controller.Decision.FireLit && fireLight.enabled);
+            for (int i = 0; i < 5; i++) yield return null;
+            Assert.AreEqual(WitchState.Flying, controller.Decision.State);
+            Assert.AreEqual(1, caughtCount);
+        }
+
+        [UnityTest]
         public IEnumerator SprintStopsAtWallAndRecoversOnNavMesh()
         {
             witch.transform.position = Vector3.zero;
