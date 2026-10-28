@@ -53,6 +53,18 @@ namespace TiffanyGame.Tests
             controller = witch.AddComponent<WitchController>();
             controller.player = player.transform;
             controller.skyRoute = new[] { new Vector3(30f, 14f, 0f), new Vector3(30f, 14f, 30f) };
+#if UNITY_EDITOR
+            var model = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Models/witch.fbx");
+            controller.figure = Object.Instantiate(model, witch.transform, false);
+            controller.figure.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            controller.figure.transform.localScale = Vector3.one;
+            var animator = controller.figure.GetComponent<Animator>();
+            if (animator == null) animator = controller.figure.AddComponent<Animator>();
+            animator.runtimeAnimatorController = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
+                "Assets/Art/Models/Witch.controller");
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+#endif
             var lightObject = new GameObject("FireLight");
             lightObject.transform.SetParent(witch.transform, false);
             fireLight = lightObject.AddComponent<Light>();
@@ -75,35 +87,75 @@ namespace TiffanyGame.Tests
             yield return null;
         }
 
-        [Test]
-        public void ShowPoseSwitchesCrouchForWindUpWithoutScalingFigure()
+#if UNITY_EDITOR
+        [TestCase(WitchState.Stalking)]
+        [TestCase(WitchState.WindUp)]
+        [TestCase(WitchState.Sprinting)]
+        [TestCase(WitchState.Recovering)]
+        [TestCase(WitchState.Stunned)]
+        [TestCase(WitchState.Caught)]
+        public void ShowPoseSelectsClipWithoutTransformingFigure(WitchState state)
         {
             controller.enabled = false;
-            var figure = new GameObject("WitchFigure");
-            figure.transform.SetParent(witch.transform, false);
-            controller.figure = figure;
-            var stand = new GameObject("WitchStand");
-            stand.transform.SetParent(figure.transform, false);
-            controller.figureStand = stand;
-            var crouch = new GameObject("WitchCrouch");
-            crouch.transform.SetParent(figure.transform, false);
-            controller.figureCrouch = crouch;
-            controller.ShowPose(WitchState.Stalking, false);
+            controller.ShowPose(WitchState.Flying, true);
+            Assert.IsFalse(controller.figure.activeSelf);
+            controller.ShowPose(state, false);
+            var animator = controller.figure.GetComponent<Animator>();
+            animator.Update(0f);
 
-            controller.ShowPose(WitchState.WindUp, false);
-
-            Assert.IsTrue(figure.activeSelf);
-            Assert.IsFalse(stand.activeSelf);
-            Assert.IsTrue(crouch.activeSelf);
-            Assert.AreEqual(Vector3.one, figure.transform.localScale);
-
-            controller.ShowPose(WitchState.Stalking, false);
-
-            Assert.IsTrue(figure.activeSelf);
-            Assert.IsTrue(stand.activeSelf);
-            Assert.IsFalse(crouch.activeSelf);
-            Assert.AreEqual(Vector3.one, figure.transform.localScale);
+            Assert.AreEqual(Animator.StringToHash(state.ToString()), animator.GetCurrentAnimatorStateInfo(0).shortNameHash);
+            Assert.IsTrue(controller.figure.activeSelf);
+            Assert.AreEqual(Vector3.zero, controller.figure.transform.localPosition);
+            Assert.AreEqual(Quaternion.identity, controller.figure.transform.localRotation);
+            Assert.AreEqual(Vector3.one, controller.figure.transform.localScale);
         }
+
+        [UnityTest]
+        public IEnumerator CaptureAdvancesSprintClipWithControllerDisabled()
+        {
+            var stage = world.AddComponent<WitchCaptureStage>();
+            stage.state = WitchState.Sprinting;
+            stage.witchOffset = Vector3.forward * 3f;
+            stage.lightWitch = false;
+            stage.Apply(player.transform);
+            var animator = controller.figure.GetComponent<Animator>();
+            animator.Update(0f);
+            float start = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+
+            yield return new WaitForSeconds(0.2f);
+
+            Assert.IsFalse(controller.enabled);
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Sprinting"));
+            Assert.Greater(animator.GetCurrentAnimatorStateInfo(0).normalizedTime, start);
+        }
+
+        [UnityTest]
+        public IEnumerator SprintingAnimatesAtMeasuredSpeedWithoutRestartingClip()
+        {
+            witch.transform.position = Vector3.zero;
+            LightPlayerAt(Vector3.right * 8f);
+            yield return WaitForStalking();
+            yield return WaitForState(WitchState.Sprinting, 2f);
+            LightPlayerAt(Vector3.back * 25f);
+            yield return new WaitForSeconds(0.15f);
+            var animator = controller.figure.GetComponent<Animator>();
+            int speedHash = Animator.StringToHash("Speed");
+            float start = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+
+            for (int i = 0; i < 3; i++)
+            {
+                Vector3 previous = witch.transform.position;
+                yield return null;
+                Vector3 displacement = witch.transform.position - previous;
+                displacement.y = 0f;
+                Assert.AreEqual(WitchState.Sprinting, controller.Decision.State);
+                Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Sprinting"));
+                Assert.Greater(animator.GetFloat(speedHash), 5f);
+                Assert.AreEqual(displacement.magnitude / Time.deltaTime, animator.GetFloat(speedHash), 0.01f);
+            }
+            Assert.Greater(animator.GetCurrentAnimatorStateInfo(0).normalizedTime, start);
+        }
+#endif
 
         [TestCase(WitchState.Flying, 1f)]
         [TestCase(WitchState.Flying, 5f)]
@@ -360,6 +412,11 @@ namespace TiffanyGame.Tests
                 yield return null;
                 Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
                 Assert.IsTrue(agent.isOnNavMesh);
+#if UNITY_EDITOR
+                Vector3 velocity = agent.velocity;
+                velocity.y = 0f;
+                Assert.AreEqual(velocity.magnitude, controller.figure.GetComponent<Animator>().GetFloat("Speed"), 0.01f);
+#endif
             }
 
             Assert.LessOrEqual(HorizontalDistanceToPlayer(), initialDistance - 0.5f);

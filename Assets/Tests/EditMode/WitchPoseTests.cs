@@ -7,13 +7,11 @@ namespace TiffanyGame.Tests
         [Test]
         public void ConstructorPreservesEveryProperty()
         {
-            var pose = new WitchPose(true, true, true, true, 12f);
+            var pose = new WitchPose(true, true, true);
 
             Assert.IsTrue(pose.FigureVisible);
             Assert.IsTrue(pose.BallVisible);
             Assert.IsTrue(pose.LightOn);
-            Assert.IsTrue(pose.Crouched);
-            Assert.AreEqual(12f, pose.FigureLean);
         }
 
         [TestCase(WitchState.Flying, false, false)]
@@ -29,17 +27,15 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(pose.FigureVisible);
             Assert.IsTrue(pose.BallVisible);
             Assert.AreEqual(lightOn, pose.LightOn);
-            Assert.IsFalse(pose.Crouched);
-            Assert.AreEqual(0f, pose.FigureLean);
         }
 
-        [TestCase(WitchState.Stalking, false, 0f)]
-        [TestCase(WitchState.Stunned, false, 0f)]
-        [TestCase(WitchState.Caught, false, 0f)]
-        [TestCase(WitchState.WindUp, true, 0f)]
-        [TestCase(WitchState.Sprinting, false, 30f)]
-        [TestCase(WitchState.Recovering, false, 15f)]
-        public void GroundedPoseShowsFigureWithoutFire(WitchState state, bool crouched, float lean)
+        [TestCase(WitchState.Stalking)]
+        [TestCase(WitchState.Stunned)]
+        [TestCase(WitchState.Caught)]
+        [TestCase(WitchState.WindUp)]
+        [TestCase(WitchState.Sprinting)]
+        [TestCase(WitchState.Recovering)]
+        public void GroundedPoseShowsFigureWithoutFire(WitchState state)
         {
             foreach (bool fireLit in new[] { false, true })
             {
@@ -48,8 +44,6 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(pose.FigureVisible);
                 Assert.IsFalse(pose.BallVisible);
                 Assert.IsFalse(pose.LightOn);
-                Assert.AreEqual(crouched, pose.Crouched);
-                Assert.AreEqual(lean, pose.FigureLean);
             }
         }
 

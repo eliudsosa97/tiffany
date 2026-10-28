@@ -12,8 +12,6 @@ namespace TiffanyGame
         public Chapter chapter = Chapter.Ravine;
         public WitchSenseProfile senses = new WitchSenseProfile();
         public GameObject figure;
-        public GameObject figureStand;
-        public GameObject figureCrouch;
         public GameObject fireBall;
         public Light fireLight;
         public float fireFullHeight = 14f;
@@ -49,6 +47,19 @@ namespace TiffanyGame
         private bool warnedMissingNavMesh;
         private WitchPose lastPose;
         private bool hasPose;
+        private Animator animator;
+        private WitchState lastAnimationState;
+        private bool hasAnimationState;
+        private static readonly int SpeedHash = Animator.StringToHash("Speed");
+        private static readonly int IdleHash = Animator.StringToHash("Idle");
+        private static readonly int StalkingHash = Animator.StringToHash(nameof(WitchState.Stalking));
+        private static readonly int WindUpHash = Animator.StringToHash(nameof(WitchState.WindUp));
+        private static readonly int SprintingHash = Animator.StringToHash(nameof(WitchState.Sprinting));
+        private static readonly int RecoveringHash = Animator.StringToHash(nameof(WitchState.Recovering));
+        private static readonly int StunnedHash = Animator.StringToHash(nameof(WitchState.Stunned));
+        private static readonly int CaughtHash = Animator.StringToHash(nameof(WitchState.Caught));
+        private static readonly int LandingHash = Animator.StringToHash(nameof(WitchState.Landing));
+        private static readonly int TakingOffHash = Animator.StringToHash(nameof(WitchState.TakingOff));
 
         private void Awake()
         {
@@ -59,6 +70,7 @@ namespace TiffanyGame
             brain = new WitchBrain(profile, skyRoute);
             hits = new RaycastHit[32];
             noiseHandler = Hear;
+            if (figure != null) animator = figure.GetComponent<Animator>();
             if (fireLight != null) baseFireIntensity = fireLight.intensity;
             Decision = new WitchDecision { State = WitchState.Flying, Form = WitchForm.Flying, FireLit = true };
         }
@@ -122,7 +134,7 @@ namespace TiffanyGame
                 EnterState();
             }
             ApplyMovement(dt);
-            ApplyView();
+            ApplyView(position, dt);
         }
 
         private void EnterState()
@@ -276,9 +288,13 @@ namespace TiffanyGame
             return distance < float.PositiveInfinity;
         }
 
-        private void ApplyView()
+        private void ApplyView(Vector3 previousPosition, float dt)
         {
             ApplyPose(WitchPoses.For(Decision.State, Decision.FireLit));
+            Vector3 velocity = agent.enabled && agent.isOnNavMesh ? agent.velocity
+                : Decision.State == WitchState.Sprinting && dt > 0f ? (transform.position - previousPosition) / dt : Vector3.zero;
+            velocity.y = 0f;
+            ApplyAnimation(Decision.State, velocity.magnitude);
             if (fireLight != null && fireLight.enabled)
                 fireLight.intensity = WitchPoses.FireIntensity(baseFireIntensity, FireHeightAboveGround(), fireFullHeight);
         }
@@ -286,6 +302,9 @@ namespace TiffanyGame
         public void ShowPose(WitchState state, bool fireLit)
         {
             ApplyPose(WitchPoses.For(state, fireLit));
+            float speed = state == WitchState.Sprinting ? profile.SprintSpeed
+                : state == WitchState.Stalking ? profile.StalkSpeed : 0f;
+            ApplyAnimation(state, speed, true);
             if (fireLight == null) return;
             fireLight.intensity = WitchPoses.FireIntensity(baseFireIntensity, FireHeightAboveGround(), fireFullHeight);
         }
@@ -300,20 +319,46 @@ namespace TiffanyGame
         private void ApplyPose(WitchPose pose)
         {
             if (hasPose && lastPose.FigureVisible == pose.FigureVisible && lastPose.BallVisible == pose.BallVisible
-                && lastPose.LightOn == pose.LightOn && lastPose.Crouched == pose.Crouched
-                && lastPose.FigureLean == pose.FigureLean) return;
+                && lastPose.LightOn == pose.LightOn) return;
 
             if (fireBall != null) fireBall.SetActive(pose.BallVisible);
             if (fireLight != null) fireLight.enabled = pose.LightOn;
-            if (figure != null)
-            {
-                figure.SetActive(pose.FigureVisible);
-                if (figureStand != null) figureStand.SetActive(!pose.Crouched);
-                if (figureCrouch != null) figureCrouch.SetActive(pose.Crouched);
-                figure.transform.localRotation = Quaternion.Euler(pose.FigureLean, 0f, 0f);
-            }
+            if (figure != null) figure.SetActive(pose.FigureVisible);
             lastPose = pose;
             hasPose = true;
+        }
+
+        private void ApplyAnimation(WitchState state, float speed, bool immediate = false)
+        {
+            if (animator == null) return;
+            if (!animator.isActiveAndEnabled)
+            {
+                hasAnimationState = false;
+                return;
+            }
+            animator.SetFloat(SpeedHash, speed);
+            if (!immediate && hasAnimationState && lastAnimationState == state) return;
+            int hash = state switch
+            {
+                WitchState.Stalking => StalkingHash,
+                WitchState.WindUp => WindUpHash,
+                WitchState.Sprinting => SprintingHash,
+                WitchState.Recovering => RecoveringHash,
+                WitchState.Stunned => StunnedHash,
+                WitchState.Caught => CaughtHash,
+                WitchState.Landing => LandingHash,
+                WitchState.TakingOff => TakingOffHash,
+                _ => IdleHash
+            };
+            if (immediate) animator.Play(hash, 0, 0f);
+            else
+            {
+                float duration = state == WitchState.Sprinting ? 0.1f : 0.25f;
+                float sourceLength = animator.GetCurrentAnimatorStateInfo(0).length;
+                animator.CrossFade(hash, sourceLength > 0f ? duration / sourceLength : 0f, 0, 0f);
+            }
+            lastAnimationState = state;
+            hasAnimationState = true;
         }
     }
 }

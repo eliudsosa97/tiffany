@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -14,10 +15,27 @@ namespace TiffanyGame.EditorTools
         public const string BlenderFolder = "Art/Blender";
         public static string materialFolder = MaterialFolder;
 
+        // Un modelo con tomas en su json lleva el controller que arma este registro.
+        static readonly Dictionary<string, Func<RuntimeAnimatorController>> Controllers = new Dictionary<string, Func<RuntimeAnimatorController>>
+        {
+            ["witch"] = WitchAnimator.Controller,
+        };
+
         [Serializable]
         public class ModelSpec
         {
             public MaterialSpec[] materials;
+            public ClipSpec[] clips;
+
+            public bool Rigged => clips != null && clips.Length > 0;
+        }
+
+        [Serializable]
+        public class ClipSpec
+        {
+            public string name;
+            public int frames;
+            public bool loop;
         }
 
         [Serializable]
@@ -29,9 +47,11 @@ namespace TiffanyGame.EditorTools
             public float metallic;
         }
 
+        public static string SpecPath(string id) => Path.Combine(Path.GetDirectoryName(Application.dataPath), BlenderFolder, id + ".json");
+
         public static ModelSpec LoadSpec(string id)
         {
-            string path = Path.Combine(Path.GetDirectoryName(Application.dataPath), BlenderFolder, id + ".json");
+            string path = SpecPath(id);
             if (!File.Exists(path))
                 throw new FileNotFoundException($"{GameInfo.LogPrefix} No existe la fuente del modelo '{id}': {path}");
             var spec = JsonUtility.FromJson<ModelSpec>(File.ReadAllText(path));
@@ -105,8 +125,27 @@ namespace TiffanyGame.EditorTools
                 renderer.sharedMaterials = materials;
                 renderer.shadowCastingMode = ShadowCastingMode.On;
                 renderer.receiveShadows = true;
+                // Las poses salen mucho del reposo: sin margen el culling la apaga estando a la vista.
+                if (renderer is SkinnedMeshRenderer skinned)
+                {
+                    var bounds = skinned.localBounds;
+                    bounds.Expand(Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z)));
+                    skinned.localBounds = bounds;
+                }
             }
+            if (LoadSpec(id).Rigged) Animate(id, root);
             return root;
+        }
+
+        static void Animate(string id, GameObject root)
+        {
+            if (!Controllers.TryGetValue(id, out var controller))
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} El modelo '{id}' tiene tomas pero no tiene controller registrado.");
+            var animator = root.GetComponent<Animator>();
+            if (animator == null) animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = controller();
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
         }
     }
 }
