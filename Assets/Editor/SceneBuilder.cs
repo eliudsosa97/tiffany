@@ -42,6 +42,7 @@ namespace TiffanyGame.EditorTools
             capture.overrideCamera = false;
             capture.wait = 1.5f;
             candleStop.AddComponent<LightCaptureStage>().energy = SoulEnergy.Max;
+            PowerBuilder.BuildPowers(playerLight, spawn.parent);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();

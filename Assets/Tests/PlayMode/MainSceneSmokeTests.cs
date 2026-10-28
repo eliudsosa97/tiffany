@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -63,6 +64,51 @@ namespace TiffanyGame.Tests
 
             yield return null;
 
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator MainSceneHasMovableObjectsUnderTiffanysPower()
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            Assert.IsNotNull(player);
+            var poltergeist = player.GetComponent<Poltergeist>();
+            var playerLight = player.GetComponent<PlayerLight>();
+            var soul = player.GetComponent<PlayerSoul>();
+            Assert.IsNotNull(poltergeist);
+            Assert.IsNotNull(playerLight);
+            Assert.IsNotNull(soul);
+            Assert.IsNotNull(playerLight.spot);
+            Assert.AreSame(playerLight.spot, poltergeist.handLight);
+            Assert.IsTrue(soul.Powers.Has(Power.Poltergeist));
+            Assert.IsTrue(soul.Powers.Has(Power.Light));
+
+            var objects = MovableObject.Active;
+            Assert.AreEqual(4, objects.Count);
+            foreach (ThrowableKind kind in System.Enum.GetValues(typeof(ThrowableKind)))
+            {
+                if (kind == ThrowableKind.Candle) continue;
+                int count = 0;
+                foreach (var movable in objects)
+                    if (movable.kind == kind) count++;
+                Assert.AreEqual(1, count, $"Debe haber un objeto de tipo {kind}.");
+            }
+            foreach (var movable in objects)
+            {
+                Assert.LessOrEqual(Vector3.Distance(player.transform.position, movable.transform.position), 12f);
+                var body = movable.GetComponent<Rigidbody>();
+                Assert.IsNotNull(body);
+                Assert.IsTrue(body.isKinematic);
+            }
+
+            float expectedEnergy = soul.Energy.Current - 15f;
+            playerLight.Toggle();
+            yield return null;
+            yield return null;
+
+            LogAssert.Expect(LogType.Log, new Regex(@"Poltergeist: \w+ suena a"));
+            Assert.IsTrue(poltergeist.TryMove());
+            Assert.AreEqual(expectedEnergy, soul.Energy.Current, 0.5f);
             LogAssert.NoUnexpectedReceived();
         }
 
