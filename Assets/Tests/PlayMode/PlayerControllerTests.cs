@@ -63,6 +63,31 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator WalkingBackwardsKeepsAimAndRunningFacesMovement()
+        {
+            cameraObject.transform.rotation = Quaternion.Euler(45f, 35f, 0f);
+            float yaw = cameraObject.transform.eulerAngles.y;
+            var aimDirection = PlayerMotion.CameraRelative(Vector2.up, yaw);
+            var moveDirection = PlayerMotion.CameraRelative(Vector2.down, yaw);
+            var body = player.GetComponent<CharacterController>();
+            GameInput.AimOverride = Vector2.up;
+            GameInput.MoveOverride = Vector2.down;
+
+            yield return new WaitForSeconds(2f);
+
+            Assert.That(Vector3.Dot(player.transform.forward, aimDirection), Is.GreaterThan(0.95f));
+            Assert.That(Vector3.ProjectOnPlane(body.velocity, Vector3.up).magnitude,
+                Is.EqualTo(0.7f * 2.2f).Within(0.15f));
+            GameInput.RunOverride = true;
+
+            yield return new WaitForSeconds(1f);
+
+            Assert.That(Vector3.Dot(player.transform.forward, moveDirection), Is.GreaterThan(0.95f));
+            Assert.That(Vector3.ProjectOnPlane(body.velocity, Vector3.up).magnitude,
+                Is.EqualTo(4f).Within(0.15f));
+        }
+
+        [UnityTest]
         public IEnumerator HalfStickOnGravelUsesSlowStepsAndMovesForward()
         {
             ground.AddComponent<GroundSurface>().type = GroundType.Gravel;
