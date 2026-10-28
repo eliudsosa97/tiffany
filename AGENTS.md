@@ -1,10 +1,10 @@
 # Guía para agentes de código
 
-Instrucciones para cualquier agente (Claude Code, Codex u otro) que trabaje en este repo. El diseño del juego está en `docs/GDD.md`. Léelo antes de cambiar una mecánica.
+Para cualquier agente que trabaje en este repo. Antes de cambiar una mecánica, lee `docs/GDD.md`.
 
 ## Proyecto
 
-Juego de terror y sigilo en Unity 6.3 LTS `6000.3.27f1` con URP. Sale para navegador (WebGL) y se publica en itch.io. Sin multijugador.
+Juego de terror y sigilo en Unity 6.3 LTS `6000.3.27f1` con URP, para navegador (WebGL) en itch.io. Sin multijugador.
 
 ## Idioma
 
@@ -15,12 +15,12 @@ Juego de terror y sigilo en Unity 6.3 LTS `6000.3.27f1` con URP. Sale para naveg
 
 - Todo el código vive en el namespace `TiffanyGame`. Las herramientas de editor en `TiffanyGame.EditorTools` y los tests en `TiffanyGame.Tests`.
 - La lógica va en clases de C# simples y testeables (ruido, energía del alma, pánico, estados de la bruja, recuerdos, poderes). Los `MonoBehaviour` son delgados: leen la escena, llaman a la lógica y aplican el resultado.
-- Solo Input System (el input viejo está apagado). La entrada se lee a través de una sola clase, `GameInput`.
+- Solo Input System. Toda la entrada pasa por `GameInput`.
 - UI con `UnityEngine.UI.Text` y la fuente `LegacyRuntime.ttf`. Sin TextMeshPro.
 - Sin asignaciones de memoria por cuadro en `Update`: nada de LINQ, strings concatenados, `Find` ni `GetComponent` en el ciclo caliente.
-- Los materiales y shaders se guardan como assets. No se crean en tiempo de ejecución, porque WebGL quita las variantes que no ve en el build.
+- Materiales y shaders como assets, nunca creados en tiempo de ejecución.
 - Audio de efectos en 2D (`spatialBlend = 0`) salvo que el diseño pida posición.
-- El contenido que edita el equipo de arte y narrativa (frases, dibujos, ecos de los recuerdos) vive en archivos de datos en `Assets/Data/`, no en código.
+- Frases, dibujos y ecos de los recuerdos viven en `Assets/Data/`, no en código.
 
 ## Cómo cambiar código
 
@@ -32,7 +32,7 @@ Juego de terror y sigilo en Unity 6.3 LTS `6000.3.27f1` con URP. Sale para naveg
 
 ## Escena generada
 
-`Assets/Editor/SceneBuilder.cs` genera `Assets/Scenes/Main.unity` completa. **Regenerar la escena borra lo que se haya editado a mano.** Se cambia el builder y se regenera. La escena regenerada se commitea solo en `main`, para que dos ramas no choquen en el mismo archivo.
+`Assets/Editor/SceneBuilder.cs` genera `Assets/Scenes/Main.unity` completa. **Regenerar la escena borra lo editado a mano.** Se cambia el builder y se regenera. La escena regenerada se commitea solo en `main`.
 
 ## Estructura
 
@@ -72,7 +72,7 @@ $UNITY -batchmode -projectPath . -executeMethod TiffanyGame.EditorTools.BuildToo
 "Builds/Mac/tiffany.app/Contents/MacOS/Tiffany" -capturevideo <carpeta> -captureseconds 10 -screen-width 1600 -screen-height 900 -screen-fullscreen 0
 ```
 
-Si el editor está abierto, el modo batch falla porque el proyecto queda bloqueado.
+Con el editor abierto, el modo batch falla.
 
 ## Git
 
