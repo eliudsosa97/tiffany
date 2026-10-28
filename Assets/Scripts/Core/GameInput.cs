@@ -132,6 +132,13 @@ namespace TiffanyGame
 
         public static bool NotebookPressed => KeyPressed(Key.Tab) || Gamepad.current?.selectButton.wasPressedThisFrame == true;
 
-        public static bool PausePressed => KeyPressed(Key.Escape) || Gamepad.current?.startButton.wasPressedThisFrame == true;
+        public static bool PausePressed => KeyPressed(Key.Escape) || KeyPressed(Key.P) ||
+            Gamepad.current?.startButton.wasPressedThisFrame == true;
+
+        public static bool NotebookNextPressed => KeyPressed(Key.D) || KeyPressed(Key.RightArrow) ||
+            Gamepad.current?.dpad.right.wasPressedThisFrame == true;
+
+        public static bool NotebookPreviousPressed => KeyPressed(Key.A) || KeyPressed(Key.LeftArrow) ||
+            Gamepad.current?.dpad.left.wasPressedThisFrame == true;
     }
 }
