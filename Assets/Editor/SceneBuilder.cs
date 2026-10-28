@@ -46,6 +46,16 @@ namespace TiffanyGame.EditorTools
             tyler.transform.position = route.GetChild(0).Find("Ball").position + new Vector3(1.5f, -0.2f, 0f);
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories);
             PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
+            var heartbeat = player.gameObject.AddComponent<Heartbeat>();
+            heartbeat.panic = player.GetComponent<PanicController>();
+            heartbeat.witch = playerLight.witch;
+            heartbeat.source = player.gameObject.AddComponent<AudioSource>();
+            heartbeat.source.playOnAwake = false;
+            heartbeat.source.spatialBlend = 0f;
+            const string heartbeatPath = "Assets/Audio/Sfx/heartbeat.wav";
+            heartbeat.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(heartbeatPath);
+            if (heartbeat.clip == null)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el audio de latidos: {heartbeatPath}");
             var candleStop = new GameObject("Candle 1 Safe");
             candleStop.transform.SetParent(testZone, false);
             candleStop.transform.position = SurfacePoint(-5f, 1.5f);
@@ -152,6 +162,7 @@ namespace TiffanyGame.EditorTools
                 stop.transform.SetParent(root, false);
                 stop.transform.position = top;
                 stop.AddComponent<CaptureStop>().overrideCamera = false;
+                stop.AddComponent<WitchAwayStage>();
             }
 
             CreateBorder("West Border", root, SurfacePoint(-30f, 0f) + normal,
