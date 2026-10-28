@@ -5,10 +5,10 @@ namespace TiffanyGame.EditorTools
 {
     public static class PowerBuilder
     {
-        public static void BuildPowers(PlayerLight playerLight, Transform zoneRoot)
+        public static void BuildPowers(PlayerLight playerLight, Transform zoneRoot, Storm storm)
         {
             var soul = playerLight.GetComponent<PlayerSoul>();
-            var powers = new[] { Power.Poltergeist, Power.Vanish };
+            var powers = new[] { Power.Candles, Power.Poltergeist, Power.Vanish };
             for (int i = 0; i < powers.Length; i++)
             {
                 if (Array.IndexOf(soul.startingPowers, powers[i]) >= 0) continue;
@@ -31,6 +31,19 @@ namespace TiffanyGame.EditorTools
             Array.Resize(ref renderers, figureCount);
             vanish.figure = renderers;
 
+            var candles = new CandleSpot[2];
+            Physics.SyncTransforms();
+            for (int i = 0; i < candles.Length; i++)
+            {
+                Vector3 position = playerLight.transform.position
+                    + playerLight.transform.right * (i == 0 ? -1.5f : 1.5f) - playerLight.transform.forward;
+                if (Physics.Raycast(position + Vector3.up * 20f, Vector3.down, out var ground,
+                    Mathf.Infinity, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) position.y = ground.point.y;
+                candles[i] = SceneBuilder.CreateCandle(zoneRoot, $"Kindled Candle {i + 1}", position,
+                    CandleKind.Kindled, false, soul, storm);
+            }
+            playerLight.gameObject.AddComponent<CandleKindler>().candles = candles;
+
             Vector3 origin = playerLight.transform.position + Vector3.forward * 3.5f;
             BuildObject(zoneRoot, ThrowableKind.Bottle, origin + Vector3.left * 2.4f,
                 0.16f, 0.32f, 0.4f, new Color(0.08f, 0.24f, 0.13f));
@@ -41,7 +54,11 @@ namespace TiffanyGame.EditorTools
             BuildObject(zoneRoot, ThrowableKind.Bell, origin + Vector3.right * 2.4f,
                 0.18f, 0.18f, 0.3f, new Color(0.7f, 0.53f, 0.2f));
 
-            var names = new[] { "Power 1 Before", "Power 2 After", "Power 3 Vanish Fading", "Power 4 Vanish Hidden" };
+            var names = new[]
+            {
+                "Power 1 Before", "Power 2 After", "Power 3 Vanish Fading", "Power 4 Vanish Hidden",
+                "Power 5 Candle Before", "Power 6 Candle Lit"
+            };
             for (int i = 0; i < names.Length; i++)
             {
                 var stop = new GameObject(names[i]);
@@ -53,10 +70,11 @@ namespace TiffanyGame.EditorTools
                 var stage = stop.AddComponent<LightCaptureStage>();
                 stage.energy = SoulEnergy.Max;
                 stage.hideWitch = true;
-                if (i > 0)
+                if (i > 0 && i != 4)
                 {
                     var powerStage = stop.AddComponent<PowerCaptureStage>();
-                    powerStage.action = i >= 2 ? PowerCaptureAction.Vanish : PowerCaptureAction.MoveObject;
+                    powerStage.action = i == 5 ? PowerCaptureAction.Kindle
+                        : i >= 2 ? PowerCaptureAction.Vanish : PowerCaptureAction.MoveObject;
                 }
             }
         }

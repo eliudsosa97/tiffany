@@ -113,6 +113,40 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator MainSceneHasTwoCandlesTiffanyCanKindle()
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            Assert.IsNotNull(player);
+            var kindler = player.GetComponent<CandleKindler>();
+            var soul = player.GetComponent<PlayerSoul>();
+            Assert.IsNotNull(kindler);
+            Assert.IsNotNull(soul);
+            Assert.IsTrue(soul.Powers.Has(Power.Candles));
+            Assert.AreEqual(2, kindler.candles.Length);
+            foreach (var candle in kindler.candles)
+            {
+                Assert.IsNotNull(candle);
+                Assert.AreEqual(CandleKind.Kindled, candle.Candle.Kind);
+                Assert.IsFalse(candle.Candle.IsLit);
+                Assert.IsFalse(candle.startLit);
+                Assert.IsNotNull(candle.flameMesh);
+                Assert.IsFalse(candle.flameMesh.enabled);
+            }
+
+            float expectedEnergy = soul.Energy.Current - SoulCosts.LightCandle;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Tiffany enciende una veladora");
+            Assert.IsTrue(kindler.TryKindle());
+            yield return null;
+
+            int lit = 0;
+            foreach (var candle in kindler.candles)
+                if (candle.Candle.IsLit) lit++;
+            Assert.AreEqual(1, lit);
+            Assert.AreEqual(expectedEnergy, soul.Energy.Current, 0.5f);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator WalkingInMainScenePublishesStepsAndCameraFollows()
         {
             var player = GameObject.FindGameObjectWithTag("Player");
