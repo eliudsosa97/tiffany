@@ -56,7 +56,7 @@ Por modelo:
 - Texturas de 1K como máximo y comprimidas en el import.
 - Sin efectos de posproceso nuevos en `Mobile_Renderer` sin medir antes y después.
 
-Quien agregue modelos a la ruta mide antes y después y pone las cifras en el PR. Cómo se mide: build web servida con `python3 -m http.server` y el Brave de `/Applications` manejado por CDP (ver `guias/unity-batch.md` del taller). Cada claro se abre con `?stop=Route <n> <nombre>`, que vive en la rama `feat/web-capture-stop` y se aplica solo en local porque no entra a la build pública. En cada claro se miden 6 s con `requestAnimationFrame`, con DPR 1 y 2. Las llamadas de dibujo y los triángulos se cuentan envolviendo `drawElements` y `drawArrays` del contexto WebGL, y se reporta el cuadro más alto además de la mediana.
+Quien agregue modelos a la ruta mide antes y después y pone las cifras en el PR. Cómo se mide: build web servida con `python3 -m http.server` y el Brave de `/Applications` manejado por CDP (ver `guias/unity-batch.md` del taller). Cada claro se abre con `?stop=Route <n> <nombre>`, que vive en la rama `feat/web-capture-stop` y se aplica solo en local porque no entra a la build pública. En cada claro se miden 6 s con `requestAnimationFrame`, con DPR 1 y 2. Las llamadas de dibujo y los triángulos se cuentan envolviendo `drawElements`, `drawArrays`, `drawElementsInstanced` y `drawArraysInstanced` del contexto WebGL (los triángulos con instancing se multiplican por las instancias), y se reporta el cuadro más alto además de la mediana.
 
 ## Estructura
 
