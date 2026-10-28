@@ -4,6 +4,8 @@ namespace ElVelador
 {
     public static class PowerRules
     {
+        public const float MoveRange = 12f;
+
         public static bool CanUseLight(PowerSet powers, SoulEnergy energy)
         {
             if (powers == null)
@@ -28,6 +30,56 @@ namespace ElVelador
             }
 
             stunsWitch = witchGrounded && witchInCone;
+            return true;
+        }
+
+        public static bool TryLightCandle(PowerSet powers, SoulEnergy energy, Candle candle)
+        {
+            if (powers == null)
+            {
+                throw new ArgumentNullException(nameof(powers));
+            }
+            if (energy == null)
+            {
+                throw new ArgumentNullException(nameof(energy));
+            }
+            if (candle == null)
+            {
+                throw new ArgumentNullException(nameof(candle));
+            }
+            if (!powers.Has(Power.Candles) || candle.Kind != CandleKind.Kindled || candle.IsLit
+                || !energy.TrySpend(SoulCosts.LightCandle))
+            {
+                return false;
+            }
+
+            return candle.TryLight();
+        }
+
+        public static bool TryMove(PowerSet powers, SoulEnergy energy, Throwable target,
+            float distance, bool visibleInLight, bool raining, out float noiseRadius)
+        {
+            noiseRadius = 0f;
+            if (powers == null)
+            {
+                throw new ArgumentNullException(nameof(powers));
+            }
+            if (energy == null)
+            {
+                throw new ArgumentNullException(nameof(energy));
+            }
+            if (target == null)
+            {
+                throw new ArgumentNullException(nameof(target));
+            }
+            if (!powers.Has(Power.Poltergeist) || !(distance >= 0f && distance <= MoveRange)
+                || !visibleInLight || target.Used || !energy.TrySpend(SoulCosts.MoveObject))
+            {
+                return false;
+            }
+
+            target.Used = true;
+            noiseRadius = Throwable.NoiseRadius(target.Kind) * (raining ? NoiseModel.RainMultiplier : 1f);
             return true;
         }
     }
