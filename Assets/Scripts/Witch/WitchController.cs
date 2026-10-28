@@ -31,6 +31,7 @@ namespace TiffanyGame
         public bool hearingMuted;
 
         public WitchDecision Decision { get; private set; }
+        public WitchProfile Profile => profile;
         public event Action Caught;
 
         private NavMeshAgent agent;

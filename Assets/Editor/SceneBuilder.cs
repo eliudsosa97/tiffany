@@ -51,7 +51,8 @@ namespace TiffanyGame.EditorTools
             tyler.transform.position = ball.position + new Vector3(1.5f, -0.2f, 0f);
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories, ball: ball);
             PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
-            BuildForestAmbience(player.transform, route, playerLight.witch);
+            var ambience = BuildForestAmbience(player.transform, route, playerLight.witch);
+            ambience.music = BuildTensionMusic(playerLight.witch, player.transform);
             var heartbeat = player.gameObject.AddComponent<Heartbeat>();
             heartbeat.panic = player.GetComponent<PanicController>();
             heartbeat.witch = playerLight.witch;
@@ -324,7 +325,20 @@ namespace TiffanyGame.EditorTools
             audio.cackles = new[] { LoadClip("cackle_1"), LoadClip("cackle_2"), LoadClip("cackle_3") };
         }
 
-        static void BuildForestAmbience(Transform player, Transform route, WitchController witch)
+        static TensionMusic BuildTensionMusic(WitchController witch, Transform player)
+        {
+            var root = new GameObject("Tension Music");
+            var music = root.AddComponent<TensionMusic>();
+            (music.witch, music.player, music.hiding) = (witch, player, player.GetComponent<PlayerHiding>());
+            music.drone = root.AddComponent<AudioSource>();
+            music.pulse = root.AddComponent<AudioSource>();
+            foreach (var source in new[] { music.drone, music.pulse })
+                (source.loop, source.playOnAwake, source.spatialBlend, source.volume) = (true, false, 0f, 0f);
+            (music.drone.clip, music.pulse.clip) = (LoadClip("tension_drone"), LoadClip("tension_pulse"));
+            return music;
+        }
+
+        static ForestAmbience BuildForestAmbience(Transform player, Transform route, WitchController witch)
         {
             var root = new GameObject("Forest Ambience");
             var audio = root.AddComponent<ForestAmbience>();
@@ -342,6 +356,7 @@ namespace TiffanyGame.EditorTools
             (audio.calls.playOnAwake, audio.calls.spatialBlend) = (false, 0f);
             (audio.owl, audio.barnOwl, audio.coyote) = (LoadClip("owl"), LoadClip("lechuza"), LoadClip("coyote"));
             audio.howls = new[] { LoadClip("distant_howl_1"), LoadClip("distant_howl_2"), LoadClip("distant_howl_3") };
+            return audio;
         }
 
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)

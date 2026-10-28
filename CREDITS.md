@@ -54,6 +54,8 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/leaves.wav` | [Leaves_Rustling_Edited](https://freesound.org/s/443065/) | AmberdeMeillon | CC0 |
 | `Assets/Audio/Sfx/lake_water.wav` | [060516 lake biwa](https://freesound.org/s/390287/) | pflanigan | CC0 |
 | `Assets/Audio/Sfx/frogs.wav` | [FrogsAndCrickets_ExcerptA](https://freesound.org/s/32654/) | greysound | CC0 |
+| `Assets/Audio/Sfx/tension_drone.wav` | [Deep rumbling drone](https://freesound.org/s/632682/) | xkeril | CC0 |
+| `Assets/Audio/Sfx/tension_pulse.wav` | [Horror Pulsating Drone Loop](https://freesound.org/s/457046/) | gerainsan | CC0 |
 | `Assets/Audio/Sfx/bottle.wav` | [Small_Glass_Bottle_Wood_Floor.wav](https://freesound.org/s/235602/) | tcrocker68 | CC0 |
 | `Assets/Audio/Sfx/can.wav` | [CanBounce 2.wav](https://freesound.org/s/92622/) | nigelcoop | CC0 |
 | `Assets/Audio/Sfx/pot.wav` | [Breaking pot short](https://freesound.org/s/810043/) | anna_bliss | CC0 |
