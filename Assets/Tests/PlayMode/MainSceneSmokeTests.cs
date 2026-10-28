@@ -183,8 +183,8 @@ namespace TiffanyGame.Tests
             var route = GameObject.Find("Route").transform;
             var cemetery = route.GetChild(0);
             Assert.AreEqual(8, route.childCount);
-            Assert.AreEqual(54, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
-                "46 paradas de escena, una vista previa, cinco ecos y dos de la pelota.");
+            Assert.AreEqual(55, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
+                "47 paradas de escena, una vista previa, cinco ecos y dos de la pelota.");
             Assert.AreEqual(19, route.GetComponentsInChildren<CaptureStop>().Length);
             Assert.AreEqual(12, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length);
             foreach (var movable in MovableObject.Active) Assert.IsTrue(movable.transform.IsChildOf(cemetery));
