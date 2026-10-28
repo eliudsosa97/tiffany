@@ -1,4 +1,3 @@
-using System;
 using NUnit.Framework;
 using TiffanyGame.EditorTools;
 using UnityEditor;
@@ -7,43 +6,44 @@ namespace TiffanyGame.Tests
 {
     public sealed class BuildToolsTests
     {
-        Action<BuildTargetGroup, BuildTarget> original;
         int switches;
         BuildTargetGroup switchedGroup;
         BuildTarget switchedTarget;
 
-        [SetUp]
-        public void SetUp()
+        bool Switch(BuildTargetGroup group, BuildTarget target, bool result)
         {
-            original = BuildTools.switchTarget;
-            switches = 0;
-            BuildTools.switchTarget = (group, target) =>
-            {
-                switches++;
-                switchedGroup = group;
-                switchedTarget = target;
-            };
+            switches++;
+            switchedGroup = group;
+            switchedTarget = target;
+            return result;
         }
 
-        [TearDown]
-        public void TearDown() => BuildTools.switchTarget = original;
+        [SetUp]
+        public void SetUp() => switches = 0;
 
-        [Test]
-        public void WebBuildAfterMacBuildSwitchesToWebGLFirst()
+        [TestCase(BuildTarget.StandaloneOSX, BuildTarget.WebGL, BuildTargetGroup.WebGL)]
+        [TestCase(BuildTarget.WebGL, BuildTarget.StandaloneOSX, BuildTargetGroup.Standalone)]
+        public void BuildSwitchesToItsTargetFirst(BuildTarget active, BuildTarget target, BuildTargetGroup group)
         {
-            BuildTools.UseTarget(BuildTarget.StandaloneOSX, BuildTarget.WebGL);
+            Assert.IsTrue(BuildTools.UseTarget(active, target, (g, t) => Switch(g, t, true)));
 
             Assert.AreEqual(1, switches);
-            Assert.AreEqual(BuildTargetGroup.WebGL, switchedGroup);
-            Assert.AreEqual(BuildTarget.WebGL, switchedTarget);
+            Assert.AreEqual(group, switchedGroup);
+            Assert.AreEqual(target, switchedTarget);
         }
 
         [Test]
         public void MatchingTargetIsLeftAlone()
         {
-            BuildTools.UseTarget(BuildTarget.WebGL, BuildTarget.WebGL);
+            Assert.IsTrue(BuildTools.UseTarget(BuildTarget.WebGL, BuildTarget.WebGL, (g, t) => Switch(g, t, true)));
 
             Assert.AreEqual(0, switches);
+        }
+
+        [Test]
+        public void FailedSwitchStopsTheBuild()
+        {
+            Assert.IsFalse(BuildTools.UseTarget(BuildTarget.StandaloneOSX, BuildTarget.WebGL, (g, t) => Switch(g, t, false)));
         }
     }
 }

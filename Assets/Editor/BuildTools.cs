@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
@@ -21,14 +22,9 @@ namespace TiffanyGame.EditorTools
         [MenuItem("Tiffany/Build Mac")]
         public static void BuildMac() => Run(BuildTarget.StandaloneOSX, "Builds/Mac/tiffany.app");
 
-        public static System.Action<BuildTargetGroup, BuildTarget> switchTarget =
-            (group, target) => EditorUserBuildSettings.SwitchActiveBuildTarget(group, target);
-
         // Compilar WebGL con otra plataforma activa deja la web sin las variantes de luz de URP.
-        public static void UseTarget(BuildTarget active, BuildTarget target)
-        {
-            if (active != target) switchTarget(BuildPipeline.GetBuildTargetGroup(target), target);
-        }
+        public static bool UseTarget(BuildTarget active, BuildTarget target, Func<BuildTargetGroup, BuildTarget, bool> switchTarget) =>
+            active == target || switchTarget(BuildPipeline.GetBuildTargetGroup(target), target);
 
         static void Run(BuildTarget target, string path)
         {
@@ -45,7 +41,12 @@ namespace TiffanyGame.EditorTools
                 return;
             }
 
-            UseTarget(EditorUserBuildSettings.activeBuildTarget, target);
+            if (!UseTarget(EditorUserBuildSettings.activeBuildTarget, target, EditorUserBuildSettings.SwitchActiveBuildTarget))
+            {
+                Debug.LogError($"{GameInfo.LogPrefix} No se pudo cambiar la plataforma activa a {target}.");
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+                return;
+            }
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = scenes.ToArray(),
