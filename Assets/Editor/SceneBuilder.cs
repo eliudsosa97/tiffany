@@ -5,6 +5,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 
 namespace TiffanyGame.EditorTools
 {
@@ -27,6 +28,7 @@ namespace TiffanyGame.EditorTools
             CreateCamera(player);
             BuildWitch(spawn.parent, player.transform);
             StormBuilder.BuildStorm(player.transform, spawn);
+            BuildInterface();
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -257,6 +259,107 @@ namespace TiffanyGame.EditorTools
             camera.fieldOfView = follow.fieldOfView;
             follow.Snap();
             player.viewCamera = camera;
+        }
+
+        static GameInterface BuildInterface()
+        {
+            var root = new GameObject("Interface", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
+            root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = root.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var ui = root.AddComponent<GameInterface>();
+
+            ui.noticeText = InterfaceText("Power Notice", root.transform, font, "", 42,
+                new Vector2(0.12f, 0.65f), new Vector2(0.88f, 0.74f));
+            ui.noticeText.color = new Color(1f, 0.87f, 0.63f);
+            ui.noticeText.gameObject.AddComponent<Shadow>().effectDistance = new Vector2(2f, -2f);
+            ui.subtitleText = InterfaceText("Subtitle", root.transform, font, "", 38,
+                new Vector2(0.12f, 0.06f), new Vector2(0.88f, 0.18f));
+            ui.subtitleText.gameObject.AddComponent<Outline>().effectDistance = new Vector2(2f, -2f);
+
+            ui.pausePanel = InterfacePanel("Pause", root.transform, 0.6f);
+            InterfaceText("Title", ui.pausePanel.transform, font, InterfaceTexts.PauseTitle, 76,
+                new Vector2(0.1f, 0.47f), new Vector2(0.9f, 0.60f));
+            InterfaceText("Hint", ui.pausePanel.transform, font, InterfaceTexts.PauseHint, 30,
+                new Vector2(0.1f, 0.37f), new Vector2(0.9f, 0.46f));
+
+            ui.notebookPanel = InterfacePanel("Notebook", root.transform, 0.92f);
+            var notebook = ui.notebookPanel.transform;
+            var frame = InterfaceRect("Drawing Frame", notebook,
+                new Vector2(0.08f, 0.23f), new Vector2(0.92f, 0.84f));
+            var drawing = InterfaceRect("Drawing", frame, Vector2.zero, Vector2.one);
+            ui.drawingImage = drawing.gameObject.AddComponent<RawImage>();
+            ui.drawingImage.raycastTarget = false;
+            ui.drawingFitter = drawing.gameObject.AddComponent<AspectRatioFitter>();
+            ui.drawingFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            ui.drawingFitter.aspectRatio = 4f / 3f;
+            ui.notebookTitle = InterfaceText("Title", notebook, font, "", 48,
+                new Vector2(0.08f, 0.87f), new Vector2(0.92f, 0.96f));
+            ui.notebookPhrase = InterfaceText("Phrase", notebook, font, "", 40,
+                new Vector2(0.10f, 0.11f), new Vector2(0.90f, 0.21f));
+            ui.notebookPage = InterfaceText("Page", notebook, font, "", 28,
+                new Vector2(0.84f, 0.025f), new Vector2(0.97f, 0.085f));
+            ui.notebookPage.alignment = TextAnchor.MiddleRight;
+            InterfaceText("Hint", notebook, font, InterfaceTexts.NotebookHint, 26,
+                new Vector2(0.15f, 0.025f), new Vector2(0.85f, 0.085f));
+            ui.notebookEmpty = InterfaceText("Empty", notebook, font, InterfaceTexts.NotebookEmpty, 44,
+                new Vector2(0.1f, 0.4f), new Vector2(0.9f, 0.6f));
+
+            ui.memoryAssets = LoadInterfaceAssets<TextAsset>("t:TextAsset", "Assets/Data/Memories");
+            ui.drawings = LoadInterfaceAssets<Texture2D>("t:Texture2D", "Assets/Art/Memories");
+            ui.pausePanel.SetActive(false);
+            ui.notebookPanel.SetActive(false);
+            return ui;
+        }
+
+        static T[] LoadInterfaceAssets<T>(string filter, string folder) where T : UnityEngine.Object
+        {
+            if (!AssetDatabase.IsValidFolder(folder)) return Array.Empty<T>();
+            var paths = AssetDatabase.FindAssets(filter, new[] { folder });
+            for (int i = 0; i < paths.Length; i++) paths[i] = AssetDatabase.GUIDToAssetPath(paths[i]);
+            if (typeof(T) == typeof(TextAsset))
+                paths = Array.FindAll(paths, path => path.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+            Array.Sort(paths, StringComparer.Ordinal);
+            var assets = new T[paths.Length];
+            for (int i = 0; i < paths.Length; i++)
+                assets[i] = AssetDatabase.LoadAssetAtPath<T>(paths[i]);
+            return assets;
+        }
+
+        static RectTransform InterfaceRect(string name, Transform parent, Vector2 min, Vector2 max)
+        {
+            var rect = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = min;
+            rect.anchorMax = max;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            return rect;
+        }
+
+        static GameObject InterfacePanel(string name, Transform parent, float alpha)
+        {
+            var rect = InterfaceRect(name, parent, Vector2.zero, Vector2.one);
+            var image = rect.gameObject.AddComponent<Image>();
+            image.color = new Color(0f, 0f, 0f, alpha);
+            image.raycastTarget = false;
+            return rect.gameObject;
+        }
+
+        static Text InterfaceText(string name, Transform parent, Font font, string value, int size,
+            Vector2 min, Vector2 max)
+        {
+            var text = InterfaceRect(name, parent, min, max).gameObject.AddComponent<Text>();
+            text.font = font;
+            text.text = value;
+            text.fontSize = size;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.white;
+            text.raycastTarget = false;
+            return text;
         }
 
         static GameObject CreatePrimitive(string name, PrimitiveType type, Transform parent,
