@@ -78,7 +78,29 @@ namespace TiffanyGame
                 if (stormStage != null) stormStage.Clear();
             }
 
-            Debug.Log($"{GameInfo.LogPrefix} Recorrido terminado: {stops.Length + 1} capturas en {directory}.");
+            int captureCount = stops.Length + 1;
+            var gameInterface = FindAnyObjectByType<GameInterface>();
+            if (gameInterface != null)
+            {
+                gameInterface.MemoryFound(2);
+                gameInterface.MemoryFound(1);
+                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Capture($"{captureCount++:00}_notice");
+                gameInterface.ShowSubtitle("Subtítulo de prueba", 5f);
+                yield return Capture($"{captureCount++:00}_subtitle");
+                gameInterface.ToggleNotebook();
+                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Capture($"{captureCount++:00}_notebook_1");
+                gameInterface.NextPage();
+                yield return Capture($"{captureCount++:00}_notebook_2");
+                gameInterface.ToggleNotebook();
+                gameInterface.TogglePause();
+                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Capture($"{captureCount++:00}_pause");
+                gameInterface.TogglePause();
+            }
+
+            Debug.Log($"{GameInfo.LogPrefix} Recorrido terminado: {captureCount} capturas en {directory}.");
             yield return new WaitForSecondsRealtime(1f);
             GameInput.ClearOverrides();
             Application.Quit();
