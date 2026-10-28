@@ -63,6 +63,44 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator HalfStickOnGravelUsesSlowStepsAndMovesForward()
+        {
+            ground.AddComponent<GroundSurface>().type = GroundType.Gravel;
+            GameInput.MoveOverride = new Vector2(0f, 0.5f);
+
+            yield return new WaitForSeconds(2f);
+
+            AssertSteps(3, 5, 4f);
+            Assert.That(player.transform.position.z, Is.InRange(1.7f, 2.4f));
+        }
+
+        [UnityTest]
+        public IEnumerator NearFullStickOnGravelUsesWalkingSteps()
+        {
+            ground.AddComponent<GroundSurface>().type = GroundType.Gravel;
+            GameInput.MoveOverride = new Vector2(0f, 0.9f);
+
+            yield return new WaitForSeconds(2f);
+
+            AssertSteps(5, 7, 8f);
+        }
+
+        [UnityTest]
+        public IEnumerator ReleasingStickPreservesLastGait()
+        {
+            GameInput.MoveOverride = new Vector2(0f, 0.9f);
+            yield return null;
+
+            var controller = player.GetComponent<PlayerController>();
+            Assert.AreEqual(Gait.Walk, controller.CurrentGait);
+            GameInput.MoveOverride = Vector2.zero;
+
+            yield return null;
+
+            Assert.AreEqual(Gait.Walk, controller.CurrentGait);
+        }
+
+        [UnityTest]
         public IEnumerator RunningOnGravelDoublesNoiseRadius()
         {
             ground.AddComponent<GroundSurface>().type = GroundType.Gravel;
