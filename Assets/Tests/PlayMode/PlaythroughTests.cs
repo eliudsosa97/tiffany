@@ -46,16 +46,18 @@ namespace TiffanyGame.Tests
         public IEnumerator WalksFromGravestoneAndBallToSecondMemoryInLessThanSixtySeconds()
         {
             var collector = Object.FindAnyObjectByType<MemoryCollector>();
-            collector.tyler.gameObject.SetActive(false);
+            Assert.IsFalse(collector.tyler.gameObject.activeSelf);
             var ball = GameObject.Find("Route").transform.GetChild(0).Find("Ball");
+            var secondMemory = System.Array.Find(collector.spots, spot => spot != null && spot.memoryId == 2);
+            Assert.IsNotNull(secondMemory);
             var plan = new PlaythroughPlan(new[]
             {
                 PlaythroughMilestone.Memory1, PlaythroughMilestone.Ball, PlaythroughMilestone.Memory2
             }, 55f);
             ExpectMilestone("lápida \\(recuerdo 1\\)");
-            ExpectMilestone("faltante: recogida real de la pelota");
+            ExpectMilestone("recoger la pelota");
             ExpectMilestone("listón \\(recuerdo 2\\)");
-            LogAssert.Expect(LogType.Log, new Regex(@"^\[Tiffany\] Partida completa con faltantes en \d+\.\ds: recogida real de la pelota$"));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Tiffany\] Partida completa en \d+\.\ds$"));
             runner = new GameObject("Playthrough Test").AddComponent<Playthrough>();
             runner.Configure(plan);
             float start = Time.time;
@@ -63,22 +65,46 @@ namespace TiffanyGame.Tests
             while (!plan.Finished && Time.time - start < 60f && Time.realtimeSinceStartup < realDeadline) yield return null;
 
             Assert.IsTrue(plan.Finished, "No terminó el recorrido reducido.");
-            Assert.AreEqual(2, plan.ExitCode, plan.FailureReason);
-            CollectionAssert.AreEqual(new[] { "recogida real de la pelota" }, plan.MissingContent);
+            Assert.AreEqual(0, plan.ExitCode, plan.FailureReason);
+            Assert.IsEmpty(plan.MissingContent);
+            Assert.IsNull(plan.FailureReason);
+            Assert.IsNull(plan.FirstConsoleError);
             Assert.AreEqual(3, plan.CompletedCount);
             Assert.Less(Time.time - start, 60f);
             Assert.AreEqual(3, milestones.Count);
             StringAssert.EndsWith("lápida (recuerdo 1)", milestones[0]);
-            StringAssert.EndsWith("faltante: recogida real de la pelota", milestones[1]);
+            StringAssert.EndsWith("recoger la pelota", milestones[1]);
             StringAssert.EndsWith("listón (recuerdo 2)", milestones[2]);
             Assert.LessOrEqual(PlaythroughPlan.HorizontalDistance(ballVisitPosition, ball.position), 1f);
-            Assert.IsFalse(collector.tyler.gameObject.activeSelf);
+            Assert.IsTrue(collector.IsFound(MemoryProgress.BallId));
+            Assert.IsFalse(ball.gameObject.activeSelf);
+            Assert.IsTrue(collector.tyler.gameObject.activeSelf);
             Assert.IsTrue(collector.IsFound(1));
             Assert.IsTrue(collector.IsFound(2));
             Assert.IsFalse(collector.IsFound(3));
-            Assert.Less(PlaythroughPlan.HorizontalDistance(collector.transform.position, collector.spots[1].transform.position), 2f);
+            Assert.Less(PlaythroughPlan.HorizontalDistance(collector.transform.position, secondMemory.transform.position), 2f);
             Assert.IsNull(GameInput.MoveOverride);
             Assert.IsNull(GameInput.InteractOverride);
+        }
+
+        [UnityTest]
+        public IEnumerator MissingBallIsReportedWithoutFailingSceneSetup()
+        {
+            var collector = Object.FindAnyObjectByType<MemoryCollector>();
+            Object.Destroy(GameObject.Find("Route").transform.GetChild(0).Find("Ball").gameObject);
+            yield return null;
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Ball }, 5f);
+            ExpectMilestone("faltante: recogida real de la pelota");
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Tiffany\] Partida completa con faltantes en \d+\.\ds: recogida real de la pelota$"));
+            runner = new GameObject("Playthrough Missing Ball Test").AddComponent<Playthrough>();
+            runner.Configure(plan);
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (!plan.Finished && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsTrue(plan.Finished);
+            Assert.AreEqual(2, plan.ExitCode, plan.FailureReason);
+            CollectionAssert.AreEqual(new[] { "recogida real de la pelota" }, plan.MissingContent);
+            Assert.IsFalse(collector.IsFound(MemoryProgress.BallId));
+            Assert.IsFalse(collector.tyler.gameObject.activeSelf);
         }
 
         [UnityTest]
@@ -209,6 +235,10 @@ namespace TiffanyGame.Tests
             yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Single);
             yield return null;
             foreach (var heartbeat in Object.FindObjectsByType<Heartbeat>(FindObjectsSortMode.None)) heartbeat.enabled = false;
+            var collector = Object.FindAnyObjectByType<MemoryCollector>();
+            var ballPickup = System.Array.Find(collector.spots, spot => spot != null && spot.memoryId == MemoryProgress.BallId);
+            Object.Destroy(ballPickup.gameObject);
+            yield return null;
             var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Ball }, 20f);
             ExpectMilestone("faltante: recogida real de la pelota");
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Tiffany\] Partida fallida en recoger la pelota: .*primer error antes de la escena$"));
@@ -246,7 +276,7 @@ namespace TiffanyGame.Tests
         void RecordMilestone(string message, string stackTrace, LogType type)
         {
             if (type == LogType.Log && Regex.IsMatch(message, @"^\[Tiffany\] Partida \d+\.\ds ")) milestones.Add(message);
-            if (message.EndsWith("faltante: recogida real de la pelota"))
+            if (message.EndsWith("recoger la pelota"))
                 ballVisitPosition = Object.FindAnyObjectByType<PlayerController>().transform.position;
         }
     }

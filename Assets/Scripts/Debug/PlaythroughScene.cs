@@ -18,6 +18,7 @@ namespace TiffanyGame
         readonly EndingController ending;
         readonly Transform route;
         readonly Transform ball;
+        readonly MemorySpot ballPickup;
         readonly Transform[] clearings;
         readonly CandleSpot[] family = new CandleSpot[8];
         readonly MemorySpot[] memories = new MemorySpot[5];
@@ -58,9 +59,13 @@ namespace TiffanyGame
                     if (candle.kind == CandleKind.Family) { family[i] = candle; break; }
                 Require(family[i], "veladora familiar");
             }
-            ball = Require(clearings[0].Find("Ball"), "Ball");
+            ball = clearings[0].Find("Ball");
             foreach (var memory in collector.spots)
-                if (memory != null && memory.memoryId >= 1 && memory.memoryId <= 5) memories[memory.memoryId - 1] = memory;
+            {
+                if (memory == null) continue;
+                if (memory.memoryId == MemoryProgress.BallId && memory.kind == MemorySpotKind.Ball) ballPickup = memory;
+                else if (memory.memoryId >= 1 && memory.memoryId <= 5) memories[memory.memoryId - 1] = memory;
+            }
         }
 
         public void Prepare(PlaythroughPlan plan, Action<string> log)
@@ -127,7 +132,8 @@ namespace TiffanyGame
             switch (next)
             {
                 case PlaythroughMilestone.Ball:
-                    Target = ball.position;
+                    if (ballPickup != null) Target = ballPickup.transform.position;
+                    else if (ball != null) Target = ball.position;
                     arrivalRadius = 1f;
                     break;
                 case PlaythroughMilestone.Hide:
@@ -162,9 +168,10 @@ namespace TiffanyGame
             Position = Position,
             AtTarget = AtTarget,
             MemoryFound = PlaythroughPlan.MemoryId(milestone) > 0 && collector.IsFound(PlaythroughPlan.MemoryId(milestone)),
+            BallCollected = collector.IsFound(MemoryProgress.BallId),
             MissingContent = milestone switch
             {
-                PlaythroughMilestone.Ball when AtTarget => "recogida real de la pelota",
+                PlaythroughMilestone.Ball when ball == null || (AtTarget && ballPickup == null) => "recogida real de la pelota",
                 PlaythroughMilestone.Hide when hideVolume == null => "escondite alcanzable por NavMesh desde la ruta",
                 _ => null
             },

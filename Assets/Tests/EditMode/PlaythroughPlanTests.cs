@@ -49,7 +49,7 @@ namespace TiffanyGame.Tests
         {
             var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Ball });
             var observation = new PlaythroughObservation { AtTarget = true };
-            plan.Tick(0.1f, in observation);
+            Assert.IsTrue(plan.Tick(0.1f, in observation).Interact);
             Assert.IsFalse(plan.Finished);
             Assert.AreEqual(0, plan.CompletedCount);
             observation.BallCollected = true;

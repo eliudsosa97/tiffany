@@ -114,7 +114,7 @@ namespace TiffanyGame
             command.ToggleLight = press && observation.LightOn != wantsLight;
             if (observation.AtTarget && press)
             {
-                command.Interact = MemoryId(Current) > 0 || Current == PlaythroughMilestone.Hide
+                command.Interact = MemoryId(Current) > 0 || Current == PlaythroughMilestone.Ball || Current == PlaythroughMilestone.Hide
                     || Current == PlaythroughMilestone.LeaveHide || Current == PlaythroughMilestone.Manifest;
                 command.Flash = Current == PlaythroughMilestone.Flash;
                 command.Kindle = Current == PlaythroughMilestone.Kindle;
