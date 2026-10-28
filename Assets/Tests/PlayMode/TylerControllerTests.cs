@@ -84,18 +84,30 @@ namespace TiffanyGame.Tests
         public IEnumerator CaptureStagesRestoreControllerAndNavigation()
         {
             var stages = Object.FindObjectsByType<TylerCaptureStage>(FindObjectsSortMode.None);
-            Assert.AreEqual(4, stages.Length);
+            Assert.AreEqual(5, stages.Length);
             foreach (var stage in stages)
             {
                 tyler.gameObject.SetActive(false);
                 stage.Apply(tyler.player);
+                var lightStage = stage.GetComponent<LightCaptureStage>();
+                if (lightStage != null) lightStage.Apply(tyler.player);
                 Assert.IsTrue(tyler.gameObject.activeSelf);
-                Assert.IsFalse(tyler.enabled);
+                Assert.AreEqual(stage.shareLight, tyler.enabled);
                 Assert.IsFalse(tyler.GetComponent<NavMeshAgent>().enabled);
                 Assert.AreEqual(stage.reaction, tyler.Reaction);
                 Assert.AreEqual(stage.reaction == TylerReaction.Growl, tyler.crouchBody.activeSelf);
                 Assert.AreEqual(stage.reaction != TylerReaction.Growl, tyler.standBody.activeSelf);
+                if (stage.shareLight)
+                {
+                    Assert.IsFalse(stage.lightTyler);
+                    Assert.IsNull(stage.fillLight);
+                    yield return null;
+                    Assert.IsTrue(tyler.SharingLight && tyler.shareLight.enabled);
+                    Assert.AreEqual(0f, tyler.soul.Energy.Current);
+                }
                 stage.Clear();
+                if (stage.shareLight) Assert.IsFalse(tyler.SharingLight || tyler.shareLight.enabled);
+                if (lightStage != null) lightStage.Clear();
                 yield return null;
                 Assert.IsTrue(tyler.enabled && tyler.GetComponent<NavMeshAgent>().isOnNavMesh);
             }

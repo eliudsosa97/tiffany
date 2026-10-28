@@ -9,11 +9,13 @@ namespace TiffanyGame
         public Vector3 tylerOffset = new Vector3(1.8f, 0f, 1.5f);
         public Vector3 witchOffset = new Vector3(0f, 0f, 10f);
         public bool lightTyler = true;
+        public bool shareLight;
+        public Light fillLight;
 
         private TylerController tyler;
-        private Light fillLight;
         private bool applied;
         private bool tylerWasEnabled;
+        private Transform previousMemory;
 
         public void Apply(Transform player)
         {
@@ -22,7 +24,9 @@ namespace TiffanyGame
             if (tyler == null) return;
             if (!tyler.gameObject.activeSelf) tyler.Appear(player.position);
             tylerWasEnabled = tyler.enabled;
-            tyler.enabled = false;
+            previousMemory = tyler.nextMemory;
+            if (shareLight) tyler.nextMemory = null;
+            tyler.enabled = shareLight;
             tyler.GetComponent<NavMeshAgent>().enabled = false;
             Vector3 position = GetTylerPosition(player);
             Vector3 target = reaction == TylerReaction.Guide && tyler.nextMemory != null
@@ -32,17 +36,13 @@ namespace TiffanyGame
             tyler.transform.SetPositionAndRotation(position,
                 direction.sqrMagnitude > 0f ? Quaternion.LookRotation(direction) : Quaternion.identity);
             tyler.ShowReaction(reaction, player.position + player.rotation * witchOffset);
-            if (lightTyler)
+            if (lightTyler && !shareLight && fillLight != null)
             {
                 var camera = Camera.main;
                 Vector3 lightDirection = camera != null ? camera.transform.position - position : player.position - position;
                 lightDirection.y = 0f;
-                fillLight = new GameObject("Tyler Capture Light").AddComponent<Light>();
-                fillLight.type = LightType.Point;
-                fillLight.range = 4f;
-                fillLight.intensity = 2f;
-                fillLight.color = new Color(0.65f, 0.8f, 1f);
                 fillLight.transform.position = position + lightDirection.normalized * 1.2f + Vector3.up * 1.2f;
+                fillLight.enabled = true;
             }
             applied = true;
             Debug.Log($"{GameInfo.LogPrefix} Captura de Tyler: {reaction}");
@@ -60,13 +60,13 @@ namespace TiffanyGame
 
         public void Clear()
         {
-            if (fillLight != null)
+            if (fillLight != null) fillLight.enabled = false;
+            if (applied && tyler != null)
             {
-                fillLight.enabled = false;
-                Destroy(fillLight.gameObject);
+                tyler.nextMemory = previousMemory;
+                if (shareLight) tyler.enabled = false;
+                tyler.enabled = tylerWasEnabled;
             }
-            fillLight = null;
-            if (applied && tyler != null) tyler.enabled = tylerWasEnabled;
             applied = false;
         }
     }

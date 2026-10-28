@@ -403,6 +403,8 @@ namespace TiffanyGame.EditorTools
             agent.enabled = false;
             var controller = tyler.AddComponent<TylerController>();
             controller.player = player;
+            controller.soul = player.GetComponent<PlayerSoul>();
+            controller.shareLight = TylerBuilder.BuildShareLight(tyler.transform);
             controller.witch = zoneRoot.GetComponentInChildren<WitchController>();
             controller.nextMemory = nextMemory;
             controller.figure = TylerBuilder.BuildFigure(tyler.transform, out var head, out var stand, out var crouch);
@@ -414,17 +416,25 @@ namespace TiffanyGame.EditorTools
             controller.voice.playOnAwake = false;
             controller.barkClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/bark_1.wav");
             controller.growlClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/growl_1.wav");
-            var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl" };
-            var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl };
+            var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl", "Tyler 5 Shares Light" };
+            var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl, TylerReaction.None };
             for (int i = 0; i < reactions.Length; i++)
             {
                 var stop = new GameObject(names[i]);
                 stop.transform.SetParent(captureRoot, false);
-                stop.transform.position = SurfacePoint(-6f, 4f);
+                stop.transform.position = i == 4 ? SurfacePoint(0f, 0f) : SurfacePoint(-6f, 4f);
                 var capture = stop.AddComponent<CaptureStop>();
                 var stage = stop.AddComponent<TylerCaptureStage>();
                 stage.reaction = reactions[i];
-                stage.lightTyler = i != 0;
+                stage.lightTyler = i > 0 && i < 4;
+                stage.shareLight = i == 4;
+                if (stage.lightTyler)
+                {
+                    stage.fillLight = TylerBuilder.BuildShareLight(stop.transform);
+                    stage.fillLight.name = "Tyler Capture Light";
+                    stage.fillLight.intensity = 2f;
+                }
+                if (stage.shareLight) stop.AddComponent<LightCaptureStage>().energy = 0f;
                 stage.witchOffset = reactions[i] == TylerReaction.Whine
                     ? new Vector3(0f, 12f, 16f) : new Vector3(0f, 0f, 10f);
                 Vector3 position = stage.GetTylerPosition(stop.transform);

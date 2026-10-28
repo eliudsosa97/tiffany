@@ -18,10 +18,14 @@ namespace TiffanyGame
         public AudioClip whineClip;
         public AudioClip growlClip;
         public Animator animator;
+        public Light shareLight;
+        public PlayerSoul soul;
+        public ShareMode shareMode = ShareMode.LightOnly;
         public float repathThreshold = 0.5f;
         public float nearPlayerRadius = 6f;
 
         public TylerReaction Reaction { get; private set; }
+        public bool SharingLight { get; private set; }
         public bool NearPlayer
         {
             get
@@ -44,6 +48,7 @@ namespace TiffanyGame
         }
 
         private Tyler brain;
+        private readonly TylerLightShare lightShare = new TylerLightShare();
         private bool heardMimic;
         private NavMeshAgent agent;
         private Vector3 previousPlayerPosition;
@@ -87,6 +92,8 @@ namespace TiffanyGame
         private void OnDisable()
         {
             if (agent != null) agent.enabled = false;
+            lightShare.Tick(0f, shareMode, false, false, false, 0f, out _);
+            SetSharingLight(false);
         }
 
         private void Start()
@@ -117,6 +124,12 @@ namespace TiffanyGame
 
         private void Update()
         {
+            bool sharing = lightShare.Tick(Time.deltaTime, shareMode,
+                soul != null && soul.Energy.IsEmpty, soul != null && NearPlayer,
+                soul != null && soul.RechargingAtCandle, soul != null ? soul.Energy.Current : 0f,
+                out float recharge);
+            if (recharge > 0f) soul.Energy.Recharge(recharge / SoulCosts.RechargePerSecond);
+            SetSharingLight(sharing);
             float speed = Speed;
             idleSeconds = speed > TylerMotion.StillSpeed ? 0f : idleSeconds + Time.deltaTime;
             if (player == null)
@@ -142,6 +155,15 @@ namespace TiffanyGame
             ApplyPose(pose);
             if (witch != null) FaceWitch(pose, witch.transform.position);
             ApplyAnimation(speed);
+        }
+
+        private void SetSharingLight(bool sharing)
+        {
+            if (SharingLight == sharing) return;
+            SharingLight = sharing;
+            if (shareLight != null) shareLight.enabled = sharing;
+            Debug.Log(sharing ? GameInfo.LogPrefix + " Tyler comparte su luz"
+                : GameInfo.LogPrefix + " Tyler deja de compartir su luz");
         }
 
         private void EnterReaction(TylerReaction reaction)
