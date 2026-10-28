@@ -70,6 +70,7 @@ $UNITY -batchmode -projectPath . -executeMethod TiffanyGame.EditorTools.BuildToo
 "Builds/Mac/tiffany.app/Contents/MacOS/Tiffany" -autocapture <carpeta> -screen-width 1600 -screen-height 900 -screen-fullscreen 0
 # Video: cuadros PNG a 30 fps durante los segundos indicados
 "Builds/Mac/tiffany.app/Contents/MacOS/Tiffany" -capturevideo <carpeta> -captureseconds 10 -screen-width 1600 -screen-height 900 -screen-fullscreen 0
+"Builds/Mac/tiffany.app/Contents/MacOS/Tiffany" -motiondemo -capturevideo <carpeta> -captureseconds 10 -screen-width 1600 -screen-height 900 -screen-fullscreen 0
 ```
 
 Con el editor abierto, el modo batch falla.
