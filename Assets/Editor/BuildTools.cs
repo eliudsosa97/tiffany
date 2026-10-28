@@ -7,12 +7,14 @@ namespace TiffanyGame.EditorTools
 {
     public static class BuildTools
     {
+        public const string WebTemplate = "PROJECT:Tiffany";
+
         [MenuItem("Tiffany/Build Web")]
         public static void BuildWeb()
         {
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true;
-            PlayerSettings.WebGL.template = "APPLICATION:Default";
+            PlayerSettings.WebGL.template = WebTemplate;
             Run(BuildTarget.WebGL, "Builds/Web");
         }
 
