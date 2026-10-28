@@ -1,26 +1,28 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace TiffanyGame
 {
     public enum PlaythroughMilestone
     {
-        Memory1, Ball, Light, Flash, Hide, LeaveHide, Memory2, Recharge2, Kindle,
-        Memory3, Recharge3, MoveObject, Memory4, Recharge4, Vanish, Memory5,
+        Memory1, Ball, Light, Flash, Kindle, MoveObject, Hide, LeaveHide, Memory2, Recharge2,
+        Memory3, Recharge3, Memory4, Recharge4, Vanish, Memory5,
         Capture, Respawn, LakeCandle, Road, Manifest
     }
 
     public struct PlaythroughObservation
     {
         public Vector3 Position;
-        public bool AtTarget, MemoryFound, TylerVisible, LightOn, Flashing, Hidden;
+        public bool AtTarget, MemoryFound, BallCollected, LightOn, Flashing, Hidden;
         public bool CandleLit, ObjectMoved, Vanished, CheckpointReached, Respawning, AtRespawn, Credits, Frozen;
         public float Energy;
+        public string MissingContent;
     }
 
     public struct PlaythroughCommand
     {
-        public bool Move, Repath, Interact, ToggleLight, Flash, Kindle, MoveObject, Vanish, ShowTyler, ForceRespawn;
+        public bool Move, Repath, Interact, ToggleLight, Flash, Kindle, MoveObject, Vanish, ForceRespawn;
     }
 
     public sealed class PlaythroughPlan
@@ -31,6 +33,7 @@ namespace TiffanyGame
         public const float ProgressDistance = 1f;
         const float PressInterval = 0.3f;
         readonly PlaythroughMilestone[] milestones;
+        readonly List<string> missingContent = new List<string>();
         readonly float timeout;
         Vector3 progressPosition;
         float stalledSeconds, pressCooldown;
@@ -45,6 +48,7 @@ namespace TiffanyGame
         public int ExitCode { get; private set; } = -1;
         public string FailureReason { get; private set; }
         public string FirstConsoleError { get; private set; }
+        public IReadOnlyList<string> MissingContent => missingContent;
 
         public PlaythroughPlan(PlaythroughMilestone[] milestones = null, float timeout = DefaultTimeout)
         {
@@ -83,13 +87,17 @@ namespace TiffanyGame
                 Fail("tiempo límite agotado");
                 return default;
             }
-            if (Satisfied(in observation))
+            if (observation.MissingContent != null || Satisfied(in observation))
             {
+                bool skipLeaveHide = Current == PlaythroughMilestone.Hide && observation.MissingContent != null;
+                if (observation.MissingContent != null && !missingContent.Contains(observation.MissingContent))
+                    missingContent.Add(observation.MissingContent);
                 CompletedCount++;
+                if (skipLeaveHide && CompletedCount < Count && Current == PlaythroughMilestone.LeaveHide) CompletedCount++;
                 if (CompletedCount == Count)
                 {
                     if (FirstConsoleError != null) Fail("error de consola durante la partida");
-                    else { Finished = true; ExitCode = 0; }
+                    else { Finished = true; ExitCode = missingContent.Count == 0 ? 0 : 2; }
                 }
                 MilestoneElapsed = stalledSeconds = pressCooldown = 0f;
                 trackingMovement = forceRequested = false;
@@ -112,7 +120,6 @@ namespace TiffanyGame
                 command.Kindle = Current == PlaythroughMilestone.Kindle;
                 command.MoveObject = Current == PlaythroughMilestone.MoveObject;
                 command.Vanish = Current == PlaythroughMilestone.Vanish;
-                command.ShowTyler = Current == PlaythroughMilestone.Ball;
             }
             if (Current == PlaythroughMilestone.Capture && MilestoneElapsed >= CaptureTimeout && !forceRequested)
             {
@@ -128,7 +135,7 @@ namespace TiffanyGame
             if (MemoryId(Current) > 0) return o.MemoryFound;
             switch (Current)
             {
-                case PlaythroughMilestone.Ball: return o.AtTarget && o.TylerVisible;
+                case PlaythroughMilestone.Ball: return o.AtTarget && o.BallCollected;
                 case PlaythroughMilestone.Light: return o.LightOn;
                 case PlaythroughMilestone.Flash: return o.Flashing;
                 case PlaythroughMilestone.Hide: return o.Hidden;
@@ -186,7 +193,7 @@ namespace TiffanyGame
         public static string Label(PlaythroughMilestone milestone) => milestone switch
         {
             PlaythroughMilestone.Memory1 => "lápida (recuerdo 1)",
-            PlaythroughMilestone.Ball => "pelota y Tyler",
+            PlaythroughMilestone.Ball => "recoger la pelota",
             PlaythroughMilestone.Light => "luz",
             PlaythroughMilestone.Flash => "destello",
             PlaythroughMilestone.Hide => "entrar al escondite",

@@ -13,7 +13,28 @@ namespace TiffanyGame
         bool quitOnFinish, reported;
         int selected = -1;
         string earlyError;
+        static string startupError;
         public PlaythroughPlan Plan { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void BeforeSceneLoad()
+        {
+#if !UNITY_WEBGL || UNITY_EDITOR
+            CaptureStartupErrors(Environment.GetCommandLineArgs());
+#endif
+        }
+
+        public static void CaptureStartupErrors(string[] args)
+        {
+            Application.logMessageReceived -= ReceiveStartupLog;
+            startupError = null;
+            if (Array.IndexOf(args, "-playthrough") >= 0) Application.logMessageReceived += ReceiveStartupLog;
+        }
+
+        static void ReceiveStartupLog(string message, string stackTrace, LogType type)
+        {
+            if (startupError == null && (type == LogType.Error || type == LogType.Exception)) startupError = message;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
@@ -35,7 +56,10 @@ namespace TiffanyGame
         {
             Plan = plan ?? throw new ArgumentNullException(nameof(plan));
             quitOnFinish = quit;
+            if (startupError != null) Plan.RecordConsoleError(startupError);
             if (earlyError != null) Plan.RecordConsoleError(earlyError);
+            Application.logMessageReceived -= ReceiveStartupLog;
+            startupError = null;
         }
 
         void Awake() => Application.logMessageReceived += ReceiveLog;
@@ -65,18 +89,22 @@ namespace TiffanyGame
         {
             NeutralInput();
             if (Plan.Finished) { Report(); return; }
-            if (selected != Plan.CompletedCount)
+            bool targetChanged = selected != Plan.CompletedCount;
+            if (targetChanged)
             {
                 selected = Plan.CompletedCount;
                 scene.Select(Plan.Current);
-                if (PlaythroughPlan.NeedsNavigation(Plan.Current) && !CalculatePath()) return;
             }
             PlaythroughMilestone milestone = Plan.Current;
             var observation = scene.Observe();
+            if (targetChanged && observation.MissingContent == null
+                && PlaythroughPlan.NeedsNavigation(milestone) && !CalculatePath()) return;
+            int missingCount = Plan.MissingContent.Count;
             var command = Plan.Tick(Time.unscaledDeltaTime, in observation);
+            if (Plan.MissingContent.Count > missingCount) LogMilestone("faltante: " + Plan.MissingContent[missingCount]);
             if (Plan.CompletedCount != selected)
             {
-                LogMilestone(PlaythroughPlan.Label(milestone));
+                if (observation.MissingContent == null) LogMilestone(PlaythroughPlan.Label(milestone));
                 if (Plan.Finished) Report();
                 return;
             }
@@ -128,9 +156,13 @@ namespace TiffanyGame
             if (reported) return;
             reported = true;
             NeutralInput();
-            Debug.Log(Plan.ExitCode == 0
-                ? string.Format(CultureInfo.InvariantCulture, "{0} Partida completa en {1:0.0}s", GameInfo.LogPrefix, Plan.Elapsed)
-                : $"{GameInfo.LogPrefix} Partida fallida en {PlaythroughPlan.Label(Plan.Current)}: {Plan.FailureReason}");
+            Debug.Log(Plan.ExitCode switch
+            {
+                0 => string.Format(CultureInfo.InvariantCulture, "{0} Partida completa en {1:0.0}s", GameInfo.LogPrefix, Plan.Elapsed),
+                2 => string.Format(CultureInfo.InvariantCulture, "{0} Partida completa con faltantes en {1:0.0}s: {2}",
+                    GameInfo.LogPrefix, Plan.Elapsed, string.Join("; ", Plan.MissingContent)),
+                _ => $"{GameInfo.LogPrefix} Partida fallida en {PlaythroughPlan.Label(Plan.Current)}: {Plan.FailureReason}"
+            });
             if (quitOnFinish) Application.Quit(Plan.ExitCode);
             enabled = false;
         }
@@ -147,7 +179,6 @@ namespace TiffanyGame
         {
             Application.logMessageReceived -= ReceiveLog;
             GameInput.ClearOverrides();
-            scene?.Dispose();
         }
     }
 }

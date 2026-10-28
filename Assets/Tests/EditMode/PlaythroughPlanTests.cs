@@ -11,9 +11,10 @@ namespace TiffanyGame.Tests
             var expected = new[]
             {
                 PlaythroughMilestone.Memory1, PlaythroughMilestone.Ball, PlaythroughMilestone.Light,
-                PlaythroughMilestone.Flash, PlaythroughMilestone.Hide, PlaythroughMilestone.LeaveHide,
-                PlaythroughMilestone.Memory2, PlaythroughMilestone.Recharge2, PlaythroughMilestone.Kindle,
-                PlaythroughMilestone.Memory3, PlaythroughMilestone.Recharge3, PlaythroughMilestone.MoveObject,
+                PlaythroughMilestone.Flash, PlaythroughMilestone.Kindle, PlaythroughMilestone.MoveObject,
+                PlaythroughMilestone.Hide, PlaythroughMilestone.LeaveHide,
+                PlaythroughMilestone.Memory2, PlaythroughMilestone.Recharge2,
+                PlaythroughMilestone.Memory3, PlaythroughMilestone.Recharge3,
                 PlaythroughMilestone.Memory4, PlaythroughMilestone.Recharge4, PlaythroughMilestone.Vanish,
                 PlaythroughMilestone.Memory5, PlaythroughMilestone.Capture, PlaythroughMilestone.Respawn,
                 PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
@@ -41,6 +42,66 @@ namespace TiffanyGame.Tests
             observation.MemoryFound = true;
             plan.Tick(0.1f, in observation);
             Assert.AreEqual(PlaythroughMilestone.Ball, plan.Current);
+        }
+
+        [Test]
+        public void ReachingTheBallDoesNotProvePickup()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Ball });
+            var observation = new PlaythroughObservation { AtTarget = true };
+            plan.Tick(0.1f, in observation);
+            Assert.IsFalse(plan.Finished);
+            Assert.AreEqual(0, plan.CompletedCount);
+            observation.BallCollected = true;
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(0, plan.ExitCode);
+        }
+
+        [Test]
+        public void MissingContentSkipsHidingAndReturnsCodeTwoOnlyAfterFinishing()
+        {
+            var plan = new PlaythroughPlan(new[]
+            {
+                PlaythroughMilestone.Ball, PlaythroughMilestone.Hide, PlaythroughMilestone.LeaveHide,
+                PlaythroughMilestone.Manifest
+            });
+            var observation = new PlaythroughObservation { AtTarget = true, MissingContent = "recogida real de la pelota" };
+            plan.Tick(0.1f, in observation);
+            Assert.IsFalse(plan.Finished);
+            Assert.AreEqual(-1, plan.ExitCode);
+            Assert.AreEqual(PlaythroughMilestone.Hide, plan.Current);
+            observation.MissingContent = "escondite alcanzable por NavMesh desde la ruta";
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsFalse(command.Interact);
+            Assert.IsFalse(command.Move);
+            Assert.AreEqual(PlaythroughMilestone.Manifest, plan.Current);
+            Assert.AreEqual(3, plan.CompletedCount);
+            observation.MissingContent = null;
+            observation.Credits = true;
+            plan.Tick(0.1f, in observation);
+            Assert.IsTrue(plan.Finished);
+            Assert.AreEqual(2, plan.ExitCode);
+            Assert.AreEqual(4, plan.CompletedCount);
+            CollectionAssert.AreEqual(new[] { "recogida real de la pelota", "escondite alcanzable por NavMesh desde la ruta" },
+                plan.MissingContent);
+            Assert.IsNull(plan.FailureReason);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ConsoleErrorOrTimeoutTakesPriorityOverMissingContent(bool timeout)
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Ball, PlaythroughMilestone.Manifest }, 2f);
+            var observation = new PlaythroughObservation { AtTarget = true, MissingContent = "recogida real de la pelota" };
+            plan.Tick(0.1f, in observation);
+            observation.MissingContent = null;
+            observation.Credits = !timeout;
+            if (!timeout) plan.RecordConsoleError("error de consola");
+            plan.Tick(timeout ? 2f : 0.1f, in observation);
+            Assert.IsTrue(plan.Finished);
+            Assert.AreEqual(1, plan.ExitCode);
+            Assert.AreEqual(1, plan.MissingContent.Count);
+            StringAssert.Contains(timeout ? "tiempo límite" : "error de consola", plan.FailureReason);
         }
 
         [Test]
@@ -171,9 +232,19 @@ namespace TiffanyGame.Tests
             Assert.Less(Vector3.Distance(direction, PlayerMotion.CameraRelative(input, yaw)), 0.0001f);
         }
 
+        [TestCase("-playthrough", false)]
+        [TestCase("-motiondemo", true)]
+        [TestCase("-playthrough-timeout", true)]
+        [TestCase("", true)]
+        public void VideoCaptureLeavesProcessExitToPlaythrough(string mode, bool expected)
+        {
+            Assert.AreEqual(expected, VideoCapture.ShouldQuit(new[] { "Tiffany", "-capturevideo", "frames", mode }));
+            Assert.AreEqual(expected, VideoCapture.ShouldQuit(new[] { "Tiffany", mode, "-capturevideo", "frames" }));
+        }
+
         static PlaythroughObservation CompletedObservation(PlaythroughMilestone milestone) => new PlaythroughObservation
         {
-            AtTarget = true, MemoryFound = true, TylerVisible = true, LightOn = true, Flashing = true,
+            AtTarget = true, MemoryFound = true, BallCollected = true, LightOn = true, Flashing = true,
             Hidden = milestone == PlaythroughMilestone.Hide, CandleLit = true, ObjectMoved = true, Vanished = true,
             CheckpointReached = true, Energy = SoulEnergy.Max, Respawning = milestone == PlaythroughMilestone.Capture,
             AtRespawn = true, Credits = true

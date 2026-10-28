@@ -1,12 +1,11 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using Object = UnityEngine.Object;
 
 namespace TiffanyGame
 {
-    public sealed class PlaythroughScene : IDisposable
+    public sealed class PlaythroughScene
     {
         readonly MemoryCollector collector;
         readonly PlayerController player;
@@ -17,15 +16,12 @@ namespace TiffanyGame
         readonly VanishPower vanish;
         readonly CandleKindler kindler;
         readonly EndingController ending;
-        readonly TylerController tyler;
         readonly Transform route;
         readonly Transform ball;
         readonly Transform[] clearings;
         readonly CandleSpot[] family = new CandleSpot[8];
         readonly MemorySpot[] memories = new MemorySpot[5];
-        readonly List<GameObject> copies = new List<GameObject>();
-        readonly bool tylerWasActive;
-        CandleSpot kindleTarget, originalKindle, checkpoint;
+        CandleSpot kindleTarget, checkpoint;
         MovableObject movable;
         HideVolume hideVolume;
         PlaythroughMilestone milestone;
@@ -34,6 +30,7 @@ namespace TiffanyGame
 
         public Vector3 Position => player.transform.position;
         public Vector3 Target { get; private set; }
+        bool AtTarget => PlaythroughPlan.HorizontalDistance(Position, Target) <= arrivalRadius;
         public float CameraYaw => player.viewCamera != null ? player.viewCamera.transform.eulerAngles.y : 0f;
         public Vector2 Aim => milestone == PlaythroughMilestone.MoveObject
             ? PlaythroughNavigation.CameraInput((movable.transform.position - Position).normalized, CameraYaw)
@@ -50,7 +47,6 @@ namespace TiffanyGame
             vanish = Require(player.GetComponent<VanishPower>(), "VanishPower");
             kindler = Require(player.GetComponent<CandleKindler>(), "CandleKindler");
             ending = Require(Object.FindAnyObjectByType<EndingController>(), "EndingController");
-            tyler = Require(collector.tyler, "Tyler");
             var tracker = Require(Object.FindAnyObjectByType<WitchChapterTracker>(), "WitchChapterTracker");
             route = tracker.transform;
             clearings = tracker.clearings;
@@ -65,40 +61,24 @@ namespace TiffanyGame
             ball = Require(clearings[0].Find("Ball"), "Ball");
             foreach (var memory in collector.spots)
                 if (memory != null && memory.memoryId >= 1 && memory.memoryId <= 5) memories[memory.memoryId - 1] = memory;
-            tylerWasActive = tyler.gameObject.activeSelf;
         }
 
         public void Prepare(PlaythroughPlan plan, Action<string> log)
         {
-            if (plan.Includes(PlaythroughMilestone.Ball)) tyler.gameObject.SetActive(false);
             if (plan.Includes(PlaythroughMilestone.Kindle))
             {
                 for (int i = 0; i < kindler.candles.Length; i++)
-                    if (kindler.candles[i] != null && !kindler.candles[i].Candle.IsLit
-                        && kindler.candles[i].transform.IsChildOf(clearings[1])) { kindleTarget = kindler.candles[i]; break; }
-                if (kindleTarget == null)
-                {
-                    if (kindler.candles.Length == 0) throw new InvalidOperationException("No hay veladoras para encender.");
-                    originalKindle = Require(kindler.candles[0], "veladora apagada");
-                    kindleTarget = Copy(originalKindle, family[1].transform.position + Vector3.right * 1.4f, clearings[1]);
-                    kindler.candles[0] = kindleTarget;
-                    log("veladora de prueba copiada a la planta de agua");
-                }
+                    if (kindler.candles[i] != null && kindler.candles[i].isActiveAndEnabled
+                        && kindler.candles[i].kind == CandleKind.Kindled && !kindler.candles[i].Candle.IsLit)
+                    { kindleTarget = kindler.candles[i]; break; }
+                Require(kindleTarget, "veladora apagada para encender");
             }
             if (plan.Includes(PlaythroughMilestone.MoveObject))
             {
                 var objects = MovableObject.Active;
                 for (int i = 0; i < objects.Count; i++)
-                    if (!objects[i].Used && objects[i].transform.IsChildOf(clearings[2])) { movable = objects[i]; break; }
-                if (movable == null)
-                {
-                    if (objects.Count == 0) throw new InvalidOperationException("No hay objetos que mover.");
-                    var source = objects[0];
-                    Vector3 position = family[2].transform.position + Vector3.right * 1.2f;
-                    position.y += source.transform.localPosition.y;
-                    movable = Copy(source, position, clearings[2]);
-                    log("objeto de prueba copiado a las vías");
-                }
+                    if (!objects[i].Used) { movable = objects[i]; break; }
+                Require(movable, "objeto movible sin usar");
             }
             if (plan.Includes(PlaythroughMilestone.Hide))
             {
@@ -106,41 +86,30 @@ namespace TiffanyGame
                 hideVolume = NearestHide(volumes, true);
                 if (hideVolume == null)
                 {
-                    hideVolume = Require(NearestHide(volumes, false), "HideVolume");
-                    log("escondite más cercano de la escena: " + hideVolume.name);
-                    var path = new NavMeshPath();
-                    if (!NavMesh.SamplePosition(hideVolume.HidePoint, out var end, 2f, NavMesh.AllAreas)
-                        || !NavMesh.CalculatePath(Position, end.position, NavMesh.AllAreas, path)
-                        || path.status != NavMeshPathStatus.PathComplete)
-                    {
-                        hideVolume = Copy(hideVolume, clearings[0].TransformPoint(new Vector3(6f, 0f, -6f)), clearings[0]);
-                        log("escondite sin sendero conectado: copia temporal en el cementerio");
-                    }
+                    hideVolume = NearestHide(volumes, false);
+                    if (hideVolume != null) log("escondite más cercano de la escena: " + hideVolume.name);
                 }
             }
-            Physics.SyncTransforms();
         }
 
         HideVolume NearestHide(HideVolume[] volumes, bool onRoute)
         {
             HideVolume nearest = null;
             float distance = float.PositiveInfinity;
+            var path = new NavMeshPath();
+            if (!NavMesh.SamplePosition(Position, out var start, 5f, NavMesh.AllAreas)) return null;
             foreach (var volume in volumes)
             {
-                if (onRoute && !volume.transform.IsChildOf(route)) continue;
+                if (!volume.isActiveAndEnabled || (onRoute && !volume.transform.IsChildOf(route))) continue;
                 float candidate = (volume.HidePoint - Position).sqrMagnitude;
                 if (candidate >= distance) continue;
+                if (!NavMesh.SamplePosition(volume.HidePoint, out var end, 0.5f, NavMesh.AllAreas)
+                    || !NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path)
+                    || path.status != NavMeshPathStatus.PathComplete) continue;
                 nearest = volume;
                 distance = candidate;
             }
             return nearest;
-        }
-
-        T Copy<T>(T source, Vector3 position, Transform parent) where T : Component
-        {
-            T copy = Object.Instantiate(source, position, source.transform.rotation, parent);
-            copies.Add(copy.gameObject);
-            return copy;
         }
 
         public void Select(PlaythroughMilestone next)
@@ -161,7 +130,9 @@ namespace TiffanyGame
                     Target = ball.position;
                     arrivalRadius = 1f;
                     break;
-                case PlaythroughMilestone.Hide: Target = hideVolume.HidePoint; break;
+                case PlaythroughMilestone.Hide:
+                    if (hideVolume != null) Target = hideVolume.HidePoint;
+                    break;
                 case PlaythroughMilestone.Recharge2: SelectCandle(1); break;
                 case PlaythroughMilestone.Recharge3: SelectCandle(2); break;
                 case PlaythroughMilestone.Recharge4: SelectCandle(3); break;
@@ -189,9 +160,14 @@ namespace TiffanyGame
         public PlaythroughObservation Observe() => new PlaythroughObservation
         {
             Position = Position,
-            AtTarget = PlaythroughPlan.HorizontalDistance(Position, Target) <= arrivalRadius,
+            AtTarget = AtTarget,
             MemoryFound = PlaythroughPlan.MemoryId(milestone) > 0 && collector.IsFound(PlaythroughPlan.MemoryId(milestone)),
-            TylerVisible = tyler.gameObject.activeInHierarchy && tyler.figure.activeInHierarchy,
+            MissingContent = milestone switch
+            {
+                PlaythroughMilestone.Ball when AtTarget => "recogida real de la pelota",
+                PlaythroughMilestone.Hide when hideVolume == null => "escondite alcanzable por NavMesh desde la ruta",
+                _ => null
+            },
             LightOn = light.State.IsOn,
             Flashing = light.State.IsFlashing,
             Hidden = hiding.Hidden,
@@ -208,16 +184,7 @@ namespace TiffanyGame
 
         public void Apply(in PlaythroughCommand command)
         {
-            if (command.ShowTyler) tyler.gameObject.SetActive(true);
             if (command.ForceRespawn) respawn.Trigger();
-        }
-
-        public void Dispose()
-        {
-            if (originalKindle != null && kindler != null) kindler.candles[0] = originalKindle;
-            if (tyler != null) tyler.gameObject.SetActive(tylerWasActive);
-            foreach (var copy in copies) if (copy != null) Object.Destroy(copy);
-            copies.Clear();
         }
 
         static T Require<T>(T value, string name) where T : Object =>
