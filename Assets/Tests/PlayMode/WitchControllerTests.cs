@@ -17,6 +17,7 @@ namespace TiffanyGame.Tests
         private NavMeshAgent agent;
         private WitchController controller;
         private Light fireLight;
+        internal WitchController Controller => controller;
 
         [SetUp]
         public void SetUp()

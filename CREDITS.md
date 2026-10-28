@@ -40,6 +40,11 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/cackle_1.wav` | [Witch's Laugh](https://freesound.org/s/348142/) | NikoMyth | CC0 |
 | `Assets/Audio/Sfx/cackle_2.wav` | [Laughing Witch (or Old Woman) in a Rocking Chair](https://freesound.org/s/179924/) | craiggroshek | CC0 |
 | `Assets/Audio/Sfx/cackle_3.wav` | [witch (laughing)](https://freesound.org/s/237984/) | ZyryTSounds | CC0 |
+| `Assets/Audio/Sfx/monster_step_2.wav` a `monster_step_4.wav` | [Heavy Footsteps \| Crunchy Thuds](https://freesound.org/s/854190/) | GammaGool | CC0 |
+| `Assets/Audio/Sfx/witch_land.wav` | [BODY FALL - V HVY - DIRT](https://freesound.org/s/504626/) | leonelmail | CC0 |
+| `Assets/Audio/Sfx/witch_breath.wav` | [Monster breathing](https://freesound.org/s/567723/) | iut_Paris8 | CC0 |
+| `Assets/Audio/Sfx/witch_crack.wav` | [Hard Candy / Bone Crunch](https://freesound.org/s/392883/) | clif_creates | CC0 |
+| `Assets/Audio/Sfx/witch_whoosh.wav` | [Whoosh](https://freesound.org/s/60013/) | qubodup | CC0 |
 | `Assets/Audio/Sfx/bottle.wav` | [Small_Glass_Bottle_Wood_Floor.wav](https://freesound.org/s/235602/) | tcrocker68 | CC0 |
 | `Assets/Audio/Sfx/can.wav` | [CanBounce 2.wav](https://freesound.org/s/92622/) | nigelcoop | CC0 |
 | `Assets/Audio/Sfx/pot.wav` | [Breaking pot short](https://freesound.org/s/810043/) | anna_bliss | CC0 |
