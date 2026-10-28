@@ -27,6 +27,7 @@ namespace TiffanyGame.EditorTools
             var player = CreatePlayer(spawn, out var playerLight);
             CreateCamera(player);
             playerLight.witch = BuildWitch(spawn.parent, player.transform);
+            BuildTyler(spawn.parent, player.transform);
             var storm = StormBuilder.BuildStorm(player.transform, spawn);
             BuildCandles(spawn.parent, player.GetComponent<PlayerSoul>(), storm);
             BuildInterface();
@@ -280,6 +281,60 @@ namespace TiffanyGame.EditorTools
                 var stage = stop.AddComponent<LightCaptureStage>();
                 stage.energy = i == 1 ? 8f : SoulEnergy.Max;
                 stage.flash = i == 2;
+            }
+        }
+
+        static void BuildTyler(Transform zoneRoot, Transform player)
+        {
+            var tyler = new GameObject("Tyler");
+            tyler.transform.SetParent(zoneRoot, false);
+            tyler.transform.position = player.position - player.forward * 1.5f;
+            var agent = tyler.AddComponent<NavMeshAgent>();
+            agent.radius = 0.25f;
+            agent.height = 0.6f;
+            agent.avoidancePriority = 99;
+            agent.enabled = false;
+            var controller = tyler.AddComponent<TylerController>();
+            controller.player = player;
+            controller.witch = zoneRoot.GetComponentInChildren<WitchController>();
+            controller.figure = TylerBuilder.BuildFigure(tyler.transform, out var head, out var stand, out var crouch);
+            controller.head = head;
+            controller.standBody = stand;
+            controller.crouchBody = crouch;
+            controller.voice = tyler.AddComponent<AudioSource>();
+            controller.voice.spatialBlend = 0f;
+            controller.voice.playOnAwake = false;
+            var marker = new GameObject("Memory Marker").transform;
+            marker.SetParent(zoneRoot, false);
+            marker.position = SurfacePoint(15f, 20f);
+            controller.nextMemory = marker;
+
+            var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl" };
+            var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl };
+            for (int i = 0; i < reactions.Length; i++)
+            {
+                var stop = new GameObject(names[i]);
+                stop.transform.SetParent(zoneRoot, false);
+                stop.transform.position = SurfacePoint(-6f, 4f);
+                var capture = stop.AddComponent<CaptureStop>();
+                var stage = stop.AddComponent<TylerCaptureStage>();
+                stage.reaction = reactions[i];
+                stage.lightTyler = i != 0;
+                stage.witchOffset = reactions[i] == TylerReaction.Whine
+                    ? new Vector3(0f, 12f, 16f) : new Vector3(0f, 0f, 10f);
+                Vector3 position = stage.GetTylerPosition(stop.transform);
+                Vector3 target = TylerPoses.For(stage.reaction).FaceWitch
+                    ? stop.transform.position + stop.transform.rotation * stage.witchOffset
+                    : stage.reaction == TylerReaction.Guide ? marker.position : stop.transform.position;
+                Vector3 direction = Vector3.ProjectOnPlane(target - position, Vector3.up).normalized;
+                Vector3 side = Vector3.Cross(Vector3.up, direction);
+                Vector3 toPlayer = Vector3.ProjectOnPlane(stop.transform.position - position, Vector3.up);
+                if (Vector3.Dot(side, toPlayer) > 0f) side = -side;
+                Vector3 cameraOffset = (side - toPlayer.normalized * 0.35f).normalized * 3f;
+                capture.overrideCamera = true;
+                capture.cameraPosition = TylerCaptureStage.GroundPosition(position + cameraOffset) + Vector3.up * 1.2f;
+                Vector3 focus = position + toPlayer * 0.25f + Vector3.up * 0.4f;
+                capture.cameraRotation = Quaternion.LookRotation(focus - capture.cameraPosition);
             }
         }
 
