@@ -48,7 +48,6 @@ namespace TiffanyGame.EditorTools
 
             var material = Get(name, tint, smoothness: smoothness);
             material.SetTexture("_BaseMap", diffuse);
-            material.mainTexture = diffuse;
             material.SetTexture("_BumpMap", normal);
             material.EnableKeyword("_NORMALMAP");
             material.SetFloat("_BumpScale", 1f);
