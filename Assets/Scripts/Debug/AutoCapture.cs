@@ -16,14 +16,6 @@ namespace TiffanyGame
             return;
 #else
             var args = System.Environment.GetCommandLineArgs();
-            // -screen-quality no cambia la calidad en el player de Mac.
-            for (int i = 0; i < args.Length - 1; i++)
-            {
-                if (args[i] != "-capturequality") continue;
-                int level = System.Array.IndexOf(QualitySettings.names, args[i + 1]);
-                if (level >= 0) QualitySettings.SetQualityLevel(level, true);
-                else Debug.LogWarning($"{GameInfo.LogPrefix} No existe la calidad '{args[i + 1]}'.");
-            }
             for (int i = 0; i < args.Length - 1; i++)
             {
                 if (args[i] != "-autocapture") continue;
