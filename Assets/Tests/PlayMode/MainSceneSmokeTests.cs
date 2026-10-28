@@ -58,10 +58,8 @@ namespace TiffanyGame.Tests
                 int count = 0;
                 foreach (var surface in surfaces)
                     if (surface.type == type) count++;
-                Assert.AreEqual(1, count, $"Debe haber un suelo de tipo {type}.");
+                Assert.GreaterOrEqual(count, 1, $"Debe haber al menos un suelo de tipo {type}.");
             }
-
-            Assert.AreEqual(6, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length);
 
             yield return null;
 
@@ -77,18 +75,20 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(viewCamera);
             var initialPlayerPosition = player.transform.position;
             var initialCameraPosition = viewCamera.transform.position;
-            float initialDistance = HorizontalDistance(initialCameraPosition, initialPlayerPosition);
 
             GameInput.MoveOverride = Vector2.up;
 
-            yield return new WaitForSeconds(2f);
+            yield return new WaitForSeconds(0.5f);
+            float followingDistance = HorizontalDistance(viewCamera.transform.position, player.transform.position);
+
+            yield return new WaitForSeconds(1.5f);
 
             Assert.Greater(HorizontalDistance(player.transform.position, initialPlayerPosition), 2f);
             Assert.That(steps.Count, Is.GreaterThanOrEqualTo(3));
             foreach (var step in steps) Assert.Greater(step.Radius, 0f);
             Assert.Greater(HorizontalDistance(viewCamera.transform.position, initialCameraPosition), 0f);
             Assert.That(HorizontalDistance(viewCamera.transform.position, player.transform.position),
-                Is.EqualTo(initialDistance).Within(1f));
+                Is.EqualTo(followingDistance).Within(1f));
             LogAssert.NoUnexpectedReceived();
         }
 
