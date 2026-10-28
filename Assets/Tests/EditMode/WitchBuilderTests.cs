@@ -11,10 +11,19 @@ namespace TiffanyGame.Tests
         GameObject root;
 
         [SetUp]
-        public void SetUp() => root = new GameObject("WitchBuilderTests");
+        public void SetUp()
+        {
+            WitchBuilder.materialFolder = "Assets/WitchBuilderTestTemp/Materials";
+            root = new GameObject("WitchBuilderTests");
+        }
 
         [TearDown]
-        public void TearDown() => Object.DestroyImmediate(root);
+        public void TearDown()
+        {
+            Object.DestroyImmediate(root);
+            AssetDatabase.DeleteAsset("Assets/WitchBuilderTestTemp");
+            WitchBuilder.materialFolder = WitchBuilder.MaterialFolder;
+        }
 
         [Test]
         public void FigureIsTallThinAndAsymmetric()
@@ -29,6 +38,32 @@ namespace TiffanyGame.Tests
             Assert.Greater(shoulderR.position.y - shoulderL.position.y, 0.1f);
             Assert.Less(CombinedBounds(shoulderL.Find("ArmL")).min.y, 0.3f);
             Assert.Greater(CombinedBounds(shoulderR.Find("ArmR")).min.y, 0.9f);
+            var head = figure.transform.Find("Head");
+            var neck = figure.transform.Find("Neck");
+            Assert.Less(head.localPosition.x, neck.localPosition.x);
+            Assert.Less(head.up.x, 0f);
+            Assert.Less(neck.up.x, 0f);
+        }
+
+        [Test]
+        public void FigureHasHairAndClothInFrontOfTheFaceAndChest()
+        {
+            var figure = WitchBuilder.BuildFigure(root.transform);
+            var torso = figure.transform.Find("Torso").GetComponent<Renderer>();
+            var head = figure.transform.Find("Head").GetComponent<Renderer>();
+            var hair = figure.transform.Find("HairFront").GetComponent<Renderer>();
+            var shawl = figure.transform.Find("ShawlFront").GetComponent<Renderer>();
+
+            Assert.AreEqual("WitchCloth", torso.sharedMaterial.name);
+            Assert.AreSame(torso.sharedMaterial, shawl.sharedMaterial);
+            Assert.AreEqual("WitchHair", hair.sharedMaterial.name);
+            Assert.Less(hair.sharedMaterial.GetColor("_BaseColor").maxColorComponent, 0.05f);
+            Assert.Greater(hair.bounds.center.z, head.bounds.max.z);
+            Assert.Greater(hair.bounds.max.y, head.bounds.center.y);
+            Assert.Less(hair.bounds.min.y, torso.bounds.max.y);
+            Assert.Greater(shawl.bounds.center.z, torso.bounds.max.z);
+            Assert.Greater(shawl.bounds.max.y, figure.transform.Find("ShoulderR").position.y);
+            Assert.Less(shawl.bounds.min.y, torso.bounds.max.y);
         }
 
         [Test]
@@ -48,7 +83,7 @@ namespace TiffanyGame.Tests
             foreach (var renderer in renderers)
             {
                 Assert.IsTrue(AssetDatabase.Contains(renderer.sharedMaterial), renderer.name);
-                StringAssert.StartsWith(WitchBuilder.MaterialFolder + "/", AssetDatabase.GetAssetPath(renderer.sharedMaterial));
+                StringAssert.StartsWith(WitchBuilder.materialFolder + "/", AssetDatabase.GetAssetPath(renderer.sharedMaterial));
                 Assert.AreEqual(ShadowCastingMode.On, renderer.shadowCastingMode, renderer.name);
                 Assert.IsTrue(renderer.receiveShadows, renderer.name);
                 Assert.AreEqual("Universal Render Pipeline/Lit", renderer.sharedMaterial.shader.name);
@@ -86,7 +121,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(ShadowCastingMode.Off, renderer.shadowCastingMode);
             Assert.IsFalse(renderer.receiveShadows);
             Assert.IsTrue(AssetDatabase.Contains(renderer.sharedMaterial));
-            StringAssert.StartsWith(WitchBuilder.MaterialFolder + "/", AssetDatabase.GetAssetPath(renderer.sharedMaterial));
+            StringAssert.StartsWith(WitchBuilder.materialFolder + "/", AssetDatabase.GetAssetPath(renderer.sharedMaterial));
             Assert.AreEqual("Universal Render Pipeline/Unlit", renderer.sharedMaterial.shader.name);
         }
 
@@ -94,7 +129,7 @@ namespace TiffanyGame.Tests
         public void MaterialsKeepTheirGuidWhenRebuilt()
         {
             WitchBuilder.BuildFigure(root.transform);
-            string path = $"{WitchBuilder.MaterialFolder}/WitchSkin.mat";
+            string path = $"{WitchBuilder.materialFolder}/WitchSkin.mat";
             string guid = AssetDatabase.AssetPathToGUID(path);
             Assert.IsNotEmpty(guid);
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -106,6 +141,19 @@ namespace TiffanyGame.Tests
 
             Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(path));
             Assert.AreEqual(color, AssetDatabase.LoadAssetAtPath<Material>(path).GetColor("_BaseColor"));
+        }
+
+        [Test]
+        public void TestsLeaveNoMaterialsInTheSceneFolder()
+        {
+            string path = WitchBuilder.MaterialFolder + "/WitchSkin.mat";
+            if (AssetDatabase.LoadAssetAtPath<Material>(path) != null)
+                Assert.Ignore("El material de la escena ya existía antes del test.");
+
+            WitchBuilder.BuildFigure(root.transform);
+            WitchBuilder.BuildFireBall(root.transform, out _);
+
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<Material>(path));
         }
 
         static Bounds CombinedBounds(Transform parent)

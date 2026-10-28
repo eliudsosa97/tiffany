@@ -7,6 +7,7 @@ namespace TiffanyGame.EditorTools
     public static class WitchBuilder
     {
         public const string MaterialFolder = "Assets/Scenes/Generated/Materials";
+        public static string materialFolder = MaterialFolder;
 
         public static GameObject BuildFigure(Transform parent)
         {
@@ -25,7 +26,7 @@ namespace TiffanyGame.EditorTools
             CreatePart("FootR", PrimitiveType.Sphere, root, new Vector3(0.08f, 0.02f, 0.045f),
                 new Vector3(0.075f, 0.04f, 0.17f), skin);
             CreatePart("Torso", PrimitiveType.Capsule, root, new Vector3(0f, 1.425f, 0f),
-                new Vector3(0.28f, 0.525f, 0.2f), skin, new Vector3(6f, 0f, 0f));
+                new Vector3(0.28f, 0.525f, 0.2f), cloth, new Vector3(6f, 0f, 0f));
 
             var shoulderL = CreateRoot("ShoulderL", root, new Vector3(-0.135f, 1.9f, 0.05f)).transform;
             var shoulderR = CreateRoot("ShoulderR", root, new Vector3(0.135f, 2.05f, 0.05f)).transform;
@@ -34,8 +35,8 @@ namespace TiffanyGame.EditorTools
             BuildArm(shoulderL, "L", new Vector3(-0.04f, -0.84f, 0f), new Vector3(-0.08f, -1.74f, 0.02f), skin);
             BuildArm(shoulderR, "R", new Vector3(0.1f, -0.55f, 0.07f), new Vector3(-0.01f, -0.85f, 0.38f), skin);
 
-            CreateSegment("Neck", root, new Vector3(0f, 1.94f, 0.06f), new Vector3(0.015f, 2.15f, 0.13f), 0.07f, skin);
-            CreatePart("Head", PrimitiveType.Sphere, root, new Vector3(0.015f, 2.23f, 0.13f),
+            CreateSegment("Neck", root, new Vector3(0f, 1.94f, 0.06f), new Vector3(-0.045f, 2.15f, 0.13f), 0.07f, skin);
+            CreatePart("Head", PrimitiveType.Sphere, root, new Vector3(-0.045f, 2.23f, 0.13f),
                 new Vector3(0.22f, 0.24f, 0.18f), skin, new Vector3(0f, 0f, 25f));
             CreatePart("HairL", PrimitiveType.Cube, root, new Vector3(-0.1f, 1.97f, -0.02f),
                 new Vector3(0.1f, 0.6f, 0.025f), hair, new Vector3(16f, 0f, -8f));
@@ -43,11 +44,15 @@ namespace TiffanyGame.EditorTools
                 new Vector3(0.12f, 0.6f, 0.025f), hair, new Vector3(12f, 0f, 2f));
             CreatePart("HairR", PrimitiveType.Cube, root, new Vector3(0.1f, 1.99f, -0.025f),
                 new Vector3(0.1f, 0.62f, 0.025f), hair, new Vector3(20f, 0f, 10f));
+            CreatePart("HairFront", PrimitiveType.Cube, root, new Vector3(-0.055f, 1.96f, 0.255f),
+                new Vector3(0.075f, 0.7f, 0.035f), hair, new Vector3(-4f, 0f, 12f));
 
             CreatePart("ShawlL", PrimitiveType.Cube, root, new Vector3(-0.145f, 1.66f, -0.055f),
                 new Vector3(0.11f, 0.55f, 0.035f), cloth, new Vector3(6f, 0f, -8f));
             CreatePart("ShawlR", PrimitiveType.Cube, root, new Vector3(0.16f, 1.77f, -0.07f),
                 new Vector3(0.11f, 0.57f, 0.035f), cloth, new Vector3(-9f, 0f, 12f));
+            CreatePart("ShawlFront", PrimitiveType.Cube, root, new Vector3(0.145f, 1.82f, 0.17f),
+                new Vector3(0.13f, 0.54f, 0.04f), cloth, new Vector3(-22f, 0f, 8f));
             CreatePart("ShawlTornEnd", PrimitiveType.Cube, root, new Vector3(-0.19f, 1.27f, -0.08f),
                 new Vector3(0.075f, 0.3f, 0.025f), cloth, new Vector3(10f, 0f, 6f));
 
@@ -128,19 +133,24 @@ namespace TiffanyGame.EditorTools
 
         private static Material GetMaterial(string name, Color color, bool unlit)
         {
-            string path = $"{MaterialFolder}/{name}.mat";
+            string path = $"{materialFolder}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material == null)
             {
+                string shaderName = unlit ? "Universal Render Pipeline/Unlit" : "Universal Render Pipeline/Lit";
+                var shader = Shader.Find(shaderName);
+                if (shader == null)
+                    throw new System.InvalidOperationException($"No se encontró el shader '{shaderName}'.");
+
                 string folder = "Assets";
-                foreach (string part in MaterialFolder.Substring("Assets/".Length).Split('/'))
+                foreach (string part in materialFolder.Substring("Assets/".Length).Split('/'))
                 {
                     string next = $"{folder}/{part}";
                     if (!AssetDatabase.IsValidFolder(next)) AssetDatabase.CreateFolder(folder, part);
                     folder = next;
                 }
 
-                material = new Material(Shader.Find(unlit ? "Universal Render Pipeline/Unlit" : "Universal Render Pipeline/Lit"));
+                material = new Material(shader);
                 material.name = name;
                 AssetDatabase.CreateAsset(material, path);
             }
