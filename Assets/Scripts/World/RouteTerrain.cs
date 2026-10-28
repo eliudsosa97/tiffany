@@ -10,6 +10,9 @@ namespace TiffanyGame
         public const float RoadWidth = 8f;
         public const float CliffHeight = 6f;
         public const float RampLanding = 6f;
+        public const float ForestTileSize = 32f;
+        public const string ForestArea = "Forest";
+        public const float ForestCost = 4f;
         public static readonly Vector2 LakeCenter = new Vector2(-32f, 44f);
         public static readonly Vector2 LakeRadius = new Vector2(65f, 52f);
         public static readonly Vector2 CliffFoot = new Vector2(75f, 94f);
@@ -32,7 +35,8 @@ namespace TiffanyGame
             RouteLayout.RiverSpan(out var start, out var end);
             Crossing = (start + end) * 0.5f;
             Town = Rect.MinMaxRect(-73f, 160f, 146f, 242f);
-            Bounds = Rect.MinMaxRect(Mathf.Floor((LakeCenter.x - LakeRadius.x - Margin) / 2f) * 2f, -38f, 218f, Town.yMax + Margin);
+            Bounds = Rect.MinMaxRect(Mathf.Floor((LakeCenter.x - LakeRadius.x - Margin) / 2f) * 2f,
+                RouteLayout.Clearing(2).z - RouteLayout.ClearingSize * 0.5f - Margin, 218f, Town.yMax + Margin);
             Road = Rect.MinMaxRect(Bounds.xMin, RouteLayout.Clearing(6).z - RoadWidth * 0.5f,
                 150f, RouteLayout.Clearing(6).z + RoadWidth * 0.5f);
             river = new[] { new Vector2(150f, 116f), new Vector2(120f, 121f),
@@ -53,6 +57,28 @@ namespace TiffanyGame
 
         public bool IsWalkable(float x, float z) => WalkableDistance(x, z) <= 0f;
 
+        public GroundType ForestGround(float x, float z)
+        {
+            int column = Mathf.FloorToInt((x - Bounds.xMin) / ForestTileSize);
+            int row = Mathf.FloorToInt((z - Bounds.yMin) / ForestTileSize);
+            return ((column * 17 + row * 31) & 3) == 0 ? GroundType.Branches : GroundType.Leaves;
+        }
+
+        public float TrainDistance(float x, float z) => SegmentDistance(new Vector2(x, z),
+            Xz(RouteLayout.Clearing(2)), new Vector2(RouteLayout.Clearing(2).x, RouteLayout.TrainNorthEnd));
+
+        public float TrainHeight(float z)
+        {
+            Vector3 tracks = RouteLayout.Clearing(2);
+            float south = tracks.z + RouteLayout.TrainSouthRampLength;
+            float north = RouteLayout.TrainNorthEnd - RouteLayout.TrainRampLength;
+            float Deck(float at) => Mathf.Max(0f, GroundHeight(tracks.x, at)) + RouteLayout.TrainClearance;
+            if (z < south) return Mathf.Lerp(tracks.y, Deck(south), (z - tracks.z) / RouteLayout.TrainSouthRampLength);
+            if (z > north) return Mathf.Lerp(Deck(north), GroundHeight(tracks.x, RouteLayout.TrainNorthEnd),
+                (z - north) / RouteLayout.TrainRampLength);
+            return Deck(z);
+        }
+
         public float WalkableDistance(float x, float z)
         {
             float distance = DistanceToRoute(x, z);
@@ -63,10 +89,10 @@ namespace TiffanyGame
             return Mathf.Max(distance, riverBlock);
         }
 
-        public float DistanceToRoute(float x, float z)
+        public float DistanceToRoute(float x, float z, bool includeRoad = true)
         {
             var point = new Vector2(x, z);
-            float distance = RectangleDistance(point, Road);
+            float distance = includeRoad ? RectangleDistance(point, Road) : float.PositiveInfinity;
             for (int i = 0; i < RouteLayout.Count; i++)
             {
                 Vector3 center = RouteLayout.Clearing(i);

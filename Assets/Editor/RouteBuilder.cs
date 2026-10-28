@@ -72,7 +72,8 @@ namespace TiffanyGame.EditorTools
             {
                 if (collider.isTrigger || collider.TryGetComponent<GroundSurface>(out _)) continue;
                 if (collider.bounds.max.y <= clearing.position.y + 1f && collider.bounds.size.y <= 1f) continue;
-                var modifier = collider.gameObject.AddComponent<NavMeshModifier>();
+                if (collider.TryGetComponent<NavMeshModifier>(out var modifier) && modifier.ignoreFromBuild) continue;
+                if (modifier == null) modifier = collider.gameObject.AddComponent<NavMeshModifier>();
                 modifier.overrideArea = true;
                 modifier.area = notWalkable;
             }
@@ -167,14 +168,14 @@ namespace TiffanyGame.EditorTools
                     HidingBuilder.BuildHideSpot(clearing, "Hide Fence Bush", new Vector3(6f, 0f, -1.5f), bush);
                     return new Vector3(0f, 0f, -1f);
                 case 2:
-                    var tracks = Root("Tracks", clearing, Vector3.zero);
+                    var tracks = Root("Tracks", clearing, Vector3.back * 7f);
                     tracks.localRotation = Quaternion.Euler(0f, 90f, 0f);
-                    for (int i = 0; i < 12; i++)
-                        Part($"Sleeper {i + 1}", tracks, new Vector3(-12.1f + i * 2.2f, 0.04f, 0f),
-                            new Vector3(0.45f, 0.08f, 5f), structure).AddComponent<GroundSurface>().type = GroundType.Gravel;
+                    for (int i = 0; i < 7; i++)
+                        Part($"Sleeper {i + 1}", tracks, new Vector3(-6.6f + i * 2.2f, 0.04f, 0f),
+                            new Vector3(0.45f, 0.08f, RouteLayout.TrainWidth), structure).AddComponent<GroundSurface>().type = GroundType.Gravel;
                     for (int side = -1; side <= 1; side += 2)
-                        Part($"Rail {side}", tracks, new Vector3(0f, 0.1f, side * 1.6f),
-                            new Vector3(28f, 0.2f, 0.15f), dark).AddComponent<GroundSurface>().type = GroundType.Gravel;
+                        Part($"Rail {side}", tracks, new Vector3(0f, TerrainBuilder.FloorOffset + 0.04f, side * 0.9f),
+                            new Vector3(14f, 0.08f, 0.12f), dark).AddComponent<GroundSurface>().type = GroundType.Gravel;
                     HidingBuilder.BuildHideSpot(clearing, "Hide Tracks Bush", new Vector3(6f, 0f, -4f), bush);
                     return new Vector3(0f, 0f, -3f);
                 case 3:
@@ -296,7 +297,8 @@ namespace TiffanyGame.EditorTools
 
         static void Ground(string name, Transform parent, Vector3 position, Vector2 size, GroundType type, Material material)
         {
-            var ground = Part(name, parent, position - Vector3.up * 0.02f, new Vector3(size.x, 0.06f, size.y), material);
+            var ground = Part(name, parent, position + Vector3.up * (TerrainBuilder.FloorOffset - 0.03f),
+                new Vector3(size.x, 0.06f, size.y), material);
             ground.AddComponent<GroundSurface>().type = type;
             TerrainBuilder.HideFloor(ground);
         }

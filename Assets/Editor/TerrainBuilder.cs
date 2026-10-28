@@ -11,7 +11,8 @@ namespace TiffanyGame.EditorTools
     public static partial class TerrainBuilder
     {
         public const float GridSize = 2f;
-        public const float TileSize = 64f;
+        public const float TileSize = RouteTerrain.ForestTileSize;
+        public const float FloorOffset = 0.06f;
         public static string Folder => Path.GetDirectoryName(GeneratedMaterials.folder) + "/Terrain";
 
         public static Transform Build(Transform route, RouteTerrain terrain, Material ground, Material structure, Material dark)
@@ -22,14 +23,15 @@ namespace TiffanyGame.EditorTools
             for (float x = terrain.Bounds.xMin; x < terrain.Bounds.xMax; x += TileSize)
                 BuildTile(tiles, terrain, Rect.MinMaxRect(x, z, Mathf.Min(x + TileSize, terrain.Bounds.xMax),
                     Mathf.Min(z + TileSize, terrain.Bounds.yMax)), ground);
-            BuildBoundary(Root("Walkable Boundary", landscape), terrain);
+            BuildBoundary(Root("Map Boundary", landscape), terrain, structure);
             BuildRiver(Root("River", landscape), terrain);
             BuildLakeBanks(Root("Lake Banks", landscape), terrain);
             BuildRoad(Root("Road", landscape), terrain, dark, structure);
             BuildTown(Root("Town", landscape), terrain, structure);
             BuildFence(Root("Fence", landscape), terrain, structure);
             BuildRocks(Root("Cliff Rocks", landscape), terrain, structure);
-            ForestBuilder.FillArea(landscape, terrain, terrain.IsWalkable, dark);
+            BuildTrainBridge(Root("Train Bridge", landscape), terrain, structure, dark);
+            ForestBuilder.FillArea(landscape, terrain);
             return landscape;
         }
 
@@ -63,21 +65,29 @@ namespace TiffanyGame.EditorTools
             {
                 Vector3 center = (vertices[a] + vertices[b] + vertices[c]) / 3f;
                 var indices = terrain.IsWater(center.x, center.z) ? bed
-                    : terrain.WalkableDistance(center.x, center.z) < 0.5f ? walkable : wild;
+                    : terrain.WalkableDistance(center.x, center.z) < 0.5f || terrain.InClearingSquare(center.x, center.z)
+                        || terrain.Town.Contains(new Vector2(center.x, center.z)) ? walkable : wild;
                 indices.Add(a); indices.Add(b); indices.Add(c);
             }
             string name = $"Tile {rectangle.xMin} {rectangle.yMin}";
             Make("Ground", walkable, false);
             Make("Wild", wild, true);
             Make("Bed", bed, false);
-            void Make(string suffix, List<int> indices, bool blocked)
+            void Make(string suffix, List<int> indices, bool forest)
             {
                 if (indices.Count == 0) return;
                 var mesh = SaveMesh(name + " " + suffix, vertices, indices.ToArray(), uv, normals);
                 var piece = MeshObject(name + " " + suffix, parent, mesh, material);
                 piece.AddComponent<MeshCollider>().sharedMesh = mesh;
-                piece.AddComponent<GroundSurface>().type = GroundType.Dirt;
-                if (blocked) BlockNavigation(piece);
+                piece.AddComponent<GroundSurface>().type = forest
+                    ? terrain.ForestGround(rectangle.center.x, rectangle.center.y) : GroundType.Dirt;
+                if (forest)
+                {
+                    var modifier = piece.AddComponent<NavMeshModifier>();
+                    modifier.overrideArea = true;
+                    modifier.area = NavMesh.GetAreaFromName(RouteTerrain.ForestArea);
+                    if (modifier.area < 0) throw new System.InvalidOperationException("Falta el área Forest en NavMeshAreas.");
+                }
                 if (suffix == "Bed") piece.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
             }
         }
@@ -104,7 +114,7 @@ namespace TiffanyGame.EditorTools
             for (int lane = 0; lane < 3; lane++)
             {
                 Vector3 point = Vector3.Lerp(a, b, (float)i / steps) + side * (lane - 1);
-                point.y = terrain.Height(point.x, point.z) + 0.01f;
+                point.y = terrain.Height(point.x, point.z) + FloorOffset;
                 vertices[i * 3 + lane] = point - origin;
                 if (i == steps || lane == 2) continue;
                 int index = i * 3 + lane;
@@ -125,44 +135,20 @@ namespace TiffanyGame.EditorTools
             modifier.applyToChildren = false;
         }
 
-        static void BuildBoundary(Transform parent, RouteTerrain terrain)
+        static void BuildBoundary(Transform parent, RouteTerrain terrain, Material material)
         {
-            const float step = 1f;
-            int width = Mathf.CeilToInt(terrain.Bounds.width) + 3;
-            int depth = Mathf.CeilToInt(terrain.Bounds.height) + 3;
-            var values = new float[width * depth];
-            var start = terrain.Bounds.min - Vector2.one;
-            for (int z = 0; z < depth; z++)
-            for (int x = 0; x < width; x++) values[z * width + x] = terrain.WalkableDistance(start.x + x, start.y + z);
-            for (int z = 0; z < depth - 1; z++)
-            for (int x = 0; x < width - 1; x++)
-            {
-                Vector2 a = start + new Vector2(x, z) * step;
-                int index = z * width + x;
-                Contour(a, a + Vector2.up, a + Vector2.one, values[index], values[index + width], values[index + width + 1]);
-                Contour(a, a + Vector2.one, a + Vector2.right, values[index], values[index + width + 1], values[index + 1]);
-            }
-            void Contour(Vector2 a, Vector2 b, Vector2 c, float da, float db, float dc)
-            {
-                Vector2 first = default, second = default;
-                int hits = 0;
-                Edge(a, b, da, db); Edge(b, c, db, dc); Edge(c, a, dc, da);
-                if (hits == 2 && Vector2.Distance(first, second) > 0.01f) Border("Boundary", parent, terrain, first, second);
-                void Edge(Vector2 p, Vector2 q, float dp, float dq)
-                {
-                    if ((dp <= 0f) == (dq <= 0f)) return;
-                    Vector2 hit = Vector2.Lerp(p, q, dp / (dp - dq));
-                    if (hits++ == 0) first = hit; else second = hit;
-                }
-            }
+            Rect bounds = terrain.Bounds;
+            var corners = new[] { bounds.min, new Vector2(bounds.xMax, bounds.yMin), bounds.max, new Vector2(bounds.xMin, bounds.yMax) };
+            for (int i = 0; i < corners.Length; i++)
+                FenceSection(parent, terrain, corners[i], corners[(i + 1) % corners.Length], material);
         }
 
-        static void Border(string name, Transform parent, RouteTerrain terrain, Vector2 a, Vector2 b)
+        static void Border(string name, Transform parent, RouteTerrain terrain, Vector2 a, Vector2 b, float wallHeight = 3f)
         {
             Vector3 start = new Vector3(a.x, terrain.Height(a.x, a.y), a.y);
             Vector3 end = new Vector3(b.x, terrain.Height(b.x, b.y), b.y);
             float low = Mathf.Min(start.y, end.y) - 0.4f;
-            float height = Mathf.Abs(start.y - end.y) + 3.4f;
+            float height = Mathf.Abs(start.y - end.y) + wallHeight + 0.4f;
             var middle = (start + end) * 0.5f;
             middle.y = low + height * 0.5f;
             SceneBuilder.CreateBorder(name, parent, parent.TransformPoint(middle),

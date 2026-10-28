@@ -9,7 +9,7 @@ namespace TiffanyGame.Tests
         const float Tolerance = 0.0001f;
 
         [Test]
-        public void MapKeepsTheCemeteryNortheastPlantEastStableSouthAndLakeWest()
+        public void MapKeepsCemeteryNortheastPlantEastTracksSouthAndLakeWest()
         {
             Assert.AreEqual(8, RouteLayout.Count);
             Assert.AreEqual(36f, RouteLayout.ClearingSize);
@@ -23,12 +23,13 @@ namespace TiffanyGame.Tests
                 Vector3 clearing = RouteLayout.Clearing(i);
                 Assert.GreaterOrEqual(cemetery.x + cemetery.z, clearing.x + clearing.z);
                 Assert.GreaterOrEqual(plant.x, clearing.x);
-                if (i != 3) Assert.Less(stable.z, clearing.z);
+                if (i != 3 && i != 2) Assert.Less(stable.z, clearing.z);
                 if (i != 5) Assert.Less(lake.x, clearing.x);
             }
             Assert.Less(plant.z, cemetery.z);
             Assert.Less(tracks.z, plant.z);
-            Assert.Greater(tracks.x, stable.x);
+            Assert.Less(tracks.z, stable.z);
+            Assert.Less(tracks.x, stable.x);
             Assert.Less(lake.x, hut.x);
             for (int i = 1; i <= 5; i++)
             {
@@ -88,7 +89,10 @@ namespace TiffanyGame.Tests
                 foreach (Vector3 point in RouteLayout.Path(from))
                     bounds.Encapsulate(new Bounds(point, new Vector3(RouteLayout.PathWidth, 0f, RouteLayout.PathWidth)));
             Assert.LessOrEqual(bounds.size.x, 220f);
-            Assert.LessOrEqual(bounds.size.z, 220f);
+            Assert.LessOrEqual(bounds.size.z, 280f);
+            var terrain = new RouteTerrain();
+            Assert.GreaterOrEqual(bounds.min.z, terrain.Bounds.yMin + RouteTerrain.Margin);
+            Assert.LessOrEqual(bounds.max.z, terrain.Bounds.yMax - RouteTerrain.Margin);
         }
 
         [TestCase(0)]
@@ -108,7 +112,7 @@ namespace TiffanyGame.Tests
             AssertPerpendicular(path[path.Length - 1], path[path.Length - 2], RouteLayout.Clearing(from + 1));
             float length = 0f;
             for (int i = 1; i < path.Length; i++) length += Vector3.Distance(path[i - 1], path[i]);
-            Assert.That(length, from == 4 ? Is.InRange(110f, 130f) : Is.InRange(16f, 45f));
+            Assert.That(length, from == 4 ? Is.InRange(60f, 70f) : from == 1 ? Is.InRange(180f, 200f) : Is.InRange(16f, 45f));
             float deviation = 0f;
             for (int i = 1; i < path.Length - 1; i++)
                 deviation = Mathf.Max(deviation, PointDistance(Xz(path[i]), Xz(path[0]), Xz(path[path.Length - 1])));
@@ -116,7 +120,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void SlopesNeverExceedSixDegreesAndAtLeastThreePathsReachThreeDegrees()
+        public void PathsKeepSixDegreesExceptTheEightDegreeCliffDescent()
         {
             int slopingPaths = 0;
             for (int from = 0; from < RouteLayout.Count - 1; from++)
@@ -127,7 +131,7 @@ namespace TiffanyGame.Tests
                 {
                     Assert.Greater(Vector2.Distance(Xz(path[i - 1]), Xz(path[i])), Tolerance);
                     float slope = RouteLayout.Slope(path[i - 1], path[i]);
-                    Assert.LessOrEqual(slope, RouteLayout.MaxSlopeDegrees + Tolerance, $"Sendero {from}, tramo {i}");
+                    Assert.LessOrEqual(slope, (from == 4 ? RouteLayout.CliffPathMaxSlopeDegrees : RouteLayout.MaxSlopeDegrees) + Tolerance, $"Sendero {from}, tramo {i}");
                     float rise = path[i].y - path[i - 1].y;
                     float totalRise = RouteLayout.Clearing(from + 1).y - RouteLayout.Clearing(from).y;
                     Assert.GreaterOrEqual(rise * totalRise, -Tolerance);

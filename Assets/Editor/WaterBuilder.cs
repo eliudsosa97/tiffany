@@ -116,7 +116,7 @@ namespace TiffanyGame.EditorTools
 
         static void Bank(string name, Transform parent, Vector3 position, Vector2 size, GroundType ground, Material material)
         {
-            var floor = SceneBuilder.CreatePrimitive(name, PrimitiveType.Cube, parent, position - Vector3.up * 0.02f,
+            var floor = SceneBuilder.CreatePrimitive(name, PrimitiveType.Cube, parent, position + Vector3.up * (TerrainBuilder.FloorOffset - 0.03f),
                 new Vector3(size.x, 0.06f, size.y), material);
             floor.AddComponent<GroundSurface>().type = ground;
             TerrainBuilder.HideFloor(floor);

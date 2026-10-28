@@ -36,9 +36,9 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void EveryHalfMeterWalkableSampleKeepsSixDegreesAndNoFifteenCentimeterSteps()
+        public void EveryHalfMeterPathSampleKeepsItsSlopeLimitAndNoFifteenCentimeterSteps()
         {
-            float maximum = Mathf.Tan(RouteLayout.MaxSlopeDegrees * Mathf.Deg2Rad);
+            var descent = RouteLayout.Path(4);
             for (float z = terrain.Bounds.yMin; z <= terrain.Bounds.yMax; z += 0.5f)
             for (float x = terrain.Bounds.xMin; x <= terrain.Bounds.xMax; x += 0.5f)
             {
@@ -48,6 +48,11 @@ namespace TiffanyGame.Tests
                 float dx = east ? terrain.Height(x + 0.5f, z) - height : 0f;
                 float dz = north ? terrain.Height(x, z + 0.5f) - height : 0f;
                 Assert.LessOrEqual(Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dz)), 0.15f, $"Salto en {x}, {z}");
+                float limit = RouteLayout.MaxSlopeDegrees;
+                for (int i = 1; i < descent.Length; i++)
+                    if (RouteTerrain.SegmentDistance(new Vector2(x, z), new Vector2(descent[i - 1].x, descent[i - 1].z),
+                        new Vector2(descent[i].x, descent[i].z)) < RouteLayout.PathWidth) limit = RouteLayout.CliffPathMaxSlopeDegrees;
+                float maximum = Mathf.Tan(limit * Mathf.Deg2Rad);
                 Assert.LessOrEqual(new Vector2(dx, dz).magnitude / 0.5f, maximum + 0.0001f, $"Pendiente en {x}, {z}");
             }
         }
@@ -84,7 +89,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void RiverRunsWestFromCemeteryAndOnlyTheStoneCrossingIsWalkable()
+        public void RiverRunsWestFromCemeteryAndOnlyTheStoneCrossingIsAtGroundLevel()
         {
             Assert.Less(terrain.RiverPoint(0).x, RouteLayout.Clearing(0).x - 18f);
             Assert.AreEqual(terrain.Bounds.xMin, terrain.RiverPoint(terrain.RiverPointCount - 1).x);
@@ -138,6 +143,44 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void ForestGroundIsDeterministicWithinTilesAndNoisierThanDirt()
+        {
+            var types = new HashSet<GroundType>();
+            for (float z = terrain.Bounds.yMin; z < terrain.Bounds.yMax; z += RouteTerrain.ForestTileSize)
+            for (float x = terrain.Bounds.xMin; x < terrain.Bounds.xMax; x += RouteTerrain.ForestTileSize)
+            {
+                GroundType type = terrain.ForestGround(x + 1f, z + 1f);
+                Assert.That(type, Is.EqualTo(GroundType.Leaves).Or.EqualTo(GroundType.Branches));
+                Assert.AreEqual(type, terrain.ForestGround(x + 31f, z + 31f));
+                Assert.Greater(NoiseModel.StepRadius(type, Gait.Walk, false), NoiseModel.StepRadius(GroundType.Dirt, Gait.Walk, false));
+                types.Add(type);
+            }
+            Assert.AreEqual(2, types.Count);
+        }
+
+        [Test]
+        public void TrainLineConnectsTheTracksToTheForestSouthOfTheRoadWithGentleRamps()
+        {
+            var tracks = RouteLayout.Clearing(2);
+            Assert.AreEqual(terrain.Bounds.center.x, tracks.x, 0.001f);
+            Assert.That(tracks.x - RouteTerrain.LakeCenter.x - RouteTerrain.LakeRadius.x, Is.InRange(0f, 20f));
+            Assert.Less(RouteLayout.TrainNorthEnd, terrain.Road.yMin);
+            Assert.Less(RouteLayout.TrainNorthEnd, terrain.Town.yMin);
+            Assert.That(RouteLayout.TrainWidth, Is.InRange(2.5f, 3f));
+            Assert.AreEqual(tracks.y, terrain.TrainHeight(tracks.z), 0.001f);
+            Assert.AreEqual(terrain.GroundHeight(tracks.x, RouteLayout.TrainNorthEnd), terrain.TrainHeight(RouteLayout.TrainNorthEnd), 0.001f);
+            for (float z = tracks.z; z < RouteLayout.TrainNorthEnd; z += 0.5f)
+            {
+                float height = terrain.TrainHeight(z);
+                Assert.GreaterOrEqual(height, terrain.GroundHeight(tracks.x, z) - 0.05f, $"Puente enterrado en {z}");
+                if (z < tracks.z + RouteLayout.TrainSouthRampLength || z >= RouteLayout.TrainNorthEnd - RouteLayout.TrainRampLength)
+                    Assert.LessOrEqual(RouteLayout.Slope(new Vector3(tracks.x, height, z),
+                        new Vector3(tracks.x, terrain.TrainHeight(z + 0.5f), z + 0.5f)), 8.001f, $"Rampa en {z}");
+                else Assert.That(height - Mathf.Max(0f, terrain.GroundHeight(tracks.x, z)), Is.InRange(3f, 4f));
+            }
+        }
+
+        [Test]
         public void RampFollowsTheCliffWithoutCuttingAnotherClearing()
         {
             var path = RouteLayout.Path(4);
@@ -151,7 +194,8 @@ namespace TiffanyGame.Tests
                     Assert.IsTrue(terrain.IsWalkable(point.x, point.z));
                 }
             }
-            Assert.Greater(length, 6f / Mathf.Tan(6f * Mathf.Deg2Rad));
+            Assert.Greater(length, 6f / Mathf.Tan(8f * Mathf.Deg2Rad));
+            Assert.Less(length, 70f);
             Assert.AreEqual(6f, path[0].y - path[path.Length - 1].y, 0.001f);
         }
     }

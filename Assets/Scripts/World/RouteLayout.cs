@@ -9,12 +9,18 @@ namespace TiffanyGame
         public const float ClearingSize = 36f;
         public const float PathWidth = 5f;
         public const float MaxSlopeDegrees = 6f;
+        public const float CliffPathMaxSlopeDegrees = 8f;
+        public const float TrainWidth = 2.8f;
+        public const float TrainClearance = 3.5f;
+        public const float TrainRampLength = 28f;
+        public const float TrainSouthRampLength = 52f;
+        public const float TrainNorthEnd = 148f;
 
         static readonly Vector3[] Clearings =
         {
             new Vector3(180f, 0f, 140f),
             new Vector3(180f, 1.5f, 70f),
-            new Vector3(140f, 2.8f, 20f),
+            new Vector3(50f, 2.8f, -60f),
             new Vector3(70f, 4.2f, 0f),
             new Vector3(104f, 6f, 60f),
             new Vector3(36f, 0f, 84f),
@@ -26,15 +32,15 @@ namespace TiffanyGame
         {
             GradedPath(0, new Vector2(180f, 122f), new Vector2(180f, 118f),
                 new Vector2(183f, 111f), new Vector2(182f, 103f), new Vector2(180f, 92f), new Vector2(180f, 88f)),
-            GradedPath(1, new Vector2(162f, 58f), new Vector2(158f, 58f),
-                new Vector2(151f, 56f), new Vector2(146f, 50f), new Vector2(146f, 42f), new Vector2(146f, 38f)),
-            GradedPath(2, new Vector2(122f, 10f), new Vector2(118f, 10f),
-                new Vector2(110f, 12f), new Vector2(92f, 8f), new Vector2(88f, 8f)),
+            GradedPath(1, new Vector2(180f, 52f), new Vector2(180f, 48f),
+                new Vector2(174f, 20f), new Vector2(160f, -26f), new Vector2(120f, -60f),
+                new Vector2(72f, -60f), new Vector2(68f, -60f)),
+            GradedPath(2, new Vector2(68f, -50f), new Vector2(72f, -50f),
+                new Vector2(80f, -30f), new Vector2(80f, -22f), new Vector2(80f, -18f)),
             GradedPath(3, new Vector2(80f, 18f), new Vector2(80f, 22f),
                 new Vector2(84f, 29f), new Vector2(92f, 31f), new Vector2(96f, 38f), new Vector2(96f, 42f)),
-            new[] { new Vector3(104f, 6f, 78f), new Vector3(104f, 6f, 82f),
-                new Vector3(104f, 4.6f, 110f), new Vector3(64f, 2.2f, 110f),
-                new Vector3(64f, 0f, 70f), new Vector3(58f, 0f, 70f), new Vector3(54f, 0f, 70f) },
+            new[] { new Vector3(86f, 6f, 46f), new Vector3(82f, 6f, 46f),
+                new Vector3(58f, 0f, 96f), new Vector3(54f, 0f, 96f) },
             GradedPath(5, new Vector2(36f, 102f), new Vector2(36f, 106f),
                 new Vector2(38f, 110f), new Vector2(42f, 112f), new Vector2(44f, 116f), new Vector2(44f, 130f),
                 new Vector2(44f, 134f), new Vector2(44f, 138f)),

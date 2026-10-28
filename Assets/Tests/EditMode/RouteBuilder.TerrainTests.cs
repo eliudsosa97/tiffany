@@ -14,6 +14,7 @@ namespace TiffanyGame.Tests
         public void TerrainTilesHavePersistentMeshesCollidersAndNoDuplicateNavigationFloors()
         {
             var terrain = new RouteTerrain();
+            var descent = RouteLayout.Path(4);
             var tiles = route.Find("Landscape/Terrain").GetComponentsInChildren<MeshCollider>();
             Assert.Greater(tiles.Length, 10);
             foreach (var tile in tiles)
@@ -25,9 +26,11 @@ namespace TiffanyGame.Tests
                 Assert.LessOrEqual(mesh.vertexCount, 1300);
                 Assert.LessOrEqual(mesh.bounds.size.x, 64.001f);
                 Assert.LessOrEqual(mesh.bounds.size.z, 64.001f);
-                Assert.AreEqual(GroundType.Dirt, tile.GetComponent<GroundSurface>().type);
+                bool forest = tile.name.EndsWith(" Wild");
+                Assert.AreEqual(forest ? terrain.ForestGround(mesh.bounds.center.x, mesh.bounds.center.z) : GroundType.Dirt,
+                    tile.GetComponent<GroundSurface>().type);
                 Assert.AreEqual("RouteGround", tile.GetComponent<Renderer>().sharedMaterial.name);
-                if (tile.name.EndsWith(" Wild")) Assert.AreEqual(NavMesh.GetAreaFromName("Not Walkable"), tile.GetComponent<NavMeshModifier>().area);
+                if (tile.name.EndsWith(" Wild")) Assert.AreEqual(NavMesh.GetAreaFromName(RouteTerrain.ForestArea), tile.GetComponent<NavMeshModifier>().area);
                 else if (tile.name.EndsWith(" Bed")) Assert.IsTrue(tile.GetComponent<NavMeshModifier>().ignoreFromBuild);
                 else Assert.IsNull(tile.GetComponent<NavMeshModifier>());
                 var vertices = mesh.vertices;
@@ -37,7 +40,13 @@ namespace TiffanyGame.Tests
                     Vector3 a = vertices[indices[i]], b = vertices[indices[i + 1]], c = vertices[indices[i + 2]];
                     Vector3 center = (a + b + c) / 3f;
                     if (!terrain.IsWalkable(center.x, center.z) || terrain.IsWater(center.x, center.z)) continue;
-                    Assert.LessOrEqual(Vector3.Angle(Vector3.up, Vector3.Cross(b - a, c - a)), 6.001f, $"Pendiente en {center}");
+                    float limit = RouteLayout.MaxSlopeDegrees;
+                    for (int segment = 1; segment < descent.Length; segment++)
+                        if (RouteTerrain.SegmentDistance(new Vector2(center.x, center.z),
+                            new Vector2(descent[segment - 1].x, descent[segment - 1].z),
+                            new Vector2(descent[segment].x, descent[segment].z)) < RouteLayout.PathWidth)
+                            limit = RouteLayout.CliffPathMaxSlopeDegrees;
+                    Assert.LessOrEqual(Vector3.Angle(Vector3.up, Vector3.Cross(b - a, c - a)), limit + 0.001f, $"Pendiente en {center}");
                 }
             }
             for (float z = terrain.Bounds.yMin + 1f; z < terrain.Bounds.yMax; z += 7f)
@@ -127,11 +136,13 @@ namespace TiffanyGame.Tests
         [Test]
         public void ForestFillUsesPersistentInstancingCellsWithinEveryClearingBudget()
         {
+            Assert.AreEqual(250000, ForestBuilder.AreaTriangleBudget);
             var fill = route.Find("Landscape/Forest Fill");
             var cells = fill.GetComponentsInChildren<ForestInstances>();
             Assert.IsNotEmpty(cells);
             Assert.IsEmpty(fill.GetComponentsInChildren<Renderer>());
-            Assert.IsEmpty(fill.GetComponentsInChildren<Collider>());
+            Assert.IsNotEmpty(fill.GetComponentsInChildren<CapsuleCollider>());
+            Assert.IsNotEmpty(fill.GetComponentsInChildren<BoxCollider>());
             var terrain = new RouteTerrain();
             foreach (var cell in cells)
             {
@@ -142,12 +153,17 @@ namespace TiffanyGame.Tests
                 {
                     Assert.IsTrue(AssetDatabase.Contains(batch.mesh));
                     Assert.IsTrue(batch.material.enableInstancing);
-                    Assert.AreEqual("RouteForest", batch.material.name);
+                    StringAssert.StartsWith("Forest", batch.material.name);
+                    StringAssert.StartsWith("Assets/Art/Stylized/Meshes/", AssetDatabase.GetAssetPath(batch.mesh));
                     foreach (var matrix in batch.matrices)
                     {
                         Vector3 position = cell.transform.localPosition + matrix.MultiplyPoint3x4(Vector3.zero);
                         Assert.IsFalse(terrain.IsWalkable(position.x, position.z));
-                        Assert.That(terrain.DistanceToRoute(position.x, position.z), Is.InRange(1.4f, 20f));
+                        Assert.Greater(terrain.DistanceToRoute(position.x, position.z), 0f);
+                        Assert.IsFalse(terrain.Town.Contains(new Vector2(position.x, position.z)));
+                        Assert.IsFalse(terrain.IsWater(position.x, position.z));
+                        if (batch.mesh.name == "GoldenGrass0" || batch.mesh.name == "DryShrub0" || batch.mesh.name == "OakLitter0")
+                            Assert.LessOrEqual(terrain.DistanceToRoute(position.x, position.z, false), 10f);
                         var bounds = ForestInstances.TransformBounds(batch.mesh.bounds, matrix);
                         Assert.IsTrue(batch.bounds.Contains(bounds.min));
                         Assert.IsTrue(batch.bounds.Contains(bounds.max));
@@ -160,11 +176,10 @@ namespace TiffanyGame.Tests
                 long extra = 0;
                 Rect view = ForestBuilder.ViewSquare(i);
                 foreach (var cell in cells)
-                foreach (var batch in cell.data.batches)
                 {
-                    var bounds = ForestInstances.TransformBounds(batch.bounds, Matrix4x4.Translate(cell.transform.localPosition));
-                    if (!view.Overlaps(Rect.MinMaxRect(bounds.min.x, bounds.min.z, bounds.max.x, bounds.max.z))) continue;
-                    extra += batch.mesh.GetIndexCount(0) / 3 * batch.matrices.Length;
+                    var position = cell.transform.localPosition;
+                    var key = new Vector2Int(Mathf.RoundToInt(position.x / ForestBuilder.CellSize), Mathf.RoundToInt(position.z / ForestBuilder.CellSize));
+                    if (view.Overlaps(ForestBuilder.CellBounds(key))) extra += ForestBuilder.TriangleCount(cell.transform);
                 }
                 Assert.Greater(extra, 0, $"Relleno ausente en claro {i}");
                 Assert.LessOrEqual(triangles + extra, ForestBuilder.AreaTriangleBudget, $"Claro {i}: {triangles} + {extra}");

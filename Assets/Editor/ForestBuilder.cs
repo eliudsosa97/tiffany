@@ -73,6 +73,7 @@ namespace TiffanyGame.EditorTools
                 var roof = canopy.AddComponent<BoxCollider>();
                 roof.center = crown.bounds.center;
                 roof.size = crown.bounds.size;
+                canopy.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild = true;
                 blocked.Add((new Vector2(position.x, position.z), 0.9f));
                 triangles += (trunk.GetIndexCount(0) + crown.GetIndexCount(0)) / 3;
                 trees++;

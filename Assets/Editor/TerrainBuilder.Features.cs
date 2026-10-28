@@ -24,14 +24,16 @@ namespace TiffanyGame.EditorTools
                     if (Mathf.Abs(a.y - terrain.Crossing.z) < 0.001f && Mathf.Abs(b.y - terrain.Crossing.z) < 0.001f
                         && terrain.Crossing.x < a.x && terrain.Crossing.x > b.x)
                     {
-                        Border($"Bank {i} {sign} East", parent, terrain, first,
+                        Bank($"Bank {i} {sign} East", first,
                             new Vector2(terrain.Crossing.x + RouteTerrain.CrossingWidth * 0.5f + 0.15f, first.y));
-                        Border($"Bank {i} {sign} West", parent, terrain,
+                        Bank($"Bank {i} {sign} West",
                             new Vector2(terrain.Crossing.x - RouteTerrain.CrossingWidth * 0.5f - 0.15f, last.y), last);
                     }
-                    else Border($"Bank {i} {sign}", parent, terrain, first, last);
+                    else Bank($"Bank {i} {sign}", first, last);
                 }
             }
+            Bank("River End", BankPoint(0, -1), BankPoint(0, 1));
+            void Bank(string name, Vector2 a, Vector2 b) => Border(name, parent, terrain, a, b, 1.5f);
             Vector2 BankPoint(int index, int sign)
             {
                 var point = terrain.RiverPoint(index);
@@ -122,6 +124,18 @@ namespace TiffanyGame.EditorTools
             for (int i = 0; i <= 16; i++)
                 Visual("Bar", entrance, new Vector3(0f, 1.5f, -gateWidth * 0.5f + i * 0.5f), new Vector3(0.12f, 3f, 0.12f));
             for (int i = 0; i < 2; i++) Visual("Rail", entrance, new Vector3(0f, 0.6f + i * 1.8f, 0f), new Vector3(0.15f, 0.15f, gateWidth));
+            var town = terrain.Town;
+            var road = RouteLayout.Clearing(6);
+            var house = RouteLayout.Clearing(7);
+            var perimeter = new[] { town.min, new Vector2(road.x - 18f, town.yMin),
+                new Vector2(road.x - 18f, road.z + 18f), new Vector2(road.x + 18f, road.z + 18f),
+                new Vector2(road.x + 18f, town.yMin + 6f), new Vector2(house.x - 18f, town.yMin + 6f),
+                new Vector2(house.x - 18f, house.z + 18f), new Vector2(house.x + 18f, house.z + 18f),
+                new Vector2(house.x + 18f, town.yMin), new Vector2(town.xMax, town.yMin),
+                town.max, new Vector2(town.xMin, town.yMax) };
+            var boundary = Root("Town Boundary", parent);
+            for (int i = 0; i < perimeter.Length; i++)
+                FenceSection(boundary, terrain, perimeter[i], perimeter[(i + 1) % perimeter.Length], material);
             void FenceRun(string name, float start, float end)
             {
                 int count = Mathf.CeilToInt((end - start) / 4f);
@@ -142,8 +156,38 @@ namespace TiffanyGame.EditorTools
                 Object.DestroyImmediate(SceneBuilder.CreatePrimitive(name, PrimitiveType.Cube, root, position, size, material).GetComponent<Collider>());
         }
 
+        static void FenceSection(Transform parent, RouteTerrain terrain, Vector2 a, Vector2 b, Material material)
+        {
+            int count = Mathf.CeilToInt(Vector2.Distance(a, b) / 8f);
+            for (int i = 0; i <= count; i++)
+            {
+                Vector2 point = Vector2.Lerp(a, b, (float)i / count);
+                float height = terrain.GroundHeight(point.x, point.y);
+                Visual("Post", new Vector3(point.x, height + 1.5f, point.y), new Vector3(0.2f, 3f, 0.2f), Quaternion.identity);
+                if (i == count) continue;
+                Vector2 next = Vector2.Lerp(a, b, (float)(i + 1) / count);
+                Border("Fence Collision", parent, terrain, point, next);
+                Vector3 start = new Vector3(point.x, height, point.y);
+                Vector3 end = new Vector3(next.x, terrain.GroundHeight(next.x, next.y), next.y);
+                for (int rail = 0; rail < 2; rail++)
+                    Visual("Rail", (start + end) * 0.5f + Vector3.up * (0.7f + rail * 1.6f),
+                        new Vector3(0.16f, 0.16f, Vector3.Distance(start, end)), Quaternion.LookRotation(end - start));
+            }
+            void Visual(string name, Vector3 position, Vector3 size, Quaternion rotation)
+            {
+                var piece = SceneBuilder.CreatePrimitive(name, PrimitiveType.Cube, parent, position, size, material);
+                piece.transform.localRotation = rotation;
+                Object.DestroyImmediate(piece.GetComponent<Collider>());
+            }
+        }
+
         static void BuildRocks(Transform parent, RouteTerrain terrain, Material material)
         {
+            var face = Root("Cliff Face", parent).gameObject;
+            var wall = face.AddComponent<BoxCollider>();
+            wall.center = new Vector3(75.75f, RouteTerrain.CliffHeight * 0.5f, 95f);
+            wall.size = new Vector3(0.5f, RouteTerrain.CliffHeight, 10f);
+            BlockNavigation(face);
             for (int i = 0; i < 7; i++)
             {
                 string id = i % 2 == 0 ? "rock_largeA" : "stone_tallA";

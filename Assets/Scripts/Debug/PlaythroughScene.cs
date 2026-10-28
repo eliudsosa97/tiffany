@@ -31,7 +31,7 @@ namespace TiffanyGame
 
         public Vector3 Position => player.transform.position;
         public Vector3 Target { get; private set; }
-        bool AtTarget => PlaythroughPlan.HorizontalDistance(Position, Target) <= arrivalRadius;
+        bool AtTarget => PlaythroughPlan.HorizontalDistance(Position, Target) <= arrivalRadius && Mathf.Abs(Position.y - Target.y) < 0.8f;
         public float CameraYaw => player.viewCamera != null ? player.viewCamera.transform.eulerAngles.y : 0f;
         public Vector2 Aim => milestone == PlaythroughMilestone.MoveObject
             ? PlaythroughNavigation.CameraInput((movable.transform.position - Position).normalized, CameraYaw)
@@ -102,6 +102,7 @@ namespace TiffanyGame
             HideVolume nearest = null;
             float distance = float.PositiveInfinity;
             var path = new NavMeshPath();
+            var filter = PlaythroughNavigation.CreateFilter();
             if (!NavMesh.SamplePosition(Position, out var start, 5f, NavMesh.AllAreas)) return null;
             foreach (var volume in volumes)
             {
@@ -109,7 +110,7 @@ namespace TiffanyGame
                 float candidate = (volume.HidePoint - Position).sqrMagnitude;
                 if (candidate >= distance) continue;
                 if (!NavMesh.SamplePosition(volume.HidePoint, out var end, 0.5f, NavMesh.AllAreas)
-                    || !NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path)
+                    || !NavMesh.CalculatePath(start.position, end.position, filter, path)
                     || path.status != NavMeshPathStatus.PathComplete) continue;
                 nearest = volume;
                 distance = candidate;

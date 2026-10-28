@@ -274,10 +274,12 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void PathsJoinIrregularClearingsWithOpeningsAndClosedOuterEdges()
+        public void PathsJoinIrregularClearingsWithOpenSidesIntoTheForest()
         {
             var terrain = new RouteTerrain();
-            var borders = route.Find("Landscape/Walkable Boundary").GetComponentsInChildren<Collider>();
+            Assert.IsNull(route.Find("Landscape/Walkable Boundary"));
+            var borders = route.Find("Landscape/Map Boundary").GetComponentsInChildren<Collider>();
+            Assert.IsNotEmpty(borders);
             for (int i = 0; i < RouteLayout.Count; i++)
             {
                 var clearing = route.GetChild(i);
@@ -290,7 +292,7 @@ namespace TiffanyGame.Tests
                     Vector3 beyond = center + normal * (radius + 1f);
                     if (terrain.IsWalkable(beyond.x, beyond.z)) continue;
                     var ray = new Ray(clearing.TransformPoint(normal * (radius - 1f) + Vector3.up), normal);
-                    Assert.IsTrue(System.Array.Exists(borders, border => border.Raycast(ray, out _, 2.2f)), $"Borde {i}/{degrees}");
+                    Assert.IsFalse(System.Array.Exists(borders, border => border.Raycast(ray, out _, 2.2f)), $"Borde {i}/{degrees}");
                 }
                 foreach (Vector3 opening in RouteLayout.Openings(i))
                 {
@@ -354,7 +356,7 @@ namespace TiffanyGame.Tests
             high = float.NegativeInfinity;
             foreach (var floor in floors)
                 if (floor.GetComponent<Collider>().Raycast(new Ray(point + Vector3.up * 2f, Vector3.down), out var hit, 4f)
-                    && hit.normal.y > 0.99f)
+                    && hit.normal.y >= Mathf.Cos(RouteLayout.CliffPathMaxSlopeDegrees * Mathf.Deg2Rad) - 0.001f)
                 {
                     low = Mathf.Min(low, hit.point.y);
                     high = Mathf.Max(high, hit.point.y);
@@ -363,7 +365,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void GateAndCliffAreSolidAndTheBakedRouteConnectsEveryClearingWithoutAShortcut()
+        public void GateAndCliffAreSolidAndTheBakedRouteConnectsEveryClearing()
         {
             var gate = route.Find("Landscape/Fence/Closed Gate");
             Assert.IsNotNull(gate.GetComponent<Collider>());
@@ -415,6 +417,40 @@ namespace TiffanyGame.Tests
                     out _, delta.magnitude));
             }
             Assert.Greater(length, Vector3.Distance(last, start.position) * 2f);
+            var terrain = new RouteTerrain();
+            int forest = NavMesh.GetAreaFromName(RouteTerrain.ForestArea);
+            Assert.Greater(forest, 0);
+            Assert.AreEqual(4f, NavMesh.GetAreaCost(forest));
+            Assert.AreEqual(4f, PlaythroughNavigation.CreateFilter().GetAreaCost(forest));
+            Assert.IsTrue(NavMesh.SamplePosition(route.TransformPoint(new Vector3(198f, terrain.GroundHeight(198f, 15f), 15f)),
+                out var woods, 3f, 1 << forest));
+            Assert.IsTrue(NavMesh.CalculatePath(start.position, woods.position, NavMesh.AllAreas, path));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
+            var tracks = RouteLayout.Clearing(2);
+            int walkable = 1 << NavMesh.GetAreaFromName("Walkable");
+            Vector3 previous = Vector3.zero;
+            for (float z = tracks.z; z <= RouteLayout.TrainNorthEnd; z += 2f)
+            {
+                Vector3 point = route.TransformPoint(new Vector3(tracks.x, terrain.TrainHeight(z), z));
+                Assert.IsTrue(NavMesh.SamplePosition(point, out var deck, 0.5f, walkable), $"Puente en {z}");
+                if (z > tracks.z)
+                {
+                    Assert.IsTrue(NavMesh.CalculatePath(previous, deck.position, walkable, path));
+                    Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, $"Puente en {z}");
+                }
+                previous = deck.position;
+            }
+            var navigation = new PlaythroughNavigation();
+            for (int i = 0; i < RouteLayout.Count - 1; i++)
+            {
+                Vector3 origin = route.GetChild(i).TransformPoint(Vector3.back * 13f);
+                Vector3 target = route.GetChild(i + 1).TransformPoint(Vector3.back * 13f);
+                Assert.IsTrue(NavMesh.SamplePosition(origin, out var from, 0.5f, walkable));
+                Assert.IsTrue(NavMesh.SamplePosition(target, out var to, 0.5f, walkable));
+                Assert.IsTrue(NavMesh.CalculatePath(from.position, to.position, walkable, path));
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, $"Senderos {i}");
+                Assert.IsTrue(navigation.Calculate(origin, target), $"Partida automática {i}");
+            }
         }
 
         [Test]
