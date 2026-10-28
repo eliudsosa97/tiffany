@@ -4,10 +4,11 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using LogAssert = TiffanyGame.Tests.TiffanyLogs;
 
 namespace TiffanyGame.Tests
 {
-    public sealed class HidingTests
+    public sealed class HidingTests : TiffanyLogTests
     {
         GameObject world;
         int steps;

@@ -7,10 +7,11 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using LogAssert = TiffanyGame.Tests.TiffanyLogs;
 
 namespace TiffanyGame.Tests
 {
-    public class MainSceneSmokeTests
+    public class MainSceneSmokeTests : TiffanyLogTests
     {
         Scene mainScene;
         List<StepNoise> steps;
@@ -28,8 +29,6 @@ namespace TiffanyGame.Tests
             yield return null;
             yield return null;
 
-            // Heartbeat registra cada cambio de ritmo y estos tests no admiten logs inesperados.
-            foreach (var heartbeat in Object.FindObjectsByType<Heartbeat>(FindObjectsSortMode.None)) heartbeat.enabled = false;
             mainScene = SceneManager.GetActiveScene();
             NoiseBus.Published += RecordStep;
         }

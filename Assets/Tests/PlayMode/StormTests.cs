@@ -3,10 +3,11 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.TestTools;
+using LogAssert = TiffanyGame.Tests.TiffanyLogs;
 
 namespace TiffanyGame.Tests
 {
-    public sealed class StormTests
+    public sealed class StormTests : TiffanyLogTests
     {
         [UnityTest]
         public IEnumerator RainAndThunderReachWitchAndStopWithRain()
