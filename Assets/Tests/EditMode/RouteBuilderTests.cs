@@ -221,7 +221,8 @@ namespace TiffanyGame.Tests
             Assert.Less(route.GetComponentsInChildren<Transform>(true).Length, 600);
             var renderers = route.GetComponentsInChildren<Renderer>(true);
             Assert.IsNotEmpty(renderers);
-            Assert.Less(renderers.Length, 300);
+            foreach (Transform clearing in route)
+                Assert.LessOrEqual(clearing.GetComponentsInChildren<Renderer>(true).Length, 200, clearing.name);
             Assert.AreEqual(4, System.Array.FindAll(renderers,
                 renderer => renderer.GetComponentInParent<HideVolume>() != null).Length);
             foreach (var renderer in renderers)

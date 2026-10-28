@@ -29,6 +29,14 @@ namespace TiffanyGame.Tests
             StringAssert.DoesNotContain("unity-footer", html);
         }
 
+        [Test]
+        public void TemplateDeclaresAnIconSoTheBrowserDoesNotRequestFavicon()
+        {
+            string html = File.ReadAllText(Path.Combine(TemplatePath(), "index.html"));
+
+            StringAssert.Contains("<link rel=\"icon\" href=\"data:,\">", html);
+        }
+
         static string TemplatePath()
         {
             string name = BuildTools.WebTemplate.Substring(ProjectPrefix.Length);

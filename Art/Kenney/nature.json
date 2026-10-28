@@ -1,0 +1,12 @@
+{
+  "materials": [
+    { "name": "leafsDark", "color": "#253A30" },
+    { "name": "woodBarkDark", "color": "#352E2B" },
+    { "name": "dirt", "color": "#46413D" },
+    { "name": "grass", "color": "#354435" },
+    { "name": "stone", "color": "#51535A" },
+    { "name": "_defaultMat", "color": "#51535A" },
+    { "name": "woodBark", "color": "#46382E" },
+    { "name": "woodInner", "color": "#78664D" }
+  ]
+}
