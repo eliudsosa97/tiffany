@@ -7,6 +7,7 @@ namespace TiffanyGame
     {
         public int memoryId;
         public GameObject visual;
+        public EchoPlayer echoPlayer;
 
         void Awake() => Initialize();
 

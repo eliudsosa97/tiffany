@@ -1,0 +1,133 @@
+{
+  "id": 3,
+  "duration": 12,
+  "girl": {
+    "position": {"x": 0, "y": 0, "z": 0},
+    "rotation": {"x": 0, "y": 0, "z": 0},
+    "scale": {"x": 1, "y": 1, "z": 1},
+    "appear": 0,
+    "disappear": 11.7,
+    "points": [
+      {"time": 0, "position": {"x": -0.5, "y": 0.16, "z": -3}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 4, "position": {"x": -0.5, "y": 0.16, "z": -0.3}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 4.8, "position": {"x": -0.5, "y": 0.16, "z": -0.3}, "rotation": {"x": 12, "y": 0, "z": 0}, "scale": {"x": 1, "y": 0.78, "z": 1}},
+      {"time": 5.4, "position": {"x": -0.5, "y": 0.16, "z": -0.3}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 6.8, "position": {"x": -0.5, "y": 0.16, "z": -0.3}, "rotation": {"x": 0, "y": 120, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 8, "position": {"x": -0.5, "y": 0.16, "z": -0.3}, "rotation": {"x": 0, "y": 120, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 8.6, "position": {"x": -0.5, "y": 0.16, "z": -0.3}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+      {"time": 11.5, "position": {"x": -0.5, "y": 0.16, "z": 3.2}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}}
+    ]
+  },
+  "tyler": {
+    "position": {"x": 0, "y": 0, "z": 0},
+    "rotation": {"x": 0, "y": 0, "z": 0},
+    "scale": {"x": 1, "y": 1, "z": 1},
+    "appear": 0,
+    "disappear": 0,
+    "points": []
+  },
+  "subtitles": [
+    {"time": 4.8, "duration": 2.6, "text": "Cuídame el camino"}
+  ],
+  "sounds": [
+    {
+      "clip": "bark_3",
+      "time": 6.2,
+      "duration": 1.05,
+      "pitch": 0.55,
+      "volume": 0.65,
+      "panStereo": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.25,
+      "copies": [
+        {"delay": 0.3, "volume": 0.35, "panStereo": -0.25, "pitch": 0.53},
+        {"delay": 0.65, "volume": 0.22, "panStereo": 0.3, "pitch": 0.52},
+        {"delay": 1, "volume": 0.12, "panStereo": -0.2, "pitch": 0.5}
+      ]
+    }
+  ],
+  "props": [
+    {
+      "type": "rail",
+      "parent": "",
+      "position": {"x": 0, "y": 0, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "doll",
+      "parent": "girl",
+      "position": {"x": 0.62, "y": 0.74, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 4.8,
+      "points": []
+    },
+    {
+      "type": "doll",
+      "parent": "",
+      "position": {"x": 0.55, "y": 0.24, "z": -0.3},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 4.8,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "arm",
+      "parent": "girl",
+      "position": {"x": 0.25, "y": 0.86, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": [
+        {"time": 0, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 85}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 4, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 85}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 4.8, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": -65, "y": 0, "z": 60}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 5.4, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 8.6, "position": {"x": 0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 85}, "scale": {"x": 1, "y": 1, "z": 1}}
+      ]
+    },
+    {
+      "type": "arm",
+      "parent": "girl",
+      "position": {"x": -0.25, "y": 0.86, "z": 0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": [
+        {"time": 0, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": -85}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 4, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": -85}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 4.8, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}},
+        {"time": 8.6, "position": {"x": -0.25, "y": 0.86, "z": 0}, "rotation": {"x": 0, "y": 0, "z": -85}, "scale": {"x": 1, "y": 1, "z": 1}}
+      ]
+    },
+    {
+      "type": "shoe",
+      "parent": "girl",
+      "position": {"x": -0.12, "y": 0.07, "z": 0.07},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    },
+    {
+      "type": "shoe",
+      "parent": "girl",
+      "position": {"x": 0.12, "y": 0.07, "z": 0.07},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "appear": 0,
+      "disappear": 12,
+      "points": []
+    }
+  ],
+  "blackout": {"time": 0, "duration": 0}
+}
