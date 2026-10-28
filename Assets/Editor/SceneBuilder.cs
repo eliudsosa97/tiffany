@@ -35,6 +35,7 @@ namespace TiffanyGame.EditorTools
             BuildLightStops(spawn.parent);
             HidingBuilder.BuildHideTest(spawn.parent, player);
             MemoryBuilder.Build(spawn.parent, player, gameInterface, tyler, viewCamera);
+            PanicBuilder.BuildPanic(spawn, playerLight, tyler);
             var candleStop = new GameObject("Candle 1 Safe");
             candleStop.transform.SetParent(spawn.parent, false);
             candleStop.transform.position = SurfacePoint(-5f, 1.5f);

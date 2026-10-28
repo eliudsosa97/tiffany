@@ -11,6 +11,7 @@ namespace TiffanyGame
         public bool startOn;
         public float pitch = 35f;
         public float flashBoost = 4f;
+        public float intensityScale = 1f;
         public LayerMask groundMask = Physics.DefaultRaycastLayers;
 
         public SoulLight State { get; private set; }
@@ -65,7 +66,7 @@ namespace TiffanyGame
                 spot.innerSpotAngle = baseInnerAngle * shrink;
                 spot.range = baseRange * size;
                 spot.intensity = baseIntensity * SoulLight.Flicker(soul.Energy.Current, Time.time)
-                    * (State.IsFlashing ? flashBoost : 1f);
+                    * (State.IsFlashing ? flashBoost : 1f) * intensityScale;
             }
             if (glow.gameObject.activeSelf != visible) glow.gameObject.SetActive(visible);
             glow.localScale = baseGlowScale * size;
