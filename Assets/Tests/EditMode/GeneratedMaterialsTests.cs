@@ -74,6 +74,18 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void InstancingIsOptInAndSurvivesCallsWithoutTheOption()
+        {
+            Assert.IsFalse(GeneratedMaterials.Get("Ordinary", Color.white).enableInstancing);
+            var instanced = GeneratedMaterials.Get("Instanced", Color.white, instancing: true);
+            Assert.IsTrue(instanced.enableInstancing);
+            Assert.IsTrue(GeneratedMaterials.Get("Instanced", Color.white).enableInstancing);
+            Assert.IsTrue(GeneratedMaterials.GetTextured("Leaves", Color.white, "dry_decay_leaves", 1f,
+                instancing: true).enableInstancing);
+            Assert.IsFalse(GeneratedMaterials.Get("Instanced", Color.white, instancing: false).enableInstancing);
+        }
+
+        [Test]
         public void GetTexturedThrowsWhenTextureDoesNotExist()
         {
             var exception = Assert.Throws<InvalidOperationException>(() =>
