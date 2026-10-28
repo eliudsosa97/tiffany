@@ -66,6 +66,21 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator MimicIsIgnoredWhileInactiveAndHeardAfterAppearing()
+        {
+            tyler.gameObject.SetActive(false);
+            tyler.HearMimic();
+            tyler.Appear(tyler.player.position);
+            tyler.witch.transform.position = tyler.transform.position + Vector3.forward * 25f;
+            yield return null;
+            Assert.AreEqual(TylerReaction.Whine, tyler.Reaction);
+
+            tyler.HearMimic();
+            yield return null;
+            Assert.AreEqual(TylerReaction.Growl, tyler.Reaction);
+        }
+
+        [UnityTest]
         public IEnumerator CaptureStagesRestoreControllerAndNavigation()
         {
             var stages = Object.FindObjectsByType<TylerCaptureStage>(FindObjectsSortMode.None);

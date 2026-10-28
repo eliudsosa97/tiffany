@@ -44,6 +44,7 @@ namespace TiffanyGame
         }
 
         private Tyler brain;
+        private bool heardMimic;
         private NavMeshAgent agent;
         private Vector3 previousPlayerPosition;
         private Vector3 lastDestination;
@@ -109,6 +110,11 @@ namespace TiffanyGame
             if (voice != null && barkClip != null) voice.PlayOneShot(barkClip);
         }
 
+        public void HearMimic()
+        {
+            if (isActiveAndEnabled) heardMimic = true;
+        }
+
         private void Update()
         {
             float speed = Speed;
@@ -120,6 +126,8 @@ namespace TiffanyGame
             }
             Vector3 playerPosition = player.position;
             var inputs = TylerInputs.None;
+            inputs.HeardMimic = heardMimic;
+            heardMimic = false;
             inputs.PlayerStill = TylerMotion.IsStill(previousPlayerPosition, playerPosition, Time.deltaTime);
             previousPlayerPosition = playerPosition;
             if (witch != null)

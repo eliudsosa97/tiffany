@@ -169,7 +169,7 @@ namespace TiffanyGame.Tests
             var route = GameObject.Find("Route").transform;
             var cemetery = route.GetChild(0);
             Assert.AreEqual(8, route.childCount);
-            Assert.AreEqual(46, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length);
+            Assert.AreEqual(48, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(17, route.GetComponentsInChildren<CaptureStop>().Length);
             Assert.AreEqual(12, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length);
             foreach (var movable in MovableObject.Active) Assert.IsTrue(movable.transform.IsChildOf(cemetery));
@@ -178,7 +178,10 @@ namespace TiffanyGame.Tests
             Assert.That(start.x, Is.InRange(-17f, 17f));
             Assert.That(start.z, Is.InRange(-17f, -10f));
             var witch = Object.FindAnyObjectByType<WitchController>();
-            var tyler = Object.FindAnyObjectByType<TylerController>();
+            var tyler = Object.FindAnyObjectByType<TylerController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(tyler);
+            Assert.IsFalse(tyler.gameObject.activeSelf);
+            Assert.IsFalse(tyler.NearPlayer);
             Assert.IsTrue(witch.transform.IsChildOf(cemetery));
             Assert.IsTrue(tyler.transform.IsChildOf(cemetery));
             Assert.Less(Vector3.Distance(tyler.transform.position, cemetery.Find("Ball").position), 3f);
@@ -255,6 +258,7 @@ namespace TiffanyGame.Tests
             var initialPlayerPosition = player.transform.position;
             var initialCameraPosition = viewCamera.transform.position;
 
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Latidos: 70 lpm");
             GameInput.MoveOverride = Vector2.up;
 
             yield return new WaitForSeconds(0.5f);

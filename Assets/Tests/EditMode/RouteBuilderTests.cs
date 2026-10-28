@@ -83,26 +83,33 @@ namespace TiffanyGame.Tests
         public void FiveMemoriesBelongToTheirClearingsAndBothEchoCapturesUseTheGravestone()
         {
             var collector = player.GetComponent<MemoryCollector>();
-            Assert.AreEqual(5, collector.spots.Length);
+            Assert.AreEqual(6, collector.spots.Length);
             for (int i = 0; i < 8; i++)
             {
                 var spots = route.GetChild(i).GetComponentsInChildren<MemorySpot>();
-                Assert.AreEqual(i < 5 ? 1 : 0, spots.Length);
+                Assert.AreEqual(i == 0 ? 2 : i < 5 ? 1 : 0, spots.Length);
                 if (i >= 5) continue;
                 Assert.AreEqual(i + 1, spots[0].memoryId);
-                Assert.AreSame(spots[0], collector.spots[i]);
+                Assert.AreEqual(MemorySpotKind.Memory, spots[0].kind);
+                Assert.AreSame(spots[0], collector.spots[i == 0 ? 0 : i + 1]);
+                if (i == 0) Assert.AreSame(spots[1], collector.spots[1]);
             }
             var grave = route.GetChild(0).Find("Tiffany Gravestone");
             Assert.Less(Vector3.Distance(grave.position, collector.spots[0].transform.position), 2f);
             var ball = route.GetChild(0).Find("Ball");
             Assert.IsNotNull(ball);
             Assert.IsNull(ball.GetComponentInChildren<MemorySpot>());
+            Assert.AreEqual(MemorySpotKind.Ball, collector.spots[1].kind);
+            Assert.AreEqual(MemoryProgress.BallId, collector.spots[1].memoryId);
+            Assert.AreSame(ball.gameObject, collector.spots[1].visual);
+            Assert.AreEqual(ball.position, collector.spots[1].transform.position);
             var stages = root.GetComponentsInChildren<MemoryCaptureStage>();
-            Assert.AreEqual(2, stages.Length);
+            Assert.AreEqual(4, stages.Length);
             Assert.AreEqual("Memory 0 Spot", stages[0].name);
             Assert.AreEqual("Memory 1 Echo", stages[1].name);
-            foreach (var stage in stages)
+            for (int i = 0; i < 2; i++)
             {
+                var stage = stages[i];
                 Assert.AreSame(collector, stage.collector);
                 Assert.AreSame(collector.spots[0], stage.spot);
                 Assert.Less(Vector3.Distance(stage.transform.position, stage.spot.transform.position), 2f);

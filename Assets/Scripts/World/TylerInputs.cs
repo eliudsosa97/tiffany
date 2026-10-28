@@ -3,6 +3,7 @@ namespace TiffanyGame
     public struct TylerInputs
     {
         public bool PlayerStill;
+        public bool HeardMimic;
         public WitchForm WitchForm;
         public float WitchDistance;
 
