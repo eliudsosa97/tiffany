@@ -13,6 +13,7 @@ namespace ElVelador
         private float stateTime;
         private float timeWithoutPerception;
         private bool hasTarget;
+        private bool targetIsPlayer;
         private bool chasing;
         private bool wasHidden;
         private bool wasVanished;
@@ -35,9 +36,11 @@ namespace ElVelador
         public WitchDecision Tick(float dt, in WitchPerception p)
         {
             sawHiding = p.PlayerHidden && (wasHidden ? sawHiding : sawPlayer);
+            if (p.PlayerVanished && !wasVanished) sawHiding = false;
             bool trackable = !p.PlayerVanished && !p.PlayerInSafeZone && (!p.PlayerHidden || sawHiding);
             bool noiseHeard = p.HeardNoise && !p.HearingMuted;
             bool noiseFromPlayer = noiseHeard && HorizontalDistance(p.NoisePosition, p.PlayerPosition) <= profile.PlayerNoiseMatch;
+            if (p.PlayerVanished && noiseFromPlayer) noiseHeard = false;
             bool detected = trackable && (p.SeesPlayer || p.SmellsPlayer || noiseFromPlayer || (p.PlayerHidden && sawHiding));
             bool lostEdge = (p.PlayerVanished && !wasVanished) || (p.PlayerHidden && !wasHidden && !sawHiding);
             wasHidden = p.PlayerHidden;
@@ -52,12 +55,13 @@ namespace ElVelador
             {
                 if (lostEdge)
                 {
-                    hasTarget = false;
+                    if (chasing || targetIsPlayer) hasTarget = false;
                     chasing = false;
                 }
                 if (noiseHeard || detected)
                 {
                     target = detected ? p.PlayerPosition : p.NoisePosition;
+                    targetIsPlayer = detected;
                     hasTarget = true;
                     timeWithoutPerception = 0f;
                 }
@@ -90,7 +94,7 @@ namespace ElVelador
                     }
                     break;
                 case WitchState.Stalking:
-                    if (detected && p.DistanceToPlayer < profile.CatchDistance)
+                    if (detected && (chasing || !profile.CanSprint) && p.DistanceToPlayer < profile.CatchDistance)
                     {
                         Enter(WitchState.Caught, p.WitchPosition);
                         break;
@@ -175,10 +179,11 @@ namespace ElVelador
                 Enter(WitchState.Landing, p.WitchPosition);
                 return;
             }
-            bool seesTarget = p.SeesPlayerLight || (p.SeesPlayer && !p.PlayerVanished && !p.PlayerHidden);
+            bool seesTarget = p.SeesPlayerLight || (p.SeesPlayer && !p.PlayerVanished && !p.PlayerHidden && !p.PlayerInSafeZone);
             if (seesTarget)
             {
                 target = p.SeesPlayerLight ? p.PlayerLightPosition : p.PlayerPosition;
+                targetIsPlayer = !p.SeesPlayerLight;
                 hasTarget = true;
             }
             if (hasTarget)
@@ -247,7 +252,7 @@ namespace ElVelador
             stateTime = 0f;
             verticalTarget = position;
             if (next == WitchState.WindUp) chasing = true;
-            if (next == WitchState.Stunned) chasing = false;
+            if (next == WitchState.Stunned || next == WitchState.TakingOff || next == WitchState.Landing) chasing = false;
         }
 
         private static float HorizontalDistance(Vector3 from, Vector3 to)

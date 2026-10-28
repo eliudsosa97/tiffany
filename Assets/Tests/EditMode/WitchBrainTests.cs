@@ -75,7 +75,7 @@ namespace ElVelador.Tests
             Check(Step(1f), WitchState.Flying, abovePlayer, 6f);
             profile.CanLand = true;
             p.PlayerInSafeZone = true;
-            Check(Step(0f), WitchState.Flying, abovePlayer, 6f);
+            Check(Step(0f), WitchState.Flying, route[1], 6f);
 
             p.PlayerInSafeZone = false;
             p.WitchPosition = abovePlayer + Vector3.left * 12.01f;
@@ -159,6 +159,19 @@ namespace ElVelador.Tests
             Check(Step(20f), WitchState.Flying, aboveLight, 6f);
             p.SeesPlayerLight = false;
             Check(Step(0f), WitchState.Flying, route[0], 6f);
+        }
+
+        [Test]
+        public void FlyingResumesRouteWhenVisiblePlayerEntersSafeZone()
+        {
+            p.SeesPlayer = true;
+            Vector3 abovePlayer = new Vector3(60f, 20f, 0f);
+            Check(Step(0f), WitchState.Flying, abovePlayer, 6f);
+            p.PlayerInSafeZone = true;
+            p.WitchPosition = abovePlayer;
+            Check(Step(0f), WitchState.Flying, route[0], 6f);
+            p.WitchPosition = route[0];
+            Check(Step(0f), WitchState.Flying, route[1], 6f);
         }
 
         [Test]

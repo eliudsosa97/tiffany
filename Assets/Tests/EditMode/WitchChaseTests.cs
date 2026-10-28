@@ -78,6 +78,41 @@ namespace ElVelador.Tests
             Step(0f, WitchState.Stalking, voice: true);
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public void LandingAfterChaseRestoresSlowStalkingAndVoice(bool raining)
+        {
+            Recover();
+            Step(0.81f, WitchState.Stalking, 2.5f);
+            p.SmellsPlayer = false;
+            Step(7.99f, WitchState.Stalking, 2.5f);
+            Step(0.02f, WitchState.TakingOff);
+            p.Raining = raining;
+            if (!raining)
+            {
+                Step(1.51f, WitchState.Flying, 6f);
+                p.SeesPlayerLight = true;
+                p.PlayerLightPosition = p.WitchPosition;
+            }
+            Assert.AreEqual(WitchState.Landing, WitchSim.Step(brain, ref p, 0f).State);
+            Assert.AreEqual(WitchState.Stalking, WitchSim.Step(brain, ref p, 1.51f).State);
+            p.SeesPlayerLight = false;
+            p.HeardNoise = true;
+            p.NoisePosition = p.WitchPosition + Vector3.forward * 20f;
+            Assert.AreEqual(p.NoisePosition, Step(0f, WitchState.Stalking, 1.2f, true).MoveTarget);
+        }
+
+        [Test]
+        public void StalkingWarnsBeforeCloseCaptureButFollowingStillCatches()
+        {
+            p.PlayerPosition = Vector3.right * 0.5f;
+            Step(0f, WitchState.WindUp);
+            Recover();
+            Step(0.81f, WitchState.Stalking, 2.5f);
+            p.PlayerPosition = p.WitchPosition + Vector3.right * 0.5f;
+            Step(0f, WitchState.Caught);
+        }
+
         [Test]
         public void DisabledSprintStalksSlowlyAndStillCatches()
         {
@@ -109,6 +144,20 @@ namespace ElVelador.Tests
             brain = new WitchBrain(profile, null);
             p.Flashed = true;
             Step(1f, WitchState.Flying, 6f);
+        }
+
+        [Test]
+        public void FlashStopsSprintAndPreventsCaptureWhileStunned()
+        {
+            Sprint();
+            Step(0.4f, WitchState.Sprinting, 9f);
+            Vector3 anchor = p.WitchPosition;
+            p.PlayerPosition = anchor + Vector3.right * 0.5f;
+            p.Flashed = true;
+            Assert.AreEqual(anchor, Step(0.01f, WitchState.Stunned).MoveTarget);
+            p.Flashed = false;
+            Step(1.99f, WitchState.Stunned);
+            Assert.AreEqual(anchor, p.WitchPosition);
         }
 
         [Test]
@@ -156,6 +205,36 @@ namespace ElVelador.Tests
         }
 
         [Test]
+        public void VanishingInsideSeenHidingSpotClearsTrackingAfterReappearing()
+        {
+            p.SeesPlayer = true;
+            p.PlayerPosition = Vector3.right * 12f;
+            Step(0f, WitchState.Stalking, 1.2f, true);
+            p.PlayerHidden = true;
+            p.SeesPlayer = p.SmellsPlayer = false;
+            Step(0f, WitchState.Stalking, 1.2f, true);
+            p.PlayerPosition = Vector3.right * 8f;
+            p.PlayerVanished = true;
+            Step(0f, WitchState.Stalking, voice: true);
+            Step(2.99f, WitchState.Stalking, voice: true);
+            p.PlayerVanished = false;
+            Assert.AreEqual(p.WitchPosition, Step(0.01f, WitchState.Stalking, voice: true).MoveTarget);
+        }
+
+        [Test]
+        public void HidingWithoutBeingSeenPreservesDecoyTarget()
+        {
+            p.SmellsPlayer = false;
+            p.HeardNoise = true;
+            p.NoisePosition = Vector3.left * 24f;
+            Vector3 decoy = p.NoisePosition;
+            Assert.AreEqual(decoy, Step(1f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            p.HeardNoise = false;
+            p.PlayerHidden = true;
+            Assert.AreEqual(decoy, Step(1f, WitchState.Stalking, 1.2f, true).MoveTarget);
+        }
+
+        [Test]
         public void DecoyOnlyAttractsStalkingButAudiblePlayerNoiseTriggersWarning()
         {
             p.SmellsPlayer = false;
@@ -171,6 +250,23 @@ namespace ElVelador.Tests
             Assert.AreEqual(decoy, Step(0f, WitchState.Stalking, 1.2f, true).MoveTarget);
             p.HearingMuted = false;
             Assert.AreEqual(p.PlayerPosition, Step(0f, WitchState.WindUp).MoveTarget);
+        }
+
+        [TestCase(0f)]
+        [TestCase(1f)]
+        public void VanishedPlayerNoiseDoesNotRedirectOrDelayTakeOffButDecoyDoes(float noiseOffset)
+        {
+            p.SmellsPlayer = false;
+            p.PlayerVanished = true;
+            Step(0f, WitchState.Stalking, voice: true);
+            Step(7.9f, WitchState.Stalking, voice: true);
+            p.HeardNoise = true;
+            p.NoisePosition = Vector3.left * 40f;
+            Vector3 decoy = p.NoisePosition;
+            Assert.AreEqual(decoy, Step(0.2f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            p.NoisePosition = p.PlayerPosition + Vector3.right * noiseOffset;
+            Assert.AreEqual(decoy, Step(7.9f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Step(0.2f, WitchState.TakingOff);
         }
 
         [Test]
