@@ -13,6 +13,9 @@ namespace TiffanyGame
         public TextAsset[] memoryAssets;
         public Texture2D[] drawings;
         public GameObject titlePanel;
+        public Text startHint;
+        public Text continueOption;
+        public Text newGameOption;
         public GameObject pausePanel;
         public GameObject notebookPanel;
         public RawImage drawingImage;
@@ -41,9 +44,11 @@ namespace TiffanyGame
         int noticeVersion = -1;
         int subtitleVersion = -1;
         int startFrame = -1;
+        SaveGame saveGame;
 
         public InterfaceScreen Screen => flow.Screen;
         public bool IsFrozen => flow.IsFrozen || Time.frameCount == startFrame;
+        public bool HasContinue => flow.HasContinue;
 
         void Awake()
         {
@@ -81,7 +86,7 @@ namespace TiffanyGame
         {
             if (Screen == InterfaceScreen.Title)
             {
-                if (GameInput.StartPressed) StartGame();
+                UpdateTitle();
             }
             else if (Time.frameCount != startFrame)
             {
@@ -107,10 +112,10 @@ namespace TiffanyGame
             RefreshLines();
         }
 
-        public bool MemoryFound(int memoryId)
+        public bool MemoryFound(int memoryId, bool notify = true)
         {
             if (!catalog.TryGet(memoryId, out var memory) || !pages.Add(memory)) return false;
-            if (memoryId >= 1 && memoryId <= 5)
+            if (notify && memoryId >= 1 && memoryId <= 5)
                 ShowPowerNotice(PowerSet.ForMemory(memoryId));
             pages.ShowFirstOf(memoryId);
             pageDirty = true;
@@ -164,9 +169,68 @@ namespace TiffanyGame
         public void StartGame()
         {
             if (Screen != InterfaceScreen.Title) return;
+            if (saveGame != null)
+            {
+                if (flow.ContinueSelected) saveGame.Continue();
+                else saveGame.Delete();
+            }
             startFrame = Time.frameCount;
             flow.PressStart();
             ApplyScreen();
+        }
+
+        public void ConfigureSave(SaveGame save, bool hasValidSave)
+        {
+            saveGame = save;
+            flow.ConfigureTitle(hasValidSave);
+            if (startHint != null) startHint.gameObject.SetActive(!HasContinue);
+            if (continueOption != null) continueOption.gameObject.SetActive(HasContinue);
+            if (newGameOption != null) newGameOption.gameObject.SetActive(HasContinue);
+            RefreshTitleSelection();
+        }
+
+        public void NewGame()
+        {
+            if (Screen != InterfaceScreen.Title) return;
+            flow.SelectTitleOption(false);
+            StartGame();
+        }
+
+        void UpdateTitle()
+        {
+            bool submit = GameInput.StartPressed;
+            if (!HasContinue)
+            {
+                if (submit) StartGame();
+                return;
+            }
+            bool selected = flow.ContinueSelected;
+            if (GameInput.TitlePreviousPressed) flow.SelectTitleOption(true);
+            if (GameInput.TitleNextPressed) flow.SelectTitleOption(false);
+            bool hit = false;
+            bool clicked = GameInput.PointerPressed;
+            if (GameInput.PointerMoved || clicked)
+            {
+                if (RectTransformUtility.RectangleContainsScreenPoint(continueOption.rectTransform, GameInput.PointerPosition))
+                {
+                    flow.SelectTitleOption(true);
+                    hit = true;
+                }
+                else if (RectTransformUtility.RectangleContainsScreenPoint(newGameOption.rectTransform, GameInput.PointerPosition))
+                {
+                    flow.SelectTitleOption(false);
+                    hit = true;
+                }
+            }
+            if (selected != flow.ContinueSelected) RefreshTitleSelection();
+            if (submit && (!clicked || hit)) StartGame();
+        }
+
+        void RefreshTitleSelection()
+        {
+            var highlight = new Color(1f, 0.87f, 0.63f);
+            if (continueOption != null) continueOption.color = flow.ContinueSelected ? highlight : Color.gray;
+            if (newGameOption != null) newGameOption.color = flow.ContinueSelected ? Color.gray : highlight;
         }
 
         public void TogglePause()

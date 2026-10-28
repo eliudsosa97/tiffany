@@ -21,6 +21,7 @@ namespace TiffanyGame
 
         public bool Has(Power power) => (unlocked & ToMask(power)) != 0;
         public void Unlock(Power power) => unlocked |= ToMask(power);
+        public void Clear() => unlocked = 0;
 
         private static int ToMask(Power power)
         {

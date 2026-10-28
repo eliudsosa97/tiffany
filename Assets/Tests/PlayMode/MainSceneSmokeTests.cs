@@ -99,6 +99,17 @@ namespace TiffanyGame.Tests
             var soul = player.GetComponent<PlayerSoul>();
             Assert.IsNotNull(respawn);
             Assert.IsNotNull(soul);
+            var save = player.GetComponent<SaveGame>();
+            Assert.IsNotNull(save);
+            Assert.AreSame(soul, save.soul);
+            Assert.AreSame(witch, save.witch);
+            Assert.AreEqual(10, save.candles.Length);
+            var ids = new HashSet<string>();
+            foreach (var candle in save.candles)
+            {
+                Assert.IsFalse(string.IsNullOrEmpty(candle.saveId));
+                Assert.IsTrue(ids.Add(candle.saveId));
+            }
             Assert.AreSame(witch, respawn.witch);
             Assert.IsNotNull(respawn.overlay);
             Assert.IsFalse(respawn.overlay.gameObject.activeSelf);
