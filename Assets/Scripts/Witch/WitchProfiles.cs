@@ -23,6 +23,10 @@ namespace TiffanyGame
                 case Chapter.OldCemetery:
                 case Chapter.Chapel:
                     break;
+                case Chapter.Return:
+                    profile.GroundChase = true;
+                    profile.UsesVoiceLure = false;
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(chapter), chapter, null);
             }

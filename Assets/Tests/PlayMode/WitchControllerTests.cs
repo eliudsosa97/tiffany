@@ -415,6 +415,44 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator ResetBrainKeepsReturnChaseOnGroundAwayFromPlayerAndSafeZones()
+        {
+            player.transform.position = Vector3.zero;
+            controller.BeginReturn();
+            yield return WaitForState(WitchState.Caught, 8f);
+            var candle = AddFamilyCandle();
+            player.transform.position = candle.transform.position + Vector3.back;
+            SafeZones.Add(player.transform.position - player.transform.forward * 12f, 3f);
+            controller.Flash();
+            Physics.SyncTransforms();
+
+            controller.ResetBrain();
+
+            Assert.AreEqual(Chapter.Return, controller.chapter);
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            Assert.AreEqual(WitchForm.Grounded, controller.Decision.Form);
+            Assert.IsFalse(controller.Decision.FireLit || fireLight.enabled);
+            Assert.GreaterOrEqual(HorizontalDistanceToPlayer(), 10f);
+            Assert.IsFalse(SafeZones.Contains(witch.transform.position));
+            Assert.Less(Mathf.Abs(witch.transform.position.y), 0.3f);
+            yield return null;
+            yield return null;
+            Assert.IsTrue(agent.enabled && agent.isOnNavMesh);
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+
+            player.transform.position = Vector3.right * 20f;
+            Physics.SyncTransforms();
+            yield return null;
+            yield return null;
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            Assert.AreEqual(WitchForm.Grounded, controller.Decision.Form);
+            Assert.AreEqual(2.5f, controller.Decision.Speed);
+            Assert.AreEqual(player.transform.position, controller.Decision.MoveTarget);
+            Assert.IsFalse(controller.Decision.FireLit || fireLight.enabled);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator SprintStopsAtWallAndRecoversOnNavMesh()
         {
             witch.transform.position = Vector3.zero;

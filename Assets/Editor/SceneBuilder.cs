@@ -41,6 +41,7 @@ namespace TiffanyGame.EditorTools
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
             respawn.witch = playerLight.witch;
             respawn.overlay = caughtFade;
+            BuildEnding(route.GetChild(7), player.GetComponent<PlayerSoul>(), playerLight.witch, gameInterface);
             var tyler = BuildTyler(route.GetChild(0), player.transform, testZone, memories[0]);
             tyler.transform.position = route.GetChild(0).Find("Ball").position + new Vector3(1.5f, -0.2f, 0f);
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories);
@@ -255,6 +256,26 @@ namespace TiffanyGame.EditorTools
                 if (i == 0) first = spot;
             }
             return first;
+        }
+
+        static void BuildEnding(Transform house, PlayerSoul soul, WitchController witch, GameInterface gameInterface)
+        {
+            var ending = house.Find("Window Candle").gameObject.AddComponent<EndingController>();
+            ending.soul = soul;
+            ending.witch = witch;
+            ending.gameInterface = gameInterface;
+            for (int i = 0; i < 2; i++)
+            {
+                var stop = new GameObject(i == 0 ? "Ending 1 Fade" : "Ending 2 Credits");
+                stop.transform.SetParent(house, false);
+                stop.transform.position = new Vector3(ending.transform.position.x, house.position.y, ending.transform.position.z - 1.5f);
+                var capture = stop.AddComponent<CaptureStop>();
+                capture.overrideCamera = false;
+                capture.wait = 0.5f;
+                var stage = stop.AddComponent<EndingCaptureStage>();
+                stage.ending = ending;
+                stage.credits = i == 1;
+            }
         }
 
         internal static CandleSpot CreateCandle(Transform parent, string name, Vector3 position,
@@ -494,6 +515,13 @@ namespace TiffanyGame.EditorTools
                 new Vector2(0.15f, 0.025f), new Vector2(0.85f, 0.085f));
             ui.notebookEmpty = InterfaceText("Empty", notebook, font, InterfaceTexts.NotebookEmpty, 44,
                 new Vector2(0.1f, 0.4f), new Vector2(0.9f, 0.6f));
+
+            ui.endingPanel = InterfacePanel("Ending", root.transform, 0f).GetComponent<Image>();
+            ui.endingPanel.color = new Color(1f, 1f, 1f, 0f);
+            ui.endingText = InterfaceText("Ending Text", ui.endingPanel.transform, font, "", 48,
+                new Vector2(0.12f, 0.2f), new Vector2(0.88f, 0.8f));
+            ui.endingText.color = new Color(0.12f, 0.12f, 0.12f);
+            ui.endingPanel.gameObject.SetActive(false);
 
             ui.memoryAssets = LoadInterfaceAssets<TextAsset>("t:TextAsset", "Assets/Data/Memories");
             ui.drawings = LoadInterfaceAssets<Texture2D>("t:Texture2D", "Assets/Art/Memories");

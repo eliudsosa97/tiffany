@@ -12,6 +12,7 @@ namespace TiffanyGame.Tests
         [TestCase(Chapter.Ravine, true, true, true)]
         [TestCase(Chapter.OldCemetery, true, true, true)]
         [TestCase(Chapter.Chapel, true, true, true)]
+        [TestCase(Chapter.Return, true, true, false)]
         public void ForSetsChapterFlagsAndPreservesNumericDefaults(
             Chapter chapter, bool canLand, bool canSprint, bool usesVoiceLure)
         {
@@ -21,6 +22,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(canLand, profile.CanLand);
             Assert.AreEqual(canSprint, profile.CanSprint);
             Assert.AreEqual(usesVoiceLure, profile.UsesVoiceLure);
+            Assert.AreEqual(chapter == Chapter.Return, profile.GroundChase);
             Assert.AreEqual(defaults.FlySpeed, profile.FlySpeed);
             Assert.AreEqual(defaults.StalkSpeed, profile.StalkSpeed);
             Assert.AreEqual(defaults.FollowSpeed, profile.FollowSpeed);

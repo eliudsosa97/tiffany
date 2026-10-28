@@ -4,6 +4,7 @@ namespace TiffanyGame
     {
         Playing,
         Paused,
-        Notebook
+        Notebook,
+        Ending
     }
 }
