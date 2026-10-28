@@ -14,7 +14,7 @@ namespace TiffanyGame
         public GameObject figure;
         public GameObject fireBall;
         public Light fireLight;
-        public float fireFullHeight = 10f;
+        public float fireFullHeight = 14f;
         public LayerMask sightMask = Physics.DefaultRaycastLayers;
         public LayerMask coverMask = Physics.DefaultRaycastLayers;
         public LayerMask groundMask = Physics.DefaultRaycastLayers;
@@ -281,7 +281,12 @@ namespace TiffanyGame
         public void ShowPose(WitchState state, bool fireLit)
         {
             ApplyPose(WitchPoses.For(state, fireLit));
-            if (fireLight != null) fireLight.intensity = baseFireIntensity;
+            if (fireLight == null) return;
+            Vector3 ballPosition = fireBall != null ? fireBall.transform.position : fireLight.transform.position;
+            fireLight.intensity = Physics.Raycast(ballPosition, Vector3.down, out var hit,
+                Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore)
+                ? WitchPoses.FireIntensity(baseFireIntensity, hit.distance, fireFullHeight)
+                : baseFireIntensity;
         }
 
         private void ApplyPose(WitchPose pose)

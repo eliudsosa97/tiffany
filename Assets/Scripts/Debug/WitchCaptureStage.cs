@@ -28,12 +28,15 @@ namespace TiffanyGame
             witch.ShowPose(state, fireLit);
             if (lightWitch && WitchPoses.For(state, fireLit).FigureVisible)
             {
+                var camera = Camera.main;
+                Vector3 lightDirection = camera != null ? camera.transform.position - position : direction;
+                lightDirection.y = 0f;
                 fillLight = new GameObject("Witch Capture Light").AddComponent<Light>();
                 fillLight.type = LightType.Point;
-                fillLight.range = 7f;
-                fillLight.intensity = 4f;
+                fillLight.range = 5f;
+                fillLight.intensity = 8f;
                 fillLight.color = new Color(0.65f, 0.8f, 1f);
-                fillLight.transform.position = position + direction.normalized * 2f + Vector3.up * 2f;
+                fillLight.transform.position = position + lightDirection.normalized * 1.2f + Vector3.up * 1.8f;
             }
             Debug.Log($"{GameInfo.LogPrefix} Captura de la bruja: {state}");
         }

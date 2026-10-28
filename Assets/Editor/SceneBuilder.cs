@@ -171,13 +171,19 @@ namespace TiffanyGame.EditorTools
                 stop.transform.SetParent(zoneRoot, false);
                 stop.transform.position = SurfacePoint(0f, -4f);
                 var capture = stop.AddComponent<CaptureStop>();
-                capture.overrideCamera = false;
+                capture.overrideCamera = states[i] == WitchState.Flying;
+                if (capture.overrideCamera)
+                {
+                    capture.cameraPosition = SurfacePoint(0f, -4f) + new Vector3(0f, 8f, -34f);
+                    capture.cameraRotation = Quaternion.LookRotation(Vector3.forward);
+                }
                 capture.wait = 1.5f;
                 var stage = stop.AddComponent<WitchCaptureStage>();
                 stage.state = states[i];
                 stage.fireLit = stage.state == WitchState.Flying || stage.state == WitchState.TakingOff;
-                stage.witchOffset = stage.fireLit ? new Vector3(2f, 4f, 6f)
-                    : stage.state == WitchState.Landing ? new Vector3(2f, 2.5f, 6f) : new Vector3(3f, 0f, 4f);
+                stage.witchOffset = stage.state == WitchState.Flying ? new Vector3(0f, 14f, 6f)
+                    : stage.state == WitchState.TakingOff ? new Vector3(2f, 3f, 5f)
+                    : stage.state == WitchState.Landing ? new Vector3(2f, 2.5f, 6f) : new Vector3(1.5f, 0f, 3f);
             }
         }
 

@@ -75,6 +75,61 @@ namespace TiffanyGame.Tests
             yield return null;
         }
 
+        [TestCase(WitchState.Flying, 1f)]
+        [TestCase(WitchState.Flying, 5f)]
+        [TestCase(WitchState.Flying, 14f)]
+        [TestCase(WitchState.TakingOff, 5f)]
+        public void ShowPoseKeepsGroundIlluminationAtCruiseLevel(WitchState state, float height)
+        {
+            controller.enabled = false;
+            float baseIntensity = fireLight.intensity;
+            witch.transform.position = Vector3.up * (height - 1.5f);
+            var ball = new GameObject("FireBall");
+            ball.transform.SetParent(witch.transform, false);
+            ball.transform.localPosition = Vector3.up * 1.5f;
+            controller.fireBall = ball;
+            fireLight.transform.SetParent(ball.transform, false);
+
+            controller.ShowPose(state, true);
+
+            Assert.IsTrue(fireLight.enabled);
+            Assert.AreEqual(baseIntensity / (14f * 14f), fireLight.intensity / (height * height), 1e-5f);
+        }
+
+        [Test]
+        public void ShowPoseUsesGroundMaskAndIgnoresTriggers()
+        {
+            controller.enabled = false;
+            float baseIntensity = fireLight.intensity;
+            witch.transform.position = Vector3.up * 5f;
+            var canopy = AddBox("Canopy", Vector3.up * 3f, Vector3.one);
+            canopy.gameObject.layer = 8;
+            var trigger = AddBox("Trigger", Vector3.up * 2f, Vector3.one);
+            trigger.isTrigger = true;
+            controller.groundMask = 1 << ground.layer;
+            Physics.SyncTransforms();
+
+            controller.ShowPose(WitchState.Flying, true);
+
+            Assert.AreEqual(baseIntensity * 25f / 196f, fireLight.intensity, 1e-5f);
+        }
+
+        [Test]
+        public void ShowPoseRestoresBaseIntensityWithoutGround()
+        {
+            controller.enabled = false;
+            float baseIntensity = fireLight.intensity;
+            witch.transform.position = Vector3.up * 5f;
+            controller.ShowPose(WitchState.Flying, true);
+            Assert.Less(fireLight.intensity, baseIntensity);
+            ground.GetComponent<BoxCollider>().enabled = false;
+            Physics.SyncTransforms();
+
+            controller.ShowPose(WitchState.Flying, true);
+
+            Assert.AreEqual(baseIntensity, fireLight.intensity, 1e-5f);
+        }
+
         [UnityTest]
         public IEnumerator FlyingFollowsSkyRouteWithFireAndWithoutAgent()
         {
