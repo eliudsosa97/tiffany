@@ -33,7 +33,7 @@ namespace TiffanyGame.EditorTools
             return image;
         }
 
-        public static void Build(MemorySpot spot, GameInterface ui, Image blackout)
+        public static void Build(MemorySpot spot, Transform parent, GameInterface ui, Image blackout)
         {
             string path = $"Assets/Data/Echoes/echo-{spot.memoryId}.json";
             var asset = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
@@ -42,7 +42,8 @@ namespace TiffanyGame.EditorTools
                 throw new InvalidOperationException($"{GameInfo.LogPrefix} {path}: {error}.");
             if (data.id != spot.memoryId) throw new InvalidOperationException($"{GameInfo.LogPrefix} {path}: id distinto del MemorySpot.");
             var palette = new Palette();
-            var stage = Root("Echo Stage", spot.transform);
+            var stage = Root($"Echo {spot.memoryId}", parent);
+            stage.SetPositionAndRotation(spot.transform.position, spot.transform.rotation);
             var player = spot.gameObject.AddComponent<EchoPlayer>();
             spot.echoPlayer = player;
             player.echoAsset = asset;

@@ -82,10 +82,14 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void FiveMemoriesAndTheirEchoesBelongToTheirClearings()
+        public void FiveMemoriesBelongToTheirClearingsAndEchoesStayOutsideTheRoute()
         {
             var collector = player.GetComponent<MemoryCollector>();
             Assert.AreEqual(5, collector.spots.Length);
+            var echoes = root.transform.Find("Memory Echoes");
+            Assert.IsNotNull(echoes);
+            Assert.IsFalse(echoes.IsChildOf(route));
+            Assert.AreEqual(5, echoes.childCount);
             for (int i = 0; i < 8; i++)
             {
                 var spots = route.GetChild(i).GetComponentsInChildren<MemorySpot>();
@@ -95,7 +99,9 @@ namespace TiffanyGame.Tests
                 Assert.AreSame(spots[0], collector.spots[i]);
                 var echo = spots[0].echoPlayer;
                 Assert.IsNotNull(echo);
-                Assert.AreSame(spots[0].transform, echo.stageRoot.transform.parent);
+                Assert.AreSame(echoes, echo.stageRoot.transform.parent);
+                Assert.Less(Vector3.Distance(spots[0].transform.position, echo.stageRoot.transform.position), 0.001f);
+                Assert.Less(Quaternion.Angle(spots[0].transform.rotation, echo.stageRoot.transform.rotation), 0.001f);
                 Assert.IsFalse(echo.stageRoot.activeSelf);
                 Assert.AreEqual(Vector3.up, spots[0].transform.up);
                 Assert.IsNotNull(echo.ground);

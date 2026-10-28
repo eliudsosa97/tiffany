@@ -108,6 +108,9 @@ namespace TiffanyGame.Tests
             var stages = Object.FindObjectsByType<EchoCaptureStage>(FindObjectsSortMode.None);
             Assert.AreEqual(5, stages.Length);
             var route = GameObject.Find("Route").transform;
+            var echoes = route.parent.Find("Memory Echoes");
+            Assert.IsNotNull(echoes);
+            Assert.IsFalse(echoes.IsChildOf(route));
             var player = collector.GetComponent<PlayerController>();
             player.enabled = false;
             var follow = collector.viewCamera.GetComponent<FollowCamera>();
@@ -126,7 +129,7 @@ namespace TiffanyGame.Tests
                 var clearing = route.GetChild(stage.spot.memoryId - 1);
                 Assert.AreSame(collector.spots[stage.spot.memoryId - 1], stage.spot);
                 Assert.IsTrue(stage.spot.transform.IsChildOf(clearing));
-                Assert.AreSame(stage.spot.transform, stage.spot.echoPlayer.stageRoot.transform.parent);
+                Assert.AreSame(echoes, stage.spot.echoPlayer.stageRoot.transform.parent);
                 Assert.IsNotNull(stage.spot.echoPlayer.ground);
                 Assert.IsTrue(stage.spot.echoPlayer.ground.transform.IsChildOf(clearing));
                 Vector3 offset = stage.spot.transform.InverseTransformPoint(stage.transform.position);
