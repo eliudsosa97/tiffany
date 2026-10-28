@@ -118,6 +118,15 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator LeavingTracksRestoresPatrolAndReturningRestartsWatch() => LeaveAndReturn(challenges[1]);
+
+        [UnityTest]
+        public IEnumerator LeavingStableRestoresPatrolAndReturningRestartsWatch() => LeaveAndReturn(challenges[2]);
+
+        [UnityTest]
+        public IEnumerator LeavingHutRestoresPatrolAndReturningRestartsWatch() => LeaveAndReturn(challenges[3]);
+
+        [UnityTest]
         public IEnumerator StableDetectsVisiblePlayerAndAllowsWalkingWithinThreeSecondsOfVanish()
         {
             var challenge = challenges[2];
@@ -233,6 +242,64 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(powers, soul.Powers.Count);
             Assert.AreEqual(energy, soul.Energy.Current);
             foreach (var candle in challenge.candles) Assert.IsFalse(candle.Candle.IsLit || candle.flame.enabled);
+        }
+
+        IEnumerator LeaveAndReturn(PowerChallenge challenge)
+        {
+            var witch = challenge.Witch;
+            var animator = witch.figure.GetComponent<Animator>();
+            Assert.IsNotNull(animator);
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            yield return Prepare(challenge);
+            yield return new WaitForSeconds(0.35f);
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Stalking"));
+            Assert.AreEqual(0f, animator.GetFloat("Speed"), 0.01f);
+            if (challenge.Rules.NeedsCandles)
+            {
+                soul.Powers.Unlock(Power.Candles);
+                yield return Kindle(challenge);
+            }
+            if (challenge.lure != null)
+            {
+                soul.Powers.Unlock(Power.Poltergeist);
+                yield return Distract(challenge);
+                Assert.IsTrue(challenge.lure.Used && witch.WatchInvestigating);
+            }
+            if (challenge.Rules.NeedsVanish)
+            {
+                soul.Powers.Unlock(Power.Vanish);
+                Assert.IsTrue(vanish.TryStart());
+            }
+            Vector3 previousClearing = challenge.transform.parent.TransformPoint(new Vector3(0f, 0f, -13f));
+            Teleport(previousClearing, -challenge.transform.forward);
+            yield return null;
+            yield return null;
+
+            Assert.IsNull(witch.WatchPassage);
+            Assert.AreEqual(WitchState.Flying, witch.Decision.State);
+            Assert.AreEqual(WitchForm.Flying, witch.Decision.Form);
+            Assert.IsTrue(witch.Decision.FireLit && witch.fireLight.enabled);
+            Assert.IsFalse(witch.GetComponent<CapsuleCollider>().enabled);
+            Assert.IsFalse(witch.WatchInvestigating || witch.WatchPassageClear || respawn.Active);
+            Assert.IsFalse(challenge.Rules.Completed || challenge.Rules.Crossing || vanish.State.IsActive);
+            Assert.AreEqual(0, challenge.Rules.LitMask);
+            foreach (var candle in challenge.candles) Assert.IsFalse(candle.Candle.IsLit);
+            foreach (var gate in challenge.darkness) Assert.IsTrue(gate.activeSelf);
+            if (challenge.lure != null) Assert.IsFalse(challenge.lure.Used);
+            Vector3 patrolPosition = witch.transform.position;
+            yield return new WaitForSeconds(0.1f);
+            Assert.Greater(Vector3.Distance(patrolPosition, witch.transform.position), 0.1f);
+            Assert.IsNull(witch.WatchPassage);
+
+            yield return Prepare(challenge);
+            yield return new WaitForSeconds(0.35f);
+            Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
+            Assert.IsTrue(witch.figure.activeInHierarchy);
+            Assert.IsFalse(witch.fireLight.enabled);
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Stalking"));
+            Assert.AreEqual(0f, animator.GetFloat("Speed"), 0.01f);
+            Assert.AreEqual(challenge.Rules.NeedsDistraction, witch.GetComponent<CapsuleCollider>().enabled);
+            Assert.IsFalse(challenge.Rules.Completed);
         }
 
         IEnumerator Prepare(PowerChallenge challenge)

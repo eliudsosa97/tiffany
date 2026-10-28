@@ -93,5 +93,30 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(ChallengeRules.CanRestoreLure(true, true, true, 8f));
             Assert.IsTrue(ChallengeRules.CanRestoreLure(true, true, false, 0.5f));
         }
+
+        [TestCase(-4f)]
+        [TestCase(-6f)]
+        public void LeavingAreaAllowsRechargeAndRoomBeyondTheActivationBoundary(float checkpointProgress)
+        {
+            Assert.IsFalse(ChallengeRules.HasLeftArea(-0.2f, checkpointProgress, checkpointProgress));
+            Assert.IsFalse(ChallengeRules.HasLeftArea(8f, checkpointProgress - 3f, checkpointProgress));
+            Assert.IsFalse(ChallengeRules.HasLeftArea(0f, checkpointProgress - 5f, checkpointProgress));
+            Assert.IsTrue(ChallengeRules.HasLeftArea(0f, checkpointProgress - 5.1f, checkpointProgress));
+        }
+
+        [TestCase(-10.1f, 2.2f, true)]
+        [TestCase(-10f, 2.2f, false)]
+        [TestCase(10f, 2.2f, false)]
+        [TestCase(10.1f, 2.2f, true)]
+        [TestCase(6f, 2.2f, false)]
+        [TestCase(0f, -0.3f, false)]
+        [TestCase(0f, ChallengeRules.PassageLength + 0.3f, false)]
+        [TestCase(0f, ChallengeRules.PassageLength + 5f, false)]
+        [TestCase(0f, ChallengeRules.PassageLength + 5.1f, true)]
+        public void LeavingAreaBoundsTheSidesAndFarEndButIncludesTheLureAndPassage(float lateralOffset,
+            float progress, bool expected)
+        {
+            Assert.AreEqual(expected, ChallengeRules.HasLeftArea(lateralOffset, progress, -4f));
+        }
     }
 }

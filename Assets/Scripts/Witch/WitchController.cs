@@ -129,7 +129,7 @@ namespace TiffanyGame
             Physics.SyncTransforms();
             brain.BeginWatch(post, requiresVanish);
             Decision = new WitchDecision { State = WitchState.Stalking, Form = WitchForm.Grounded, MoveTarget = post };
-            ApplyView();
+            ApplyView(transform.position, 0f);
         }
 
         public void EndWatch() => ResetBrain();

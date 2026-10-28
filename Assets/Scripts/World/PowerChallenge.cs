@@ -55,6 +55,12 @@ namespace TiffanyGame
                 if (kind != ChallengeKind.Candles) Witch.BeginWatch(transform, post.position, Rules.NeedsVanish, Rules.NeedsDistraction);
             }
             if (!active) return;
+            if (kind != ChallengeKind.Candles
+                && ChallengeRules.HasLeftArea(local.x, local.z, checkpoint.transform.localPosition.z))
+            {
+                ResetAttempt();
+                return;
+            }
             int lit = 0;
             for (int i = 0; i < candles.Length; i++)
                 if (candles[i].Candle.IsLit) lit |= 1 << i;

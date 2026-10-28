@@ -24,6 +24,9 @@ namespace TiffanyGame
         public static bool CanRestoreLure(bool atCheckpoint, bool used, bool investigating, float age) =>
             atCheckpoint && used && !investigating && age >= 0.5f;
 
+        public static bool HasLeftArea(float lateralOffset, float progress, float checkpointProgress) =>
+            System.Math.Abs(lateralOffset) > 10f || progress < checkpointProgress - 5f || progress > PassageLength + 5f;
+
         public void Tick(float progress, bool inLane, int litMask, bool distracted, bool vanished)
         {
             if (Completed) return;
