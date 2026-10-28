@@ -10,11 +10,12 @@ namespace TiffanyGame
         public const float MinThunderDelay = 0.4f;
         public const float MaxThunderDelay = 2f;
         public const float ThunderDuration = 3f;
-
+        const float FlashPeakLevel = 1f;
         const float FlashDipStart = 0.08f;
-        const float FlashDipEnd = 0.16f;
-        const float FlashDipLevel = 0.35f;
-
+        const float FlashDipLevel = 0.2f;
+        const float FlashReboundStart = 0.16f;
+        const float FlashReboundLevel = 0.8f;
+        const float FlashFadeStart = 0.26f;
         readonly Func<float> random01;
         double time;
         double thunderUntil;
@@ -49,8 +50,18 @@ namespace TiffanyGame
 
         public bool Flashing => time - flashAt < FlashDuration;
 
-        public float FlashLevel => !Flashing ? 0f
-            : time - flashAt < FlashDipStart || time - flashAt >= FlashDipEnd ? 1f : FlashDipLevel;
+        public float FlashLevel
+        {
+            get
+            {
+                if (!Flashing) return 0f;
+                double elapsed = time - flashAt;
+                if (elapsed < FlashDipStart) return FlashPeakLevel;
+                if (elapsed < FlashReboundStart) return FlashDipLevel;
+                if (elapsed < FlashFadeStart) return FlashReboundLevel;
+                return FlashReboundLevel * (float)((FlashDuration - elapsed) / (FlashDuration - FlashFadeStart));
+            }
+        }
 
         public bool ThunderSounding => time < thunderUntil;
 

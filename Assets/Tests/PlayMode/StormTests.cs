@@ -55,29 +55,81 @@ namespace TiffanyGame.Tests
             var player = playerObject.AddComponent<PlayerController>();
             player.viewCamera = cameraObject.GetComponent<Camera>();
             var storm = new GameObject("Storm").AddComponent<Storm>();
-            storm.lightning = new GameObject("Lightning").AddComponent<Light>();
-            storm.lightning.transform.SetParent(storm.transform);
-            storm.lightning.enabled = false;
-            GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
-            GameInput.RunOverride = GameInput.SlowOverride = false;
+            storm.moon = new GameObject("Moon").AddComponent<Light>();
+            storm.moon.transform.SetParent(storm.transform);
+            storm.moon.type = LightType.Directional;
+            storm.moon.intensity = 0.3f;
+            var originalAmbient = RenderSettings.ambientLight;
+            var baseAmbient = new Color(0.025f, 0.035f, 0.065f);
+            RenderSettings.ambientLight = baseAmbient;
+            GameInput.MoveOverride = Vector2.zero;
+            GameInput.AimOverride = Vector2.zero;
+            GameInput.RunOverride = false;
+            GameInput.SlowOverride = false;
             try
             {
                 Physics.SyncTransforms();
                 storm.raining = true;
                 yield return null;
                 Assert.IsTrue(player.raining);
+                Assert.AreEqual(0.3f, storm.moon.intensity);
+                Assert.AreEqual(baseAmbient, RenderSettings.ambientLight);
                 storm.Strike();
                 yield return null;
-                Assert.IsTrue(storm.Flashing && storm.lightning.enabled);
-                Assert.Greater(storm.lightning.intensity, 0f);
+                Assert.IsTrue(storm.Flashing);
+                Assert.Greater(storm.moon.intensity, 0.3f);
+                Assert.AreNotEqual(baseAmbient, RenderSettings.ambientLight);
                 yield return new WaitForSeconds(1.2f);
-                Assert.IsFalse(storm.Flashing || storm.lightning.enabled);
-                Assert.AreEqual(0f, storm.lightning.intensity);
+                Assert.IsFalse(storm.Flashing);
+                Assert.AreEqual(0.3f, storm.moon.intensity);
+                Assert.AreEqual(baseAmbient, RenderSettings.ambientLight);
+
+                storm.Strike();
+                yield return null;
+                Assert.Greater(storm.moon.intensity, 0.3f);
+                storm.enabled = false;
+                Assert.AreEqual(0.3f, storm.moon.intensity);
+                Assert.AreEqual(baseAmbient, RenderSettings.ambientLight);
             }
             finally
             {
+                storm.enabled = false;
+                RenderSettings.ambientLight = originalAmbient;
                 foreach (var instance in new[] { storm.gameObject, playerObject, cameraObject, ground }) Object.Destroy(instance);
                 GameInput.ClearOverrides();
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator RainAudioLoopsOnlyWhileRaining()
+        {
+            var storm = new GameObject("Storm", typeof(AudioListener)).AddComponent<Storm>();
+            var clip = AudioClip.Create("Rain", 4410, 1, 44100, false);
+            storm.rainSource = storm.gameObject.AddComponent<AudioSource>();
+            storm.rainSource.playOnAwake = false;
+            storm.rainSource.loop = true;
+            storm.rainSource.clip = clip;
+            try
+            {
+                yield return null;
+                Assert.IsFalse(storm.rainSource.isPlaying);
+
+                storm.raining = true;
+                yield return null;
+                Assert.IsTrue(storm.rainSource.isPlaying);
+                yield return new WaitForSeconds(0.2f);
+                Assert.IsTrue(storm.rainSource.isPlaying);
+
+                storm.raining = false;
+                yield return null;
+                Assert.IsFalse(storm.rainSource.isPlaying);
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                Object.Destroy(storm.gameObject);
+                Object.Destroy(clip);
             }
             yield return null;
         }
