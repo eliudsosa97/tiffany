@@ -162,35 +162,10 @@ namespace TiffanyGame
 
         private bool EnableAgent()
         {
-            if (agent.enabled)
-            {
-                if (agent.isOnNavMesh) return true;
-                agent.enabled = false;
-            }
-            if (!TrySampleNavMesh(transform.position, 3f, out var hit))
-            {
-                if (!warnedMissingNavMesh)
-                {
-                    Debug.LogWarning(GameInfo.LogPrefix + " Tyler no encontró NavMesh cerca.");
-                    warnedMissingNavMesh = true;
-                }
-                return false;
-            }
-            transform.position = hit.position;
-            agent.enabled = true;
-            agent.Warp(hit.position);
-            hasDestination = false;
-            if (agent.isOnNavMesh) return true;
-            agent.enabled = false;
-            return false;
-        }
-
-        private bool TrySampleNavMesh(Vector3 position, float radius, out NavMeshHit hit)
-        {
-            for (; radius <= 24f; radius *= 2f)
-                if (NavMesh.SamplePosition(position, out hit, radius, agent.areaMask)) return true;
-            hit = default;
-            return false;
+            bool ready = NavMeshPlacement.EnsureOnNavMesh(agent, transform, ref warnedMissingNavMesh,
+                GameInfo.LogPrefix + " Tyler no encontró NavMesh cerca.", out bool repositioned);
+            if (repositioned) hasDestination = false;
+            return ready;
         }
 
         public void ShowReaction(TylerReaction reaction, Vector3 witchPosition)
