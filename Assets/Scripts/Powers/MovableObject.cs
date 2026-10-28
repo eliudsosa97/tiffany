@@ -10,6 +10,7 @@ namespace TiffanyGame
         public float pushSpeed = 2.5f;
         public float liftSpeed = 2f;
         public float spin = 6f;
+        public AudioSource sound;
 
         private static readonly List<MovableObject> active = new List<MovableObject>();
         private Rigidbody body;
@@ -39,6 +40,7 @@ namespace TiffanyGame
             body.isKinematic = false;
             body.AddForce(direction * pushSpeed + Vector3.up * liftSpeed, ForceMode.VelocityChange);
             body.AddTorque(Vector3.Cross(Vector3.up, direction) * spin, ForceMode.VelocityChange);
+            if (sound != null && sound.clip != null) sound.Play();
             NoiseBus.Publish(new StepNoise(transform.position, noiseRadius));
             Debug.Log($"{GameInfo.LogPrefix} Poltergeist: {kind} suena a {noiseRadius:0.#} m");
         }
