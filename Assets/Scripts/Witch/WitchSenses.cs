@@ -6,18 +6,35 @@ namespace TiffanyGame
     public sealed class WitchSenses
     {
         private readonly WitchSenseProfile profile;
-        private StepNoise pendingNoise;
-        private bool hasPendingNoise;
+        private readonly StepNoise[] pendingNoises;
+        private int pendingCount;
 
         public WitchSenses(WitchSenseProfile profile)
         {
             this.profile = profile ?? throw new ArgumentNullException(nameof(profile));
+            pendingNoises = new StepNoise[8];
         }
 
-        public void Hear(in StepNoise noise)
+        public void Hear(in StepNoise noise, Vector3 witchPosition)
         {
-            pendingNoise = noise;
-            hasPendingNoise = true;
+            if (pendingCount < pendingNoises.Length)
+            {
+                pendingNoises[pendingCount++] = noise;
+                return;
+            }
+
+            int smallest = 0;
+            float smallestMargin = HearingMargin(in pendingNoises[0], witchPosition);
+            for (int i = 1; i < pendingCount; i++)
+            {
+                float margin = HearingMargin(in pendingNoises[i], witchPosition);
+                if (margin < smallestMargin)
+                {
+                    smallest = i;
+                    smallestMargin = margin;
+                }
+            }
+            if (HearingMargin(in noise, witchPosition) > smallestMargin) pendingNoises[smallest] = noise;
         }
 
         public WitchPerception Sense(in WitchSenseInputs input)
@@ -25,9 +42,28 @@ namespace TiffanyGame
             float distance = HorizontalDistance(input.WitchPosition, input.PlayerPosition);
             bool flying = input.Form == WitchForm.Flying;
             bool grounded = input.Form == WitchForm.Grounded;
-            bool heardNoise = hasPendingNoise && grounded
-                && HorizontalDistance(input.WitchPosition, pendingNoise.Position) <= pendingNoise.Radius;
-            hasPendingNoise = false;
+            bool heardNoise = false;
+            Vector3 noisePosition = Vector3.zero;
+            float bestMargin = float.NegativeInfinity;
+            float bestDistance = float.PositiveInfinity;
+            if (grounded)
+            {
+                for (int i = 0; i < pendingCount; i++)
+                {
+                    StepNoise noise = pendingNoises[i];
+                    float noiseDistance = HorizontalDistance(input.WitchPosition, noise.Position);
+                    if (noiseDistance > noise.Radius) continue;
+                    float margin = noise.Radius - noiseDistance;
+                    if (margin > bestMargin || (margin == bestMargin && noiseDistance < bestDistance))
+                    {
+                        heardNoise = true;
+                        noisePosition = noise.Position;
+                        bestMargin = margin;
+                        bestDistance = noiseDistance;
+                    }
+                }
+            }
+            pendingCount = 0;
 
             return new WitchPerception
             {
@@ -49,8 +85,13 @@ namespace TiffanyGame
                     && HorizontalDistance(input.WitchPosition, input.PlayerLightPosition) <= profile.LightSightDistance,
                 SmellsPlayer = grounded && !input.PlayerVanished && distance <= profile.SmellDistance,
                 HeardNoise = heardNoise,
-                NoisePosition = heardNoise ? pendingNoise.Position : Vector3.zero
+                NoisePosition = noisePosition
             };
+        }
+
+        private static float HearingMargin(in StepNoise noise, Vector3 witchPosition)
+        {
+            return noise.Radius - HorizontalDistance(witchPosition, noise.Position);
         }
 
         private static float HorizontalDistance(Vector3 from, Vector3 to)
