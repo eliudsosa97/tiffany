@@ -2,6 +2,7 @@ using System.IO;
 using NUnit.Framework;
 using TiffanyGame.EditorTools;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -10,6 +11,7 @@ namespace TiffanyGame.Tests
     public class ModelLibraryTests
     {
         const string TempFolder = "Assets/ModelLibraryTestTemp";
+        static readonly string[] ExpectedClips = { "Idle", "Stalking", "WindUp", "Sprinting", "Recovering", "Stunned", "Caught", "Landing", "TakingOff" };
         GameObject parent;
 
         [SetUp]
@@ -29,15 +31,211 @@ namespace TiffanyGame.Tests
             ModelLibrary.materialFolder = ModelLibrary.MaterialFolder;
         }
 
+        static GameObject Model() => AssetDatabase.LoadAssetAtPath<GameObject>(WitchAnimator.ModelPath);
+
         [Test]
-        public void WitchFbxHasBothPosesWithinBudget()
+        public void WitchFbxIsOneSkinnedMeshWithinBudget()
         {
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelLibrary.ModelFolder + "/witch.fbx");
+            var model = Model();
             Assert.IsNotNull(model);
-            foreach (string pose in new[] { "WitchStand", "WitchCrouch" })
+            Assert.IsEmpty(model.GetComponentsInChildren<MeshFilter>(true));
+            var skins = model.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            Assert.AreEqual(1, skins.Length);
+            var mesh = skins[0].sharedMesh;
+            long indices = 0;
+            for (int i = 0; i < mesh.subMeshCount; i++) indices += mesh.GetIndexCount(i);
+            Assert.That(indices / 3, Is.InRange(3000, 6000));
+            Assert.That(skins[0].bones.Length, Is.InRange(20, 40));
+            foreach (var bone in skins[0].bones) Assert.IsNotNull(bone);
+            foreach (string name in new[] { "Hips", "Head", "Hand.L", "Hand.R", "Foot.L", "Foot.R" })
+                Assert.IsNotNull(Bone(model.transform, name), name);
+        }
+
+        [TestCase("Idle")]
+        [TestCase("Stalking")]
+        [TestCase("WindUp")]
+        [TestCase("Sprinting")]
+        [TestCase("Recovering")]
+        [TestCase("Stunned")]
+        [TestCase("Caught")]
+        [TestCase("Landing")]
+        [TestCase("TakingOff")]
+        public void WitchClipsMatchTheirSpecAndStayInPlace(string name)
+        {
+            var clips = WitchAnimator.Clips();
+            var spec = ModelLibrary.LoadSpec("witch");
+            CollectionAssert.AreEquivalent(ExpectedClips, clips.Keys);
+            CollectionAssert.AreEquivalent(ExpectedClips, System.Array.ConvertAll(spec.clips, c => c.name));
+            var entry = System.Array.Find(spec.clips, c => c.name == name);
+            var clip = clips[name];
+            Assert.AreEqual(entry.loop, clip.isLooping, name);
+            Assert.AreEqual(30f, clip.frameRate, 0.001f, name);
+            Assert.AreEqual(entry.frames / 30f, clip.length, 0.001f, name);
+            var importer = (ModelImporter)AssetImporter.GetAtPath(WitchAnimator.ModelPath);
+            Assert.AreEqual(ModelImporterAnimationType.Generic, importer.animationType);
+            Assert.AreEqual(ModelImporterAnimationCompression.KeyframeReduction, importer.animationCompression);
+            var imported = System.Array.Find(importer.clipAnimations, c => c.name == name);
+            Assert.IsNotNull(imported, name);
+            Assert.AreEqual(0f, imported.firstFrame, name);
+            Assert.AreEqual(entry.frames, imported.lastFrame, name);
+            Assert.AreEqual(entry.loop ? WrapMode.Loop : WrapMode.ClampForever, imported.wrapMode, name);
+            var root = Object.Instantiate(Model());
+            try
             {
-                Assert.That(TriangleCount(model.transform.Find(pose)), Is.InRange(1000, 6000), pose);
+                var hips = Bone(root.transform, "Hips");
+                for (int frame = 0; frame <= entry.frames; frame++)
+                {
+                    clip.SampleAnimation(root, frame / 30f);
+                    AssertNeutral(root.transform);
+                    var local = root.transform.InverseTransformPoint(hips.position);
+                    Assert.Less(new Vector2(local.x, local.z).magnitude, 0.6f, $"{name} en cuadro {frame}");
+                }
             }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [TestCase("Idle")]
+        [TestCase("Stalking")]
+        [TestCase("Sprinting")]
+        [TestCase("Stunned")]
+        public void WitchClipsLoopWithoutAJump(string name)
+        {
+            var root = Object.Instantiate(Model());
+            var clip = Object.Instantiate(WitchAnimator.Clips()[name]);
+            try
+            {
+                // El muestreo no debe envolver el último cuadro al primero.
+                var settings = AnimationUtility.GetAnimationClipSettings(clip);
+                settings.loopTime = false;
+                AnimationUtility.SetAnimationClipSettings(clip, settings);
+                clip.wrapMode = WrapMode.ClampForever;
+                clip.SampleAnimation(root, 0f);
+                var start = Snapshot(root.transform);
+                clip.SampleAnimation(root, clip.length);
+                var end = Snapshot(root.transform);
+                for (int i = 0; i < start.Length; i++)
+                {
+                    Assert.Less(Quaternion.Angle(start[i].rotation, end[i].rotation), 1f, $"{name}: {start[i].name}");
+                    Assert.Less((start[i].position - end[i].position).magnitude, 0.01f, $"{name}: {start[i].name}");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(clip);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [TestCase("L")]
+        [TestCase("R")]
+        public void SprintingForearmsClearTheHindLegsDuringRecovery(string side)
+        {
+            var root = Object.Instantiate(Model());
+            try
+            {
+                var clip = WitchAnimator.Clips()["Sprinting"];
+                var elbow = Bone(root.transform, "Forearm." + side);
+                var wrist = Bone(root.transform, "Hand." + side);
+                var knee = Bone(root.transform, "Shin." + side);
+                var ankle = Bone(root.transform, "Foot." + side);
+                for (int sample = 0; sample <= 16; sample++)
+                {
+                    float frame = 9f + sample / 8f;
+                    clip.SampleAnimation(root, frame / clip.frameRate);
+                    var a = root.transform.InverseTransformPoint(elbow.position);
+                    var b = root.transform.InverseTransformPoint(wrist.position);
+                    var c = root.transform.InverseTransformPoint(knee.position);
+                    var d = root.transform.InverseTransformPoint(ankle.position) - c;
+                    for (int point = 0; point <= 16; point++)
+                    {
+                        var forearm = Vector3.Lerp(a, b, point / 16f);
+                        var shin = c + d * Mathf.Clamp01(Vector3.Dot(forearm - c, d) / d.sqrMagnitude);
+                        Assert.Greater(Vector3.Distance(forearm, shin), 0.075f, $"{side}, cuadro {frame}");
+                    }
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void WindUpLowersTheHipsAndHoldsItsLastPose()
+        {
+            var root = Object.Instantiate(Model());
+            try
+            {
+                var clips = WitchAnimator.Clips();
+                var hips = Bone(root.transform, "Hips");
+                clips["Idle"].SampleAnimation(root, 0f);
+                float standing = root.transform.InverseTransformPoint(hips.position).y;
+                var windUp = clips["WindUp"];
+                windUp.SampleAnimation(root, windUp.length);
+                Assert.Greater(standing - root.transform.InverseTransformPoint(hips.position).y, 0.4f);
+                var end = Snapshot(root.transform);
+                windUp.SampleAnimation(root, windUp.length + 0.5f);
+                var held = Snapshot(root.transform);
+                for (int i = 0; i < end.Length; i++)
+                {
+                    Assert.Less(Quaternion.Angle(end[i].rotation, held[i].rotation), 0.1f, end[i].name);
+                    Assert.Less((end[i].position - held[i].position).magnitude, 0.001f, end[i].name);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void ControllerHasEveryStateAndTheSpeedParameter()
+        {
+            var controller = (AnimatorController)WitchAnimator.Controller();
+            Assert.AreEqual(WitchAnimator.ControllerPath, AssetDatabase.GetAssetPath(controller));
+            Assert.AreEqual(1, controller.parameters.Length);
+            Assert.AreEqual("Speed", controller.parameters[0].name);
+            Assert.AreEqual(AnimatorControllerParameterType.Float, controller.parameters[0].type);
+            var machine = controller.layers[0].stateMachine;
+            var profile = new WitchProfile();
+            var clips = WitchAnimator.Clips();
+            string[] names = ExpectedClips;
+            Assert.AreEqual(names.Length, machine.states.Length);
+            Assert.IsEmpty(machine.anyStateTransitions);
+            Assert.AreEqual("Idle", machine.defaultState.name);
+            foreach (string name in names)
+            {
+                var state = System.Array.Find(machine.states, s => s.state.name == name).state;
+                Assert.IsNotNull(state, name);
+                Assert.IsEmpty(state.transitions, name);
+                Assert.IsNotNull(state.motion, name);
+                if (name != "Stalking") Assert.AreSame(clips[name], state.motion, name);
+            }
+            var stalking = System.Array.Find(machine.states, s => s.state.name == "Stalking").state;
+            var tree = (BlendTree)stalking.motion;
+            Assert.AreEqual("Speed", tree.blendParameter);
+            var children = tree.children;
+            Assert.AreEqual(3, children.Length);
+            Assert.AreSame(clips["Idle"], children[0].motion);
+            Assert.AreEqual(0f, children[0].threshold);
+            Assert.AreSame(clips["Stalking"], children[1].motion);
+            Assert.AreEqual(profile.StalkSpeed, children[1].threshold);
+            Assert.AreSame(clips["Stalking"], children[2].motion);
+            Assert.AreEqual(profile.FollowSpeed, children[2].threshold);
+            // Más rápido es más cadencia con la misma zancada.
+            Assert.AreEqual(profile.FollowSpeed / profile.StalkSpeed, children[2].timeScale, 1e-4f);
+            var sprint = System.Array.Find(machine.states, s => s.state.name == "Sprinting").state;
+            Assert.AreSame(clips["Sprinting"], sprint.motion);
+            Assert.IsTrue(sprint.speedParameterActive);
+            Assert.AreEqual("Speed", sprint.speedParameter);
+            Assert.AreEqual(1f, sprint.speed * profile.SprintSpeed, 1e-4f);
+
+            string text = File.ReadAllText(WitchAnimator.ControllerPath);
+            WitchAnimator.Controller();
+            Assert.AreEqual(text, File.ReadAllText(WitchAnimator.ControllerPath), "el controller se rehízo sin cambios");
         }
 
         [Test]
@@ -48,33 +246,83 @@ namespace TiffanyGame.Tests
             Assert.AreSame(parent.transform, root.transform.parent);
             AssertNeutral(root.transform);
 
-            var stand = LocalBounds(root.transform, "WitchStand");
-            Assert.That(stand.size.y, Is.InRange(2.25f, 2.4f));
-            Assert.AreEqual(0f, stand.min.y, 0.01f);
-            Assert.Less(new Vector2(stand.center.x, stand.center.z).magnitude, 0.3f);
+            var animator = root.GetComponent<Animator>();
+            Assert.IsNotNull(animator);
+            Assert.AreSame(AssetDatabase.LoadAssetAtPath<AnimatorController>(WitchAnimator.ControllerPath), animator.runtimeAnimatorController);
+            Assert.IsFalse(animator.applyRootMotion);
+            Assert.AreEqual(AnimatorCullingMode.CullUpdateTransforms, animator.cullingMode);
+            Assert.IsNull(root.transform.Find("WitchStand"));
+            Assert.IsNull(root.transform.Find("WitchCrouch"));
 
-            var crouch = LocalBounds(root.transform, "WitchCrouch");
-            Assert.Less(crouch.size.y, 1.8f);
-            Assert.AreEqual(0f, crouch.min.y, 0.01f);
-            // Las manos y la cabeza van por delante. Con el modelo al revés, el margen se invierte.
-            Assert.Greater(crouch.max.z, 2f * -crouch.min.z);
-            Assert.Greater(stand.max.z, 2f * -stand.min.z);
+            var skin = root.GetComponentInChildren<SkinnedMeshRenderer>();
+            var rest = RestBounds(skin, root.transform);
+            Assert.That(rest.size.y, Is.InRange(2.25f, 2.4f));
+            Assert.AreEqual(0f, rest.min.y, 0.01f);
+            Assert.Less(new Vector2(rest.center.x, rest.center.z).magnitude, 0.3f);
 
-            var hair = SubMeshBounds(root.transform.Find("WitchStand"), "WitchHair");
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                Assert.Greater(Vector3.Dot(Vector3.Cross(t.right, t.up), t.forward), 0f, $"{t.name} está reflejado");
+            var bones = BonePositions(root.transform);
+            Assert.IsTrue(FacesForward(bones), "huesos de su izquierda en -X, rodillas y la mano alzada al frente");
+            for (int i = 0; i < bones.Length; i++) bones[i].x = -bones[i].x;
+            Assert.IsFalse(FacesForward(bones), "el esqueleto reflejado también pasaría");
+
+            var hair = SubMeshBounds(skin, "WitchHair");
             Assert.IsTrue(HeadLeansToHerLeft(hair), $"centro del pelo en x = {hair.center.x}");
             hair.center = new Vector3(-hair.center.x, hair.center.y, hair.center.z);
             Assert.IsFalse(HeadLeansToHerLeft(hair), "el modelo reflejado también pasaría");
         }
 
+        static readonly string[] Landmarks = { "Thigh.L", "Thigh.R", "Shin.L", "Shin.R", "Hand.L", "Hand.R", "Fingers.R" };
+
+        static Vector3[] BonePositions(Transform root)
+        {
+            var positions = new Vector3[Landmarks.Length];
+            for (int i = 0; i < Landmarks.Length; i++) positions[i] = root.InverseTransformPoint(Bone(root, Landmarks[i]).position);
+            return positions;
+        }
+
+        // Ella mira a +Z: su izquierda es -X, las rodillas van delante de la cadera y la mano derecha alzada al frente.
+        static bool FacesForward(Vector3[] b) =>
+            b[0].x < 0f && b[1].x > 0f && b[4].x < 0f && b[5].x > 0f &&
+            b[2].z > b[0].z + 0.03f && b[3].z > b[1].z + 0.03f && b[6].z > 0.3f;
+
         // Su izquierda es -X en Unity: witch.json pone la cabeza en x = -0.14.
         static bool HeadLeansToHerLeft(Bounds hair) => hair.center.x < -0.05f;
 
-        static Bounds SubMeshBounds(Transform pose, string material)
+        static Bounds SubMeshBounds(SkinnedMeshRenderer skin, string material)
         {
-            var materials = pose.GetComponent<Renderer>().sharedMaterials;
+            var materials = skin.sharedMaterials;
             int index = System.Array.FindIndex(materials, m => m.name == material);
             Assert.GreaterOrEqual(index, 0, material);
-            return pose.GetComponent<MeshFilter>().sharedMesh.GetSubMesh(index).bounds;
+            return skin.sharedMesh.GetSubMesh(index).bounds;
+        }
+
+        static Bounds RestBounds(SkinnedMeshRenderer skin, Transform root)
+        {
+            var b = skin.sharedMesh.bounds;
+            var m = root.worldToLocalMatrix * skin.transform.localToWorldMatrix;
+            var bounds = new Bounds(m.MultiplyPoint3x4(b.center), Vector3.zero);
+            for (int i = 0; i < 8; i++)
+                bounds.Encapsulate(m.MultiplyPoint3x4(b.center + Vector3.Scale(b.extents,
+                    new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1))));
+            return bounds;
+        }
+
+        static Transform Bone(Transform root, string name)
+        {
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                if (t.name == name) return t;
+            Assert.Fail($"Falta el hueso {name}");
+            return null;
+        }
+
+        static (string name, Quaternion rotation, Vector3 position)[] Snapshot(Transform root)
+        {
+            var all = root.GetComponentsInChildren<Transform>(true);
+            var snap = new (string, Quaternion, Vector3)[all.Length];
+            for (int i = 0; i < all.Length; i++) snap[i] = (all[i].name, all[i].localRotation, all[i].localPosition);
+            return snap;
         }
 
         [Test]
@@ -84,10 +332,12 @@ namespace TiffanyGame.Tests
             Assert.IsEmpty(root.GetComponentsInChildren<Collider>(true));
             var spec = ModelLibrary.LoadSpec("witch");
             var renderers = root.GetComponentsInChildren<Renderer>(true);
-            Assert.AreEqual(2, renderers.Length);
+            Assert.AreEqual(1, renderers.Length);
+            Assert.IsInstanceOf<SkinnedMeshRenderer>(renderers[0]);
             foreach (var renderer in renderers)
             {
                 Assert.AreEqual(ShadowCastingMode.On, renderer.shadowCastingMode);
+                Assert.AreEqual(spec.materials.Length, renderer.sharedMaterials.Length);
                 foreach (var material in renderer.sharedMaterials)
                 {
                     Assert.IsNotNull(material, renderer.name);

@@ -7,16 +7,12 @@ namespace TiffanyGame
         public bool FigureVisible { get; }
         public bool BallVisible { get; }
         public bool LightOn { get; }
-        public bool Crouched { get; }
-        public float FigureLean { get; }
 
-        public WitchPose(bool figureVisible, bool ballVisible, bool lightOn, bool crouched, float figureLean)
+        public WitchPose(bool figureVisible, bool ballVisible, bool lightOn)
         {
             FigureVisible = figureVisible;
             BallVisible = ballVisible;
             LightOn = lightOn;
-            Crouched = crouched;
-            FigureLean = figureLean;
         }
     }
 
@@ -27,19 +23,13 @@ namespace TiffanyGame
             switch (state)
             {
                 case WitchState.Flying:
-                    return new WitchPose(false, true, fireLit, false, 0f);
+                    return new WitchPose(false, true, fireLit);
                 case WitchState.Landing:
-                    return new WitchPose(false, true, false, false, 0f);
+                    return new WitchPose(false, true, false);
                 case WitchState.TakingOff:
-                    return new WitchPose(false, true, true, false, 0f);
-                case WitchState.WindUp:
-                    return new WitchPose(true, false, false, true, 0f);
-                case WitchState.Sprinting:
-                    return new WitchPose(true, false, false, false, 30f);
-                case WitchState.Recovering:
-                    return new WitchPose(true, false, false, false, 15f);
+                    return new WitchPose(false, true, true);
                 default:
-                    return new WitchPose(true, false, false, false, 0f);
+                    return new WitchPose(true, false, false);
             }
         }
 

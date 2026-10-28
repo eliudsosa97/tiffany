@@ -6,20 +6,10 @@ namespace TiffanyGame.EditorTools
 {
     public static class WitchBuilder
     {
-        public static GameObject BuildFigure(Transform parent, out GameObject stand, out GameObject crouch)
+        public static GameObject BuildFigure(Transform parent)
         {
             var figure = ModelLibrary.Instantiate("witch", parent);
             figure.name = "WitchFigure";
-            var standTransform = figure.transform.Find("WitchStand");
-            var crouchTransform = figure.transform.Find("WitchCrouch");
-            if (standTransform == null)
-                throw new System.InvalidOperationException($"{GameInfo.LogPrefix} Falta la hija directa 'WitchStand' en el modelo 'witch'.");
-            if (crouchTransform == null)
-                throw new System.InvalidOperationException($"{GameInfo.LogPrefix} Falta la hija directa 'WitchCrouch' en el modelo 'witch'.");
-            stand = standTransform.gameObject;
-            crouch = crouchTransform.gameObject;
-            stand.SetActive(true);
-            crouch.SetActive(false);
             return figure;
         }
 
