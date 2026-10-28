@@ -10,9 +10,14 @@ namespace TiffanyGame
         private SoulEnergy energy;
         private PowerSet powers;
         private RespawnPoint respawn;
+        private int lastCandleRechargeFrame = -2;
 
         public SoulEnergy Energy => energy ?? (energy = new SoulEnergy(startEnergy));
         public RespawnPoint Respawn => respawn ?? (respawn = new RespawnPoint(transform.position));
+        // Las veladoras y Tyler pueden actualizarse en cualquier orden.
+        public bool RechargingAtCandle => Time.frameCount - lastCandleRechargeFrame <= 1;
+
+        internal void RegisterCandleRecharge() => lastCandleRechargeFrame = Time.frameCount;
 
         public PowerSet Powers
         {

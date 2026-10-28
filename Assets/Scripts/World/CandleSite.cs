@@ -10,6 +10,7 @@ namespace TiffanyGame
         public Candle Candle { get; }
         public float Radius { get; }
         public bool PlayerInside { get; private set; }
+        public bool Recharging => PlayerInside && Candle.Kind == CandleKind.Family;
 
         public CandleSite(Candle candle, float radius)
         {
@@ -30,7 +31,7 @@ namespace TiffanyGame
             bool wasInside = PlayerInside;
             Candle.Tick(dt, raining);
             PlayerInside = Contains(playerPosition);
-            if (!PlayerInside || Candle.Kind != CandleKind.Family) return;
+            if (!Recharging) return;
             if (!wasInside) respawn?.Touch(Candle);
             energy?.Recharge(dt);
         }

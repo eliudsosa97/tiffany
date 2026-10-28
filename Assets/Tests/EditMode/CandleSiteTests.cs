@@ -22,6 +22,7 @@ namespace TiffanyGame.Tests
 
             Assert.AreEqual(expected, energy.Current);
             Assert.AreEqual(expected > 10f, site.PlayerInside);
+            Assert.AreEqual(expected > 10f, site.Recharging);
             Assert.AreEqual(expected > 10f ? candle.Position : start, respawn.Position);
         }
 
@@ -50,6 +51,7 @@ namespace TiffanyGame.Tests
             site.Tick(1f, false, Vector3.zero, energy, respawn);
             Assert.AreEqual(lit, site.Contains(Vector3.up * 5f));
             Assert.AreEqual(lit, site.PlayerInside);
+            Assert.IsFalse(site.Recharging);
             Assert.AreEqual(10f, energy.Current);
             Assert.AreEqual(Vector3.one, respawn.Position);
             site.Tick(Candle.LitDuration / 2f, true, Vector3.zero, energy, respawn);

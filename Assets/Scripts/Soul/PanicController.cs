@@ -28,7 +28,9 @@ namespace TiffanyGame
             float dt = Time.deltaTime;
             Vector3 position = transform.position;
             bool witchActive = witch != null && witch.isActiveAndEnabled;
-            var inputs = PanicSenses.Build(playerLight != null && playerLight.State.IsOn,
+            bool lightOn = (playerLight != null && playerLight.State.IsOn)
+                || (tyler != null && tyler.SharingLight);
+            var inputs = PanicSenses.Build(lightOn,
                 SafeZones.Contains(position),
                 witchActive ? Vector3.Distance(position, witch.transform.position) : float.PositiveInfinity,
                 witchActive && witch.Decision.VoiceLure, hiding != null && hiding.Hidden,
