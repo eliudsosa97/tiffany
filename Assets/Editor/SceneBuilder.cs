@@ -133,8 +133,17 @@ namespace TiffanyGame.EditorTools
             Physics.SyncTransforms();
             surface.BuildNavMesh();
             const string path = "Assets/Scenes/Generated/WitchNavMesh.asset";
-            if (AssetDatabase.LoadAssetAtPath<NavMeshData>(path) != null) AssetDatabase.DeleteAsset(path);
-            AssetDatabase.CreateAsset(surface.navMeshData, path);
+            var existing = AssetDatabase.LoadAssetAtPath<NavMeshData>(path);
+            if (existing != null)
+            {
+                EditorUtility.CopySerialized(surface.navMeshData, existing);
+                surface.navMeshData = existing;
+                EditorUtility.SetDirty(existing);
+            }
+            else
+            {
+                AssetDatabase.CreateAsset(surface.navMeshData, path);
+            }
         }
 
         static void BuildWitch(Transform zoneRoot, Transform player)
@@ -162,6 +171,12 @@ namespace TiffanyGame.EditorTools
             controller.fireLight = WitchBuilder.BuildFireBall(witch.transform, out var ball);
             ball.transform.localPosition = Vector3.up * 1.5f;
             controller.fireBall = ball;
+
+            var liveStop = new GameObject("Witch 0 Live");
+            liveStop.transform.SetParent(zoneRoot, false);
+            liveStop.transform.position = SurfacePoint(0f, -4f);
+            liveStop.AddComponent<CaptureStop>().wait = 6f;
+            liveStop.AddComponent<WitchCaptureStage>().live = true;
 
             var states = new[] { WitchState.Flying, WitchState.Landing, WitchState.Stalking, WitchState.WindUp,
                 WitchState.Sprinting, WitchState.Recovering, WitchState.TakingOff };

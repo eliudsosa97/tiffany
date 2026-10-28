@@ -7,6 +7,7 @@ namespace TiffanyGame
     {
         public WitchState state;
         public bool fireLit;
+        public bool live;
         public Vector3 witchOffset;
         public bool lightWitch = true;
 
@@ -18,9 +19,22 @@ namespace TiffanyGame
             Clear();
             if (witch == null) witch = FindAnyObjectByType<WitchController>();
             if (witch == null) return;
+            if (live)
+            {
+                var controller = player.GetComponent<CharacterController>();
+                bool controllerWasEnabled = controller != null && controller.enabled;
+                if (controller != null) controller.enabled = false;
+                if (Physics.Raycast(witch.transform.position, Vector3.down, out var ground,
+                    Mathf.Infinity, witch.groundMask, QueryTriggerInteraction.Ignore)) player.position = ground.point;
+                if (controller != null) controller.enabled = controllerWasEnabled;
+                Physics.SyncTransforms();
+                return;
+            }
             witch.enabled = false;
             witch.GetComponent<NavMeshAgent>().enabled = false;
             Vector3 position = player.position + player.rotation * witchOffset;
+            if (witchOffset.y == 0f && Physics.Raycast(position + Vector3.up * 3f, Vector3.down, out var hit,
+                Mathf.Infinity, witch.groundMask, QueryTriggerInteraction.Ignore)) position.y = hit.point.y;
             Vector3 direction = player.position - position;
             direction.y = 0f;
             Quaternion rotation = direction.sqrMagnitude > 0f ? Quaternion.LookRotation(direction) : Quaternion.identity;

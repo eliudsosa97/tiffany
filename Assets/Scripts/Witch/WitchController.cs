@@ -44,7 +44,7 @@ namespace TiffanyGame
         private Vector3 lastDestination;
         private bool hasDestination;
         private float baseFireIntensity;
-        private float groundY;
+        private bool warnedMissingNavMesh;
         private WitchPose lastPose;
         private bool hasPose;
 
@@ -67,9 +67,6 @@ namespace TiffanyGame
 
         private void Start()
         {
-            int count = Physics.RaycastNonAlloc(transform.position, Vector3.down, hits,
-                Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
-            groundY = ClosestWorldHit(count, out var hit) ? hit.point.y : transform.position.y - 14f;
             if (player != null) return;
             var found = GameObject.FindGameObjectWithTag("Player");
             if (found != null) player = found.transform;
@@ -123,7 +120,6 @@ namespace TiffanyGame
                 EnterState();
             }
             ApplyMovement(dt);
-            if (Decision.Form == WitchForm.Grounded) groundY = transform.position.y;
             ApplyView();
         }
 
@@ -136,7 +132,6 @@ namespace TiffanyGame
                 verticalTarget = GroundPosition(SafeZones.PushOut(entryPosition, landingMargin));
                 if (TrySampleNavMesh(verticalTarget, 6f, out var hit) && !SafeZones.Contains(hit.position))
                     verticalTarget = hit.position;
-                groundY = verticalTarget.y;
             }
             else if (Decision.State == WitchState.TakingOff)
             {
@@ -195,7 +190,15 @@ namespace TiffanyGame
                 if (agent.isOnNavMesh) return true;
                 agent.enabled = false;
             }
-            if (!TrySampleNavMesh(transform.position, 3f, out var hit)) return false;
+            if (!TrySampleNavMesh(transform.position, 3f, out var hit))
+            {
+                if (!warnedMissingNavMesh)
+                {
+                    Debug.LogWarning($"{GameInfo.LogPrefix} La bruja no encontró NavMesh cerca de {transform.position}.");
+                    warnedMissingNavMesh = true;
+                }
+                return false;
+            }
             transform.position = hit.position;
             agent.enabled = true;
             agent.Warp(hit.position);
@@ -275,18 +278,21 @@ namespace TiffanyGame
         {
             ApplyPose(WitchPoses.For(Decision.State, Decision.FireLit));
             if (fireLight != null && fireLight.enabled)
-                fireLight.intensity = WitchPoses.FireIntensity(baseFireIntensity, transform.position.y - groundY, fireFullHeight);
+                fireLight.intensity = WitchPoses.FireIntensity(baseFireIntensity, FireHeightAboveGround(), fireFullHeight);
         }
 
         public void ShowPose(WitchState state, bool fireLit)
         {
             ApplyPose(WitchPoses.For(state, fireLit));
             if (fireLight == null) return;
-            Vector3 ballPosition = fireBall != null ? fireBall.transform.position : fireLight.transform.position;
-            fireLight.intensity = Physics.Raycast(ballPosition, Vector3.down, out var hit,
-                Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore)
-                ? WitchPoses.FireIntensity(baseFireIntensity, hit.distance, fireFullHeight)
-                : baseFireIntensity;
+            fireLight.intensity = WitchPoses.FireIntensity(baseFireIntensity, FireHeightAboveGround(), fireFullHeight);
+        }
+
+        private float FireHeightAboveGround()
+        {
+            int count = Physics.RaycastNonAlloc(fireLight.transform.position, Vector3.down, hits,
+                Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
+            return ClosestWorldHit(count, out var hit) ? hit.distance : fireFullHeight;
         }
 
         private void ApplyPose(WitchPose pose)
