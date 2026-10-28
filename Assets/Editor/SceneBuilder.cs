@@ -334,6 +334,7 @@ namespace TiffanyGame.EditorTools
             controller.voice = tyler.AddComponent<AudioSource>();
             controller.voice.spatialBlend = 0f;
             controller.voice.playOnAwake = false;
+            controller.barkClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/bark_1.wav");
             var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl" };
             var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl };
             for (int i = 0; i < reactions.Length; i++)
@@ -361,6 +362,7 @@ namespace TiffanyGame.EditorTools
                 Vector3 focus = position + toPlayer * 0.25f + Vector3.up * 0.4f;
                 capture.cameraRotation = Quaternion.LookRotation(focus - capture.cameraPosition);
             }
+            tyler.SetActive(false);
             return controller;
         }
 

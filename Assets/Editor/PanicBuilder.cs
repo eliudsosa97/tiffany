@@ -17,6 +17,7 @@ namespace TiffanyGame.EditorTools
             panic.cueSource.playOnAwake = false;
             panic.fakeSteps = new[] { LoadClip("step_1"), LoadClip("step_2"), LoadClip("step_3"), LoadClip("step_4") };
             panic.whispers = new[] { LoadClip("whisper_1"), LoadClip("whisper_2"), LoadClip("whisper_3") };
+            panic.sobs = new[] { LoadClip("sob_1"), LoadClip("sob_2") };
             var names = new[] { "Panic 1 Steps", "Panic 2 Whispers", "Panic 3 Sob" };
             var levels = new[] { 0.55f, 0.8f, 0.95f };
             for (int i = 0; i < names.Length; i++)

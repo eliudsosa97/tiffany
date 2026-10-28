@@ -18,8 +18,9 @@ namespace TiffanyGame
         public void Apply(Transform player)
         {
             Clear();
-            if (tyler == null) tyler = FindAnyObjectByType<TylerController>();
+            if (tyler == null) tyler = FindAnyObjectByType<TylerController>(FindObjectsInactive.Include);
             if (tyler == null) return;
+            if (!tyler.gameObject.activeSelf) tyler.Appear(player.position);
             tylerWasEnabled = tyler.enabled;
             tyler.enabled = false;
             tyler.GetComponent<NavMeshAgent>().enabled = false;

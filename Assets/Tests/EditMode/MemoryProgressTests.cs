@@ -6,6 +6,22 @@ namespace TiffanyGame.Tests
     public sealed class MemoryProgressTests
     {
         [Test]
+        public void BallStaysBetweenFirstAndSecondMemory()
+        {
+            var order = new[] { 1, MemoryProgress.BallId, 2 };
+            var progress = new MemoryProgress(order);
+            foreach (int id in order)
+            {
+                Assert.IsTrue(progress.TryGetNext(out int next));
+                Assert.AreEqual(id, next);
+                Assert.IsTrue(progress.MarkFound(id));
+                Assert.IsFalse(progress.MarkFound(id));
+            }
+            Assert.IsTrue(progress.AllFound);
+            Assert.IsFalse(progress.TryGetNext(out _));
+        }
+
+        [Test]
         public void PreservesOrderSkipsInvalidIdsAndCountsEachMemoryOnce()
         {
             var ids = new[] { 3, 0, -1, 1, 3, 2, 1 };

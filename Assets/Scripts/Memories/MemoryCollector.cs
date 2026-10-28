@@ -35,7 +35,6 @@ namespace TiffanyGame
                 order[i] = spot.memoryId;
                 spotsByCollider[spot.GetComponent<SphereCollider>()] = spot;
             }
-            Array.Sort(order);
             progress = new MemoryProgress(order);
             if (viewCamera != null) cameraData = viewCamera.GetComponent<UniversalAdditionalCameraData>();
         }
@@ -60,15 +59,22 @@ namespace TiffanyGame
         public bool Collect(int memoryId)
         {
             if (!progress.MarkFound(memoryId)) return false;
+            for (int i = 0; i < spots.Length; i++)
+                if (spots[i] != null && spots[i].memoryId == memoryId && spots[i].visual != null)
+                    spots[i].visual.SetActive(false);
+            if (memoryId == MemoryProgress.BallId)
+            {
+                GuideTyler();
+                if (tyler != null) tyler.Appear(transform.position);
+                Debug.Log($"{GameInfo.LogPrefix} Tyler aparece");
+                return true;
+            }
             bool hasPower = memoryId >= 1 && memoryId <= 5;
             if (hasPower) soul.Powers.Unlock(PowerSet.ForMemory(memoryId));
             if (!gameInterface.MemoryFound(memoryId) && hasPower)
                 gameInterface.ShowPowerNotice(PowerSet.ForMemory(memoryId));
             if (gameInterface.TryGetMemory(memoryId, out var memory))
                 gameInterface.ReplaceSubtitle($"{memory.title} · {memory.place}", MemoryEcho.Duration);
-            for (int i = 0; i < spots.Length; i++)
-                if (spots[i] != null && spots[i].memoryId == memoryId && spots[i].visual != null)
-                    spots[i].visual.SetActive(false);
             echo.Start();
             ApplyEcho(echo.Weight, echo.Active);
             GuideTyler();

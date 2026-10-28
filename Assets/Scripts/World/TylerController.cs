@@ -14,6 +14,7 @@ namespace TiffanyGame
         public GameObject standBody;
         public GameObject crouchBody;
         public AudioSource voice;
+        public AudioClip barkClip;
         public AudioClip whineClip;
         public AudioClip growlClip;
         public Animator animator;
@@ -25,7 +26,7 @@ namespace TiffanyGame
         {
             get
             {
-                if (player == null) return false;
+                if (!isActiveAndEnabled || player == null) return false;
                 Vector3 offset = player.position - transform.position;
                 offset.y = 0f;
                 return offset.sqrMagnitude < nearPlayerRadius * nearPlayerRadius;
@@ -95,6 +96,17 @@ namespace TiffanyGame
                 if (found != null) player = found.transform;
             }
             if (player != null) previousPlayerPosition = player.position;
+        }
+
+        public void Appear(Vector3 near)
+        {
+            if (agent == null) agent = GetComponent<NavMeshAgent>();
+            agent.enabled = false;
+            Vector3 forward = player != null ? player.forward : Vector3.forward;
+            transform.position = near - forward * TylerMotion.FollowDistance;
+            gameObject.SetActive(true);
+            EnableAgent();
+            if (voice != null && barkClip != null) voice.PlayOneShot(barkClip);
         }
 
         private void Update()
