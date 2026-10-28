@@ -418,7 +418,11 @@ namespace TiffanyGame.Tests
         public IEnumerator ResetBrainKeepsReturnChaseOnGroundAwayFromPlayerAndSafeZones()
         {
             player.transform.position = Vector3.zero;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
             controller.BeginReturn();
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: WindUp");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Sprinting");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Caught");
             yield return WaitForState(WitchState.Caught, 8f);
             var candle = AddFamilyCandle();
             player.transform.position = candle.transform.position + Vector3.back;
@@ -426,6 +430,7 @@ namespace TiffanyGame.Tests
             controller.Flash();
             Physics.SyncTransforms();
 
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
             controller.ResetBrain();
 
             Assert.AreEqual(Chapter.Return, controller.chapter);

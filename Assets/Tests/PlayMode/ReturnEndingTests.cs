@@ -58,9 +58,13 @@ namespace TiffanyGame.Tests
         {
             for (int id = 1; id <= 4; id++)
             {
+                LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo {id} encontrado");
                 Assert.IsTrue(collector.Collect(id));
                 Assert.AreEqual(Chapter.Ravine, witch.chapter);
             }
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo 5 encontrado");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Tyler: None");
             MovePlayer(collector.spots[4].transform.position - Vector3.forward * 0.5f);
             GameInput.InteractOverride = true;
             yield return null;
@@ -93,11 +97,15 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator FifthMemoryDuringLandingStartsReturnNearTheHut()
         {
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Landing");
             Object.FindAnyObjectByType<Storm>().raining = true;
             float deadline = Time.realtimeSinceStartup + 2f;
             while (witch.Decision.State != WitchState.Landing && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.AreEqual(WitchState.Landing, witch.Decision.State);
             MovePlayer(collector.spots[4].transform.position);
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo 5 encontrado");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Tyler: None");
             Assert.IsTrue(collector.Collect(5));
             yield return null;
             yield return null;
@@ -110,6 +118,7 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator CaptureReturnsToLatestCandleWithMemoriesAndGroundChaseIntact()
         {
+            collector.tyler.enabled = false;
             var lakeCandle = route.GetChild(5).GetComponentInChildren<CandleSpot>();
             var roadCandle = route.GetChild(6).GetComponentInChildren<CandleSpot>();
             MovePlayer(lakeCandle.transform.position - Vector3.forward);
@@ -121,18 +130,34 @@ namespace TiffanyGame.Tests
             yield return null;
             Assert.AreEqual(roadCandle.Candle.Position, soul.Respawn.Position);
             MovePlayer(route.GetChild(6).position - Vector3.forward * 4f);
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo 3 encontrado");
             Assert.IsTrue(collector.Collect(3));
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo 5 encontrado");
             Assert.IsTrue(collector.Collect(5));
             soul.Energy.ResetTo(80f);
             int caught = 0;
-            Vector3 caughtPosition = soul.transform.position;
-            witch.Caught += () => caught++;
+            Vector3 caughtPosition = Vector3.zero;
+            witch.Caught += () =>
+            {
+                caughtPosition = soul.transform.position;
+                caught++;
+            };
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: WindUp");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Sprinting");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Caught");
             float deadline = Time.realtimeSinceStartup + 8f;
             while (caught == 0 && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.AreEqual(1, caught);
             Assert.IsTrue(respawn.Active);
             Assert.IsFalse(soul.GetComponent<PlayerController>().enabled);
-            Assert.Less(Vector3.Distance(caughtPosition, soul.transform.position), 0.1f);
+            Assert.AreEqual(caughtPosition, soul.transform.position);
+            GameInput.MoveOverride = Vector2.right;
+            yield return null;
+            Assert.AreEqual(caughtPosition, soul.transform.position);
+            GameInput.MoveOverride = Vector2.zero;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Atrapada: regreso a la veladora");
             deadline = Time.realtimeSinceStartup + 4f;
             while (respawn.Active && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.IsFalse(respawn.Active);
@@ -154,6 +179,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchForm.Grounded, witch.Decision.Form);
             Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
             Assert.IsFalse(witch.fireBall.activeSelf);
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: WindUp");
             MovePlayer(route.GetChild(6).position - Vector3.forward * 4f);
             yield return null;
             yield return null;
