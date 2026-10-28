@@ -63,6 +63,7 @@ namespace TiffanyGame.EditorTools
                 stop.transform.SetParent(storm.transform, false);
                 stop.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
                 stop.AddComponent<CaptureStop>().wait = i == 0 ? 1.5f : i == 1 ? 0.3f : 2.5f;
+                stop.AddComponent<WitchAwayStage>();
                 var stage = stop.AddComponent<StormCaptureStage>();
                 stage.raining = true;
                 stage.lightning = i > 0;

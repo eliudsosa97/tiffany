@@ -71,6 +71,8 @@ namespace TiffanyGame
                     followCamera.Snap();
                 }
 
+                var awayStage = stop.GetComponent<WitchAwayStage>();
+                if (awayStage != null) awayStage.Apply();
                 var witchStage = stop.GetComponent<WitchCaptureStage>();
                 if (witchStage != null && player != null) witchStage.Apply(player.transform);
                 var tylerStage = stop.GetComponent<TylerCaptureStage>();
@@ -97,6 +99,7 @@ namespace TiffanyGame
                 if (powerStage != null) powerStage.Clear();
                 if (memoryStage != null) memoryStage.Clear();
                 if (panicStage != null) panicStage.Clear();
+                if (awayStage != null) awayStage.Clear();
             }
 
             int captureCount = stops.Length + 1;
