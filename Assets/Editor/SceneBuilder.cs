@@ -132,6 +132,7 @@ namespace TiffanyGame.EditorTools
             surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
             Physics.SyncTransforms();
             surface.BuildNavMesh();
+            surface.navMeshData.name = "WitchNavMesh";
             const string path = "Assets/Scenes/Generated/WitchNavMesh.asset";
             var existing = AssetDatabase.LoadAssetAtPath<NavMeshData>(path);
             if (existing != null)
