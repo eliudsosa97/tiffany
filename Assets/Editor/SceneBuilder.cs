@@ -23,10 +23,11 @@ namespace TiffanyGame.EditorTools
             ConfigureNight();
             CreateMoon();
             var spawn = BuildTestZone();
-            var player = CreatePlayer(spawn);
+            var player = CreatePlayer(spawn, out var playerLight);
             CreateCamera(player);
-            BuildWitch(spawn.parent, player.transform);
+            playerLight.witch = BuildWitch(spawn.parent, player.transform);
             StormBuilder.BuildStorm(player.transform, spawn);
+            BuildLightStops(spawn.parent);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -148,7 +149,7 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static void BuildWitch(Transform zoneRoot, Transform player)
+        static WitchController BuildWitch(Transform zoneRoot, Transform player)
         {
             BakeNavMesh(zoneRoot);
             var route = new[]
@@ -204,6 +205,24 @@ namespace TiffanyGame.EditorTools
                     : stage.state == WitchState.TakingOff ? new Vector3(2f, 3f, 5f)
                     : stage.state == WitchState.Landing ? new Vector3(2f, 2.5f, 6f) : new Vector3(1.5f, 0f, 3f);
             }
+            return controller;
+        }
+
+        static void BuildLightStops(Transform zoneRoot)
+        {
+            var names = new[] { "Light 1 On", "Light 2 Low", "Light 3 Flash" };
+            for (int i = 0; i < names.Length; i++)
+            {
+                var stop = new GameObject(names[i]);
+                stop.transform.SetParent(zoneRoot, false);
+                stop.transform.SetPositionAndRotation(SurfacePoint(0f, 0f), Quaternion.identity);
+                var capture = stop.AddComponent<CaptureStop>();
+                capture.overrideCamera = false;
+                capture.wait = 1.5f;
+                var stage = stop.AddComponent<LightCaptureStage>();
+                stage.energy = i == 1 ? 8f : SoulEnergy.Max;
+                stage.flash = i == 2;
+            }
         }
 
         static Vector3 SurfacePoint(float x, float alongSlope)
@@ -222,7 +241,7 @@ namespace TiffanyGame.EditorTools
             border.AddComponent<BoxCollider>().size = size;
         }
 
-        static PlayerController CreatePlayer(Transform spawn)
+        static PlayerController CreatePlayer(Transform spawn, out PlayerLight playerLight)
         {
             var player = new GameObject("Tiffany");
             player.tag = "Player";
@@ -240,6 +259,30 @@ namespace TiffanyGame.EditorTools
                 new Vector3(0f, 0.97f, 0.26f), new Vector3(0.18f, 0.14f, 0.18f),
                 GeneratedMaterials.Get("TiffanyFacing", new Color(0.8f, 0.43f, 0.16f)));
             UnityEngine.Object.DestroyImmediate(facing.GetComponent<BoxCollider>());
+            player.AddComponent<PlayerSoul>().startingPowers = new[] { Power.Light };
+            var spot = new GameObject("Soul Light").AddComponent<Light>();
+            spot.transform.SetParent(player.transform, false);
+            spot.transform.localPosition = new Vector3(0f, 3.2f, -0.4f);
+            spot.type = LightType.Spot;
+            spot.color = new Color(1f, 0.78f, 0.52f);
+            spot.spotAngle = 84f;
+            spot.innerSpotAngle = 56f;
+            spot.range = 13f;
+            spot.intensity = 45f;
+            spot.shadows = LightShadows.Soft;
+            spot.renderMode = LightRenderMode.ForcePixel;
+            var glow = CreatePrimitive("Hand Glow", PrimitiveType.Sphere, player.transform,
+                new Vector3(0f, 0.72f, 0.3f), Vector3.one * 0.16f,
+                GeneratedMaterials.Get("TiffanyHandGlow", new Color(1f, 0.9f, 0.65f), true));
+            UnityEngine.Object.DestroyImmediate(glow.GetComponent<SphereCollider>());
+            var glowRenderer = glow.GetComponent<Renderer>();
+            glowRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            glowRenderer.receiveShadows = false;
+            playerLight = player.AddComponent<PlayerLight>();
+            playerLight.spot = spot;
+            playerLight.glow = glow.transform;
+            playerLight.startOn = true;
+            playerLight.pitch = 42f;
             return player.AddComponent<PlayerController>();
         }
 
