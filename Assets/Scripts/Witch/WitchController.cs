@@ -99,7 +99,7 @@ namespace TiffanyGame
                 transform.position = WitchMotion.FarthestRoutePoint(skyRoute,
                     player != null ? player.position : transform.position, fallback) + Vector3.up * profile.FlightHeightOffset;
             }
-            ApplyView();
+            ApplyView(transform.position, 0f);
             Debug.Log($"{GameInfo.LogPrefix} Bruja: {(profile.GroundChase ? "retoma la persecución a pie" : "vuelve a la ruta")}");
         }
 
