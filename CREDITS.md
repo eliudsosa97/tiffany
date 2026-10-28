@@ -44,6 +44,8 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/can.wav` | [CanBounce 2.wav](https://freesound.org/s/92622/) | nigelcoop | CC0 |
 | `Assets/Audio/Sfx/pot.wav` | [Breaking pot short](https://freesound.org/s/810043/) | anna_bliss | CC0 |
 | `Assets/Audio/Sfx/bell.wav` | [Small Bell #2](https://freesound.org/s/452379/) | steffcaffrey | CC0 |
+| `Assets/Audio/Sfx/human_bark.wav` | [human dog barf](https://freesound.org/s/414878/) | juanto9889 | CC0 |
+| `Assets/Audio/Sfx/woman_laugh.wav` | [Female Evil Laugh](https://freesound.org/s/219778/) | mvVoiceActing | CC0 |
 
 ## Otros recursos
 

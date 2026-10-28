@@ -26,26 +26,58 @@ namespace TiffanyGame.EditorTools
             collector.spots = spots;
             collector.echoVolume = BuildEchoVolume(zone, profilePath);
             collector.viewCamera = viewCamera;
-
-            BuildCaptureStops(zone, collector, spots[0], "Memory 0 Spot", "Memory 1 Echo");
-            BuildCaptureStops(zone, collector, spots[1], "Ball 0 Before", "Ball 1 Tyler");
+            var blackout = EchoBuilder.BuildBlackout(gameInterface);
+            var echoes = new GameObject("Memory Echoes").transform;
+            echoes.SetParent(zone, false);
+            for (int i = 0; i < spots.Length; i++)
+            {
+                var spot = spots[i];
+                if (spot.kind == MemorySpotKind.Ball) continue;
+                EchoBuilder.Build(spot, echoes, gameInterface, blackout);
+                EchoData.TryLoad(spot.echoPlayer.echoAsset.text, out var data, out _);
+                var stop = new GameObject($"Echo {spot.memoryId} Memory");
+                stop.transform.SetParent(zone, false);
+                Vector3 position = TylerCaptureStage.GroundPosition(spot.transform.TransformPoint(new Vector3(-3f, 0f, -4f)));
+                stop.transform.SetPositionAndRotation(position, spot.transform.rotation);
+                var capture = stop.AddComponent<CaptureStop>();
+                capture.wait = data.duration * 0.5f;
+                capture.overrideCamera = true;
+                Vector3 focus = spot.transform.TransformPoint(new Vector3(0f, 0.7f, 0.8f));
+                capture.cameraPosition = spot.transform.TransformPoint(new Vector3(8f, 6f, -12f));
+                capture.cameraRotation = Quaternion.LookRotation(focus - capture.cameraPosition);
+                var stage = stop.AddComponent<EchoCaptureStage>();
+                stage.collector = collector;
+                stage.spot = spot;
+            }
+            var preview = new GameObject("Memory 0 Spot");
+            preview.transform.SetParent(zone, false);
+            var firstSpot = spots[0].transform;
+            preview.transform.SetPositionAndRotation(
+                TylerCaptureStage.GroundPosition(firstSpot.TransformPoint(Vector3.back * 1.5f)), firstSpot.rotation);
+            var previewCapture = preview.AddComponent<CaptureStop>();
+            previewCapture.overrideCamera = true;
+            previewCapture.cameraPosition = firstSpot.TransformPoint(new Vector3(4f, 3f, -3f));
+            previewCapture.cameraRotation = Quaternion.LookRotation(firstSpot.position - previewCapture.cameraPosition);
+            preview.AddComponent<LightCaptureStage>().energy = SoulEnergy.Max;
+            var memoryStage = preview.AddComponent<MemoryCaptureStage>();
+            memoryStage.collector = collector;
+            memoryStage.spot = spots[0];
+            memoryStage.collect = false;
+            BuildBallCaptureStops(zone, collector, spots[1]);
         }
 
-        static void BuildCaptureStops(Transform zone, MemoryCollector collector, MemorySpot spot,
-            string before, string after)
+        static void BuildBallCaptureStops(Transform zone, MemoryCollector collector, MemorySpot spot)
         {
-            Vector3 focus = spot.transform.position;
-            Vector3 position = focus - Vector3.forward * 1.5f;
-            if (spot.kind == MemorySpotKind.Ball) focus = position;
-            Vector3 cameraPosition = focus + new Vector3(4f, 3f, -3f);
-            Quaternion cameraRotation = Quaternion.LookRotation(focus - cameraPosition);
+            Vector3 position = spot.transform.position - Vector3.forward * 1.5f;
+            Vector3 cameraPosition = position + new Vector3(4f, 3f, -3f);
+            Quaternion cameraRotation = Quaternion.LookRotation(position - cameraPosition);
             for (int i = 0; i < 2; i++)
             {
-                var stop = new GameObject(i == 0 ? before : after);
+                var stop = new GameObject(i == 0 ? "Ball 0 Before" : "Ball 1 Tyler");
                 stop.transform.SetParent(zone, false);
                 stop.transform.position = position;
                 var capture = stop.AddComponent<CaptureStop>();
-                capture.wait = i == 0 || spot.kind == MemorySpotKind.Ball ? 1.5f : MemoryEcho.Fade + 1.5f;
+                capture.wait = 1.5f;
                 capture.overrideCamera = true;
                 capture.cameraPosition = cameraPosition;
                 capture.cameraRotation = cameraRotation;

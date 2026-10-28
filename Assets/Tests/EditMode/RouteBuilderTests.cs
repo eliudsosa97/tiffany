@@ -32,7 +32,9 @@ namespace TiffanyGame.Tests
             storm = new GameObject("Storm").AddComponent<Storm>();
             storm.transform.SetParent(root.transform, false);
             route = RouteBuilder.BuildRoute(root.transform, player, storm, out var memories, out skyRoute);
-            MemoryBuilder.Build(root.transform, player, null, null, null, memories, TempFolder + "/EchoVolumeProfile.asset");
+            var gameInterface = new GameObject("Interface", typeof(RectTransform)).AddComponent<GameInterface>();
+            gameInterface.transform.SetParent(root.transform, false);
+            MemoryBuilder.Build(root.transform, player, gameInterface, null, null, memories, TempFolder + "/EchoVolumeProfile.asset");
             Physics.SyncTransforms();
         }
 
@@ -80,10 +82,14 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void FiveMemoriesBelongToTheirClearingsAndBothEchoCapturesUseTheGravestone()
+        public void FiveMemoriesBelongToTheirClearingsAndEchoesStayOutsideTheRoute()
         {
             var collector = player.GetComponent<MemoryCollector>();
             Assert.AreEqual(6, collector.spots.Length);
+            var echoes = root.transform.Find("Memory Echoes");
+            Assert.IsNotNull(echoes);
+            Assert.IsFalse(echoes.IsChildOf(route));
+            Assert.AreEqual(5, echoes.childCount);
             for (int i = 0; i < 8; i++)
             {
                 var spots = route.GetChild(i).GetComponentsInChildren<MemorySpot>();
@@ -93,6 +99,15 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(MemorySpotKind.Memory, spots[0].kind);
                 Assert.AreSame(spots[0], collector.spots[i == 0 ? 0 : i + 1]);
                 if (i == 0) Assert.AreSame(spots[1], collector.spots[1]);
+                var echo = spots[0].echoPlayer;
+                Assert.IsNotNull(echo);
+                Assert.AreSame(echoes, echo.stageRoot.transform.parent);
+                Assert.Less(Vector3.Distance(spots[0].transform.position, echo.stageRoot.transform.position), 0.001f);
+                Assert.Less(Quaternion.Angle(spots[0].transform.rotation, echo.stageRoot.transform.rotation), 0.001f);
+                Assert.IsFalse(echo.stageRoot.activeSelf);
+                Assert.AreEqual(Vector3.up, spots[0].transform.up);
+                Assert.IsNotNull(echo.ground);
+                Assert.IsTrue(echo.ground.transform.IsChildOf(route.GetChild(i)));
             }
             var grave = route.GetChild(0).Find("Tiffany Gravestone");
             Assert.Less(Vector3.Distance(grave.position, collector.spots[0].transform.position), 2f);
@@ -103,20 +118,43 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(MemoryProgress.BallId, collector.spots[1].memoryId);
             Assert.AreSame(ball.gameObject, collector.spots[1].visual);
             Assert.AreEqual(ball.position, collector.spots[1].transform.position);
+            Assert.IsNull(collector.spots[1].echoPlayer);
             var stages = root.GetComponentsInChildren<MemoryCaptureStage>();
-            Assert.AreEqual(4, stages.Length);
-            Assert.AreEqual("Memory 0 Spot", stages[0].name);
-            Assert.AreEqual("Memory 1 Echo", stages[1].name);
-            for (int i = 0; i < 2; i++)
+            Assert.AreEqual(3, stages.Length);
+            CollectionAssert.AreEquivalent(new[] { "Memory 0 Spot", "Ball 0 Before", "Ball 1 Tyler" },
+                System.Array.ConvertAll(stages, stage => stage.name));
+            foreach (var stage in stages)
             {
-                var stage = stages[i];
+                bool isBall = stage.name.StartsWith("Ball ");
                 Assert.AreSame(collector, stage.collector);
-                Assert.AreSame(collector.spots[0], stage.spot);
+                Assert.AreSame(collector.spots[isBall ? 1 : 0], stage.spot);
+                Assert.AreEqual(stage.name == "Ball 1 Tyler", stage.collect);
+                Assert.IsFalse(stage.transform.IsChildOf(route));
                 Assert.Less(Vector3.Distance(stage.transform.position, stage.spot.transform.position), 2f);
                 var capture = stage.GetComponent<CaptureStop>();
                 Assert.IsTrue(capture.overrideCamera);
-                Vector3 toSpot = (stage.spot.transform.position - capture.cameraPosition).normalized;
+                Vector3 focus = isBall ? stage.transform.position : stage.spot.transform.position;
+                Vector3 toSpot = (focus - capture.cameraPosition).normalized;
                 Assert.Greater(Vector3.Dot(capture.cameraRotation * Vector3.forward, toSpot), 0.99f);
+            }
+            var echoStages = root.GetComponentsInChildren<EchoCaptureStage>();
+            Assert.AreEqual(5, echoStages.Length);
+            var ids = new System.Collections.Generic.HashSet<int>();
+            foreach (var stage in echoStages)
+            {
+                Assert.IsTrue(ids.Add(stage.spot.memoryId));
+                Assert.AreSame(collector, stage.collector);
+                Assert.AreSame(System.Array.Find(collector.spots, spot => spot.memoryId == stage.spot.memoryId), stage.spot);
+                Assert.AreEqual(MemorySpotKind.Memory, stage.spot.kind);
+                Assert.Less(Vector3.Distance(stage.transform.position, stage.spot.transform.position), 6f);
+                Assert.IsTrue(stage.spot.echoPlayer.ground.Raycast(
+                    new Ray(stage.transform.position + Vector3.up * 3f, Vector3.down), out var hit, 6f));
+                Assert.AreEqual(hit.point.y, stage.transform.position.y, 0.001f);
+                var capture = stage.GetComponent<CaptureStop>();
+                Assert.IsTrue(capture.overrideCamera);
+                Vector3 focus = stage.spot.transform.TransformPoint(new Vector3(0f, 0.7f, 0.8f));
+                Assert.Greater(Vector3.Dot(capture.cameraRotation * Vector3.forward,
+                    (focus - capture.cameraPosition).normalized), 0.999f);
             }
         }
 
@@ -305,8 +343,10 @@ namespace TiffanyGame.Tests
         public void CemeteryCaptureWaitsUntilThePreviousMemoryEchoHasEnded()
         {
             var echo = new MemoryEcho();
-            echo.Start();
-            echo.Tick(root.transform.Find("Memory 1 Echo").GetComponent<CaptureStop>().wait);
+            var stage = root.GetComponentInChildren<EchoCaptureStage>();
+            Assert.IsTrue(EchoData.TryLoad(stage.spot.echoPlayer.echoAsset.text, out var data, out _));
+            echo.Start(data.duration);
+            echo.Tick(stage.GetComponent<CaptureStop>().wait);
             Assert.IsTrue(echo.Active);
             Assert.Greater(echo.Weight, 0f);
             echo.Tick(route.GetChild(0).GetComponentInChildren<CaptureStop>().wait);

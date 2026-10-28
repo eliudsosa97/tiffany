@@ -53,6 +53,19 @@ namespace TiffanyGame
             for (int i = 0; i < stops.Length; i++)
             {
                 var stop = stops[i];
+                var echoStage = stop.GetComponent<EchoCaptureStage>();
+                if (echoStage != null)
+                {
+                    if (!echoStage.Apply())
+                        Debug.LogError($"{GameInfo.LogPrefix} No se pudo preparar {stop.name}.");
+                    else
+                    {
+                        yield return new WaitForSeconds(stop.wait);
+                        yield return Capture($"{i + 1:00}_{stop.name}");
+                        echoStage.Clear();
+                    }
+                    continue;
+                }
                 if (player != null)
                 {
                     bool controllerWasEnabled = controller != null && controller.enabled;

@@ -33,6 +33,8 @@ namespace TiffanyGame
         NotebookPages pages;
         TimedLine notice;
         TimedLine subtitle;
+        TimedLine echoSubtitle;
+        bool showingEcho;
         InterfaceScreen? appliedScreen;
         bool? appliedFrozen;
         bool pageDirty = true;
@@ -48,6 +50,7 @@ namespace TiffanyGame
             flow = new InterfaceFlow(!SkipTitle);
             notice = new TimedLine();
             subtitle = new TimedLine();
+            echoSubtitle = new TimedLine();
             pausePanel.SetActive(false);
             notebookPanel.SetActive(false);
             LoadMemories(memoryAssets, drawings);
@@ -94,8 +97,12 @@ namespace TiffanyGame
 
             if (!IsFrozen)
             {
-                notice.Tick(Time.deltaTime);
-                subtitle.Tick(Time.deltaTime);
+                if (showingEcho) echoSubtitle.Tick(Time.deltaTime);
+                else
+                {
+                    notice.Tick(Time.deltaTime);
+                    subtitle.Tick(Time.deltaTime);
+                }
             }
             RefreshLines();
         }
@@ -122,14 +129,36 @@ namespace TiffanyGame
 
         public void ShowSubtitle(string text, float seconds)
         {
-            subtitle.Enqueue(text, seconds);
+            (showingEcho ? echoSubtitle : subtitle).Enqueue(text, seconds);
             RefreshLines();
         }
 
         public void ReplaceSubtitle(string text, float seconds)
         {
-            subtitle.Clear();
+            (showingEcho ? echoSubtitle : subtitle).Clear();
             ShowSubtitle(text, seconds);
+        }
+
+        public void BeginEcho()
+        {
+            showingEcho = true;
+            echoSubtitle.Clear();
+            RefreshEchoLines();
+        }
+
+        public void EndEcho()
+        {
+            showingEcho = false;
+            echoSubtitle.Clear();
+            RefreshEchoLines();
+        }
+
+        void RefreshEchoLines()
+        {
+            subtitleVersion = -1;
+            appliedScreen = null;
+            ApplyScreen();
+            RefreshLines();
         }
 
         public void StartGame()
@@ -193,7 +222,7 @@ namespace TiffanyGame
             pausePanel.SetActive(Screen == InterfaceScreen.Paused);
             notebookPanel.SetActive(Screen == InterfaceScreen.Notebook);
             bool showLines = Screen == InterfaceScreen.Playing || Screen == InterfaceScreen.Paused;
-            noticeText.gameObject.SetActive(showLines);
+            noticeText.gameObject.SetActive(!showingEcho && showLines);
             subtitleText.gameObject.SetActive(showLines);
             appliedScreen = Screen;
             pageDirty = true;
@@ -236,10 +265,11 @@ namespace TiffanyGame
                 noticeText.text = notice.Text;
                 noticeVersion = notice.Version;
             }
-            if (subtitleVersion != subtitle.Version)
+            var line = showingEcho ? echoSubtitle : subtitle;
+            if (subtitleVersion != line.Version)
             {
-                subtitleText.text = subtitle.Text;
-                subtitleVersion = subtitle.Version;
+                subtitleText.text = line.Text;
+                subtitleVersion = line.Version;
             }
         }
 
