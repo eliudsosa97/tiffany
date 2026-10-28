@@ -2,7 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
+using Unity.AI.Navigation;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -74,6 +76,46 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator MainSceneHasRespawnAtCemeterySpawn()
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            Assert.IsNotNull(player);
+            var witch = Object.FindAnyObjectByType<WitchController>();
+            Assert.IsNotNull(witch);
+            var respawn = player.GetComponent<PlayerRespawn>();
+            var soul = player.GetComponent<PlayerSoul>();
+            Assert.IsNotNull(respawn);
+            Assert.IsNotNull(soul);
+            Assert.AreSame(witch, respawn.witch);
+            Assert.IsNotNull(respawn.overlay);
+            Assert.IsFalse(respawn.overlay.gameObject.activeSelf);
+            var spawn = GameObject.Find("Route").transform.GetChild(0).Find("Spawn");
+            Assert.IsNotNull(spawn);
+            Assert.Less(Vector3.Distance(spawn.position, soul.Respawn.Position), 0.01f);
+
+            yield return null;
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator MainSceneHasLitFamilyCandlesRegisteredAsSafeZones()
+        {
+            yield return null;
+
+            var candles = Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None);
+            int familyCount = 0;
+            foreach (var candle in candles)
+            {
+                if (candle.kind != CandleKind.Family) continue;
+                familyCount++;
+                Assert.IsTrue(candle.Candle.IsLit, candle.name);
+                Assert.IsTrue(SafeZones.Contains(candle.transform.position), candle.name);
+            }
+            Assert.GreaterOrEqual(familyCount, 2);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator MainSceneHasMovableObjectsUnderTiffanysPower()
         {
             var player = GameObject.FindGameObjectWithTag("Player");
@@ -119,6 +161,53 @@ namespace TiffanyGame.Tests
             LogAssert.Expect(LogType.Log, new Regex(@"Poltergeist: \w+ suena a"));
             Assert.IsTrue(poltergeist.TryMove());
             Assert.AreEqual(expectedEnergy, soul.Energy.Current, 0.5f);
+        }
+
+        [UnityTest]
+        public IEnumerator RouteSharesOneNavMeshAndStartsTheCastInTheCemetery()
+        {
+            var route = GameObject.Find("Route").transform;
+            var cemetery = route.GetChild(0);
+            Assert.AreEqual(8, route.childCount);
+            Assert.AreEqual(46, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length);
+            Assert.AreEqual(17, route.GetComponentsInChildren<CaptureStop>().Length);
+            Assert.AreEqual(12, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length);
+            foreach (var movable in MovableObject.Active) Assert.IsTrue(movable.transform.IsChildOf(cemetery));
+            var player = GameObject.FindGameObjectWithTag("Player");
+            Vector3 start = cemetery.InverseTransformPoint(player.transform.position);
+            Assert.That(start.x, Is.InRange(-17f, 17f));
+            Assert.That(start.z, Is.InRange(-17f, -10f));
+            var witch = Object.FindAnyObjectByType<WitchController>();
+            var tyler = Object.FindAnyObjectByType<TylerController>();
+            Assert.IsTrue(witch.transform.IsChildOf(cemetery));
+            Assert.IsTrue(tyler.transform.IsChildOf(cemetery));
+            Assert.Less(Vector3.Distance(tyler.transform.position, cemetery.Find("Ball").position), 3f);
+            Assert.AreEqual(8, witch.skyRoute.Length);
+            for (int i = 0; i < 8; i++)
+                Assert.AreEqual(route.GetChild(i).position + Vector3.up * 14f, witch.skyRoute[i]);
+
+            var surfaces = Object.FindObjectsByType<NavMeshSurface>(FindObjectsSortMode.None);
+            Assert.AreEqual(1, surfaces.Length);
+            Assert.AreEqual(CollectObjects.Children, surfaces[0].collectObjects);
+            Assert.IsNotNull(surfaces[0].navMeshData);
+            Assert.IsTrue(route.IsChildOf(surfaces[0].transform));
+            var testZone = GameObject.Find("Test Zone").transform;
+            Assert.IsTrue(testZone.IsChildOf(surfaces[0].transform));
+            Assert.AreEqual(Vector3.zero, testZone.position);
+            Assert.IsNotNull(testZone.Find("Hide Test"));
+            Assert.IsNotNull(testZone.Find("Light 1 On"));
+            Assert.AreEqual(2, testZone.GetComponentsInChildren<CandleSpot>().Length);
+            Assert.IsTrue(NavMesh.SamplePosition(testZone.Find("Spawn").position, out _, 1f, NavMesh.AllAreas));
+            Assert.IsTrue(NavMesh.SamplePosition(player.transform.position, out var from, 1f, NavMesh.AllAreas));
+            var path = new NavMeshPath();
+            for (int i = 1; i < 8; i++)
+            {
+                Assert.IsTrue(NavMesh.SamplePosition(route.GetChild(i).position, out var to, 1f, NavMesh.AllAreas));
+                Assert.IsTrue(NavMesh.CalculatePath(from.position, to.position, NavMesh.AllAreas, path));
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, route.GetChild(i).name);
+            }
+            Assert.IsFalse(NavMesh.SamplePosition(route.GetChild(5).Find("Water").position, out _, 1f, NavMesh.AllAreas));
+            yield return null;
             LogAssert.NoUnexpectedReceived();
         }
 

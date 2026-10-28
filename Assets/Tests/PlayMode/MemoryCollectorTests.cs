@@ -50,6 +50,10 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(tyler.NearPlayer);
             Assert.AreEqual(MemorySpotKind.Ball, ball.kind);
             Assert.AreEqual(MemoryProgress.BallId, ball.memoryId);
+            var cemetery = GameObject.Find("Route").transform.GetChild(0);
+            Assert.AreSame(cemetery.Find("Ball").gameObject, ball.visual);
+            Assert.AreEqual(ball.visual.transform.position, ball.transform.position);
+            Assert.IsNull(ball.visual.GetComponent<Collider>());
             Assert.Greater(Vector3.Distance(ball.transform.position, collector.spots[0].transform.position), 4f);
             var bush = Object.FindAnyObjectByType<HideVolume>();
             Assert.Greater(Vector3.Distance(ball.transform.position, bush.transform.position), 4f);
@@ -93,6 +97,9 @@ namespace TiffanyGame.Tests
             {
                 var stage = System.Array.Find(stages, candidate => candidate.name == name);
                 Assert.IsNotNull(stage);
+                Assert.AreSame(collector.spots[1], stage.spot);
+                Assert.AreEqual(name == "Ball 1 Tyler", stage.collect);
+                Assert.Less(Vector3.Distance(stage.transform.position, stage.spot.transform.position), 2f);
                 var stop = stage.GetComponent<CaptureStop>();
                 Assert.IsTrue(stop.overrideCamera);
                 var light = stage.GetComponent<LightCaptureStage>();
@@ -109,6 +116,8 @@ namespace TiffanyGame.Tests
         }
         [UnityTest] public IEnumerator CollectsOnceUnlocksNotifiesGuidesAndInteractsWithNextSpot()
         {
+            CollectionAssert.AreEqual(new[] { 1, MemoryProgress.BallId, 2, 3, 4, 5 },
+                System.Array.ConvertAll(collector.spots, spot => spot.memoryId));
             var ui = collector.gameInterface;
             ui.LoadMemories(System.Array.Empty<TextAsset>(), System.Array.Empty<Texture2D>());
             var cameraData = collector.viewCamera.GetComponent<UniversalAdditionalCameraData>();
@@ -151,7 +160,7 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(collector.Collect(2));
             Assert.IsTrue(collector.soul.Powers.Has(Power.Candles));
             Assert.IsFalse(collector.spots[2].visual.activeSelf);
-            Assert.IsNull(collector.tyler.nextMemory);
+            Assert.AreSame(collector.spots[3].transform, collector.tyler.nextMemory);
 #if UNITY_EDITOR
             Assert.AreEqual(InterfaceTexts.PowerNotice(Power.Candles), ui.noticeText.text);
             Assert.AreEqual("Listón · Jacal de la bruja", ui.subtitleText.text);
@@ -160,6 +169,14 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(ui.notebookEmpty.gameObject.activeSelf);
             ui.ToggleNotebook();
 #endif
+            for (int id = 3; id <= 5; id++)
+            {
+                Assert.IsTrue(collector.Collect(id));
+                Assert.IsTrue(collector.soul.Powers.Has(PowerSet.ForMemory(id)));
+                Assert.IsFalse(collector.spots[id].visual.activeSelf);
+                if (id < 5) Assert.AreSame(collector.spots[id + 1].transform, collector.tyler.nextMemory);
+            }
+            Assert.IsNull(collector.tyler.nextMemory);
             collector.enabled = false;
             Assert.AreEqual(0f, collector.echoVolume.weight);
             Assert.IsFalse(cameraData.renderPostProcessing);

@@ -8,34 +8,35 @@ namespace TiffanyGame.EditorTools
     public static class MemoryBuilder
     {
         public static void Build(Transform zone, PlayerController player, GameInterface gameInterface,
-            TylerController tyler, Camera viewCamera)
+            TylerController tyler, Camera viewCamera, Transform[] positions,
+            string profilePath = "Assets/Scenes/Generated/EchoVolumeProfile.asset", Transform ball = null)
         {
-            var spots = new[]
-            {
-                BuildSpot(zone, 1, SceneBuilder.SurfacePoint(15f, 20f)),
-                // Pelota provisional hasta recibir el objeto de Clau.
-                BuildSpot(zone, MemoryProgress.BallId, SceneBuilder.SurfacePoint(9f, 24f), MemorySpotKind.Ball),
-                BuildSpot(zone, 2, SceneBuilder.SurfacePoint(-15f, 22f))
-            };
+            if (positions == null || positions.Length != 5)
+                throw new System.ArgumentException($"{GameInfo.LogPrefix} La ruta necesita cinco posiciones de recuerdos.", nameof(positions));
+            if (ball == null) ball = positions[0].parent.Find("Ball");
+            var spots = new MemorySpot[positions.Length + 1];
+            for (int i = 0; i < positions.Length; i++)
+                spots[i == 0 ? 0 : i + 1] = BuildSpot(positions[i], i + 1, positions[i].position);
+            spots[1] = BuildSpot(ball.parent, MemoryProgress.BallId, ball.position, MemorySpotKind.Ball, ball.gameObject);
             var collector = player.gameObject.AddComponent<MemoryCollector>();
             collector.soul = player.GetComponent<PlayerSoul>();
             collector.hiding = player.GetComponent<PlayerHiding>();
             collector.gameInterface = gameInterface;
             collector.tyler = tyler;
             collector.spots = spots;
-            collector.echoVolume = BuildEchoVolume(zone);
+            collector.echoVolume = BuildEchoVolume(zone, profilePath);
             collector.viewCamera = viewCamera;
 
-            BuildCaptureStops(zone, collector, spots[0], SceneBuilder.SurfacePoint(15f, 18.5f),
-                "Memory 0 Spot", "Memory 1 Echo");
-            BuildCaptureStops(zone, collector, spots[1], SceneBuilder.SurfacePoint(9f, 22.5f),
-                "Ball 0 Before", "Ball 1 Tyler");
+            BuildCaptureStops(zone, collector, spots[0], "Memory 0 Spot", "Memory 1 Echo");
+            BuildCaptureStops(zone, collector, spots[1], "Ball 0 Before", "Ball 1 Tyler");
         }
 
         static void BuildCaptureStops(Transform zone, MemoryCollector collector, MemorySpot spot,
-            Vector3 position, string before, string after)
+            string before, string after)
         {
-            Vector3 focus = spot.kind == MemorySpotKind.Ball ? position : spot.transform.position;
+            Vector3 focus = spot.transform.position;
+            Vector3 position = focus - Vector3.forward * 1.5f;
+            if (spot.kind == MemorySpotKind.Ball) focus = position;
             Vector3 cameraPosition = focus + new Vector3(4f, 3f, -3f);
             Quaternion cameraRotation = Quaternion.LookRotation(focus - cameraPosition);
             for (int i = 0; i < 2; i++)
@@ -56,10 +57,9 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static Volume BuildEchoVolume(Transform zone)
+        static Volume BuildEchoVolume(Transform zone, string path)
         {
-            const string path = "Assets/Scenes/Generated/EchoVolumeProfile.asset";
-            GeneratedMaterials.EnsureFolder("Assets/Scenes/Generated");
+            GeneratedMaterials.EnsureFolder(System.IO.Path.GetDirectoryName(path));
             var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(path);
             if (profile == null)
             {
@@ -86,32 +86,40 @@ namespace TiffanyGame.EditorTools
         }
 
         static MemorySpot BuildSpot(Transform zone, int id, Vector3 position,
-            MemorySpotKind kind = MemorySpotKind.Memory)
+            MemorySpotKind kind = MemorySpotKind.Memory, GameObject visual = null)
         {
-            bool ball = kind == MemorySpotKind.Ball;
-            var root = new GameObject(ball ? "Ball" : $"Memory {id}");
+            var root = new GameObject(kind == MemorySpotKind.Ball ? "Ball Pickup" : $"Memory {id}");
             root.transform.SetParent(zone, false);
             root.transform.position = position;
+            GameObjectUtility.SetStaticEditorFlags(root, StaticEditorFlags.BatchingStatic);
             var sphere = root.AddComponent<SphereCollider>();
             sphere.radius = 1.2f;
             sphere.isTrigger = true;
             var spot = root.AddComponent<MemorySpot>();
             spot.memoryId = id;
             spot.kind = kind;
+            if (visual != null)
+            {
+                spot.visual = visual;
+                return spot;
+            }
             // Veladora provisional hasta recibir el objeto de Clau.
-            var visual = GameObject.CreatePrimitive(ball ? PrimitiveType.Sphere : PrimitiveType.Cylinder);
-            visual.name = ball ? "Ball" : "Memory Candle";
+            visual = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            visual.name = "Memory Candle";
             visual.transform.SetParent(root.transform, false);
             visual.transform.localPosition = Vector3.up * 0.18f;
-            visual.transform.localScale = ball ? Vector3.one * 0.36f : new Vector3(0.22f, 0.18f, 0.22f);
+            visual.transform.localScale = new Vector3(0.22f, 0.18f, 0.22f);
             Object.DestroyImmediate(visual.GetComponent<Collider>());
-            var material = GeneratedMaterials.Get(ball ? "MemoryBall" : "MemoryCandle",
-                ball ? new Color(1f, 0.12f, 0.04f) : new Color(0.95f, 0.9f, 0.75f));
+            var material = GeneratedMaterials.Get("MemoryCandle", new Color(0.95f, 0.9f, 0.75f));
             material.EnableKeyword("_EMISSION");
             material.SetColor("_EmissionColor", new Color(1f, 0.85f, 0.6f) * 0.2f);
             material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             EditorUtility.SetDirty(material);
-            visual.GetComponent<Renderer>().sharedMaterial = material;
+            var renderer = visual.GetComponent<Renderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            GameObjectUtility.SetStaticEditorFlags(visual, StaticEditorFlags.BatchingStatic);
             spot.visual = visual;
             return spot;
         }

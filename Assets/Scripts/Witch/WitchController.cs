@@ -148,7 +148,7 @@ namespace TiffanyGame
             if (Decision.State == WitchState.Landing)
             {
                 verticalTarget = GroundPosition(SafeZones.PushOut(entryPosition, landingMargin));
-                if (TrySampleNavMesh(verticalTarget, 6f, out var hit))
+                if (NavMeshPlacement.TrySample(verticalTarget, 6f, agent.areaMask, out var hit))
                     verticalTarget = hit.position;
             }
             else if (Decision.State == WitchState.TakingOff)
@@ -203,37 +203,10 @@ namespace TiffanyGame
 
         private bool EnableAgent()
         {
-            if (agent.enabled)
-            {
-                if (agent.isOnNavMesh) return true;
-                agent.enabled = false;
-            }
-            if (!TrySampleNavMesh(transform.position, 3f, out var hit))
-            {
-                if (!warnedMissingNavMesh)
-                {
-                    Debug.LogWarning($"{GameInfo.LogPrefix} La bruja no encontró NavMesh cerca de {transform.position}.");
-                    warnedMissingNavMesh = true;
-                }
-                return false;
-            }
-            transform.position = hit.position;
-            agent.enabled = true;
-            agent.Warp(hit.position);
-            hasDestination = false;
-            if (agent.isOnNavMesh) return true;
-            agent.enabled = false;
-            return false;
-        }
-
-        private bool TrySampleNavMesh(Vector3 position, float radius, out NavMeshHit hit)
-        {
-            for (; radius <= 24f; radius *= 2f)
-            {
-                if (NavMesh.SamplePosition(position, out hit, radius, agent.areaMask)) return true;
-            }
-            hit = default;
-            return false;
+            bool ready = NavMeshPlacement.EnsureOnNavMesh(agent, transform, ref warnedMissingNavMesh,
+                GameInfo.LogPrefix + " La bruja no encontró NavMesh cerca de {0}.", out bool repositioned);
+            if (repositioned) hasDestination = false;
+            return ready;
         }
 
         private void Stalk()
