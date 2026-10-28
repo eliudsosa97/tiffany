@@ -12,10 +12,17 @@ namespace TiffanyGame
         private Coroutine powerRoutine;
         private VanishPower vanish;
         private Candle[] candlesToExtinguish;
+        private PowerSet powers;
+        private Power granted;
+        private bool alreadyUnlocked;
 
         public void Apply(Transform player)
         {
             Clear();
+            powers = player.GetComponent<PlayerSoul>().Powers;
+            granted = action == PowerCaptureAction.Vanish ? Power.Vanish : action == PowerCaptureAction.Kindle ? Power.Candles : Power.Poltergeist;
+            alreadyUnlocked = powers.Has(granted);
+            powers.Unlock(granted);
             if (action == PowerCaptureAction.Vanish) vanish = player.GetComponent<VanishPower>();
             powerRoutine = StartCoroutine(UseAfterLight(player));
         }
@@ -26,6 +33,8 @@ namespace TiffanyGame
             powerRoutine = null;
             if (vanish != null) vanish.Cancel();
             vanish = null;
+            if (powers != null && !alreadyUnlocked) powers.Lock(granted);
+            powers = null;
             if (candlesToExtinguish != null)
             {
                 for (int i = 0; i < candlesToExtinguish.Length; i++) candlesToExtinguish[i]?.Extinguish();

@@ -180,6 +180,11 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(ui.notebookEmpty.gameObject.activeSelf);
             ui.ToggleNotebook();
 #endif
+            foreach (var challenge in collector.challenges)
+            {
+                challenge.Rules.Tick(-1f, true, 3, true, true);
+                challenge.Rules.Tick(ChallengeRules.PassageLength, true, 3, true, true);
+            }
             for (int id = 3; id <= 5; id++)
             {
                 Assert.IsTrue(collector.Collect(id));

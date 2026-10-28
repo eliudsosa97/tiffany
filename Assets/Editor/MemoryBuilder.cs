@@ -24,6 +24,7 @@ namespace TiffanyGame.EditorTools
             collector.gameInterface = gameInterface;
             collector.tyler = tyler;
             collector.spots = spots;
+            collector.challenges = zone.GetComponentsInChildren<PowerChallenge>();
             collector.echoVolume = BuildEchoVolume(zone, profilePath);
             collector.viewCamera = viewCamera;
             var blackout = EchoBuilder.BuildBlackout(gameInterface);

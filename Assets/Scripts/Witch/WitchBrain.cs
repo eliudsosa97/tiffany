@@ -22,6 +22,15 @@ namespace TiffanyGame
         private Vector3 target;
         private Vector3 verticalTarget;
         private Vector3 sprintEnd;
+        public WitchWatch Watch { get; private set; }
+
+        public void BeginWatch(Vector3 post, bool requiresVanish)
+        {
+            Watch = new WitchWatch(post, requiresVanish);
+            hasTarget = chasing = targetIsPlayer = false;
+            timeWithoutPerception = 0f;
+            Enter(WitchState.Stalking, post);
+        }
 
         public WitchBrain(WitchProfile profile, IReadOnlyList<Vector3> skyRoute)
         {
@@ -42,8 +51,16 @@ namespace TiffanyGame
             bool noiseHeard = p.HeardNoise && !p.HearingMuted;
             bool noiseFromPlayer = noiseHeard && HorizontalDistance(p.NoisePosition, p.PlayerPosition) <= profile.PlayerNoiseMatch;
             if (p.PlayerVanished && noiseFromPlayer) noiseHeard = false;
-            bool detected = trackable && (profile.GroundChase || p.SeesPlayer || p.SmellsPlayer
-                || noiseFromPlayer || (p.PlayerHidden && sawHiding));
+            bool detected = trackable && (Watch != null
+                ? p.InWatchPassage && (!Watch.PassageClear(p.WitchPosition) || Watch.RequiresVanish)
+                : profile.GroundChase || p.SeesPlayer || p.SmellsPlayer
+                    || noiseFromPlayer || (p.PlayerHidden && sawHiding));
+            if (Watch != null)
+            {
+                Watch.Tick(dt, p.WitchPosition);
+                if (noiseHeard && !noiseFromPlayer) Watch.Hear(p.NoisePosition);
+                if (!detected) noiseHeard = false;
+            }
             bool lostEdge = (p.PlayerVanished && !wasVanished) || (p.PlayerHidden && !wasHidden && !sawHiding);
             wasHidden = p.PlayerHidden;
             wasVanished = p.PlayerVanished;
@@ -100,12 +117,12 @@ namespace TiffanyGame
                     }
                     break;
                 case WitchState.Stalking:
-                    if (detected && (chasing || !profile.CanSprint) && p.DistanceToPlayer < profile.CatchDistance)
+                    if (detected && (chasing || !profile.CanSprint || Watch != null) && p.DistanceToPlayer < profile.CatchDistance)
                     {
                         Enter(WitchState.Caught, p.WitchPosition);
                         break;
                     }
-                    if (detected && profile.CanSprint && p.DistanceToPlayer < profile.SprintTriggerDistance)
+                    if (detected && profile.CanSprint && Watch == null && p.DistanceToPlayer < profile.SprintTriggerDistance)
                     {
                         Enter(WitchState.WindUp, p.WitchPosition);
                         break;
@@ -115,7 +132,8 @@ namespace TiffanyGame
                         hasTarget = false;
                         chasing = false;
                     }
-                    if (timeWithoutPerception >= profile.LoseTrackTime && !p.Raining && !profile.GroundChase)
+                    if (Watch != null && !detected) hasTarget = chasing = false;
+                    if (Watch == null && timeWithoutPerception >= profile.LoseTrackTime && !p.Raining && !profile.GroundChase)
                     {
                         hasTarget = false;
                         Enter(WitchState.TakingOff, p.WitchPosition);
@@ -237,6 +255,11 @@ namespace TiffanyGame
                 case WitchState.Stalking:
                     decision.MoveTarget = hasTarget ? target : p.WitchPosition;
                     decision.Speed = hasTarget ? (chasing || profile.GroundChase ? profile.FollowSpeed : profile.StalkSpeed) : 0f;
+                    if (Watch != null)
+                    {
+                        decision.MoveTarget = hasTarget ? target : Watch.Target;
+                        decision.Speed = HorizontalDistance(p.WitchPosition, decision.MoveTarget) > 0.15f ? profile.FollowSpeed : 0f;
+                    }
                     decision.VoiceLure = profile.UsesVoiceLure && !chasing;
                     break;
                 case WitchState.WindUp:

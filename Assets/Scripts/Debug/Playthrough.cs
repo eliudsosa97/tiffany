@@ -106,7 +106,8 @@ namespace TiffanyGame
             if (Plan.MissingContent.Count > missingCount) LogMilestone("faltante: " + Plan.MissingContent[missingCount]);
             if (Plan.CompletedCount != selected)
             {
-                if (observation.MissingContent == null) LogMilestone(PlaythroughPlan.Label(milestone));
+                if (Plan.CompletedCount < selected) LogMilestone("reintento del reto");
+                else if (observation.MissingContent == null) LogMilestone(PlaythroughPlan.Label(milestone));
                 if (Plan.Finished) Report();
                 return;
             }

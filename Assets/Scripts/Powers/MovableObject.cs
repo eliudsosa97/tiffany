@@ -14,16 +14,21 @@ namespace TiffanyGame
 
         private static readonly List<MovableObject> active = new List<MovableObject>();
         private Rigidbody body;
+        private Vector3 restPosition;
+        private Quaternion restRotation;
 
         public static IReadOnlyList<MovableObject> Active => active;
         public Throwable Throwable { get; private set; }
         public bool Used => Throwable.Used;
+        public float LastMovedAt { get; private set; }
 
         private void Awake()
         {
             Throwable = new Throwable(kind);
             body = GetComponent<Rigidbody>();
             body.isKinematic = true;
+            restPosition = transform.position;
+            restRotation = transform.rotation;
         }
 
         private void OnEnable() => active.Add(this);
@@ -32,6 +37,7 @@ namespace TiffanyGame
 
         public void Move(Vector3 from, float noiseRadius)
         {
+            LastMovedAt = Time.time;
             Vector3 direction = transform.position - from;
             direction.y = 0f;
             if (direction.sqrMagnitude == 0f) direction = transform.forward;
@@ -43,6 +49,21 @@ namespace TiffanyGame
             if (sound != null && sound.clip != null) sound.Play();
             NoiseBus.Publish(new StepNoise(transform.position, noiseRadius));
             Debug.Log($"{GameInfo.LogPrefix} Poltergeist: {kind} suena a {noiseRadius:0.#} m");
+        }
+
+        public void Restore()
+        {
+            if (!body.isKinematic)
+            {
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+            body.isKinematic = true;
+            body.position = restPosition;
+            body.rotation = restRotation;
+            transform.SetPositionAndRotation(restPosition, restRotation);
+            Throwable.Used = false;
+            if (sound != null) sound.Stop();
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

@@ -109,6 +109,23 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator FullPlaythroughSolvesAllFourChallengesBeforeReturningHome()
+        {
+            var plan = new PlaythroughPlan();
+            runner = new GameObject("Full Challenge Playthrough Test").AddComponent<Playthrough>();
+            runner.Configure(plan);
+            float deadline = Time.realtimeSinceStartup + 600f;
+            while (!plan.Finished && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsTrue(plan.Finished, PlaythroughPlan.Label(plan.Current));
+            Assert.AreEqual(0, plan.ExitCode, plan.FailureReason);
+            Assert.IsEmpty(plan.MissingContent);
+            var challenges = Object.FindObjectsByType<PowerChallenge>(FindObjectsSortMode.None);
+            Assert.AreEqual(4, challenges.Length);
+            foreach (var challenge in challenges) Assert.IsTrue(challenge.Rules.Completed, challenge.name);
+            Assert.AreEqual(EndingStage.Credits, Object.FindAnyObjectByType<EndingController>().Rules.Stage);
+        }
+
+        [UnityTest]
         public IEnumerator FullRoutePreservesOriginalPropsAndHasPathsToEveryClearing()
         {
             var collector = Object.FindAnyObjectByType<MemoryCollector>();
@@ -122,7 +139,7 @@ namespace TiffanyGame.Tests
             bool tylerWasActive = collector.tyler.gameObject.activeSelf;
             var route = GameObject.Find("Route").transform;
             var scene = new PlaythroughScene();
-            scene.Prepare(new PlaythroughPlan(), _ => { });
+            scene.Prepare(new PlaythroughPlan(new[] { PlaythroughMilestone.Kindle, PlaythroughMilestone.MoveObject }), _ => { });
             yield return null;
             CollectionAssert.AreEqual(originalCandles, kindler.candles);
             CollectionAssert.AreEquivalent(allCandles, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None));
@@ -134,8 +151,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(originalPosition + Vector3.back * 1.4f, scene.Target);
             Assert.IsTrue(originalCandle.transform.IsChildOf(route.GetChild(0)));
             scene.Select(PlaythroughMilestone.MoveObject);
-            Assert.AreEqual(originalObjects[0].transform.position + Vector3.back * 2f, scene.Target);
-            Assert.IsTrue(originalObjects[0].transform.IsChildOf(route.GetChild(0)));
+            var originalObject = originalObjects.Find(item => item.transform.IsChildOf(route.GetChild(0)));
+            Assert.AreEqual(originalObject.transform.position + Vector3.back * 2f, scene.Target);
             var navigation = new PlaythroughNavigation();
             var targets = new[]
             {
@@ -154,6 +171,8 @@ namespace TiffanyGame.Tests
         public IEnumerator UsesOriginalCandleAndMovableObjectThroughInput()
         {
             var kindler = Object.FindAnyObjectByType<CandleKindler>();
+            kindler.GetComponent<PlayerSoul>().Powers.Unlock(Power.Candles);
+            kindler.GetComponent<PlayerSoul>().Powers.Unlock(Power.Poltergeist);
             var originalCandle = kindler.candles[0];
             var originalObjects = new List<MovableObject>(MovableObject.Active);
             var plan = new PlaythroughPlan(new[]
@@ -174,7 +193,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(0, plan.ExitCode, plan.FailureReason);
             Assert.AreSame(originalCandle, kindler.candles[0]);
             Assert.IsTrue(originalCandle.Candle.IsLit);
-            Assert.IsTrue(originalObjects[0].Used);
+            Assert.IsTrue(originalObjects.Exists(item => item.Used && item.GetComponentInParent<PowerChallenge>() == null));
             CollectionAssert.AreEqual(originalObjects, MovableObject.Active);
         }
 

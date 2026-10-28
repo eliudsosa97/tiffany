@@ -19,5 +19,6 @@ namespace TiffanyGame
         public bool Flashed;
         public bool Raining;
         public bool HearingMuted;
+        public bool InWatchPassage;
     }
 }
