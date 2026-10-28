@@ -2,14 +2,13 @@
 
 ## Equipo
 
-- Eliud Sosa: dirección, diseño y programación.
-- Clau: dirección de arte, narrativa de los recuerdos y dibujos.
+Eliud Sosa y Claudia.
 
-Tyler, el perro del juego, es el perro de Eliud en la vida real.
+Tyler, el perro del juego, es un perro real.
 
-## Grabaciones propias
+## Audio propio
 
-Audio de ambiente grabado por Eliud Sosa en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
+Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 
 ## Sonidos de terceros
 
