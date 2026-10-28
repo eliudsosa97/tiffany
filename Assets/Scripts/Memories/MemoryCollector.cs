@@ -28,6 +28,8 @@ namespace TiffanyGame
 
         public EchoPlayer ActiveEcho { get; private set; }
 
+        public bool IsFound(int memoryId) => progress.IsFound(memoryId);
+
         void Awake()
         {
             var order = new int[spots.Length];
