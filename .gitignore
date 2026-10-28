@@ -57,3 +57,4 @@ sysinfo.txt
 .claude/settings.local.json
 CLAUDE.local.md
 TestResults*.xml
+__pycache__/
