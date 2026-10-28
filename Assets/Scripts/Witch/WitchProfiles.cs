@@ -11,11 +11,8 @@ namespace ElVelador
             {
                 case Chapter.Prologue:
                 case Chapter.Grave:
-                    profile.CanLand = false;
-                    profile.CanSprint = false;
-                    profile.UsesVoiceLure = false;
-                    break;
                 case Chapter.Hut:
+                    profile.CanLand = false;
                     profile.CanSprint = false;
                     profile.UsesVoiceLure = false;
                     break;

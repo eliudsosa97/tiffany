@@ -7,7 +7,7 @@ namespace ElVelador.Tests
     {
         [TestCase(Chapter.Prologue, false, false, false)]
         [TestCase(Chapter.Grave, false, false, false)]
-        [TestCase(Chapter.Hut, true, false, false)]
+        [TestCase(Chapter.Hut, false, false, false)]
         [TestCase(Chapter.Trail, true, false, true)]
         [TestCase(Chapter.Ravine, true, true, true)]
         [TestCase(Chapter.OldCemetery, true, true, true)]
