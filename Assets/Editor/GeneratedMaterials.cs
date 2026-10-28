@@ -24,6 +24,7 @@ namespace TiffanyGame.EditorTools
             else material.shader = shader;
 
             material.SetColor("_BaseColor", color);
+            material.SetColor("_Color", material.GetColor("_BaseColor"));
             if (!unlit)
             {
                 material.SetFloat("_Smoothness", smoothness);

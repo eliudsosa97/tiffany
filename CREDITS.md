@@ -74,3 +74,4 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Art/CC0/PolyHaven/rock_boulder_dry/` (losas) | [Rock Boulder Dry](https://polyhaven.com/a/rock_boulder_dry) | Poly Haven | CC0 |
 | `Assets/Audio/Sfx/sob_1.wav` y `sob_2.wav` | [Whimpering Girl Victim](https://freesound.org/s/321465/) | killbaybee | CC0 |
 | `Assets/Art/Kenney/Graveyard/` (lápidas, cruces y rejas del cementerio) | [Graveyard Kit 5.0](https://kenney.nl/assets/graveyard-kit) | Kenney | CC0 |
+| `Assets/Art/Kenney/Nature/` (pinos, rocas, tronco caído y tocón) | [Nature Kit 2.1](https://kenney.nl/assets/nature-kit) | Kenney | CC0 |
