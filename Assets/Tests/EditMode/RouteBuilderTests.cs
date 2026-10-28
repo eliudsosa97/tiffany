@@ -1,7 +1,9 @@
 using NUnit.Framework;
 using TiffanyGame.EditorTools;
+using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 
 namespace TiffanyGame.Tests
@@ -203,6 +205,106 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(HitsRoute(lake.TransformPoint(new Vector3(17f, 1f, 3f)), Vector3.left, 8f));
             Assert.IsTrue(HitsRoute(lake.TransformPoint(new Vector3(9f, 1f, -12f)), Vector3.forward, 10f));
             Assert.IsTrue(HitsRoute(lake.TransformPoint(new Vector3(9f, 1f, 17f)), Vector3.back, 8f));
+        }
+
+        [Test]
+        public void RoofsTanksAndAllElevatedCollidersAreNotWalkable()
+        {
+            int roofCount = 0;
+            int tankCount = 0;
+            int notWalkable = NavMesh.GetAreaFromName("Not Walkable");
+            Assert.GreaterOrEqual(notWalkable, 0);
+            foreach (var collider in route.GetComponentsInChildren<Collider>())
+            {
+                if (collider.isTrigger || collider.bounds.max.y <= route.position.y + 1f) continue;
+                var modifier = collider.GetComponent<NavMeshModifier>();
+                Assert.IsNotNull(modifier, collider.name);
+                Assert.IsTrue(modifier.isActiveAndEnabled, collider.name);
+                Assert.IsTrue(modifier.overrideArea, collider.name);
+                Assert.AreEqual(notWalkable, modifier.area, collider.name);
+                Assert.IsTrue(modifier.AffectsAgentType(NavMesh.GetSettingsByIndex(0).agentTypeID), collider.name);
+                Assert.IsFalse(modifier.ignoreFromBuild, collider.name);
+                if (collider.name == "Roof") roofCount++;
+                if (collider.name.StartsWith("Tank ")) tankCount++;
+            }
+            Assert.AreEqual(3, roofCount);
+            Assert.AreEqual(2, tankCount);
+            foreach (var ground in route.GetComponentsInChildren<GroundSurface>())
+                Assert.IsNull(ground.GetComponentInParent<NavMeshModifier>(), ground.name);
+        }
+
+        [TestCase(3, "Barn", 5f)]
+        [TestCase(4, "Hut", 3.5f)]
+        [TestCase(7, "House", 4f)]
+        public void SheltersKeepFullWallCollisionsAndLowCameraFacingWalls(int index, string name, float height)
+        {
+            var shelter = route.GetChild(index).Find(name);
+            var roof = shelter.Find("Roof");
+            Assert.IsFalse(roof.GetComponent<Renderer>().enabled);
+            Assert.IsTrue(roof.GetComponent<Collider>().enabled);
+            foreach (string wallName in new[] { "Side Wall -1", "Front Wall -1", "Front Wall 1" })
+            {
+                var wall = shelter.Find(wallName);
+                var renderer = wall.GetComponent<Renderer>();
+                var collider = wall.GetComponent<Collider>();
+                Assert.IsTrue(renderer.enabled, wallName);
+                Assert.LessOrEqual(renderer.bounds.max.y - shelter.position.y, 1f, wallName);
+                Assert.AreEqual(shelter.position.y, collider.bounds.min.y, 1e-4f, wallName);
+                Assert.AreEqual(shelter.position.y + height, collider.bounds.max.y, 1e-4f, wallName);
+                var normal = wallName.StartsWith("Side") ? Vector3.right : Vector3.forward;
+                foreach (float y in new[] { 0.6f, height - 0.25f })
+                {
+                    var origin = collider.bounds.center + normal * 2f;
+                    origin.y = shelter.position.y + y;
+                    Assert.IsTrue(collider.Raycast(new Ray(origin, -normal), out _, 4f), wallName);
+                }
+            }
+            float depth = shelter.Find("Side Wall 1").GetComponent<Collider>().bounds.size.z;
+            Assert.IsFalse(HitsRoute(shelter.position + Vector3.up * 0.6f, Vector3.back, depth * 0.5f + 1f));
+        }
+
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(7)]
+        public void FollowCameraSeesPlayerAndMemoryInsideShelters(int index)
+        {
+            var clearing = route.GetChild(index);
+            var spot = clearing.GetComponentInChildren<MemorySpot>();
+            Vector3 position = spot != null ? spot.transform.position : clearing.TransformPoint(new Vector3(0f, 0f, 3f));
+            Vector3 marker = spot != null ? spot.visual.GetComponent<Renderer>().bounds.center : position + Vector3.up * 0.18f;
+            var camera = new GameObject("Follow Camera").AddComponent<FollowCamera>();
+            camera.transform.SetParent(root.transform, false);
+            camera.target = player.transform;
+            for (int yaw = 0; yaw < 360; yaw += 90)
+            {
+                player.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
+                camera.Snap();
+                foreach (var target in new[] { position + Vector3.up * 0.6f, marker })
+                {
+                    Vector3 direction = target - camera.transform.position;
+                    var ray = new Ray(camera.transform.position, direction.normalized);
+                    foreach (var renderer in route.GetComponentsInChildren<Renderer>())
+                    {
+                        if (!renderer.enabled || renderer.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
+                        if (spot != null && renderer.transform.IsChildOf(spot.transform)) continue;
+                        Assert.IsFalse(renderer.bounds.IntersectRay(ray, out float distance) && distance < direction.magnitude,
+                            $"{clearing.name}: {renderer.name}, yaw {yaw}, objetivo {target}");
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void CemeteryCaptureWaitsUntilThePreviousMemoryEchoHasEnded()
+        {
+            var echo = new MemoryEcho();
+            echo.Start();
+            echo.Tick(root.transform.Find("Memory 1 Echo").GetComponent<CaptureStop>().wait);
+            Assert.IsTrue(echo.Active);
+            Assert.Greater(echo.Weight, 0f);
+            echo.Tick(route.GetChild(0).GetComponentInChildren<CaptureStop>().wait);
+            Assert.IsFalse(echo.Active);
+            Assert.AreEqual(0f, echo.Weight);
         }
 
         bool HitsRoute(Vector3 origin, Vector3 direction, float distance)

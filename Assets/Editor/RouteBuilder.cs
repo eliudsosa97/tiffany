@@ -1,6 +1,8 @@
 using System;
+using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
@@ -37,7 +39,9 @@ namespace TiffanyGame.EditorTools
                 skyRoute[i] = clearing.position + Vector3.up * 14f;
 
                 var stop = Root(clearing.name, clearing, new Vector3(0f, 0f, -8f));
-                stop.gameObject.AddComponent<CaptureStop>().overrideCamera = false;
+                var capture = stop.gameObject.AddComponent<CaptureStop>();
+                capture.overrideCamera = false;
+                if (i == 0) capture.wait = MemoryEcho.Duration;
                 stop.gameObject.AddComponent<LightCaptureStage>().energy = SoulEnergy.Max;
                 Vector3 candlePosition = i == 7 ? new Vector3(-4f, 1.1f, -0.7f) : new Vector3(-6f, 0f, -8f);
                 SceneBuilder.BuildCandle(i == 7 ? "Window Candle" : "Family Candle", clearing,
@@ -53,6 +57,15 @@ namespace TiffanyGame.EditorTools
             {
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
+            }
+            Physics.SyncTransforms();
+            int notWalkable = NavMesh.GetAreaFromName("Not Walkable");
+            foreach (var collider in route.GetComponentsInChildren<Collider>())
+            {
+                if (collider.isTrigger || collider.bounds.max.y <= route.position.y + 1f) continue;
+                var modifier = collider.gameObject.AddComponent<NavMeshModifier>();
+                modifier.overrideArea = true;
+                modifier.area = notWalkable;
             }
             return route;
         }
@@ -156,15 +169,30 @@ namespace TiffanyGame.EditorTools
             var shelter = Root(name, clearing, new Vector3(0f, 0f, 5f));
             for (int side = -1; side <= 1; side += 2)
             {
-                Part($"Side Wall {side}", shelter, new Vector3(side * width * 0.5f, height * 0.5f, 0f),
-                    new Vector3(0.5f, height, depth), material);
+                Wall($"Side Wall {side}", shelter, new Vector3(side * width * 0.5f, height * 0.5f, 0f),
+                    new Vector3(0.5f, height, depth), material, side < 0);
                 float frontWidth = (width - 4f) * 0.5f;
-                Part($"Front Wall {side}", shelter, new Vector3(side * (2f + frontWidth * 0.5f), height * 0.5f, -depth * 0.5f),
-                    new Vector3(frontWidth, height, 0.5f), material);
+                Wall($"Front Wall {side}", shelter, new Vector3(side * (2f + frontWidth * 0.5f), height * 0.5f, -depth * 0.5f),
+                    new Vector3(frontWidth, height, 0.5f), material, true);
             }
             Part("Back Wall", shelter, new Vector3(0f, height * 0.5f, depth * 0.5f), new Vector3(width, height, 0.5f), material);
-            Part("Roof", shelter, new Vector3(0f, height, 0f), new Vector3(width + 1f, 0.4f, depth + 1f), material);
+            Part("Roof", shelter, new Vector3(0f, height, 0f), new Vector3(width + 1f, 0.4f, depth + 1f), material)
+                .GetComponent<Renderer>().enabled = false;
             return shelter;
+        }
+
+        static void Wall(string name, Transform parent, Vector3 position, Vector3 size, Material material, bool cameraFacing)
+        {
+            float height = size.y;
+            if (cameraFacing)
+            {
+                position.y -= (height - 1f) * 0.5f;
+                size.y = 1f;
+            }
+            var wall = Part(name, parent, position, size, material);
+            var collider = wall.GetComponent<BoxCollider>();
+            collider.size = new Vector3(1f, height / size.y, 1f);
+            collider.center = Vector3.up * ((height / size.y - 1f) * 0.5f);
         }
 
         static void BuildLake(Transform clearing, Material floor)
