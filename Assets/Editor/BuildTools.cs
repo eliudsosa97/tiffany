@@ -11,12 +11,17 @@ namespace TiffanyGame.EditorTools
         public const string WebTemplate = "PROJECT:Tiffany";
 
         [MenuItem("Tiffany/Build Web")]
-        public static void BuildWeb()
+        public static void BuildWeb() => RunWeb();
+
+        [MenuItem("Tiffany/Build itch.io")]
+        public static void BuildItch() => RunWeb(() => ItchPackage.Zip("Builds/Web", "Builds/tiffany-web.zip"));
+
+        static void RunWeb(Action afterBuild = null)
         {
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true;
             PlayerSettings.WebGL.template = WebTemplate;
-            Run(BuildTarget.WebGL, "Builds/Web");
+            Run(BuildTarget.WebGL, "Builds/Web", afterBuild);
         }
 
         [MenuItem("Tiffany/Build Mac")]
@@ -26,7 +31,7 @@ namespace TiffanyGame.EditorTools
         public static bool UseTarget(BuildTarget active, BuildTarget target, Func<BuildTargetGroup, BuildTarget, bool> switchTarget) =>
             active == target || switchTarget(BuildPipeline.GetBuildTargetGroup(target), target);
 
-        static void Run(BuildTarget target, string path)
+        static void Run(BuildTarget target, string path, Action afterBuild = null)
         {
             var scenes = new List<string>();
             foreach (var scene in EditorBuildSettings.scenes)
@@ -56,8 +61,18 @@ namespace TiffanyGame.EditorTools
             });
             var summary = report.summary;
             Debug.Log($"{GameInfo.LogPrefix} Compilación de {target}: {summary.result}, {summary.totalSize / (1024f * 1024f):F2} MB, {summary.totalErrors} errores.");
+            bool succeeded = summary.result == BuildResult.Succeeded;
+            if (succeeded && afterBuild != null)
+            {
+                try { afterBuild(); }
+                catch (Exception exception)
+                {
+                    Debug.LogError($"{GameInfo.LogPrefix} No se pudo crear el paquete de itch.io: {exception}");
+                    succeeded = false;
+                }
+            }
             if (Application.isBatchMode)
-                EditorApplication.Exit(summary.result == BuildResult.Succeeded ? 0 : 1);
+                EditorApplication.Exit(succeeded ? 0 : 1);
         }
     }
 }

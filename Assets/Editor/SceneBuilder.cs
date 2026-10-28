@@ -44,8 +44,9 @@ namespace TiffanyGame.EditorTools
             respawn.overlay = caughtFade;
             BuildEnding(route.GetChild(7), player.GetComponent<PlayerSoul>(), playerLight.witch, gameInterface);
             var tyler = BuildTyler(route.GetChild(0), player.transform, testZone, memories[0]);
-            tyler.transform.position = route.GetChild(0).Find("Ball").position + new Vector3(1.5f, -0.2f, 0f);
-            MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories);
+            var ball = route.GetChild(0).Find("Ball");
+            tyler.transform.position = ball.position + new Vector3(1.5f, -0.2f, 0f);
+            MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories, ball: ball);
             PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
             var heartbeat = player.gameObject.AddComponent<Heartbeat>();
             heartbeat.panic = player.GetComponent<PanicController>();
@@ -397,6 +398,7 @@ namespace TiffanyGame.EditorTools
             controller.voice = tyler.AddComponent<AudioSource>();
             controller.voice.spatialBlend = 0f;
             controller.voice.playOnAwake = false;
+            controller.barkClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/bark_1.wav");
             controller.growlClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/growl_1.wav");
             var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl" };
             var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl };
@@ -425,6 +427,7 @@ namespace TiffanyGame.EditorTools
                 Vector3 focus = position + toPlayer * 0.25f + Vector3.up * 0.4f;
                 capture.cameraRotation = Quaternion.LookRotation(focus - capture.cameraPosition);
             }
+            tyler.SetActive(false);
             return controller;
         }
 

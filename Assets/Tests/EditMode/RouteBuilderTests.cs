@@ -85,7 +85,7 @@ namespace TiffanyGame.Tests
         public void FiveMemoriesBelongToTheirClearingsAndEchoesStayOutsideTheRoute()
         {
             var collector = player.GetComponent<MemoryCollector>();
-            Assert.AreEqual(5, collector.spots.Length);
+            Assert.AreEqual(6, collector.spots.Length);
             var echoes = root.transform.Find("Memory Echoes");
             Assert.IsNotNull(echoes);
             Assert.IsFalse(echoes.IsChildOf(route));
@@ -93,10 +93,12 @@ namespace TiffanyGame.Tests
             for (int i = 0; i < 8; i++)
             {
                 var spots = route.GetChild(i).GetComponentsInChildren<MemorySpot>();
-                Assert.AreEqual(i < 5 ? 1 : 0, spots.Length);
+                Assert.AreEqual(i == 0 ? 2 : i < 5 ? 1 : 0, spots.Length);
                 if (i >= 5) continue;
                 Assert.AreEqual(i + 1, spots[0].memoryId);
-                Assert.AreSame(spots[0], collector.spots[i]);
+                Assert.AreEqual(MemorySpotKind.Memory, spots[0].kind);
+                Assert.AreSame(spots[0], collector.spots[i == 0 ? 0 : i + 1]);
+                if (i == 0) Assert.AreSame(spots[1], collector.spots[1]);
                 var echo = spots[0].echoPlayer;
                 Assert.IsNotNull(echo);
                 Assert.AreSame(echoes, echo.stageRoot.transform.parent);
@@ -112,18 +114,27 @@ namespace TiffanyGame.Tests
             var ball = route.GetChild(0).Find("Ball");
             Assert.IsNotNull(ball);
             Assert.IsNull(ball.GetComponentInChildren<MemorySpot>());
+            Assert.AreEqual(MemorySpotKind.Ball, collector.spots[1].kind);
+            Assert.AreEqual(MemoryProgress.BallId, collector.spots[1].memoryId);
+            Assert.AreSame(ball.gameObject, collector.spots[1].visual);
+            Assert.AreEqual(ball.position, collector.spots[1].transform.position);
+            Assert.IsNull(collector.spots[1].echoPlayer);
             var stages = root.GetComponentsInChildren<MemoryCaptureStage>();
-            Assert.AreEqual(1, stages.Length);
-            Assert.AreEqual("Memory 0 Spot", stages[0].name);
-            Assert.IsFalse(stages[0].collect);
+            Assert.AreEqual(3, stages.Length);
+            CollectionAssert.AreEquivalent(new[] { "Memory 0 Spot", "Ball 0 Before", "Ball 1 Tyler" },
+                System.Array.ConvertAll(stages, stage => stage.name));
             foreach (var stage in stages)
             {
+                bool isBall = stage.name.StartsWith("Ball ");
                 Assert.AreSame(collector, stage.collector);
-                Assert.AreSame(collector.spots[0], stage.spot);
+                Assert.AreSame(collector.spots[isBall ? 1 : 0], stage.spot);
+                Assert.AreEqual(stage.name == "Ball 1 Tyler", stage.collect);
+                Assert.IsFalse(stage.transform.IsChildOf(route));
                 Assert.Less(Vector3.Distance(stage.transform.position, stage.spot.transform.position), 2f);
                 var capture = stage.GetComponent<CaptureStop>();
                 Assert.IsTrue(capture.overrideCamera);
-                Vector3 toSpot = (stage.spot.transform.position - capture.cameraPosition).normalized;
+                Vector3 focus = isBall ? stage.transform.position : stage.spot.transform.position;
+                Vector3 toSpot = (focus - capture.cameraPosition).normalized;
                 Assert.Greater(Vector3.Dot(capture.cameraRotation * Vector3.forward, toSpot), 0.99f);
             }
             var echoStages = root.GetComponentsInChildren<EchoCaptureStage>();
@@ -133,7 +144,8 @@ namespace TiffanyGame.Tests
             {
                 Assert.IsTrue(ids.Add(stage.spot.memoryId));
                 Assert.AreSame(collector, stage.collector);
-                Assert.AreSame(collector.spots[stage.spot.memoryId - 1], stage.spot);
+                Assert.AreSame(System.Array.Find(collector.spots, spot => spot.memoryId == stage.spot.memoryId), stage.spot);
+                Assert.AreEqual(MemorySpotKind.Memory, stage.spot.kind);
                 Assert.Less(Vector3.Distance(stage.transform.position, stage.spot.transform.position), 6f);
                 Assert.IsTrue(stage.spot.echoPlayer.ground.Raycast(
                     new Ray(stage.transform.position + Vector3.up * 3f, Vector3.down), out var hit, 6f));

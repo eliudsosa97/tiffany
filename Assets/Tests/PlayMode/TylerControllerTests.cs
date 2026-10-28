@@ -18,12 +18,13 @@ namespace TiffanyGame.Tests
             GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
             GameInput.SlowOverride = GameInput.RunOverride = false;
             yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Single);
-            tyler = Object.FindAnyObjectByType<TylerController>();
+            tyler = Object.FindAnyObjectByType<TylerController>(FindObjectsInactive.Include);
             Assert.IsNotNull(tyler);
             Assert.IsNotNull(tyler.witch);
             tyler.witch.enabled = false;
             tyler.witch.GetComponent<NavMeshAgent>().enabled = false;
             tyler.witch.transform.position = Vector3.one * 1000f;
+            tyler.Appear(tyler.player.position);
             yield return null;
         }
 
@@ -65,13 +66,30 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator MimicIsIgnoredWhileInactiveAndHeardAfterAppearing()
+        {
+            tyler.gameObject.SetActive(false);
+            tyler.HearMimic();
+            tyler.Appear(tyler.player.position);
+            tyler.witch.transform.position = tyler.transform.position + Vector3.forward * 25f;
+            yield return null;
+            Assert.AreEqual(TylerReaction.Whine, tyler.Reaction);
+
+            tyler.HearMimic();
+            yield return null;
+            Assert.AreEqual(TylerReaction.Growl, tyler.Reaction);
+        }
+
+        [UnityTest]
         public IEnumerator CaptureStagesRestoreControllerAndNavigation()
         {
             var stages = Object.FindObjectsByType<TylerCaptureStage>(FindObjectsSortMode.None);
             Assert.AreEqual(4, stages.Length);
             foreach (var stage in stages)
             {
+                tyler.gameObject.SetActive(false);
                 stage.Apply(tyler.player);
+                Assert.IsTrue(tyler.gameObject.activeSelf);
                 Assert.IsFalse(tyler.enabled);
                 Assert.IsFalse(tyler.GetComponent<NavMeshAgent>().enabled);
                 Assert.AreEqual(stage.reaction, tyler.Reaction);

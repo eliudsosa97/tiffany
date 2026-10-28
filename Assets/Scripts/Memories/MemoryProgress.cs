@@ -5,6 +5,8 @@ namespace TiffanyGame
 {
     public sealed class MemoryProgress
     {
+        public const int BallId = 100;
+
         readonly List<int> order = new List<int>();
         readonly HashSet<int> found = new HashSet<int>();
 

@@ -183,8 +183,8 @@ namespace TiffanyGame.Tests
             var route = GameObject.Find("Route").transform;
             var cemetery = route.GetChild(0);
             Assert.AreEqual(8, route.childCount);
-            Assert.AreEqual(52, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
-                "46 paradas de escena, una vista previa y cinco ecos.");
+            Assert.AreEqual(54, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
+                "46 paradas de escena, una vista previa, cinco ecos y dos de la pelota.");
             Assert.AreEqual(19, route.GetComponentsInChildren<CaptureStop>().Length);
             Assert.AreEqual(12, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length);
             foreach (var movable in MovableObject.Active) Assert.IsTrue(movable.transform.IsChildOf(cemetery));
@@ -193,7 +193,10 @@ namespace TiffanyGame.Tests
             Assert.That(start.x, Is.InRange(-17f, 17f));
             Assert.That(start.z, Is.InRange(-17f, -10f));
             var witch = Object.FindAnyObjectByType<WitchController>();
-            var tyler = Object.FindAnyObjectByType<TylerController>();
+            var tyler = Object.FindAnyObjectByType<TylerController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(tyler);
+            Assert.IsFalse(tyler.gameObject.activeSelf);
+            Assert.IsFalse(tyler.NearPlayer);
             Assert.IsTrue(witch.transform.IsChildOf(cemetery));
             Assert.IsTrue(tyler.transform.IsChildOf(cemetery));
             Assert.Less(Vector3.Distance(tyler.transform.position, cemetery.Find("Ball").position), 3f);
@@ -263,7 +266,7 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator WalkingInMainScenePublishesStepsAndCameraFollows()
         {
-            Object.FindAnyObjectByType<TylerController>().enabled = false;
+            Object.FindAnyObjectByType<TylerController>(FindObjectsInactive.Include).enabled = false;
             var player = GameObject.FindGameObjectWithTag("Player");
             Assert.IsNotNull(player);
             var viewCamera = Camera.main;

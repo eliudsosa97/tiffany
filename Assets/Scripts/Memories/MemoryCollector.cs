@@ -42,7 +42,6 @@ namespace TiffanyGame
                 order[i] = spot.memoryId;
                 spotsByCollider[spot.GetComponent<SphereCollider>()] = spot;
             }
-            Array.Sort(order);
             progress = new MemoryProgress(order);
             if (viewCamera != null) cameraData = viewCamera.GetComponent<UniversalAdditionalCameraData>();
         }
@@ -76,12 +75,6 @@ namespace TiffanyGame
         public bool Collect(int memoryId)
         {
             if (!progress.MarkFound(memoryId)) return false;
-            bool hasPower = memoryId >= 1 && memoryId <= 5;
-            if (hasPower) soul.Powers.Unlock(PowerSet.ForMemory(memoryId));
-            if (RouteProgress.StartsReturn(memoryId) && soul.TryGetComponent<PlayerRespawn>(out var respawn)
-                && respawn.witch != null) respawn.witch.BeginReturn();
-            if (!gameInterface.MemoryFound(memoryId) && hasPower)
-                gameInterface.ShowPowerNotice(PowerSet.ForMemory(memoryId));
             MemorySpot found = null;
             for (int i = 0; i < spots.Length; i++)
             {
@@ -90,6 +83,19 @@ namespace TiffanyGame
                 if (found.visual != null) found.visual.SetActive(false);
                 break;
             }
+            if (memoryId == MemoryProgress.BallId)
+            {
+                GuideTyler();
+                if (tyler != null) tyler.Appear(transform.position);
+                Debug.Log($"{GameInfo.LogPrefix} Tyler aparece");
+                return true;
+            }
+            bool hasPower = memoryId >= 1 && memoryId <= 5;
+            if (hasPower) soul.Powers.Unlock(PowerSet.ForMemory(memoryId));
+            if (RouteProgress.StartsReturn(memoryId) && soul.TryGetComponent<PlayerRespawn>(out var respawn)
+                && respawn.witch != null) respawn.witch.BeginReturn();
+            if (!gameInterface.MemoryFound(memoryId) && hasPower)
+                gameInterface.ShowPowerNotice(PowerSet.ForMemory(memoryId));
             if (!PlayEcho(found)) echo.Start();
             ApplyEcho(echo.Weight, echo.Active);
             GuideTyler();
