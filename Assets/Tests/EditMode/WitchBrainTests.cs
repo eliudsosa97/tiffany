@@ -68,12 +68,13 @@ namespace TiffanyGame.Tests
             p.SeesPlayerLight = true;
             p.PlayerLightPosition = new Vector3(90f, 0f, 30f);
             Check(Step(0f), WitchState.Flying, new Vector3(90f, 20f, 30f), 6f);
-            p.SeesPlayerLight = false;
             profile.CanLand = false;
+            p.PlayerLightPosition = p.PlayerPosition;
             p.WitchPosition = abovePlayer;
             Check(Step(0f), WitchState.Flying, abovePlayer, 6f);
             Check(Step(1f), WitchState.Flying, abovePlayer, 6f);
             profile.CanLand = true;
+            p.SeesPlayerLight = false;
             p.PlayerInSafeZone = true;
             Check(Step(0f), WitchState.Flying, route[1], 6f);
 
@@ -224,7 +225,6 @@ namespace TiffanyGame.Tests
         [Test]
         public void RainForcesLandingPreventsTakeOffAndInterruptsTakeOff()
         {
-            profile.CanLand = false;
             p.PlayerInSafeZone = p.SeesPlayerLight = true;
             Step(1f);
             Ground();
@@ -239,6 +239,64 @@ namespace TiffanyGame.Tests
             p.WitchPosition.y = 3f;
             Check(Step(1.49f), WitchState.Landing, anchor);
             Check(Step(0.02f), WitchState.Stalking, p.WitchPosition);
+        }
+
+        [Test]
+        public void CemeteryFliesHigherAndOnlyFollowsLightEvenInRain()
+        {
+            profile = WitchProfiles.For(Chapter.Cemetery);
+            brain = new WitchBrain(profile, route);
+            Vector3 height = Vector3.up * profile.FlightHeightOffset;
+            p.WitchPosition = route[0] + height;
+            p.SeesPlayer = p.Raining = true;
+            Check(Step(0f), WitchState.Flying, route[1] + height, 6f);
+            p.SeesPlayerLight = true;
+            Vector3 aboveLight = new Vector3(p.PlayerLightPosition.x, 30f, p.PlayerLightPosition.z);
+            Check(Step(0f), WitchState.Flying, aboveLight, 6f);
+            p.WitchPosition = aboveLight;
+            Check(Step(2f), WitchState.Flying, aboveLight, 6f);
+            p.SeesPlayerLight = false;
+            Check(Step(0f), WitchState.Flying, route[1] + height, 6f);
+        }
+
+        [Test]
+        public void CemeteryWithoutRouteKeepsItsHeight()
+        {
+            profile = WitchProfiles.For(Chapter.Cemetery);
+            brain = new WitchBrain(profile, null);
+            Vector3 start = p.WitchPosition;
+            for (int i = 0; i < 3; i++) Check(Step(1f), WitchState.Flying, start, 6f);
+        }
+
+        [Test]
+        public void ProfileChangeKeepsLandingTimerAndEnablesVoice()
+        {
+            profile = WitchProfiles.For(Chapter.WaterPlant);
+            brain = new WitchBrain(profile, route);
+            p.Raining = true;
+            Check(Step(0f), WitchState.Landing, p.WitchPosition);
+            Check(Step(0.9f), WitchState.Landing, p.WitchPosition);
+            profile = WitchProfiles.For(Chapter.TrainTracks);
+            brain.SetProfile(profile);
+            Check(Step(0.61f), WitchState.Stalking, p.WitchPosition);
+        }
+
+        [Test]
+        public void ProfileChangeKeepsSprintTargetAndElapsedTime()
+        {
+            Ground();
+            p.PlayerPosition = p.WitchPosition + Vector3.forward * 5f;
+            p.SeesPlayer = true;
+            Assert.AreEqual(WitchState.WindUp, Step(0f).State);
+            Assert.AreEqual(WitchState.Sprinting, Step(0.61f).State);
+            p.PlayerPosition = Vector3.left * 30f;
+            WitchDecision sprint = Step(0.4f);
+            brain.SetProfile(WitchProfiles.For(Chapter.WitchHut));
+            WitchDecision continued = Step(0.79f);
+            Assert.AreEqual(WitchState.Sprinting, continued.State);
+            Assert.AreEqual(sprint.MoveTarget, continued.MoveTarget);
+            Assert.AreEqual(sprint.Speed, continued.Speed);
+            Assert.AreEqual(WitchState.Recovering, Step(0.02f).State);
         }
 
         private WitchDecision Step(float dt) => WitchSim.Step(brain, ref p, dt);

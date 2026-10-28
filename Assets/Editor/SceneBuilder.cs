@@ -38,6 +38,7 @@ namespace TiffanyGame.EditorTools
             var viewCamera = CreateCamera(player);
             BakeNavMesh(world);
             playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute);
+            route.GetComponent<WitchChapterTracker>().witch = playerLight.witch;
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
             respawn.witch = playerLight.witch;
             respawn.overlay = caughtFade;
@@ -211,7 +212,7 @@ namespace TiffanyGame.EditorTools
         {
             var witch = new GameObject("Witch");
             witch.transform.SetParent(zoneRoot, false);
-            witch.transform.position = route[0];
+            witch.transform.position = route[0] + Vector3.up * WitchProfiles.For(Chapter.Cemetery).FlightHeightOffset;
             var agent = witch.AddComponent<NavMeshAgent>();
             agent.radius = 0.35f;
             agent.height = 2.3f;
@@ -219,7 +220,7 @@ namespace TiffanyGame.EditorTools
             var controller = witch.AddComponent<WitchController>();
             controller.player = player;
             controller.skyRoute = route;
-            controller.chapter = Chapter.Ravine;
+            controller.chapter = Chapter.Cemetery;
             controller.figure = WitchBuilder.BuildFigure(witch.transform, out var stand, out var crouch);
             controller.figureStand = stand;
             controller.figureCrouch = crouch;

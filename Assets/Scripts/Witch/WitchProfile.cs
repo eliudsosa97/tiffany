@@ -10,6 +10,7 @@ namespace TiffanyGame
         public bool UsesVoiceLure = true;
         public bool GroundChase;
         public float FlySpeed = 6f;
+        public float FlightHeightOffset;
         public float StalkSpeed = 1.2f;
         public float FollowSpeed = 2.5f;
         public float SprintSpeed = 9f;

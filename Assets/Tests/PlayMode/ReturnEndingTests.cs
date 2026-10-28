@@ -62,7 +62,7 @@ namespace TiffanyGame.Tests
             {
                 LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo {id} encontrado");
                 Assert.IsTrue(collector.Collect(id));
-                Assert.AreEqual(Chapter.Ravine, witch.chapter);
+                Assert.AreEqual(Chapter.Cemetery, witch.chapter);
             }
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo 5 encontrado");
@@ -99,6 +99,10 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator FifthMemoryDuringLandingStartsReturnNearTheHut()
         {
+            MovePlayer(route.GetChild(4).position - Vector3.forward * 12f);
+            yield return null;
+            yield return null;
+            Assert.AreEqual(Chapter.WitchHut, witch.chapter);
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Landing");
             Object.FindAnyObjectByType<Storm>().raining = true;
             float deadline = Time.realtimeSinceStartup + 2f;
