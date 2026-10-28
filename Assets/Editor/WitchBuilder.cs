@@ -6,14 +6,11 @@ namespace TiffanyGame.EditorTools
 {
     public static class WitchBuilder
     {
-        public const string MaterialFolder = "Assets/Scenes/Generated/Materials";
-        public static string materialFolder = MaterialFolder;
-
         public static GameObject BuildFigure(Transform parent)
         {
-            var skin = GetMaterial("WitchSkin", new Color(0.14f, 0.14f, 0.13f), false);
-            var cloth = GetMaterial("WitchCloth", new Color(0.055f, 0.04f, 0.03f), false);
-            var hair = GetMaterial("WitchHair", new Color(0.012f, 0.012f, 0.012f), false);
+            var skin = GeneratedMaterials.Get("WitchSkin", new Color(0.14f, 0.14f, 0.13f), false, 0.1f);
+            var cloth = GeneratedMaterials.Get("WitchCloth", new Color(0.055f, 0.04f, 0.03f), false, 0.1f);
+            var hair = GeneratedMaterials.Get("WitchHair", new Color(0.012f, 0.012f, 0.012f), false, 0.1f);
             var figure = CreateRoot("WitchFigure", parent, Vector3.zero);
             var root = figure.transform;
 
@@ -62,7 +59,7 @@ namespace TiffanyGame.EditorTools
 
         public static Light BuildFireBall(Transform parent, out GameObject ball)
         {
-            var fire = GetMaterial("WitchFire", new Color(1f, 0.65f, 0.08f), true);
+            var fire = GeneratedMaterials.Get("WitchFire", new Color(1f, 0.65f, 0.08f), true, 0.1f);
             ball = CreateRoot("WitchFireBall", parent, Vector3.zero);
             var sphere = CreatePart("FireSphere", PrimitiveType.Sphere, ball.transform, Vector3.zero,
                 Vector3.one * 0.9f, fire);
@@ -129,36 +126,6 @@ namespace TiffanyGame.EditorTools
             renderer.shadowCastingMode = ShadowCastingMode.On;
             renderer.receiveShadows = true;
             return part;
-        }
-
-        private static Material GetMaterial(string name, Color color, bool unlit)
-        {
-            string path = $"{materialFolder}/{name}.mat";
-            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (material == null)
-            {
-                string shaderName = unlit ? "Universal Render Pipeline/Unlit" : "Universal Render Pipeline/Lit";
-                var shader = Shader.Find(shaderName);
-                if (shader == null)
-                    throw new System.InvalidOperationException($"No se encontró el shader '{shaderName}'.");
-
-                string folder = "Assets";
-                foreach (string part in materialFolder.Substring("Assets/".Length).Split('/'))
-                {
-                    string next = $"{folder}/{part}";
-                    if (!AssetDatabase.IsValidFolder(next)) AssetDatabase.CreateFolder(folder, part);
-                    folder = next;
-                }
-
-                material = new Material(shader);
-                material.name = name;
-                AssetDatabase.CreateAsset(material, path);
-            }
-
-            material.SetColor("_BaseColor", color);
-            if (!unlit) material.SetFloat("_Smoothness", 0.1f);
-            EditorUtility.SetDirty(material);
-            return material;
         }
     }
 }

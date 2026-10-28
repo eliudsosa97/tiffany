@@ -11,7 +11,6 @@ namespace TiffanyGame.EditorTools
     public static class SceneBuilder
     {
         public const string ScenePath = "Assets/Scenes/Main.unity";
-        const string MaterialFolder = "Assets/Scenes/Generated/Materials";
         const float SlopeAngle = 8f;
         const float PatchHeight = 0.1f;
         const float PatchElevation = 0.03f;
@@ -78,7 +77,7 @@ namespace TiffanyGame.EditorTools
             var normal = rotation * Vector3.up;
             var slope = CreatePrimitive("Hillside", PrimitiveType.Cube, root,
                 -normal * 0.5f, new Vector3(60f, 1f, 60f),
-                GetMaterial("Hillside", new Color(0.095f, 0.11f, 0.14f)));
+                GeneratedMaterials.Get("Hillside", new Color(0.095f, 0.11f, 0.14f)));
             slope.transform.rotation = rotation;
 
             var colors = new[]
@@ -101,7 +100,7 @@ namespace TiffanyGame.EditorTools
                 var top = SurfacePoint(x, alongSlope) + normal * PatchElevation;
                 var patch = CreatePrimitive($"Ground {type}", PrimitiveType.Cube, root,
                     top - normal * (PatchHeight * 0.5f), new Vector3(10f, PatchHeight, 10f),
-                    GetMaterial($"Ground{type}", colors[i]));
+                    GeneratedMaterials.Get($"Ground{type}", colors[i]));
                 patch.transform.rotation = rotation;
                 patch.AddComponent<GroundSurface>().type = type;
 
@@ -134,7 +133,6 @@ namespace TiffanyGame.EditorTools
             Physics.SyncTransforms();
             surface.BuildNavMesh();
             const string path = "Assets/Scenes/Generated/WitchNavMesh.asset";
-            EnsureFolder("Assets/Scenes/Generated");
             if (AssetDatabase.LoadAssetAtPath<NavMeshData>(path) != null) AssetDatabase.DeleteAsset(path);
             AssetDatabase.CreateAsset(surface.navMeshData, path);
         }
@@ -211,11 +209,11 @@ namespace TiffanyGame.EditorTools
 
             var body = CreatePrimitive("Body", PrimitiveType.Capsule, player.transform,
                 new Vector3(0f, 0.6f, 0f), new Vector3(0.5f, 0.6f, 0.5f),
-                GetMaterial("TiffanyBody", new Color(0.86f, 0.86f, 0.72f)));
+                GeneratedMaterials.Get("TiffanyBody", new Color(0.86f, 0.86f, 0.72f)));
             UnityEngine.Object.DestroyImmediate(body.GetComponent<CapsuleCollider>());
             var facing = CreatePrimitive("Facing", PrimitiveType.Cube, player.transform,
                 new Vector3(0f, 0.97f, 0.26f), new Vector3(0.18f, 0.14f, 0.18f),
-                GetMaterial("TiffanyFacing", new Color(0.8f, 0.43f, 0.16f)));
+                GeneratedMaterials.Get("TiffanyFacing", new Color(0.8f, 0.43f, 0.16f)));
             UnityEngine.Object.DestroyImmediate(facing.GetComponent<BoxCollider>());
             return player.AddComponent<PlayerController>();
         }
@@ -246,36 +244,6 @@ namespace TiffanyGame.EditorTools
             instance.transform.localScale = scale;
             instance.GetComponent<Renderer>().sharedMaterial = material;
             return instance;
-        }
-
-        static Material GetMaterial(string name, Color color)
-        {
-            EnsureFolder(MaterialFolder);
-            var shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null)
-                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el shader URP/Lit.");
-
-            string path = $"{MaterialFolder}/{name}.mat";
-            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            bool isNew = material == null;
-            if (isNew) material = new Material(shader) { name = name };
-            else material.shader = shader;
-
-            material.SetColor("_BaseColor", color);
-            material.SetFloat("_Smoothness", 0.08f);
-            material.SetFloat("_Metallic", 0f);
-            if (isNew) AssetDatabase.CreateAsset(material, path);
-            else EditorUtility.SetDirty(material);
-            return material;
-        }
-
-        static void EnsureFolder(string path)
-        {
-            if (AssetDatabase.IsValidFolder(path)) return;
-            int separator = path.LastIndexOf('/');
-            string parent = path.Substring(0, separator);
-            EnsureFolder(parent);
-            AssetDatabase.CreateFolder(parent, path.Substring(separator + 1));
         }
 
         static void SaveScene()
