@@ -11,7 +11,7 @@ namespace ElVelador.Tests
             var inputs = new PanicInputs
             {
                 InDarkness = true,
-                VeladorDistance = float.PositiveInfinity
+                WitchDistance = float.PositiveInfinity
             };
 
             panic.Tick(5f, in inputs);
@@ -29,7 +29,7 @@ namespace ElVelador.Tests
             panic.ResetTo(0.6f);
             var inputs = new PanicInputs
             {
-                VeladorDistance = float.PositiveInfinity,
+                WitchDistance = float.PositiveInfinity,
                 InSafeLight = safeLight,
                 HiddenAndStill = hiddenAndStill,
                 DogNear = dogNear
@@ -59,10 +59,10 @@ namespace ElVelador.Tests
         [TestCase(float.PositiveInfinity, 0f)]
         [TestCase(float.NegativeInfinity, 0f)]
         [TestCase(float.NaN, 0f)]
-        public void VeladorRaisesPanicWithinRadius(float distance, float expected)
+        public void WitchRaisesPanicWithinRadius(float distance, float expected)
         {
             var panic = new PanicModel();
-            var inputs = new PanicInputs { VeladorDistance = distance };
+            var inputs = new PanicInputs { WitchDistance = distance };
 
             panic.Tick(5f, in inputs);
 
@@ -73,13 +73,13 @@ namespace ElVelador.Tests
         [TestCase(true, 0f, false, 0.51f)]
         [TestCase(false, float.PositiveInfinity, true, 0.15f)]
         [TestCase(true, float.PositiveInfinity, true, 0.285f)]
-        public void DarknessAmplifiesVeladorAndWhispers(bool darkness, float distance, bool whispers, float expected)
+        public void DarknessAmplifiesWitchAndWhispers(bool darkness, float distance, bool whispers, float expected)
         {
             var panic = new PanicModel();
             var inputs = new PanicInputs
             {
                 InDarkness = darkness,
-                VeladorDistance = distance,
+                WitchDistance = distance,
                 HearingWhispers = whispers
             };
 
@@ -96,7 +96,7 @@ namespace ElVelador.Tests
             var inputs = new PanicInputs
             {
                 InDarkness = true,
-                VeladorDistance = 10f,
+                WitchDistance = 10f,
                 HearingWhispers = true,
                 HiddenAndStill = true,
                 DogNear = true
@@ -113,7 +113,7 @@ namespace ElVelador.Tests
         {
             var panic = new PanicModel();
             panic.ResetTo(0.5f);
-            var inputs = new PanicInputs { InDarkness = true, VeladorDistance = 0f };
+            var inputs = new PanicInputs { InDarkness = true, WitchDistance = 0f };
 
             panic.Tick(dt, in inputs);
 
@@ -127,7 +127,7 @@ namespace ElVelador.Tests
             var inputs = new PanicInputs
             {
                 InDarkness = true,
-                VeladorDistance = float.PositiveInfinity
+                WitchDistance = float.PositiveInfinity
             };
 
             panic.Tick(1000f, in inputs);
@@ -143,8 +143,8 @@ namespace ElVelador.Tests
         [TestCase(0.49f, PanicStage.Calm)]
         [TestCase(0.5f, PanicStage.Steps)]
         [TestCase(0.74f, PanicStage.Steps)]
-        [TestCase(0.75f, PanicStage.FalseLanterns)]
-        [TestCase(0.89f, PanicStage.FalseLanterns)]
+        [TestCase(0.75f, PanicStage.FalseFires)]
+        [TestCase(0.89f, PanicStage.FalseFires)]
         [TestCase(0.9f, PanicStage.Children)]
         [TestCase(1f, PanicStage.Children)]
         public void StageMatchesThreshold(float level, PanicStage expected)
@@ -156,7 +156,7 @@ namespace ElVelador.Tests
             Assert.AreEqual(expected, panic.Stage);
         }
 
-        [TestCase(0.3f, 0.8f, PanicStage.FalseLanterns)]
+        [TestCase(0.3f, 0.8f, PanicStage.FalseFires)]
         [TestCase(100f, 1f, PanicStage.Children)]
         public void SpikeRaisesPanicAndChangesStage(float amount, float expected, PanicStage stage)
         {

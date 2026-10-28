@@ -4,7 +4,7 @@ namespace ElVelador
     {
         Calm,
         Steps,
-        FalseLanterns,
+        FalseFires,
         Children
     }
 }
