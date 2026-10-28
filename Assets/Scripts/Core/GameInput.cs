@@ -14,14 +14,19 @@ namespace TiffanyGame
         public static bool? FlashOverride;
 
         static bool commandWasPressed;
-        static FocusClickFilter focusClickFilter = new FocusClickFilter(true, float.NegativeInfinity);
+        static FocusClickFilter focusClickFilter = new FocusClickFilter(true, float.NegativeInfinity, false);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Initialize()
         {
             ClearOverrides();
             commandWasPressed = false;
-            focusClickFilter = new FocusClickFilter(Application.isFocused, Time.realtimeSinceStartup);
+#if UNITY_WEBGL && !UNITY_EDITOR
+            const bool consumeFirstClick = true;
+#else
+            const bool consumeFirstClick = false;
+#endif
+            focusClickFilter = new FocusClickFilter(Application.isFocused, Time.realtimeSinceStartup, consumeFirstClick);
             InputSystem.onAfterUpdate -= UpdateKeyboard;
             InputSystem.onAfterUpdate += UpdateKeyboard;
             Application.focusChanged -= ResetKeyboardOnFocus;
