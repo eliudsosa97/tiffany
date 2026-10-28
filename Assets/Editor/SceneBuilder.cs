@@ -41,6 +41,7 @@ namespace TiffanyGame.EditorTools
             var tyler = BuildTyler(route.GetChild(0), player.transform, testZone, memories[0]);
             tyler.transform.position = route.GetChild(0).Find("Ball").position + new Vector3(1.5f, -0.2f, 0f);
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories);
+            PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
             var candleStop = new GameObject("Candle 1 Safe");
             candleStop.transform.SetParent(testZone, false);
             candleStop.transform.position = SurfacePoint(-5f, 1.5f);
