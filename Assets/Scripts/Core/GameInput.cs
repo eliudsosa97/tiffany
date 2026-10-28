@@ -12,6 +12,7 @@ namespace TiffanyGame
         public static bool? RunOverride;
         public static Vector2? AimOverride;
         public static bool? InteractOverride;
+        public static bool? LightToggleOverride;
         public static bool? FlashOverride;
 
         static bool commandWasPressed;
@@ -41,6 +42,7 @@ namespace TiffanyGame
             RunOverride = null;
             AimOverride = null;
             InteractOverride = null;
+            LightToggleOverride = null;
             FlashOverride = null;
         }
 
@@ -128,8 +130,8 @@ namespace TiffanyGame
             }
         }
 
-        public static bool LightTogglePressed => KeyPressed(Key.F) ||
-            Mouse.current?.rightButton.wasPressedThisFrame == true || Gamepad.current?.buttonNorth.wasPressedThisFrame == true;
+        public static bool LightTogglePressed => LightToggleOverride ?? (KeyPressed(Key.F) ||
+            Mouse.current?.rightButton.wasPressedThisFrame == true || Gamepad.current?.buttonNorth.wasPressedThisFrame == true);
 
         public static bool FlashPressed => FlashOverride ??
             (focusClickFilter.Accept(Mouse.current?.leftButton.wasPressedThisFrame == true, Time.realtimeSinceStartup) ||

@@ -42,6 +42,16 @@ namespace TiffanyGame.Tests
             Assert.That(GameInput.FlashOverride, Is.Null);
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void LightToggleOverrideControlsPressAndCanBeCleared(bool pressed)
+        {
+            GameInput.LightToggleOverride = pressed;
+            Assert.That(GameInput.LightTogglePressed, Is.EqualTo(pressed));
+            GameInput.ClearOverrides();
+            Assert.That(GameInput.LightToggleOverride, Is.Null);
+        }
+
         [TestCase(0f, 0f)]
         [TestCase(0.6f, -0.4f)]
         public void AimOverrideControlsStickSuppressesPointerAndCanBeCleared(float x, float y)
