@@ -67,6 +67,6 @@ namespace TiffanyGame
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void Reset() => active.Clear();
+        private static void ClearRegistry() => active.Clear();
     }
 }

@@ -28,7 +28,8 @@ namespace TiffanyGame.EditorTools
             challenge.tracker = tracker;
             var rules = new ChallengeRules(kind);
             var timber = GeneratedMaterials.Get("RouteStructure", new Color(0.4f, 0.4f, 0.4f));
-            challenge.checkpoint = Candle(root, "Challenge Family Candle", new Vector3(-0.8f, 0f, rules.NeedsCandles ? -8f : -4f),
+            float rechargeZ = kind == ChallengeKind.Hut ? -6f : rules.NeedsCandles ? -8f : -4f;
+            challenge.checkpoint = Candle(root, "Challenge Family Candle", new Vector3(-0.8f, 0f, rechargeZ),
                 CandleKind.Family, soul, storm, 1.2f);
             challenge.post = Point(root, "Watch Post", new Vector3(0f, 0f, 2.2f));
 

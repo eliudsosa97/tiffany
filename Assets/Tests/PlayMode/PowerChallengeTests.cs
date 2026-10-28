@@ -1,6 +1,7 @@
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -47,6 +48,30 @@ namespace TiffanyGame.Tests
             Time.timeScale = 1f;
             SceneManager.CreateScene(nameof(PowerChallengeTests));
             yield return SceneManager.UnloadSceneAsync(SceneManager.GetSceneByName("Main"));
+        }
+
+        [UnityTest]
+        public IEnumerator EveryRechargeCandleHasACompletePathFromThePreviousClearing()
+        {
+            yield return new WaitForSeconds(0.6f);
+            var path = new NavMeshPath();
+            foreach (var challenge in challenges)
+            {
+                Vector3 origin = challenge.transform.parent.TransformPoint(new Vector3(0f, 0f, -13f));
+                Assert.IsTrue(NavMesh.SamplePosition(origin, out var from, 0.5f, NavMesh.AllAreas), challenge.name);
+                Assert.IsTrue(NavMesh.SamplePosition(challenge.RechargePoint, out var to,
+                    challenge.checkpoint.radius + 0.5f, NavMesh.AllAreas), challenge.name);
+                Assert.IsTrue(NavMesh.CalculatePath(from.position, to.position, NavMesh.AllAreas, path), challenge.name);
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, challenge.name);
+                Assert.IsFalse(Physics.Linecast(to.position + Vector3.up * 0.6f,
+                    challenge.RechargePoint + Vector3.up * 0.6f, Physics.DefaultRaycastLayers,
+                    QueryTriggerInteraction.Ignore), challenge.name);
+                float firstBarrier = challenge.darkness.Length > 0 ? challenge.darkness[0].transform.localPosition.z : 0f;
+                Assert.Less(challenge.checkpoint.transform.localPosition.z + challenge.checkpoint.radius,
+                    firstBarrier, challenge.name);
+            }
+            Assert.IsTrue(new PlaythroughNavigation().Calculate(challenges[2].Exit, challenges[3].RechargePoint),
+                "La recarga de la choza debe ser alcanzable al salir del reto del establo.");
         }
 
         [UnityTest]

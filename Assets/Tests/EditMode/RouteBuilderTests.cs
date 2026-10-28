@@ -209,6 +209,11 @@ namespace TiffanyGame.Tests
                 CollectionAssert.AreEquivalent(new[] { challenge.name + " Before", challenge.name + " After" },
                     System.Array.ConvertAll(captures, stage => stage.name));
             }
+            var stable = System.Array.Find(challenges, challenge => challenge.kind == ChallengeKind.Vanish);
+            var hut = System.Array.Find(challenges, challenge => challenge.kind == ChallengeKind.Hut);
+            float rechargeClearance = Vector3.Dot(hut.checkpoint.transform.position - stable.Exit, stable.transform.forward);
+            Assert.Greater(rechargeClearance, hut.checkpoint.radius + NavMesh.GetSettingsByIndex(0).agentRadius,
+                "La zona segura de la choza debe dejar libre la salida del pasillo del establo.");
             foreach (var clearing in tracker.clearings)
                 Assert.LessOrEqual(clearing.GetComponentsInChildren<Renderer>(true).Length, 200, clearing.name);
         }
