@@ -58,6 +58,23 @@ namespace TiffanyGame.EditorTools
             return material;
         }
 
+        public static Material GetWater()
+        {
+            EnsureFolder(folder);
+            var shader = Shader.Find("Universal Render Pipeline/Tiffany Water");
+            if (shader == null)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el shader del agua.");
+            string path = $"{folder}/RouteWater.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool isNew = material == null;
+            if (isNew) material = new Material(shader) { name = "RouteWater" };
+            else material.shader = shader;
+            material.SetColor("_BaseColor", new Color(0.018f, 0.038f, 0.05f, 0.88f));
+            if (isNew) AssetDatabase.CreateAsset(material, path);
+            else EditorUtility.SetDirty(material);
+            return material;
+        }
+
         public static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path)) return;
