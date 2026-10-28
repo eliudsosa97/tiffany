@@ -38,10 +38,27 @@ namespace ElVelador
                     continue;
                 }
 
-                if (memory == null || memory.id < 1 || string.IsNullOrEmpty(memory.title)
-                    || memories.ContainsKey(memory.id))
+                if (memory == null)
                 {
-                    Warn(asset.name, "datos inválidos o id duplicado.");
+                    Warn(asset.name, "el JSON está vacío");
+                    continue;
+                }
+
+                if (memory.id < 1)
+                {
+                    Warn(asset.name, $"el id debe ser 1 o mayor (tiene {memory.id})");
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(memory.title))
+                {
+                    Warn(asset.name, "falta el título");
+                    continue;
+                }
+
+                if (memories.ContainsKey(memory.id))
+                {
+                    Warn(asset.name, $"el id {memory.id} ya lo usa otro recuerdo");
                     continue;
                 }
 

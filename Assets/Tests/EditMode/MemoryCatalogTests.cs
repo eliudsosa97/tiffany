@@ -83,18 +83,29 @@ namespace ElVelador.Tests
         [Test]
         public void SkipsInvalidAssetsAndContinuesLoading()
         {
-            foreach (string name in new[] { "broken", "zero", "duplicate", "empty-title", "<null>" })
-            {
-                LogAssert.Expect(LogType.Warning,
-                    new Regex("^" + Regex.Escape($"{GameInfo.LogPrefix} Recuerdo '{name}' omitido:")));
-            }
+            LogAssert.Expect(LogType.Warning,
+                new Regex("^" + Regex.Escape($"{GameInfo.LogPrefix} Recuerdo 'broken' omitido: JSON inválido:")));
+            LogAssert.Expect(LogType.Warning,
+                $"{GameInfo.LogPrefix} Recuerdo 'empty-json' omitido: el JSON está vacío");
+            LogAssert.Expect(LogType.Warning,
+                $"{GameInfo.LogPrefix} Recuerdo 'zero' omitido: el id debe ser 1 o mayor (tiene 0)");
+            LogAssert.Expect(LogType.Warning,
+                $"{GameInfo.LogPrefix} Recuerdo 'duplicate' omitido: el id 1 ya lo usa otro recuerdo");
+            LogAssert.Expect(LogType.Warning,
+                $"{GameInfo.LogPrefix} Recuerdo 'empty-title' omitido: falta el título");
+            LogAssert.Expect(LogType.Warning,
+                $"{GameInfo.LogPrefix} Recuerdo 'whitespace-title' omitido: falta el título");
+            LogAssert.Expect(LogType.Warning,
+                $"{GameInfo.LogPrefix} Recuerdo '<null>' omitido: el asset es null.");
             var catalog = new MemoryCatalog(new[]
             {
                 Asset("memory-1", @"{""id"":1,""title"":""Flores""}"),
                 Asset("broken", "not JSON"),
+                Asset("empty-json", ""),
                 Asset("zero", @"{""id"":0,""title"":""Cero""}"),
                 Asset("duplicate", @"{""id"":1,""title"":""Duplicado""}"),
                 Asset("empty-title", @"{""id"":2,""title"":""""}"),
+                Asset("whitespace-title", @"{""id"":2,""title"":""   ""}"),
                 null,
                 Asset("memory-2", @"{""id"":2,""title"":""Listón""}")
             });
