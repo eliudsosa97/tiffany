@@ -21,6 +21,38 @@ namespace TiffanyGame.Tests
         [SetUp]
         public void SetUp() => switches = 0;
 
+        [TestCase(false, "Builds/Web")]
+        [TestCase(true, "Builds/WebDebug")]
+        public void WebBuildsKeepPublicAndDebugOutputsSeparate(bool debug, string path)
+        {
+            var scenes = new[] { "Assets/Scenes/Main.unity" };
+            var options = BuildTools.WebOptions(scenes, debug);
+            CollectionAssert.AreEqual(scenes, options.scenes);
+            Assert.AreEqual(BuildTarget.WebGL, options.target);
+            Assert.AreEqual(BuildOptions.None, options.options);
+            Assert.AreEqual(path, options.locationPathName);
+            CollectionAssert.AreEqual(debug ? new[] { WebDebugQuery.Define } : System.Array.Empty<string>(),
+                options.extraScriptingDefines);
+        }
+
+        [TestCase("TIFFANY_WEB_DEBUG", false, true)]
+        [TestCase("FOO; TIFFANY_WEB_DEBUG ;BAR", false, true)]
+        [TestCase("TIFFANY_WEB_DEBUG", true, false)]
+        [TestCase("TIFFANY_WEB_DEBUGGER;FOO", false, false)]
+        [TestCase("", false, false)]
+        [TestCase(null, false, false)]
+        public void PublicBuildRefusesTheDebugDefineInPlayerSettings(string defines, bool debug, bool leaks)
+        {
+            Assert.AreEqual(leaks, BuildTools.LeaksWebDebug(defines, debug));
+        }
+
+        [Test]
+        public void PublicBuildAfterDebugDoesNotInheritTheDefine()
+        {
+            BuildTools.WebOptions(System.Array.Empty<string>(), true);
+            Assert.IsEmpty(BuildTools.WebOptions(System.Array.Empty<string>(), false).extraScriptingDefines);
+        }
+
         [TestCase(BuildTarget.StandaloneOSX, BuildTarget.WebGL, BuildTargetGroup.WebGL)]
         [TestCase(BuildTarget.WebGL, BuildTarget.StandaloneOSX, BuildTargetGroup.Standalone)]
         public void BuildSwitchesToItsTargetFirst(BuildTarget active, BuildTarget target, BuildTargetGroup group)

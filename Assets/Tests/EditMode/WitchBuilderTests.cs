@@ -29,6 +29,19 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void BuiltWitchGroundMaskExcludesCoverAndKeepsDefaultRaycastLayers()
+        {
+            var followCamera = new GameObject("Camera").AddComponent<FollowCamera>();
+            followCamera.transform.SetParent(root.transform, false);
+            var controller = SceneBuilder.BuildWitch(root.transform, null, root.transform, new[] { Vector3.zero }, followCamera);
+            int cover = LayerMask.GetMask(ForestLayout.CoverLayer);
+            Assert.AreNotEqual(0, cover);
+            Assert.AreEqual(0, controller.groundMask.value & cover);
+            Assert.AreNotEqual(0, controller.groundMask.value & LayerMask.GetMask("Default"));
+            Assert.AreEqual(Physics.DefaultRaycastLayers, controller.groundMask.value | cover);
+        }
+
+        [Test]
         public void FigureHasNeutralRootAndDirectPoseChildren()
         {
             root.transform.SetPositionAndRotation(new Vector3(4f, 3f, -2f), Quaternion.Euler(10f, 30f, 5f));
