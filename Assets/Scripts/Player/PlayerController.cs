@@ -43,9 +43,8 @@ namespace TiffanyGame
             float yaw = viewCamera != null ? viewCamera.transform.eulerAngles.y : 0f;
             var direction = PlayerMotion.CameraRelative(GameInput.Move, yaw);
             var targetVelocity = direction * PlayerMotion.Speed(inputGait);
-            float targetSpeed = targetVelocity.magnitude;
-            if (targetSpeed > 0f) CurrentGait = PlayerMotion.GaitForSpeed(targetSpeed);
             horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, acceleration * dt);
+            CurrentGait = PlayerMotion.NoiseGait(CurrentGait, targetVelocity.magnitude, horizontalVelocity.magnitude);
 
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
             else verticalVelocity -= gravity * dt;

@@ -33,6 +33,13 @@ namespace TiffanyGame
             return speed < WalkRunThreshold ? Gait.Walk : Gait.Run;
         }
 
+        public static Gait NoiseGait(Gait last, float targetSpeed, float currentSpeed)
+        {
+            if (targetSpeed <= 0f) return last;
+            var next = GaitForSpeed(targetSpeed);
+            return next >= last || currentSpeed <= targetSpeed ? next : last;
+        }
+
         public static Vector3 CameraRelative(Vector2 input, float cameraYawDegrees)
         {
             return Quaternion.Euler(0f, cameraYawDegrees, 0f) * new Vector3(input.x, 0f, input.y);
