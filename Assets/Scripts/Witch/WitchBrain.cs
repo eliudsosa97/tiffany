@@ -26,6 +26,7 @@ namespace TiffanyGame
         public WitchBrain(WitchProfile profile, IReadOnlyList<Vector3> skyRoute)
         {
             this.profile = profile ?? throw new ArgumentNullException(nameof(profile));
+            if (profile.GroundChase) state = WitchState.Stalking;
             route = new Vector3[skyRoute?.Count ?? 0];
             for (int i = 0; i < route.Length; i++)
             {
@@ -41,7 +42,8 @@ namespace TiffanyGame
             bool noiseHeard = p.HeardNoise && !p.HearingMuted;
             bool noiseFromPlayer = noiseHeard && HorizontalDistance(p.NoisePosition, p.PlayerPosition) <= profile.PlayerNoiseMatch;
             if (p.PlayerVanished && noiseFromPlayer) noiseHeard = false;
-            bool detected = trackable && (p.SeesPlayer || p.SmellsPlayer || noiseFromPlayer || (p.PlayerHidden && sawHiding));
+            bool detected = trackable && (profile.GroundChase || p.SeesPlayer || p.SmellsPlayer
+                || noiseFromPlayer || (p.PlayerHidden && sawHiding));
             bool lostEdge = (p.PlayerVanished && !wasVanished) || (p.PlayerHidden && !wasHidden && !sawHiding);
             wasHidden = p.PlayerHidden;
             wasVanished = p.PlayerVanished;
@@ -110,7 +112,7 @@ namespace TiffanyGame
                         hasTarget = false;
                         chasing = false;
                     }
-                    if (timeWithoutPerception >= profile.LoseTrackTime && !p.Raining)
+                    if (timeWithoutPerception >= profile.LoseTrackTime && !p.Raining && !profile.GroundChase)
                     {
                         hasTarget = false;
                         Enter(WitchState.TakingOff, p.WitchPosition);
@@ -231,7 +233,7 @@ namespace TiffanyGame
                     break;
                 case WitchState.Stalking:
                     decision.MoveTarget = hasTarget ? target : p.WitchPosition;
-                    decision.Speed = hasTarget ? (chasing ? profile.FollowSpeed : profile.StalkSpeed) : 0f;
+                    decision.Speed = hasTarget ? (chasing || profile.GroundChase ? profile.FollowSpeed : profile.StalkSpeed) : 0f;
                     decision.VoiceLure = profile.UsesVoiceLure && !chasing;
                     break;
                 case WitchState.WindUp:

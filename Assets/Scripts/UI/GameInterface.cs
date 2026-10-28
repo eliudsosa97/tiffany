@@ -19,6 +19,8 @@ namespace TiffanyGame
         public Text notebookEmpty;
         public Text noticeText;
         public Text subtitleText;
+        public Image endingPanel;
+        public Text endingText;
 
         MemoryCatalog catalog;
         Dictionary<string, Texture2D> textures;
@@ -124,6 +126,16 @@ namespace TiffanyGame
             ApplyScreen();
         }
 
+        public void ShowEnding(EndingRules ending)
+        {
+            flow.SetEnding(ending.Stage != EndingStage.Idle);
+            ApplyScreen();
+            endingPanel.gameObject.SetActive(ending.Stage != EndingStage.Idle);
+            endingPanel.color = new Color(1f, 1f, 1f, ending.FadeAlpha);
+            endingText.text = ending.Stage == EndingStage.Credits ? InterfaceTexts.EndingCredits
+                : ending.Stage == EndingStage.Text ? InterfaceTexts.EndingStory : string.Empty;
+        }
+
         public void ToggleNotebook()
         {
             flow.PressNotebook();
@@ -159,8 +171,9 @@ namespace TiffanyGame
             if (appliedScreen == Screen) return;
             pausePanel.SetActive(Screen == InterfaceScreen.Paused);
             notebookPanel.SetActive(Screen == InterfaceScreen.Notebook);
-            noticeText.gameObject.SetActive(Screen != InterfaceScreen.Notebook);
-            subtitleText.gameObject.SetActive(Screen != InterfaceScreen.Notebook);
+            bool showLines = Screen == InterfaceScreen.Playing || Screen == InterfaceScreen.Paused;
+            noticeText.gameObject.SetActive(showLines);
+            subtitleText.gameObject.SetActive(showLines);
             appliedScreen = Screen;
             pageDirty = true;
             RefreshNotebook();
