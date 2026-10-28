@@ -34,9 +34,21 @@ namespace TiffanyGame.EditorTools
             if (!File.Exists(path))
                 throw new FileNotFoundException($"{GameInfo.LogPrefix} No existe la fuente del modelo '{id}': {path}");
             var spec = JsonUtility.FromJson<ModelSpec>(File.ReadAllText(path));
-            if (spec?.materials == null || spec.materials.Length == 0)
-                throw new InvalidDataException($"{GameInfo.LogPrefix} {path} no define materiales.");
+            CheckSpec(id, spec);
             return spec;
+        }
+
+        public static void CheckSpec(string id, ModelSpec spec)
+        {
+            if (spec?.materials == null || spec.materials.Length == 0)
+                throw new InvalidDataException($"{GameInfo.LogPrefix} El modelo '{id}' no define materiales.");
+            // Los .mat de todos los modelos comparten carpeta: el prefijo evita que uno pise al de otro.
+            int dash = id.IndexOf('-');
+            string family = dash < 0 ? id : id.Substring(0, dash);
+            string prefix = char.ToUpperInvariant(family[0]) + family.Substring(1);
+            foreach (var entry in spec.materials)
+                if (entry.name == null || !entry.name.StartsWith(prefix, StringComparison.Ordinal))
+                    throw new InvalidDataException($"{GameInfo.LogPrefix} El material '{entry.name}' de '{id}' debe empezar con '{prefix}'.");
         }
 
         public static void SyncMaterials(string id)

@@ -5,6 +5,8 @@ namespace TiffanyGame.EditorTools
 {
     public class ModelImportRules : AssetPostprocessor
     {
+        public override uint GetVersion() => 1;
+
         void OnPreprocessModel()
         {
             if (Path.GetDirectoryName(assetPath).Replace('\\', '/') != ModelLibrary.ModelFolder ||

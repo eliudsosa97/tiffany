@@ -59,9 +59,25 @@ namespace TiffanyGame.Tests
             var crouch = LocalBounds(root.transform, "WitchCrouch");
             Assert.Less(crouch.size.y, 1.8f);
             Assert.AreEqual(0f, crouch.min.y, 0.01f);
-            // Las manos y la cabeza van por delante; al revés este margen se invierte.
+            // Las manos y la cabeza van por delante. Con el modelo al revés, el margen se invierte.
             Assert.Greater(crouch.max.z, 2f * -crouch.min.z);
             Assert.Greater(stand.max.z, 2f * -stand.min.z);
+
+            var hair = SubMeshBounds(root.transform.Find("WitchStand"), "WitchHair");
+            Assert.IsTrue(HeadLeansToHerLeft(hair), $"centro del pelo en x = {hair.center.x}");
+            hair.center = new Vector3(-hair.center.x, hair.center.y, hair.center.z);
+            Assert.IsFalse(HeadLeansToHerLeft(hair), "el modelo reflejado también pasaría");
+        }
+
+        // Su izquierda es -X en Unity: witch.json pone la cabeza en x = -0.14.
+        static bool HeadLeansToHerLeft(Bounds hair) => hair.center.x < -0.05f;
+
+        static Bounds SubMeshBounds(Transform pose, string material)
+        {
+            var materials = pose.GetComponent<Renderer>().sharedMaterials;
+            int index = System.Array.FindIndex(materials, m => m.name == material);
+            Assert.GreaterOrEqual(index, 0, material);
+            return pose.GetComponent<MeshFilter>().sharedMesh.GetSubMesh(index).bounds;
         }
 
         [Test]
@@ -102,6 +118,8 @@ namespace TiffanyGame.Tests
             string path = $"{ModelLibrary.materialFolder}/WitchSkin.mat";
             string guid = AssetDatabase.AssetPathToGUID(path);
             string text = File.ReadAllText(path);
+            Resources.UnloadAsset(AssetDatabase.LoadAssetAtPath<Material>(path));
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             ModelLibrary.SyncMaterials("witch");
             Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(path));
             Assert.AreEqual(text, File.ReadAllText(path));
@@ -112,6 +130,19 @@ namespace TiffanyGame.Tests
         {
             var error = Assert.Throws<FileNotFoundException>(() => ModelLibrary.SyncMaterials("no-model"));
             StringAssert.StartsWith(GameInfo.LogPrefix, error.Message);
+        }
+
+        [Test]
+        public void MaterialNamesMustStartWithTheModelName()
+        {
+            var own = new ModelLibrary.MaterialSpec { name = "WitchSkin", color = "#000000" };
+            var foreign = new ModelLibrary.MaterialSpec { name = "Skin", color = "#000000" };
+            Assert.DoesNotThrow(() => ModelLibrary.CheckSpec("witch", new ModelLibrary.ModelSpec { materials = new[] { own } }));
+            var error = Assert.Throws<InvalidDataException>(() =>
+                ModelLibrary.CheckSpec("witch", new ModelLibrary.ModelSpec { materials = new[] { own, foreign } }));
+            StringAssert.StartsWith(GameInfo.LogPrefix, error.Message);
+            var stone = new ModelLibrary.MaterialSpec { name = "RockStone", color = "#000000" };
+            Assert.DoesNotThrow(() => ModelLibrary.CheckSpec("rock-a", new ModelLibrary.ModelSpec { materials = new[] { stone } }));
         }
 
         static void AssertNeutral(Transform t)
