@@ -64,6 +64,17 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void FailedWriteLeavesNoZip()
+        {
+            File.WriteAllText(zipPath, "previous");
+            Directory.CreateDirectory(zipPath + ".partial");
+
+            Assert.That(() => ItchPackage.Zip(buildFolder, zipPath), Throws.InstanceOf<Exception>());
+
+            Assert.IsFalse(File.Exists(zipPath));
+        }
+
+        [Test]
         public void PreviousZipIsReplaced()
         {
             using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
