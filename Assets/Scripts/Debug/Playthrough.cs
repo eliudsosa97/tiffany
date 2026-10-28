@@ -68,6 +68,8 @@ namespace TiffanyGame
         {
             NeutralInput();
             yield return null;
+            var gameInterface = FindAnyObjectByType<GameInterface>();
+            if (gameInterface != null) gameInterface.StartGame();
             if (Plan == null) Configure(new PlaythroughPlan());
             try
             {
