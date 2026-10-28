@@ -45,6 +45,12 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(player);
             Assert.IsNotNull(player.GetComponent<PlayerController>());
             Assert.IsNotNull(player.GetComponent<CharacterController>());
+            var witch = Object.FindAnyObjectByType<WitchController>();
+            Assert.IsNotNull(witch);
+            var light = player.GetComponent<PlayerLight>();
+            Assert.IsNotNull(light);
+            Assert.IsFalse(light.startOn);
+            Assert.AreSame(witch, light.witch);
 
             var viewCamera = Camera.main;
             Assert.IsNotNull(viewCamera);
