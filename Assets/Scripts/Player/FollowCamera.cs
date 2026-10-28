@@ -5,12 +5,16 @@ namespace TiffanyGame
     [RequireComponent(typeof(Camera))]
     public class FollowCamera : MonoBehaviour
     {
+        public const float DefaultPitch = 42f;
+        public const float DefaultYaw = 45f;
+        public const float DefaultLookAhead = 2.5f;
+
         public Transform target;
         public float distance = 36f;
-        public float pitch = 42f;
-        public float yaw = 45f;
+        public float pitch = DefaultPitch;
+        public float yaw = DefaultYaw;
         public float fieldOfView = 24f;
-        public float lookAhead = 2.5f;
+        public float lookAhead = DefaultLookAhead;
         public float focusHeight = 0.8f;
         public float smoothTime = 0.25f;
 
