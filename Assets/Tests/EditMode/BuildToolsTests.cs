@@ -1,0 +1,49 @@
+using NUnit.Framework;
+using TiffanyGame.EditorTools;
+using UnityEditor;
+
+namespace TiffanyGame.Tests
+{
+    public sealed class BuildToolsTests
+    {
+        int switches;
+        BuildTargetGroup switchedGroup;
+        BuildTarget switchedTarget;
+
+        bool Switch(BuildTargetGroup group, BuildTarget target, bool result)
+        {
+            switches++;
+            switchedGroup = group;
+            switchedTarget = target;
+            return result;
+        }
+
+        [SetUp]
+        public void SetUp() => switches = 0;
+
+        [TestCase(BuildTarget.StandaloneOSX, BuildTarget.WebGL, BuildTargetGroup.WebGL)]
+        [TestCase(BuildTarget.WebGL, BuildTarget.StandaloneOSX, BuildTargetGroup.Standalone)]
+        public void BuildSwitchesToItsTargetFirst(BuildTarget active, BuildTarget target, BuildTargetGroup group)
+        {
+            Assert.IsTrue(BuildTools.UseTarget(active, target, (g, t) => Switch(g, t, true)));
+
+            Assert.AreEqual(1, switches);
+            Assert.AreEqual(group, switchedGroup);
+            Assert.AreEqual(target, switchedTarget);
+        }
+
+        [Test]
+        public void MatchingTargetIsLeftAlone()
+        {
+            Assert.IsTrue(BuildTools.UseTarget(BuildTarget.WebGL, BuildTarget.WebGL, (g, t) => Switch(g, t, true)));
+
+            Assert.AreEqual(0, switches);
+        }
+
+        [Test]
+        public void FailedSwitchStopsTheBuild()
+        {
+            Assert.IsFalse(BuildTools.UseTarget(BuildTarget.StandaloneOSX, BuildTarget.WebGL, (g, t) => Switch(g, t, false)));
+        }
+    }
+}
