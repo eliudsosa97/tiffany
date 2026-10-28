@@ -71,6 +71,7 @@ namespace TiffanyGame.EditorTools
             caughtCapture.overrideCamera = false;
             caughtCapture.wait = CaughtSequence.FireDuration + CaughtSequence.FadeOutDuration + CaughtSequence.FadeInDuration * 0.5f;
             caughtStop.AddComponent<CaughtCaptureStage>().spot = firstCandle;
+            BuildWitchVoice(playerLight.witch, tyler);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -257,6 +258,32 @@ namespace TiffanyGame.EditorTools
             return controller;
         }
 
+        static void BuildWitchVoice(WitchController witch, TylerController tyler)
+        {
+            var voice = witch.gameObject.AddComponent<WitchVoice>();
+            voice.witch = witch;
+            voice.tyler = tyler;
+            voice.source = witch.gameObject.AddComponent<AudioSource>();
+            voice.echo = witch.gameObject.AddComponent<AudioSource>();
+            foreach (var source in new[] { voice.source, voice.echo })
+            {
+                source.playOnAwake = false;
+                source.spatialBlend = 1f;
+                source.rolloffMode = AudioRolloffMode.Linear;
+                // El AudioListener va en la cámara, a unos 36 m de Tiffany.
+                source.minDistance = 30f;
+                source.maxDistance = 71f;
+            }
+            voice.barks = new AudioClip[4];
+            for (int i = 0; i < voice.barks.Length; i++)
+            {
+                string path = $"Assets/Audio/Sfx/bark_{i + 1}.wav";
+                voice.barks[i] = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+                if (voice.barks[i] == null)
+                    throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el ladrido: {path}");
+            }
+        }
+
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
         {
             CandleSpot first = null;
@@ -369,6 +396,7 @@ namespace TiffanyGame.EditorTools
             controller.voice = tyler.AddComponent<AudioSource>();
             controller.voice.spatialBlend = 0f;
             controller.voice.playOnAwake = false;
+            controller.growlClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/growl_1.wav");
             var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl" };
             var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl };
             for (int i = 0; i < reactions.Length; i++)
