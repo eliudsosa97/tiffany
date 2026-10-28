@@ -6,16 +6,21 @@ namespace TiffanyGame
     public sealed class Storm : MonoBehaviour
     {
         public bool raining;
-        public Light lightning;
-        public float lightningIntensity = 3f;
+        public Light moon;
+        public float moonFlashBoost = 2.5f;
+        public Color flashAmbient = new Color(0.32f, 0.36f, 0.45f);
         public ParticleSystem rain;
+        public AudioSource rainSource;
         public AudioSource thunderSource;
         public AudioClip[] thunderClips;
-
         StormCycle cycle;
         PlayerController[] players;
         WitchController[] witches;
         bool previousRaining;
+        float baseMoonIntensity;
+        Color baseAmbient;
+        bool initialized;
+        float appliedFlashLevel;
 
         public bool Flashing => cycle != null && cycle.Flashing;
 
@@ -27,22 +32,44 @@ namespace TiffanyGame
             players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
             witches = FindObjectsByType<WitchController>(FindObjectsSortMode.None);
             previousRaining = !raining;
+            if (moon != null) baseMoonIntensity = moon.intensity;
+            baseAmbient = RenderSettings.ambientLight;
+            initialized = true;
+            if (rainSource != null) rainSource.spatialBlend = 0f;
             if (thunderSource != null) thunderSource.spatialBlend = 0f;
+        }
+
+        void OnDisable()
+        {
+            if (!initialized) return;
+            if (moon != null) moon.intensity = baseMoonIntensity;
+            RenderSettings.ambientLight = baseAmbient;
+            appliedFlashLevel = 0f;
         }
 
         void Update()
         {
             cycle.Active = raining;
             cycle.Tick(Time.deltaTime);
-            if (lightning != null)
+            float flashLevel = cycle.FlashLevel;
+            if (flashLevel != appliedFlashLevel)
             {
-                lightning.intensity = cycle.FlashLevel * lightningIntensity;
-                lightning.enabled = cycle.Flashing;
+                if (moon != null) moon.intensity = baseMoonIntensity + flashLevel * moonFlashBoost;
+                RenderSettings.ambientLight = Color.Lerp(baseAmbient, flashAmbient, flashLevel);
+                appliedFlashLevel = flashLevel;
             }
-            if (rain != null && previousRaining != raining)
+            if (previousRaining != raining)
             {
-                if (raining) rain.Play();
-                else rain.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                if (raining)
+                {
+                    if (rain != null) rain.Play();
+                    if (rainSource != null) rainSource.Play();
+                }
+                else
+                {
+                    if (rain != null) rain.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    if (rainSource != null) rainSource.Stop();
+                }
             }
             if (previousRaining && !raining && thunderSource != null) thunderSource.Stop();
             previousRaining = raining;
@@ -59,7 +86,11 @@ namespace TiffanyGame
             if (cycle.ThunderStartedThisTick && thunderSource != null && thunderClips != null && thunderClips.Length > 0)
             {
                 var clip = thunderClips[Random.Range(0, thunderClips.Length)];
-                if (clip != null) thunderSource.PlayOneShot(clip);
+                if (clip != null)
+                {
+                    thunderSource.PlayOneShot(clip);
+                    Debug.Log($"{GameInfo.LogPrefix} Trueno: {clip.name}");
+                }
             }
         }
     }

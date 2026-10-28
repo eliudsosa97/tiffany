@@ -34,11 +34,20 @@ namespace TiffanyGame.Tests
         }
 
         [TestCase(0f, 1f, false)]
-        [TestCase(0.079f, 1f, false), TestCase(0.08f, 0.35f, false)]
-        [TestCase(0.159f, 0.35f, false), TestCase(0.16f, 1f, false)]
-        [TestCase(0.399f, 1f, false), TestCase(0.4f, 1f, true)]
-        [TestCase(0.999f, 1f, true), TestCase(1f, 0f, true)]
-        [TestCase(3.399f, 0f, true), TestCase(3.4f, 0f, false)]
+        [TestCase(0.079f, 1f, false)]
+        [TestCase(0.08f, 0.2f, false)]
+        [TestCase(0.159f, 0.2f, false)]
+        [TestCase(0.16f, 0.8f, false)]
+        [TestCase(0.259f, 0.8f, false)]
+        [TestCase(0.26f, 0.8f, false)]
+        [TestCase(0.399f, 0.6497297f, false)]
+        [TestCase(0.4f, 0.6486486f, true)]
+        [TestCase(0.63f, 0.4f, true)]
+        [TestCase(0.999f, 0.001081081f, true)]
+        [TestCase(1f, 0f, true)]
+        [TestCase(1.001f, 0f, true)]
+        [TestCase(3.399f, 0f, true)]
+        [TestCase(3.4f, 0f, false)]
         public void DryStrikeFlickersThenThundersWithStartFlagForOneTick(float elapsed, float level, bool thunder)
         {
             cycle.Strike();
@@ -67,7 +76,7 @@ namespace TiffanyGame.Tests
             cycle.Strike();
             cycle.Tick(2f);
             cycle.Strike();
-            Check(0.4f, 1f, thunder: true, started: true);
+            Check(0.4f, 0.6486486f, thunder: true, started: true);
             Check(2f, thunder: true);
             Check(1f);
         }
@@ -75,8 +84,9 @@ namespace TiffanyGame.Tests
         void Check(float dt, float level = 0f, bool thunder = false, bool started = false)
         {
             cycle.Tick(dt);
-            Assert.AreEqual((level, level > 0f, thunder, started),
-                (cycle.FlashLevel, cycle.Flashing, cycle.ThunderSounding, cycle.ThunderStartedThisTick));
+            Assert.That(cycle.FlashLevel, Is.EqualTo(level).Within(1e-6f));
+            Assert.AreEqual((level > 0f, thunder, started),
+                (cycle.Flashing, cycle.ThunderSounding, cycle.ThunderStartedThisTick));
         }
     }
 }

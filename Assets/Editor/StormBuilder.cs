@@ -8,16 +8,26 @@ namespace TiffanyGame.EditorTools
     {
         public static Storm BuildStorm(Transform player, Transform spawn)
         {
+            if (RenderSettings.sun == null)
+                throw new System.InvalidOperationException($"{GameInfo.LogPrefix} No se encontró la luna en RenderSettings.sun para la tormenta.");
+            var rainClip = LoadClip("rain");
+            var thunderClips = new[] { LoadClip("thunder_1"), LoadClip("thunder_2") };
             var storm = new GameObject("Storm").AddComponent<Storm>();
             storm.raining = false;
-            storm.lightning = new GameObject("Lightning").AddComponent<Light>();
-            storm.lightning.transform.SetParent(storm.transform, false);
-            storm.lightning.transform.rotation = Quaternion.Euler(60f, 20f, 0f);
-            storm.lightning.type = LightType.Directional;
-            storm.lightning.color = new Color(0.8f, 0.9f, 1f);
-            storm.lightning.shadows = LightShadows.None;
-            storm.lightning.intensity = 0f;
-            storm.lightning.enabled = false;
+            storm.moon = RenderSettings.sun;
+            storm.rainSource = new GameObject("Rain Audio").AddComponent<AudioSource>();
+            storm.rainSource.transform.SetParent(storm.transform, false);
+            storm.rainSource.spatialBlend = 0f;
+            storm.rainSource.playOnAwake = false;
+            storm.rainSource.loop = true;
+            storm.rainSource.volume = 0.5f;
+            storm.rainSource.clip = rainClip;
+            storm.thunderSource = new GameObject("Thunder").AddComponent<AudioSource>();
+            storm.thunderSource.transform.SetParent(storm.transform, false);
+            storm.thunderSource.spatialBlend = 0f;
+            storm.thunderSource.playOnAwake = false;
+            storm.thunderSource.volume = 1f;
+            storm.thunderClips = thunderClips;
             storm.rain = new GameObject("Rain").AddComponent<ParticleSystem>();
             storm.rain.transform.SetParent(player, false);
             storm.rain.transform.localPosition = Vector3.up * 8f;
@@ -46,17 +56,27 @@ namespace TiffanyGame.EditorTools
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
             renderer.sharedMaterial = RainMaterial();
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < 3; i++)
             {
-                var stop = new GameObject(i == 0 ? "Stop 7 Storm" : "Stop 8 Lightning");
+                string stopName = i == 0 ? "Stop 7 Storm" : i == 1 ? "Stop 8 Lightning" : "Stop 9 Thunder";
+                var stop = new GameObject(stopName);
                 stop.transform.SetParent(storm.transform, false);
                 stop.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
-                stop.AddComponent<CaptureStop>().wait = i == 0 ? 1.5f : 0.3f;
+                stop.AddComponent<CaptureStop>().wait = i == 0 ? 1.5f : i == 1 ? 0.3f : 2.5f;
                 var stage = stop.AddComponent<StormCaptureStage>();
                 stage.raining = true;
-                stage.lightning = i == 1;
+                stage.lightning = i > 0;
             }
             return storm;
+        }
+
+        static AudioClip LoadClip(string name)
+        {
+            string path = $"Assets/Audio/Sfx/{name}.wav";
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+            if (clip == null)
+                throw new System.InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el audio de tormenta: {path}");
+            return clip;
         }
 
         static Material RainMaterial()
