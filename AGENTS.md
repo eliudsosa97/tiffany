@@ -34,6 +34,27 @@ Juego de terror y sigilo en Unity 6.3 LTS `6000.3.27f1` con URP, para navegador 
 
 `Assets/Editor/SceneBuilder.cs` genera `Assets/Scenes/Main.unity` completa. **Regenerar la escena borra lo editado a mano.** Se cambia el builder y se regenera. La escena regenerada se commitea solo en `main`.
 
+## Presupuesto de rendimiento
+
+La meta es 60 fps en el navegador con p95 del cuadro menor a 20 ms. Medido el 28-oct en Brave sobre un M2, con la ruta en gris de 6f02142: los ocho claros dan 60 fps, p95 de 17.6 a 18.7 ms con canvas de 1600x900 y de 2400x1350, entre 18 y 33 llamadas de dibujo, entre 3.4 y 7.8 mil triángulos por cuadro y 96 MB de memoria WASM. El M2 va sobrado, así que estos techos dejan margen para portátiles con gráficos integrados.
+
+Por cuadro, en cualquier claro con la bruja en pantalla:
+
+- Llamadas de dibujo: 150 como máximo.
+- Triángulos: 150 mil como máximo.
+- Luces de punto o foco en pantalla: 8 como máximo. Cada objeto recibe 4 luces adicionales como máximo (límite del asset de URP para web), así que una quinta luz cerca no se ve en él.
+- Sombras: solo las de la luna, porque el asset de URP para web no tiene sombras de luces adicionales. Lo estático de la ruta va sin sombras.
+- Memoria WASM: 256 MB como máximo.
+
+Por modelo:
+
+- Lo estático lleva `BatchingStatic` y comparte material con lo de su claro.
+- La vegetación repetida se dibuja con `Graphics.RenderMeshInstanced` y sus posiciones en un ScriptableObject, no como un objeto por planta.
+- Texturas de 1K como máximo y comprimidas en el import.
+- Sin efectos de posproceso nuevos en `Mobile_Renderer` sin medir antes y después.
+
+Quien agregue modelos a la ruta mide antes y después en la build web y pone las cifras en el PR.
+
 ## Estructura
 
 ```
