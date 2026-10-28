@@ -20,6 +20,7 @@ namespace TiffanyGame
         float baseMoonIntensity;
         Color baseAmbient;
         bool initialized;
+        float appliedFlashLevel;
 
         public bool Flashing => cycle != null && cycle.Flashing;
 
@@ -43,6 +44,7 @@ namespace TiffanyGame
             if (!initialized) return;
             if (moon != null) moon.intensity = baseMoonIntensity;
             RenderSettings.ambientLight = baseAmbient;
+            appliedFlashLevel = 0f;
         }
 
         void Update()
@@ -50,8 +52,12 @@ namespace TiffanyGame
             cycle.Active = raining;
             cycle.Tick(Time.deltaTime);
             float flashLevel = cycle.FlashLevel;
-            if (moon != null) moon.intensity = baseMoonIntensity + flashLevel * moonFlashBoost;
-            RenderSettings.ambientLight = Color.Lerp(baseAmbient, flashAmbient, flashLevel);
+            if (flashLevel != appliedFlashLevel)
+            {
+                if (moon != null) moon.intensity = baseMoonIntensity + flashLevel * moonFlashBoost;
+                RenderSettings.ambientLight = Color.Lerp(baseAmbient, flashAmbient, flashLevel);
+                appliedFlashLevel = flashLevel;
+            }
             if (previousRaining != raining)
             {
                 if (raining)

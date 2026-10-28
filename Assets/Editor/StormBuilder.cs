@@ -15,7 +15,7 @@ namespace TiffanyGame.EditorTools
             var storm = new GameObject("Storm").AddComponent<Storm>();
             storm.raining = false;
             storm.moon = RenderSettings.sun;
-            storm.rainSource = new GameObject("Rain").AddComponent<AudioSource>();
+            storm.rainSource = new GameObject("Rain Audio").AddComponent<AudioSource>();
             storm.rainSource.transform.SetParent(storm.transform, false);
             storm.rainSource.spatialBlend = 0f;
             storm.rainSource.playOnAwake = false;
