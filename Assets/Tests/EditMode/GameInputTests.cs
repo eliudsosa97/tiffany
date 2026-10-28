@@ -7,6 +7,27 @@ namespace ElVelador.Tests
     {
         const float Tolerance = 0.00001f;
 
+        [TearDown]
+        public void TearDown()
+        {
+            GameInput.ClearOverrides();
+        }
+
+        [TestCase(0f, 0f)]
+        [TestCase(0.6f, -0.4f)]
+        public void AimOverrideControlsStickSuppressesPointerAndCanBeCleared(float x, float y)
+        {
+            var aim = new Vector2(x, y);
+            GameInput.AimOverride = aim;
+
+            Assert.That(GameInput.AimStick, Is.EqualTo(aim));
+            Assert.That(GameInput.PointerMoved, Is.False);
+
+            GameInput.ClearOverrides();
+
+            Assert.That(GameInput.AimOverride, Is.Null);
+        }
+
         [TestCase(0f, 0f)]
         [TestCase(0.1f, 0.1f)]
         [TestCase(0.2f, 0f)]
