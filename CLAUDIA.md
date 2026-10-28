@@ -139,11 +139,20 @@ En el guion hay un río que se cruza por piedras y troncos. Esas piezas son tuya
 
 | Orden | Modelo | Nombre | Triángulos |
 | --- | --- | --- | --- |
-| 1 | Piedras del río: tres o cuatro rocas de orilla y dos piedras planas para pisar | `river-rock-1`, `river-rock-2`, ..., `river-step-1`, `river-step-2` | 300 cada una |
-| 2 | Tronco caído para cruzar el río | `river-log` | 500 |
-| 3 | Tramo del cauce con sus orillas: uno recto y uno en curva, de 10 m de largo | `river-bed-straight`, `river-bed-curve` | 1500 cada uno |
-| 4 | Una planta del bosque: helecho, cempasúchil o la que veas en las fotos | `plant-<nombre>` | 600 |
-| 5 | Si sobra tiempo: los objetos de tus recuerdos (flores, listón, muñeca, zapato, medalla) | `memory-object-<n>` | 500 |
+| 1 | Piedras del río: tres o cuatro rocas de orilla y dos piedras planas para pisar. Con ellas aprendes Blender | `river-rock-1`, `river-rock-2`, ..., `river-step-1`, `river-step-2` | 300 cada una |
+| 2 | Tiffany, como la diseñaste en tus dibujos (ver abajo) | `tiffany` | 3000 |
+| 3 | Tronco caído para cruzar el río | `river-log` | 500 |
+| 4 | Tramo del cauce con sus orillas: uno recto y uno en curva, de 10 m de largo | `river-bed-straight`, `river-bed-curve` | 1500 cada uno |
+| 5 | Una planta del bosque: helecho, cempasúchil o la que veas en las fotos | `plant-<nombre>` | 600 |
+| 6 | Si sobra tiempo: los objetos de tus recuerdos (flores, listón, muñeca, zapato, medalla) | `memory-object-<n>` | 500 |
+
+**Tiffany.** Tú haces la malla y un carril le pone esqueleto y animaciones (caminar, correr, esconderse, cargar la luz). Mientras no esté la tuya, el juego usa una provisional.
+
+- Mide 1.2 m, de pie, en pose de T: brazos abiertos a los lados, rectos, y piernas un poco separadas.
+- Mira hacia el frente de Blender (el eje -Y) y su origen va entre los pies, en el suelo.
+- Una sola malla. Materiales por zona con estos nombres: `TiffanySkin`, `TiffanyHair`, `TiffanyClothes` y `TiffanyGlow` (las manos, de donde sale su luz).
+- Es un alma: brilla tenue. El brillo lo pone Unity; tú solo eliges colores.
+- Antes de modelar, dibuja en Procreate una hoja de frente y de perfil. Te sirve de guía en Blender y al carril le sirve para revisar.
 
 El agua del río no se modela: es un efecto de Unity que hace un carril encima de tu cauce.
 
