@@ -8,6 +8,8 @@ namespace TiffanyGame
         private readonly WitchSenseProfile profile;
         private readonly StepNoise[] pendingNoises;
         private int pendingCount;
+        private Vector3 lastWitchPosition;
+        private bool hasSensed;
 
         public WitchSenses(WitchSenseProfile profile)
         {
@@ -24,15 +26,23 @@ namespace TiffanyGame
             }
 
             int smallest = 0;
+            float smallestMargin = HearingMargin(in pendingNoises[0]);
             for (int i = 1; i < pendingCount; i++)
             {
-                if (pendingNoises[i].Radius < pendingNoises[smallest].Radius) smallest = i;
+                float margin = HearingMargin(in pendingNoises[i]);
+                if (margin < smallestMargin)
+                {
+                    smallest = i;
+                    smallestMargin = margin;
+                }
             }
-            if (noise.Radius > pendingNoises[smallest].Radius) pendingNoises[smallest] = noise;
+            if (HearingMargin(in noise) > smallestMargin) pendingNoises[smallest] = noise;
         }
 
         public WitchPerception Sense(in WitchSenseInputs input)
         {
+            lastWitchPosition = input.WitchPosition;
+            hasSensed = true;
             float distance = HorizontalDistance(input.WitchPosition, input.PlayerPosition);
             bool flying = input.Form == WitchForm.Flying;
             bool grounded = input.Form == WitchForm.Grounded;
@@ -81,6 +91,11 @@ namespace TiffanyGame
                 HeardNoise = heardNoise,
                 NoisePosition = noisePosition
             };
+        }
+
+        private float HearingMargin(in StepNoise noise)
+        {
+            return hasSensed ? noise.Radius - HorizontalDistance(lastWitchPosition, noise.Position) : noise.Radius;
         }
 
         private static float HorizontalDistance(Vector3 from, Vector3 to)

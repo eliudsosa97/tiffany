@@ -239,6 +239,26 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void FullBufferReplacesInaudibleNoiseWithNearbyAudibleNoise()
+        {
+            input.Form = WitchForm.Grounded;
+            input.WitchPosition = Vector3.zero;
+            senses.Sense(in input);
+            for (int i = 0; i < 8; i++)
+            {
+                var inaudible = new StepNoise(Vector3.forward * 30f, 16f);
+                senses.Hear(in inaudible);
+            }
+            var audible = new StepNoise(Vector3.right, 2f);
+            senses.Hear(in audible);
+
+            WitchPerception p = senses.Sense(in input);
+
+            Assert.IsTrue(p.HeardNoise);
+            Assert.AreEqual(audible.Position, p.NoisePosition);
+        }
+
+        [Test]
         public void FlyingConsumesAllPendingNoisesBeforeGroundedSense()
         {
             var first = new StepNoise(Vector3.forward, 16f);
