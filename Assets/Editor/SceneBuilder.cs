@@ -51,6 +51,7 @@ namespace TiffanyGame.EditorTools
             tyler.transform.position = ball.position + new Vector3(1.5f, -0.2f, 0f);
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories, ball: ball);
             PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
+            BuildForestAmbience(player.transform, route, playerLight.witch);
             var heartbeat = player.gameObject.AddComponent<Heartbeat>();
             heartbeat.panic = player.GetComponent<PanicController>();
             heartbeat.witch = playerLight.witch;
@@ -323,6 +324,26 @@ namespace TiffanyGame.EditorTools
             audio.cackles = new[] { LoadClip("cackle_1"), LoadClip("cackle_2"), LoadClip("cackle_3") };
         }
 
+        static void BuildForestAmbience(Transform player, Transform route, WitchController witch)
+        {
+            var root = new GameObject("Forest Ambience");
+            var audio = root.AddComponent<ForestAmbience>();
+            (audio.player, audio.witch, audio.panic) = (player, witch, player.GetComponent<PanicController>());
+            audio.clearings = route.GetComponent<WitchChapterTracker>().clearings;
+            audio.loopClips = new[] { LoadClip("crickets"), LoadClip("wind"), LoadClip("leaves"), LoadClip("frogs"), LoadClip("lake_water") };
+            audio.loops = new AudioSource[AmbienceMix.LayerCount];
+            for (int i = 0; i < audio.loops.Length; i++)
+            {
+                var source = root.AddComponent<AudioSource>();
+                (source.loop, source.playOnAwake, source.spatialBlend, source.clip) = (true, false, 0f, audio.loopClips[i]);
+                audio.loops[i] = source;
+            }
+            audio.calls = root.AddComponent<AudioSource>();
+            (audio.calls.playOnAwake, audio.calls.spatialBlend) = (false, 0f);
+            (audio.owl, audio.barnOwl, audio.coyote) = (LoadClip("owl"), LoadClip("lechuza"), LoadClip("coyote"));
+            audio.howls = new[] { LoadClip("distant_howl_1"), LoadClip("distant_howl_2"), LoadClip("distant_howl_3") };
+        }
+
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
         {
             CandleSpot first = null;
@@ -426,6 +447,8 @@ namespace TiffanyGame.EditorTools
             agent.enabled = false;
             var controller = tyler.AddComponent<TylerController>();
             controller.player = player;
+            controller.soul = player.GetComponent<PlayerSoul>();
+            controller.shareLight = TylerBuilder.BuildShareLight(tyler.transform);
             controller.witch = zoneRoot.GetComponentInChildren<WitchController>();
             controller.nextMemory = nextMemory;
             controller.figure = TylerBuilder.BuildFigure(tyler.transform, out var head, out var stand, out var crouch);
@@ -437,17 +460,25 @@ namespace TiffanyGame.EditorTools
             controller.voice.playOnAwake = false;
             controller.barkClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/bark_1.wav");
             controller.growlClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/growl_1.wav");
-            var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl" };
-            var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl };
+            var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl", "Tyler 5 Shares Light" };
+            var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl, TylerReaction.None };
             for (int i = 0; i < reactions.Length; i++)
             {
                 var stop = new GameObject(names[i]);
                 stop.transform.SetParent(captureRoot, false);
-                stop.transform.position = SurfacePoint(-6f, 4f);
+                stop.transform.position = i == 4 ? SurfacePoint(0f, 0f) : SurfacePoint(-6f, 4f);
                 var capture = stop.AddComponent<CaptureStop>();
                 var stage = stop.AddComponent<TylerCaptureStage>();
                 stage.reaction = reactions[i];
-                stage.lightTyler = i != 0;
+                stage.lightTyler = i > 0 && i < 4;
+                stage.shareLight = i == 4;
+                if (stage.lightTyler)
+                {
+                    stage.fillLight = TylerBuilder.BuildShareLight(stop.transform);
+                    stage.fillLight.name = "Tyler Capture Light";
+                    stage.fillLight.intensity = 2f;
+                }
+                if (stage.shareLight) stop.AddComponent<LightCaptureStage>().energy = 0f;
                 stage.witchOffset = reactions[i] == TylerReaction.Whine
                     ? new Vector3(0f, 12f, 16f) : new Vector3(0f, 0f, 10f);
                 Vector3 position = stage.GetTylerPosition(stop.transform);

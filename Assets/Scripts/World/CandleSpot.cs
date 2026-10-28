@@ -39,6 +39,7 @@ namespace TiffanyGame
             Site.Tick(Time.deltaTime, storm != null && storm.raining,
                 player != null ? player.transform.position : Vector3.positiveInfinity,
                 player != null ? player.Energy : null, player != null ? player.Respawn : null);
+            if (Site.Recharging && player != null) player.RegisterCandleRecharge();
             Synchronize();
         }
 
