@@ -8,13 +8,28 @@ namespace TiffanyGame.EditorTools
         public static void BuildPowers(PlayerLight playerLight, Transform zoneRoot)
         {
             var soul = playerLight.GetComponent<PlayerSoul>();
-            if (Array.IndexOf(soul.startingPowers, Power.Poltergeist) < 0)
+            var powers = new[] { Power.Poltergeist, Power.Vanish };
+            for (int i = 0; i < powers.Length; i++)
             {
+                if (Array.IndexOf(soul.startingPowers, powers[i]) >= 0) continue;
                 int count = soul.startingPowers.Length;
                 Array.Resize(ref soul.startingPowers, count + 1);
-                soul.startingPowers[count] = Power.Poltergeist;
+                soul.startingPowers[count] = powers[i];
             }
             playerLight.gameObject.AddComponent<Poltergeist>().handLight = playerLight.spot;
+            var vanish = playerLight.gameObject.AddComponent<VanishPower>();
+            vanish.playerLight = playerLight;
+            vanish.witch = playerLight.witch;
+            var renderers = playerLight.GetComponentsInChildren<Renderer>(true);
+            int figureCount = 0;
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Transform candidate = renderers[i].transform;
+                if (candidate.IsChildOf(playerLight.glow) || candidate.IsChildOf(playerLight.spot.transform)) continue;
+                renderers[figureCount++] = renderers[i];
+            }
+            Array.Resize(ref renderers, figureCount);
+            vanish.figure = renderers;
 
             Vector3 origin = playerLight.transform.position + Vector3.forward * 3.5f;
             BuildObject(zoneRoot, ThrowableKind.Bottle, origin + Vector3.left * 2.4f,
@@ -26,7 +41,7 @@ namespace TiffanyGame.EditorTools
             BuildObject(zoneRoot, ThrowableKind.Bell, origin + Vector3.right * 2.4f,
                 0.18f, 0.18f, 0.3f, new Color(0.7f, 0.53f, 0.2f));
 
-            var names = new[] { "Power 1 Before", "Power 2 After" };
+            var names = new[] { "Power 1 Before", "Power 2 After", "Power 3 Vanish Fading", "Power 4 Vanish Hidden" };
             for (int i = 0; i < names.Length; i++)
             {
                 var stop = new GameObject(names[i]);
@@ -34,11 +49,15 @@ namespace TiffanyGame.EditorTools
                 stop.transform.SetPositionAndRotation(playerLight.transform.position, playerLight.transform.rotation);
                 var capture = stop.AddComponent<CaptureStop>();
                 capture.overrideCamera = false;
-                capture.wait = 1.5f;
+                capture.wait = i == 2 ? 0.2f : 1.5f;
                 var stage = stop.AddComponent<LightCaptureStage>();
                 stage.energy = SoulEnergy.Max;
                 stage.hideWitch = true;
-                if (i == 1) stop.AddComponent<PowerCaptureStage>();
+                if (i > 0)
+                {
+                    var powerStage = stop.AddComponent<PowerCaptureStage>();
+                    powerStage.action = i >= 2 ? PowerCaptureAction.Vanish : PowerCaptureAction.MoveObject;
+                }
             }
         }
 

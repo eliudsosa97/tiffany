@@ -3,29 +3,45 @@ using UnityEngine;
 
 namespace TiffanyGame
 {
+    public enum PowerCaptureAction { MoveObject, Vanish }
+
     public sealed class PowerCaptureStage : MonoBehaviour
     {
-        private Coroutine moveRoutine;
+        public PowerCaptureAction action = PowerCaptureAction.MoveObject;
+
+        private Coroutine powerRoutine;
+        private VanishPower vanish;
 
         public void Apply(Transform player)
         {
             Clear();
-            moveRoutine = StartCoroutine(MoveAfterLight(player));
+            if (action == PowerCaptureAction.Vanish) vanish = player.GetComponent<VanishPower>();
+            powerRoutine = StartCoroutine(UseAfterLight(player));
         }
 
         public void Clear()
         {
-            if (moveRoutine != null) StopCoroutine(moveRoutine);
-            moveRoutine = null;
+            if (powerRoutine != null) StopCoroutine(powerRoutine);
+            powerRoutine = null;
+            if (vanish != null) vanish.Cancel();
+            vanish = null;
         }
 
-        private IEnumerator MoveAfterLight(Transform player)
+        private IEnumerator UseAfterLight(Transform player)
         {
             yield return null;
             yield return null;
-            bool moved = player.GetComponent<Poltergeist>().TryMove();
-            Debug.Log($"{GameInfo.LogPrefix} Captura de poder: mover objetos {(moved ? "movió" : "no movió")} un objeto");
-            moveRoutine = null;
+            if (action == PowerCaptureAction.Vanish)
+            {
+                bool started = vanish.TryStart();
+                Debug.Log($"{GameInfo.LogPrefix} Captura de poder: desvanecerse {(started ? "activado" : "no activado")}");
+            }
+            else
+            {
+                bool moved = player.GetComponent<Poltergeist>().TryMove();
+                Debug.Log($"{GameInfo.LogPrefix} Captura de poder: mover objetos {(moved ? "movió" : "no movió")} un objeto");
+            }
+            powerRoutine = null;
         }
     }
 }

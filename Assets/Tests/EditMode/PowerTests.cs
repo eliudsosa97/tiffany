@@ -128,6 +128,23 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(3f, vanish.Remaining);
         }
 
+        [Test]
+        public void CancelEndsVanishWithoutRefundingEnergy()
+        {
+            var powers = new PowerSet();
+            powers.Unlock(Power.Vanish);
+            var energy = new SoulEnergy();
+            var vanish = new Vanish();
+            Assert.IsTrue(vanish.TryStart(powers, energy));
+            vanish.Tick(1f);
+
+            vanish.Cancel();
+
+            Assert.IsFalse(vanish.IsActive);
+            Assert.AreEqual(0f, vanish.Remaining);
+            Assert.AreEqual(70f, energy.Current);
+        }
+
         [TestCase(-1f)]
         [TestCase(0f)]
         [TestCase(float.NaN)]
