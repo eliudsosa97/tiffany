@@ -1,6 +1,7 @@
 using System.Collections;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace TiffanyGame
 {
@@ -35,6 +36,8 @@ namespace TiffanyGame
             GameInput.RunOverride = false;
             GameInput.AimOverride = Vector2.zero;
             Directory.CreateDirectory(directory);
+            Debug.Log($"{GameInfo.LogPrefix} Calidad: {QualitySettings.names[QualitySettings.GetQualityLevel()]}, pipeline: "
+                + (GraphicsSettings.currentRenderPipeline != null ? GraphicsSettings.currentRenderPipeline.name : "ninguno"));
             yield return new WaitForSecondsRealtime(2f);
             yield return Capture("00_start");
 
@@ -72,10 +75,13 @@ namespace TiffanyGame
                 if (witchStage != null && player != null) witchStage.Apply(player.transform);
                 var stormStage = stop.GetComponent<StormCaptureStage>();
                 if (stormStage != null) stormStage.Apply();
+                var lightStage = stop.GetComponent<LightCaptureStage>();
+                if (lightStage != null && player != null) lightStage.Apply(player.transform);
                 yield return new WaitForSecondsRealtime(stop.wait);
                 yield return Capture($"{i + 1:00}_{stop.name}");
                 if (witchStage != null) witchStage.Clear();
                 if (stormStage != null) stormStage.Clear();
+                if (lightStage != null) lightStage.Clear();
             }
 
             int captureCount = stops.Length + 1;
