@@ -7,6 +7,7 @@ using UnityEngine.AI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
+using static TiffanyGame.EditorTools.AudioBuilder;
 
 namespace TiffanyGame.EditorTools
 {
@@ -76,6 +77,7 @@ namespace TiffanyGame.EditorTools
             caughtCapture.wait = CaughtSequence.FireDuration + CaughtSequence.FadeOutDuration + CaughtSequence.FadeInDuration * 0.5f;
             caughtStop.AddComponent<CaughtCaptureStage>().spot = firstCandle;
             BuildWitchVoice(playerLight.witch, tyler);
+            BuildWitchAudio(playerLight.witch, player.transform);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -298,6 +300,27 @@ namespace TiffanyGame.EditorTools
                 if (voice.barks[i] == null)
                     throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el ladrido: {path}");
             }
+        }
+
+        static void BuildWitchAudio(WitchController witch, Transform player)
+        {
+            var audio = witch.gameObject.AddComponent<WitchAudio>();
+            audio.witch = witch;
+            audio.player = player;
+            audio.fireLoop = witch.gameObject.AddComponent<AudioSource>();
+            audio.breathLoop = witch.gameObject.AddComponent<AudioSource>();
+            audio.oneShot = witch.gameObject.AddComponent<AudioSource>();
+            foreach (var source in new[] { audio.fireLoop, audio.breathLoop, audio.oneShot })
+            {
+                source.playOnAwake = false;
+                source.spatialBlend = 0f;
+            }
+            audio.fireLoop.loop = audio.breathLoop.loop = true;
+            audio.fireLoop.clip = LoadClip("fireball");
+            audio.breathLoop.clip = LoadClip("witch_breath");
+            (audio.land, audio.crack, audio.whoosh) = (LoadClip("witch_land"), LoadClip("witch_crack"), LoadClip("witch_whoosh"));
+            audio.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
+            audio.cackles = new[] { LoadClip("cackle_1"), LoadClip("cackle_2"), LoadClip("cackle_3") };
         }
 
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
