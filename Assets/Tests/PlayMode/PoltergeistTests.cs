@@ -106,6 +106,31 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(1, publishedCount);
         }
 
+        [UnityTest]
+        public IEnumerator MovingBottlePlaysItsSound()
+        {
+            world.AddComponent<AudioListener>();
+            MovableObject bottle = AddObject(ThrowableKind.Bottle, new Vector3(0f, 0.2f, 5f));
+            var clip = AudioClip.Create("bottle", 22050, 1, 22050, false);
+            bottle.sound = bottle.gameObject.AddComponent<AudioSource>();
+            bottle.sound.playOnAwake = false;
+            bottle.sound.spatialBlend = 0f;
+            bottle.sound.clip = clip;
+            try
+            {
+                yield return null;
+                Assert.IsFalse(bottle.sound.isPlaying);
+
+                Assert.IsTrue(poltergeist.TryMove());
+                yield return null;
+                Assert.IsTrue(bottle.sound.isPlaying);
+            }
+            finally
+            {
+                Object.Destroy(clip);
+            }
+        }
+
         [Test]
         public void IgnoresObjectsOutsideTheLight()
         {

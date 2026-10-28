@@ -67,6 +67,20 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(candle.IsLit);
         }
 
+        [TestCase(CandleKind.Kindled, false, 0f)]
+        [TestCase(CandleKind.Family, true, float.PositiveInfinity)]
+        public void ExtinguishOnlyAffectsKindledCandles(CandleKind kind, bool staysLit, float remaining)
+        {
+            var candle = new Candle(kind, Vector3.zero, true);
+            Assert.IsTrue(candle.IsLit);
+
+            candle.Extinguish();
+
+            Assert.AreEqual(staysLit, candle.IsLit);
+            Assert.AreEqual(staysLit, candle.IsSafeZone);
+            Assert.AreEqual(remaining, candle.Remaining);
+        }
+
         [TestCase(-1f)]
         [TestCase(0f)]
         [TestCase(float.NaN)]
