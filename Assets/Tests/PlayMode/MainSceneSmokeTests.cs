@@ -76,6 +76,46 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator MainSceneHasRespawnAtCemeterySpawn()
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            Assert.IsNotNull(player);
+            var witch = Object.FindAnyObjectByType<WitchController>();
+            Assert.IsNotNull(witch);
+            var respawn = player.GetComponent<PlayerRespawn>();
+            var soul = player.GetComponent<PlayerSoul>();
+            Assert.IsNotNull(respawn);
+            Assert.IsNotNull(soul);
+            Assert.AreSame(witch, respawn.witch);
+            Assert.IsNotNull(respawn.overlay);
+            Assert.IsFalse(respawn.overlay.gameObject.activeSelf);
+            var spawn = GameObject.Find("Route").transform.GetChild(0).Find("Spawn");
+            Assert.IsNotNull(spawn);
+            Assert.Less(Vector3.Distance(spawn.position, soul.Respawn.Position), 0.01f);
+
+            yield return null;
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator MainSceneHasLitFamilyCandlesRegisteredAsSafeZones()
+        {
+            yield return null;
+
+            var candles = Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None);
+            int familyCount = 0;
+            foreach (var candle in candles)
+            {
+                if (candle.kind != CandleKind.Family) continue;
+                familyCount++;
+                Assert.IsTrue(candle.Candle.IsLit, candle.name);
+                Assert.IsTrue(SafeZones.Contains(candle.transform.position), candle.name);
+            }
+            Assert.GreaterOrEqual(familyCount, 2);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator MainSceneHasMovableObjectsUnderTiffanysPower()
         {
             var player = GameObject.FindGameObjectWithTag("Player");
