@@ -71,8 +71,8 @@ namespace TiffanyGame.EditorTools
             for (int i = 0; i < data.props.Length; i++)
             {
                 var prop = data.props[i];
-                var parent = prop.parent == "girl" ? player.girl : prop.parent == "tyler" ? player.tyler : stage;
-                var root = Root(prop.type, parent);
+                var propParent = prop.parent == "girl" ? player.girl : prop.parent == "tyler" ? player.tyler : stage;
+                var root = Root(prop.type, propParent);
                 BuildProp(prop.type, root, palette);
                 player.ApplyPose(root, EchoEvaluator.Pose(prop, 0f));
                 player.props[i] = root;
