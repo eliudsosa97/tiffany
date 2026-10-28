@@ -42,7 +42,7 @@ namespace ElVelador.Tests
         [Test]
         public void FlyingIgnoresNoiseAndGroundSensesAndAcceptsMissingRoutes()
         {
-            p.HeardNoise = p.SmellsPlayer = p.SeesPlayer = p.Flashed = true;
+            p.HeardNoise = p.SmellsPlayer = p.Flashed = true;
             p.NoisePosition = p.WitchPosition;
             Check(Step(0f), WitchState.Flying, route[0], 6f);
             brain = new WitchBrain(profile, null);
@@ -52,11 +52,62 @@ namespace ElVelador.Tests
         }
 
         [Test]
+        public void FlyingFireDetectsOnlyExposedPlayerAndFollowsLandingRules()
+        {
+            p.WitchPosition = route[0];
+            Check(Step(0f), WitchState.Flying, route[1], 6f);
+            p.SeesPlayer = p.PlayerHidden = true;
+            Check(Step(0f), WitchState.Flying, route[1], 6f);
+            p.PlayerHidden = false;
+            p.PlayerVanished = true;
+            Check(Step(0f), WitchState.Flying, route[1], 6f);
+            p.PlayerVanished = false;
+            Vector3 abovePlayer = new Vector3(60f, 20f, 0f);
+            Check(Step(0f), WitchState.Flying, abovePlayer, 6f);
+
+            p.SeesPlayerLight = true;
+            p.PlayerLightPosition = new Vector3(90f, 0f, 30f);
+            Check(Step(0f), WitchState.Flying, new Vector3(90f, 20f, 30f), 6f);
+            p.SeesPlayerLight = false;
+            profile.CanLand = false;
+            p.WitchPosition = abovePlayer;
+            Check(Step(0f), WitchState.Flying, abovePlayer, 6f);
+            Check(Step(1f), WitchState.Flying, abovePlayer, 6f);
+            profile.CanLand = true;
+            p.PlayerInSafeZone = true;
+            Check(Step(0f), WitchState.Flying, abovePlayer, 6f);
+
+            p.PlayerInSafeZone = false;
+            p.WitchPosition = abovePlayer + Vector3.left * 12.01f;
+            Check(Step(0f), WitchState.Flying, abovePlayer, 6f);
+            p.WitchPosition = abovePlayer + Vector3.left * 12f;
+            Check(Step(0f), WitchState.Landing, p.WitchPosition);
+            Check(Step(1.51f), WitchState.Stalking, p.PlayerPosition, 1.2f);
+        }
+
+        [Test]
+        public void FlyingLightUsesCurrentRouteAltitudeOrCurrentHeightWithoutRoute()
+        {
+            route[1] = new Vector3(18f, 35f, 0f);
+            brain = new WitchBrain(profile, route);
+            p.WitchPosition = route[0];
+            Check(Step(0f), WitchState.Flying, route[1], 6f);
+            p.WitchPosition.y = 2f;
+            p.SeesPlayerLight = true;
+            Check(Step(0f), WitchState.Flying, new Vector3(60f, 35f, 0f), 6f);
+
+            brain = new WitchBrain(profile, null);
+            Check(Step(0f), WitchState.Flying, new Vector3(60f, 2f, 0f), 6f);
+            brain = new WitchBrain(profile, Array.Empty<Vector3>());
+            Check(Step(0f), WitchState.Flying, new Vector3(60f, 2f, 0f), 6f);
+        }
+
+        [Test]
         public void LightLeadsToFixedLandingThenStalking()
         {
             p.SeesPlayerLight = true;
             Vector3 light = p.PlayerLightPosition;
-            Check(Step(8f), WitchState.Flying, new Vector3(60f, 10f, 0f), 6f);
+            Check(Step(9f), WitchState.Flying, new Vector3(60f, 20f, 0f), 6f);
             Vector3 anchor = p.WitchPosition;
             Check(Step(4f), WitchState.Landing, anchor);
             p.PlayerLightPosition = Vector3.left * 100f;
@@ -75,7 +126,7 @@ namespace ElVelador.Tests
             p.SeesPlayerLight = true;
             Step(1f);
             p.PlayerLightPosition = new Vector3(90f, 0f, 0f);
-            Check(Step(12f), WitchState.Flying, new Vector3(90f, 10f, 0f), 6f);
+            Check(Step(13f), WitchState.Flying, new Vector3(90f, 20f, 0f), 6f);
             Vector3 light = p.PlayerLightPosition;
             p.SeesPlayerLight = false;
             p.PlayerLightPosition = Vector3.zero;
@@ -88,7 +139,7 @@ namespace ElVelador.Tests
         {
             profile.CanLand = false;
             p.SeesPlayerLight = true;
-            Vector3 aboveLight = new Vector3(60f, 10f, 0f);
+            Vector3 aboveLight = new Vector3(60f, 20f, 0f);
             Check(Step(2f), WitchState.Flying, aboveLight, 6f);
             p.SeesPlayerLight = false;
             Check(Step(8f), WitchState.Flying, aboveLight, 6f);
@@ -103,7 +154,7 @@ namespace ElVelador.Tests
         public void SafeZonePreventsLanding()
         {
             p.PlayerInSafeZone = p.SeesPlayerLight = true;
-            Vector3 aboveLight = new Vector3(60f, 10f, 0f);
+            Vector3 aboveLight = new Vector3(60f, 20f, 0f);
             Check(Step(10f), WitchState.Flying, aboveLight, 6f);
             Check(Step(20f), WitchState.Flying, aboveLight, 6f);
             p.SeesPlayerLight = false;

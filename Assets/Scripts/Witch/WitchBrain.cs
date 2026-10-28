@@ -175,9 +175,10 @@ namespace ElVelador
                 Enter(WitchState.Landing, p.WitchPosition);
                 return;
             }
-            if (p.SeesPlayerLight)
+            bool seesTarget = p.SeesPlayerLight || (p.SeesPlayer && !p.PlayerVanished && !p.PlayerHidden);
+            if (seesTarget)
             {
-                target = p.PlayerLightPosition;
+                target = p.SeesPlayerLight ? p.PlayerLightPosition : p.PlayerPosition;
                 hasTarget = true;
             }
             if (hasTarget)
@@ -189,7 +190,7 @@ namespace ElVelador
                     Enter(WitchState.Landing, p.WitchPosition);
                     return;
                 }
-                if (!canLand && !p.SeesPlayerLight && distance <= profile.ArriveDistance)
+                if (!canLand && !seesTarget && distance <= profile.ArriveDistance)
                 {
                     hasTarget = false;
                 }
@@ -213,7 +214,8 @@ namespace ElVelador
             switch (state)
             {
                 case WitchState.Flying:
-                    decision.MoveTarget = hasTarget ? new Vector3(target.x, p.WitchPosition.y, target.z)
+                    float cruiseHeight = route.Length > 0 ? route[routeIndex].y : p.WitchPosition.y;
+                    decision.MoveTarget = hasTarget ? new Vector3(target.x, cruiseHeight, target.z)
                         : route.Length > 0 ? route[routeIndex] : p.WitchPosition;
                     decision.Speed = profile.FlySpeed;
                     break;
