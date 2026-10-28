@@ -177,13 +177,7 @@ namespace ElVelador.Tests
             Check(Step(0.02f), WitchState.Stalking, p.WitchPosition);
         }
 
-        private WitchDecision Step(float dt)
-        {
-            WitchDecision decision = brain.Tick(dt, in p);
-            p.WitchPosition = Vector3.MoveTowards(p.WitchPosition, decision.MoveTarget, decision.Speed * (dt > 0f ? dt : 0f));
-            p.DistanceToPlayer = Vector3.Distance(p.WitchPosition, p.PlayerPosition);
-            return decision;
-        }
+        private WitchDecision Step(float dt) => WitchSim.Step(brain, ref p, dt);
 
         private void Ground()
         {
