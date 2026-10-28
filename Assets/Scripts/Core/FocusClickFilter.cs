@@ -6,11 +6,14 @@ namespace TiffanyGame
 
         bool focused;
         float focusTime;
+        // El player WebGL arranca creyéndose enfocado aunque el iframe no tenga foco.
+        bool consumeFirstClick;
 
-        public FocusClickFilter(bool focused, float time)
+        public FocusClickFilter(bool focused, float time, bool consumeFirstClick)
         {
             this.focused = focused;
             focusTime = time;
+            this.consumeFirstClick = consumeFirstClick;
         }
 
         public void SetFocus(bool focused, float time)
@@ -20,7 +23,15 @@ namespace TiffanyGame
             this.focused = focused;
         }
 
-        public bool Accept(bool clickPressed, float time) =>
-            clickPressed && focused && time - focusTime >= IgnoreAfterFocus;
+        public bool Accept(bool clickPressed, float time)
+        {
+            if (clickPressed && consumeFirstClick)
+            {
+                consumeFirstClick = false;
+                return false;
+            }
+
+            return clickPressed && focused && time - focusTime >= IgnoreAfterFocus;
+        }
     }
 }
