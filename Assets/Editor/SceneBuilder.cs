@@ -17,6 +17,7 @@ namespace TiffanyGame.EditorTools
         [MenuItem("Tiffany/Build Scene")]
         public static void Build()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             ConfigureNight();
             CreateMoon();
@@ -87,6 +88,8 @@ namespace TiffanyGame.EditorTools
                 new Color(0.30f, 0.13f, 0.085f)
             };
             var types = (GroundType[])Enum.GetValues(typeof(GroundType));
+            if (colors.Length != types.Length)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} Cada GroundType necesita su color y su lugar en la zona de prueba.");
             for (int i = 0; i < types.Length; i++)
             {
                 var type = types[i];
@@ -144,7 +147,7 @@ namespace TiffanyGame.EditorTools
             var controller = player.AddComponent<CharacterController>();
             controller.height = 1.2f;
             controller.radius = 0.25f;
-            controller.center = new Vector3(0f, 0.6f, 0f);
+            controller.center = Vector3.up * (controller.height * 0.5f);
 
             var body = CreatePrimitive("Body", PrimitiveType.Capsule, player.transform,
                 new Vector3(0f, 0.6f, 0f), new Vector3(0.5f, 0.6f, 0.5f),
