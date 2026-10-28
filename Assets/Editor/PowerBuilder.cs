@@ -16,7 +16,7 @@ namespace TiffanyGame.EditorTools
             }
             playerLight.gameObject.AddComponent<Poltergeist>().handLight = playerLight.spot;
 
-            Vector3 origin = playerLight.transform.position + Vector3.forward * 4.5f;
+            Vector3 origin = playerLight.transform.position + Vector3.forward * 3.5f;
             BuildObject(zoneRoot, ThrowableKind.Bottle, origin + Vector3.left * 2.4f,
                 0.16f, 0.32f, 0.4f, new Color(0.08f, 0.24f, 0.13f));
             BuildObject(zoneRoot, ThrowableKind.Can, origin + Vector3.left * 0.8f,

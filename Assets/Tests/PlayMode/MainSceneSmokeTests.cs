@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -105,6 +106,7 @@ namespace TiffanyGame.Tests
             yield return null;
             yield return null;
 
+            LogAssert.Expect(LogType.Log, new Regex(@"Poltergeist: \w+ suena a"));
             Assert.IsTrue(poltergeist.TryMove());
             Assert.AreEqual(expectedEnergy, soul.Energy.Current, 0.5f);
             LogAssert.NoUnexpectedReceived();
