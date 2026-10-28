@@ -38,6 +38,9 @@ namespace TiffanyGame
             Directory.CreateDirectory(directory);
             Debug.Log($"{GameInfo.LogPrefix} Calidad: {QualitySettings.names[QualitySettings.GetQualityLevel()]}, pipeline: "
                 + (GraphicsSettings.currentRenderPipeline != null ? GraphicsSettings.currentRenderPipeline.name : "ninguno"));
+            var gameInterface = FindAnyObjectByType<GameInterface>();
+            yield return Capture("00_title");
+            if (gameInterface != null) gameInterface.StartGame();
             yield return new WaitForSecondsRealtime(2f);
             yield return Capture("00_start");
 
@@ -122,7 +125,6 @@ namespace TiffanyGame
             }
 
             int captureCount = stops.Length + 1;
-            var gameInterface = FindAnyObjectByType<GameInterface>();
             if (gameInterface != null)
             {
                 gameInterface.MemoryFound(2);
@@ -143,7 +145,7 @@ namespace TiffanyGame
                 gameInterface.TogglePause();
             }
 
-            Debug.Log($"{GameInfo.LogPrefix} Recorrido terminado: {captureCount} capturas en {directory}.");
+            Debug.Log($"{GameInfo.LogPrefix} Recorrido terminado: {captureCount + 1} capturas en {directory}.");
             yield return new WaitForSecondsRealtime(1f);
             GameInput.ClearOverrides();
             Application.Quit();

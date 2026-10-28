@@ -2,18 +2,29 @@ namespace TiffanyGame
 {
     public sealed class InterfaceFlow
     {
-        public InterfaceScreen Screen { get; private set; } = InterfaceScreen.Playing;
+        public InterfaceScreen Screen { get; private set; }
         public bool IsFrozen => Screen != InterfaceScreen.Playing;
+
+        public InterfaceFlow(bool startOnTitle = false)
+        {
+            Screen = startOnTitle ? InterfaceScreen.Title : InterfaceScreen.Playing;
+        }
+
+        public void PressStart()
+        {
+            if (Screen == InterfaceScreen.Title) Screen = InterfaceScreen.Playing;
+        }
 
         public void PressPause()
         {
-            if (Screen == InterfaceScreen.Ending) return;
+            if (Screen == InterfaceScreen.Title || Screen == InterfaceScreen.Ending) return;
             Screen = Screen == InterfaceScreen.Playing ? InterfaceScreen.Paused : InterfaceScreen.Playing;
         }
 
         public void PressNotebook()
         {
-            if (Screen == InterfaceScreen.Paused || Screen == InterfaceScreen.Ending) return;
+            if (Screen == InterfaceScreen.Title || Screen == InterfaceScreen.Paused
+                || Screen == InterfaceScreen.Ending) return;
             Screen = Screen == InterfaceScreen.Playing ? InterfaceScreen.Notebook : InterfaceScreen.Playing;
         }
 

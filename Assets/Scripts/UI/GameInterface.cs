@@ -5,10 +5,14 @@ using UnityEngine.UI;
 
 namespace TiffanyGame
 {
+    [DefaultExecutionOrder(-200)]
     public sealed class GameInterface : MonoBehaviour
     {
+        public static bool SkipTitle;
+
         public TextAsset[] memoryAssets;
         public Texture2D[] drawings;
+        public GameObject titlePanel;
         public GameObject pausePanel;
         public GameObject notebookPanel;
         public RawImage drawingImage;
@@ -36,13 +40,14 @@ namespace TiffanyGame
         bool pageDirty = true;
         int noticeVersion = -1;
         int subtitleVersion = -1;
+        int startFrame = -1;
 
         public InterfaceScreen Screen => flow.Screen;
-        public bool IsFrozen => flow.IsFrozen;
+        public bool IsFrozen => flow.IsFrozen || Time.frameCount == startFrame;
 
         void Awake()
         {
-            flow = new InterfaceFlow();
+            flow = new InterfaceFlow(!SkipTitle);
             notice = new TimedLine();
             subtitle = new TimedLine();
             echoSubtitle = new TimedLine();
@@ -74,8 +79,15 @@ namespace TiffanyGame
 
         void Update()
         {
-            if (GameInput.PausePressed) flow.PressPause();
-            if (GameInput.NotebookPressed) flow.PressNotebook();
+            if (Screen == InterfaceScreen.Title)
+            {
+                if (GameInput.StartPressed) StartGame();
+            }
+            else if (Time.frameCount != startFrame)
+            {
+                if (GameInput.PausePressed) flow.PressPause();
+                if (GameInput.NotebookPressed) flow.PressNotebook();
+            }
             ApplyScreen();
             if (Screen == InterfaceScreen.Notebook)
             {
@@ -149,6 +161,14 @@ namespace TiffanyGame
             RefreshLines();
         }
 
+        public void StartGame()
+        {
+            if (Screen != InterfaceScreen.Title) return;
+            startFrame = Time.frameCount;
+            flow.PressStart();
+            ApplyScreen();
+        }
+
         public void TogglePause()
         {
             flow.PressPause();
@@ -198,6 +218,7 @@ namespace TiffanyGame
                 appliedFrozen = IsFrozen;
             }
             if (appliedScreen == Screen) return;
+            if (titlePanel != null) titlePanel.SetActive(Screen == InterfaceScreen.Title);
             pausePanel.SetActive(Screen == InterfaceScreen.Paused);
             notebookPanel.SetActive(Screen == InterfaceScreen.Notebook);
             bool showLines = Screen == InterfaceScreen.Playing || Screen == InterfaceScreen.Paused;
