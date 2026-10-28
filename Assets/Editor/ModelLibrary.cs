@@ -82,9 +82,7 @@ namespace TiffanyGame.EditorTools
                 {
                     if (!ColorUtility.TryParseHtmlString(entry.color, out var color))
                         throw new InvalidDataException($"{GameInfo.LogPrefix} Color inválido '{entry.color}' en {entry.name}.");
-                    // Sin _Color la segunda corrida reescribe el .mat: URP lo iguala a _BaseColor.
                     var material = GeneratedMaterials.Get(entry.name, color, false, entry.smoothness);
-                    material.SetColor("_Color", color);
                     material.SetFloat("_Metallic", entry.metallic);
                 }
             }
@@ -156,7 +154,6 @@ namespace TiffanyGame.EditorTools
             foreach (char c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
             name = name.Replace('/', '_').Replace('\\', '_');
             var material = GeneratedMaterials.Get("Kenney" + kit + name, color);
-            material.SetColor("_Color", color);
             material.SetFloat("_Surface", 0f);
             material.SetFloat("_AlphaClip", 0f);
             material.SetFloat("_SrcBlend", (float)BlendMode.One);

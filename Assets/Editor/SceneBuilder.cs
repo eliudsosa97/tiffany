@@ -288,7 +288,7 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static WitchController BuildWitch(Transform zoneRoot, Transform player, Transform captureRoot, Vector3[] route,
+        public static WitchController BuildWitch(Transform zoneRoot, Transform player, Transform captureRoot, Vector3[] route,
             FollowCamera followCamera)
         {
             var witch = new GameObject("Witch");
@@ -299,6 +299,7 @@ namespace TiffanyGame.EditorTools
             agent.height = 2.3f;
             agent.enabled = false;
             var controller = witch.AddComponent<WitchController>();
+            controller.groundMask = Physics.DefaultRaycastLayers & ~LayerMask.GetMask(ForestLayout.CoverLayer);
             controller.player = player;
             controller.skyRoute = route;
             controller.chapter = Chapter.Cemetery;

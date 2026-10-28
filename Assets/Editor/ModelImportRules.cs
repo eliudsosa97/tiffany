@@ -9,7 +9,7 @@ namespace TiffanyGame.EditorTools
 
         void OnPreprocessModel()
         {
-            if ((!assetPath.StartsWith(ModelLibrary.KenneyFolder + "/", System.StringComparison.Ordinal) &&
+            if ((!assetPath.StartsWith(ModelLibrary.KenneyFolder + "/Nature/", System.StringComparison.Ordinal) &&
                  Path.GetDirectoryName(assetPath).Replace('\\', '/') != ModelLibrary.ModelFolder) ||
                 Path.GetExtension(assetPath).ToLowerInvariant() != ".fbx")
                 return;
