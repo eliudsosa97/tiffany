@@ -26,6 +26,7 @@ namespace TiffanyGame.EditorTools
             var player = CreatePlayer(spawn);
             CreateCamera(player);
             BuildWitch(spawn.parent, player.transform);
+            StormBuilder.BuildStorm(player.transform, spawn);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
