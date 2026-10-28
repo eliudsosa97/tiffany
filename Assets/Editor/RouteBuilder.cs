@@ -44,8 +44,8 @@ namespace TiffanyGame.EditorTools
                 if (i == 0) capture.wait = MemoryEcho.Duration;
                 stop.gameObject.AddComponent<LightCaptureStage>().energy = SoulEnergy.Max;
                 Vector3 candlePosition = i == 7 ? new Vector3(-4f, 1.1f, -0.7f) : new Vector3(-6f, 0f, -8f);
-                SceneBuilder.BuildCandle(i == 7 ? "Window Candle" : "Family Candle", clearing,
-                    clearing.TransformPoint(candlePosition), player.GetComponent<PlayerSoul>(), storm);
+                SceneBuilder.CreateCandle(clearing, i == 7 ? "Window Candle" : "Family Candle",
+                    clearing.TransformPoint(candlePosition), CandleKind.Family, true, player.GetComponent<PlayerSoul>(), storm);
             }
 
             var spawn = Root("Spawn", route.GetChild(0), new Vector3(0f, 0f, -13f));

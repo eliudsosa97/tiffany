@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace TiffanyGame
 {
-    public enum PowerCaptureAction { MoveObject, Vanish }
+    public enum PowerCaptureAction { MoveObject, Vanish, Kindle }
 
     public sealed class PowerCaptureStage : MonoBehaviour
     {
@@ -11,6 +11,7 @@ namespace TiffanyGame
 
         private Coroutine powerRoutine;
         private VanishPower vanish;
+        private Candle[] candlesToExtinguish;
 
         public void Apply(Transform player)
         {
@@ -25,6 +26,11 @@ namespace TiffanyGame
             powerRoutine = null;
             if (vanish != null) vanish.Cancel();
             vanish = null;
+            if (candlesToExtinguish != null)
+            {
+                for (int i = 0; i < candlesToExtinguish.Length; i++) candlesToExtinguish[i]?.Extinguish();
+                candlesToExtinguish = null;
+            }
         }
 
         private IEnumerator UseAfterLight(Transform player)
@@ -35,6 +41,18 @@ namespace TiffanyGame
             {
                 bool started = vanish.TryStart();
                 Debug.Log($"{GameInfo.LogPrefix} Captura de poder: desvanecerse {(started ? "activado" : "no activado")}");
+            }
+            else if (action == PowerCaptureAction.Kindle)
+            {
+                var kindler = player.GetComponent<CandleKindler>();
+                candlesToExtinguish = new Candle[kindler.candles.Length];
+                for (int i = 0; i < kindler.candles.Length; i++)
+                {
+                    CandleSpot spot = kindler.candles[i];
+                    if (spot != null && !spot.Candle.IsLit) candlesToExtinguish[i] = spot.Candle;
+                }
+                bool kindled = kindler.TryKindle();
+                Debug.Log($"{GameInfo.LogPrefix} Captura de poder: veladora {(kindled ? "encendida" : "no encendida")}");
             }
             else
             {

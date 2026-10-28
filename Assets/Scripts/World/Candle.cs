@@ -31,6 +31,11 @@ namespace TiffanyGame
             return true;
         }
 
+        public void Extinguish()
+        {
+            if (Kind == CandleKind.Kindled) Remaining = 0f;
+        }
+
         public void Tick(float dt, bool raining)
         {
             if (Kind == CandleKind.Kindled && IsLit && dt > 0f)

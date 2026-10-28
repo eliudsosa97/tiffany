@@ -101,6 +101,10 @@ namespace TiffanyGame.Tests
                 var body = movable.GetComponent<Rigidbody>();
                 Assert.IsNotNull(body);
                 Assert.IsTrue(body.isKinematic);
+                Assert.IsNotNull(movable.sound);
+                Assert.IsNotNull(movable.sound.clip);
+                Assert.AreEqual(movable.kind.ToString().ToLowerInvariant(), movable.sound.clip.name);
+                Assert.AreEqual(0f, movable.sound.spatialBlend);
             }
 
             float expectedEnergy = soul.Energy.Current - 15f;
@@ -119,9 +123,10 @@ namespace TiffanyGame.Tests
             var route = GameObject.Find("Route").transform;
             var cemetery = route.GetChild(0);
             Assert.AreEqual(8, route.childCount);
-            Assert.AreEqual(40, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length);
-            Assert.AreEqual(8, route.GetComponentsInChildren<CaptureStop>().Length);
-            Assert.AreEqual(10, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length);
+            Assert.AreEqual(42, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length);
+            Assert.AreEqual(14, route.GetComponentsInChildren<CaptureStop>().Length);
+            Assert.AreEqual(12, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length);
+            foreach (var movable in MovableObject.Active) Assert.IsTrue(movable.transform.IsChildOf(cemetery));
             var player = GameObject.FindGameObjectWithTag("Player");
             Vector3 start = cemetery.InverseTransformPoint(player.transform.position);
             Assert.That(start.x, Is.InRange(-17f, 17f));
@@ -157,6 +162,40 @@ namespace TiffanyGame.Tests
             }
             Assert.IsFalse(NavMesh.SamplePosition(route.GetChild(5).Find("Water").position, out _, 1f, NavMesh.AllAreas));
             yield return null;
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator MainSceneHasTwoCandlesTiffanyCanKindle()
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            Assert.IsNotNull(player);
+            var kindler = player.GetComponent<CandleKindler>();
+            var soul = player.GetComponent<PlayerSoul>();
+            Assert.IsNotNull(kindler);
+            Assert.IsNotNull(soul);
+            Assert.IsTrue(soul.Powers.Has(Power.Candles));
+            Assert.AreEqual(2, kindler.candles.Length);
+            foreach (var candle in kindler.candles)
+            {
+                Assert.IsNotNull(candle);
+                Assert.AreEqual(CandleKind.Kindled, candle.Candle.Kind);
+                Assert.IsFalse(candle.Candle.IsLit);
+                Assert.IsFalse(candle.startLit);
+                Assert.IsNotNull(candle.flameMesh);
+                Assert.IsFalse(candle.flameMesh.enabled);
+            }
+
+            float expectedEnergy = soul.Energy.Current - SoulCosts.LightCandle;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Tiffany enciende una veladora");
+            Assert.IsTrue(kindler.TryKindle());
+            yield return null;
+
+            int lit = 0;
+            foreach (var candle in kindler.candles)
+                if (candle.Candle.IsLit) lit++;
+            Assert.AreEqual(1, lit);
+            Assert.AreEqual(expectedEnergy, soul.Energy.Current, 0.5f);
             LogAssert.NoUnexpectedReceived();
         }
 

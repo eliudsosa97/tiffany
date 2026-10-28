@@ -35,6 +35,10 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/cackle_1.wav` | [Witch's Laugh](https://freesound.org/s/348142/) | NikoMyth | CC0 |
 | `Assets/Audio/Sfx/cackle_2.wav` | [Laughing Witch (or Old Woman) in a Rocking Chair](https://freesound.org/s/179924/) | craiggroshek | CC0 |
 | `Assets/Audio/Sfx/cackle_3.wav` | [witch (laughing)](https://freesound.org/s/237984/) | ZyryTSounds | CC0 |
+| `Assets/Audio/Sfx/bottle.wav` | [Small_Glass_Bottle_Wood_Floor.wav](https://freesound.org/s/235602/) | tcrocker68 | CC0 |
+| `Assets/Audio/Sfx/can.wav` | [CanBounce 2.wav](https://freesound.org/s/92622/) | nigelcoop | CC0 |
+| `Assets/Audio/Sfx/pot.wav` | [Breaking pot short](https://freesound.org/s/810043/) | anna_bliss | CC0 |
+| `Assets/Audio/Sfx/bell.wav` | [Small Bell #2](https://freesound.org/s/452379/) | steffcaffrey | CC0 |
 
 ## Otros recursos
 
