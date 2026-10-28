@@ -7,6 +7,25 @@ namespace TiffanyGame.Tests
     {
         const float Tolerance = 0.00001f;
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void PowerOverridesControlPressesAndCanBeCleared(bool pressed)
+        {
+            GameInput.KindleOverride = pressed;
+            GameInput.PoltergeistOverride = pressed;
+            GameInput.FadeOverride = pressed;
+
+            Assert.That(GameInput.KindlePressed, Is.EqualTo(pressed));
+            Assert.That(GameInput.PoltergeistPressed, Is.EqualTo(pressed));
+            Assert.That(GameInput.FadePressed, Is.EqualTo(pressed));
+
+            GameInput.ClearOverrides();
+
+            Assert.That(GameInput.KindleOverride, Is.Null);
+            Assert.That(GameInput.PoltergeistOverride, Is.Null);
+            Assert.That(GameInput.FadeOverride, Is.Null);
+        }
+
         [TearDown]
         public void TearDown()
         {

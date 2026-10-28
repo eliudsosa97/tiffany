@@ -71,6 +71,7 @@ $UNITY -batchmode -projectPath . -executeMethod TiffanyGame.EditorTools.BuildToo
 # Video: cuadros PNG a 30 fps durante los segundos indicados
 "Builds/Mac/tiffany.app/Contents/MacOS/Tiffany" -capturevideo <carpeta> -captureseconds 10 -screen-width 1600 -screen-height 900 -screen-fullscreen 0
 "Builds/Mac/tiffany.app/Contents/MacOS/Tiffany" -motiondemo -capturevideo <carpeta> -captureseconds 10 -screen-width 1600 -screen-height 900 -screen-fullscreen 0
+"Builds/Mac/tiffany.app/Contents/MacOS/Tiffany" -playthrough -logFile <archivo> -screen-width 1600 -screen-height 900 -screen-fullscreen 0 # Salidas: 0 completa, 1 fallo, 2 completa con faltantes. Con -capturevideo, la partida decide la salida.
 ```
 
 Con el editor abierto, el modo batch falla.
