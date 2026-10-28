@@ -7,30 +7,32 @@ namespace TiffanyGame.Tests
 {
     public sealed class WebTemplateTests
     {
+        const string ProjectPrefix = "PROJECT:";
+
         [Test]
-        public void ProjectTemplateContainsIndex()
+        public void WebBuildTemplateExistsInProject()
         {
-            string templatePath = Path.Combine(Application.dataPath, "WebGLTemplates", "Tiffany");
+            StringAssert.StartsWith(ProjectPrefix, BuildTools.WebTemplate);
+            string templatePath = TemplatePath();
 
             Assert.IsTrue(Directory.Exists(templatePath));
             Assert.IsTrue(File.Exists(Path.Combine(templatePath, "index.html")));
         }
 
         [Test]
-        public void WebBuildUsesProjectTemplate()
-        {
-            Assert.AreEqual("PROJECT:Tiffany", BuildTools.WebTemplate);
-        }
-
-        [Test]
         public void TemplateLimitsPixelRatioWithoutBranding()
         {
-            string indexPath = Path.Combine(Application.dataPath, "WebGLTemplates", "Tiffany", "index.html");
-            string html = File.ReadAllText(indexPath);
+            string html = File.ReadAllText(Path.Combine(TemplatePath(), "index.html"));
 
             StringAssert.Contains("devicePixelRatio", html);
             StringAssert.DoesNotContain("unity-logo", html);
             StringAssert.DoesNotContain("unity-footer", html);
+        }
+
+        static string TemplatePath()
+        {
+            string name = BuildTools.WebTemplate.Substring(ProjectPrefix.Length);
+            return Path.Combine(Application.dataPath, "WebGLTemplates", name);
         }
     }
 }
