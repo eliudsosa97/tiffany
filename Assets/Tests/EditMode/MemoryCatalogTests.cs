@@ -38,7 +38,6 @@ namespace ElVelador.Tests
             Assert.AreEqual(1, memory.id);
             Assert.AreEqual("Flores", memory.title);
             Assert.AreEqual("Tumba de la abuela", memory.place);
-            Assert.AreEqual("Light", memory.power);
             Assert.AreEqual(2, memory.drawings.Length);
             Assert.AreEqual("memory-1-1", memory.drawings[0].image);
             Assert.AreEqual("La niña llevó flores.", memory.drawings[0].phrase);
@@ -70,14 +69,13 @@ namespace ElVelador.Tests
 
         [TestCase(@"{""id"":1,""title"":""Flores"",""power"":""UnknownPower""}")]
         [TestCase(@"{""id"":1,""title"":""Flores"",""power"":""UnknownPower"",""drawings"":null}")]
-        public void NormalizesMissingDrawingsAndPreservesUnknownPower(string json)
+        public void NormalizesMissingDrawingsAndIgnoresUnknownPower(string json)
         {
             var catalog = new MemoryCatalog(new[] { Asset("memory-1", json) });
 
             Assert.IsTrue(catalog.TryGet(1, out MemoryData memory));
             Assert.IsNotNull(memory.drawings);
             Assert.IsEmpty(memory.drawings);
-            Assert.AreEqual("UnknownPower", memory.power);
         }
 
         [Test]

@@ -5,19 +5,17 @@ namespace ElVelador.Tests
 {
     public sealed class PowerTests
     {
-        [TestCase(1, Power.Light, "Light")]
-        [TestCase(2, Power.Candles, "Candles")]
-        [TestCase(3, Power.Poltergeist, "Poltergeist")]
-        [TestCase(4, Power.Vanish, "Vanish")]
-        [TestCase(5, Power.Manifest, "Manifest")]
-        public void MemoriesAndNamesMapToPowersUnlockedOnlyOnce(int id, Power expected, string name)
+        [TestCase(1, Power.Light)]
+        [TestCase(2, Power.Candles)]
+        [TestCase(3, Power.Poltergeist)]
+        [TestCase(4, Power.Vanish)]
+        [TestCase(5, Power.Manifest)]
+        public void MemoriesMapToPowersUnlockedOnlyOnce(int id, Power expected)
         {
             var powers = new PowerSet();
             Assert.AreEqual(0, powers.Count);
             Assert.IsFalse(powers.Has(expected));
             Assert.AreEqual(expected, PowerSet.ForMemory(id));
-            Assert.IsTrue(PowerSet.TryParse(name, out Power parsed));
-            Assert.AreEqual(expected, parsed);
             powers.Unlock(expected);
             powers.Unlock(expected);
             Assert.IsTrue(powers.Has(expected));
@@ -60,17 +58,6 @@ namespace ElVelador.Tests
         public void InvalidMemoryThrows(int id)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => PowerSet.ForMemory(id));
-        }
-
-        [TestCase("light")]
-        [TestCase("2")]
-        [TestCase("")]
-        [TestCase(null)]
-        [TestCase(" Light")]
-        [TestCase("Light,Candles")]
-        public void InvalidNameIsRejected(string name)
-        {
-            Assert.IsFalse(PowerSet.TryParse(name, out _));
         }
 
         [Test]
