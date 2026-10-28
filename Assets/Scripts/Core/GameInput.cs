@@ -12,14 +12,17 @@ namespace TiffanyGame
         public static bool? RunOverride;
         public static Vector2? AimOverride;
         public static bool? InteractOverride;
+        public static bool? FlashOverride;
 
         static bool commandWasPressed;
+        static FocusClickFilter focusClickFilter = new FocusClickFilter(true, float.NegativeInfinity);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Initialize()
         {
             ClearOverrides();
             commandWasPressed = false;
+            focusClickFilter = new FocusClickFilter(Application.isFocused, Time.realtimeSinceStartup);
             InputSystem.onAfterUpdate -= UpdateKeyboard;
             InputSystem.onAfterUpdate += UpdateKeyboard;
             Application.focusChanged -= ResetKeyboardOnFocus;
@@ -33,6 +36,7 @@ namespace TiffanyGame
             RunOverride = null;
             AimOverride = null;
             InteractOverride = null;
+            FlashOverride = null;
         }
 
         static bool CommandHeld(Keyboard keyboard) =>
@@ -48,6 +52,7 @@ namespace TiffanyGame
 
         static void ResetKeyboardOnFocus(bool focused)
         {
+            focusClickFilter.SetFocus(focused, Time.realtimeSinceStartup);
             if (!focused) return;
             var keyboard = Keyboard.current;
             if (keyboard != null) InputSystem.ResetDevice(keyboard);
@@ -121,8 +126,9 @@ namespace TiffanyGame
         public static bool LightTogglePressed => KeyPressed(Key.F) ||
             Mouse.current?.rightButton.wasPressedThisFrame == true || Gamepad.current?.buttonNorth.wasPressedThisFrame == true;
 
-        public static bool FlashPressed => Mouse.current?.leftButton.wasPressedThisFrame == true ||
-            Gamepad.current?.rightTrigger.wasPressedThisFrame == true;
+        public static bool FlashPressed => FlashOverride ??
+            (focusClickFilter.Accept(Mouse.current?.leftButton.wasPressedThisFrame == true, Time.realtimeSinceStartup) ||
+            Gamepad.current?.rightTrigger.wasPressedThisFrame == true);
 
         public static bool KindlePressed => KeyPressed(Key.Q) || Gamepad.current?.buttonWest.wasPressedThisFrame == true;
 
