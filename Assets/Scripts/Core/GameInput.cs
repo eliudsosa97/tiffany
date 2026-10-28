@@ -11,6 +11,7 @@ namespace TiffanyGame
         public static bool? SlowOverride;
         public static bool? RunOverride;
         public static Vector2? AimOverride;
+        public static bool? InteractOverride;
 
         static bool commandWasPressed;
 
@@ -31,6 +32,7 @@ namespace TiffanyGame
             SlowOverride = null;
             RunOverride = null;
             AimOverride = null;
+            InteractOverride = null;
         }
 
         static bool CommandHeld(Keyboard keyboard) =>
@@ -128,7 +130,8 @@ namespace TiffanyGame
 
         public static bool FadePressed => KeyPressed(Key.R) || Gamepad.current?.rightShoulder.wasPressedThisFrame == true;
 
-        public static bool InteractPressed => KeyPressed(Key.Space) || Gamepad.current?.buttonSouth.wasPressedThisFrame == true;
+        public static bool InteractPressed => InteractOverride ??
+            (KeyPressed(Key.Space) || Gamepad.current?.buttonSouth.wasPressedThisFrame == true);
 
         public static bool NotebookPressed => KeyPressed(Key.Tab) || Gamepad.current?.selectButton.wasPressedThisFrame == true;
 

@@ -30,6 +30,7 @@ namespace TiffanyGame.EditorTools
             StormBuilder.BuildStorm(player.transform, spawn);
             BuildInterface();
             BuildLightStops(spawn.parent);
+            HidingBuilder.BuildHideTest(spawn.parent, player);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();

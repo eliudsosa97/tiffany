@@ -36,6 +36,12 @@ namespace TiffanyGame
             if (viewCamera == null) viewCamera = Camera.main;
         }
 
+        void OnEnable()
+        {
+            horizontalVelocity = Vector3.zero;
+            verticalVelocity = 0f;
+        }
+
         void Update()
         {
             var inputGait = PlayerMotion.ResolveGait(GameInput.Slow, GameInput.Run);
