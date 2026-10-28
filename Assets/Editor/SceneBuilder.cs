@@ -30,6 +30,7 @@ namespace TiffanyGame.EditorTools
             var spawn = BuildTestZone();
             var testZone = spawn.parent;
             testZone.SetParent(world, false);
+            BuildForestSample(testZone);
             var player = CreatePlayer(spawn, out var playerLight);
             var storm = StormBuilder.BuildStorm(player.transform, spawn);
             var firstCandle = BuildCandles(testZone, player.GetComponent<PlayerSoul>(), storm);
@@ -189,15 +190,87 @@ namespace TiffanyGame.EditorTools
             return spawn;
         }
 
-        static void BakeNavMesh(Transform zoneRoot)
+        public static void BuildForestSample(Transform zoneRoot)
+        {
+            int coverLayer = LayerMask.NameToLayer(ForestLayout.CoverLayer);
+            if (coverLayer < 0)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} Falta la capa {ForestLayout.CoverLayer}.");
+            foreach (var placement in ForestLayout.Placements)
+            {
+                var piece = placement.IsKenney
+                    ? ModelLibrary.InstantiateKenney(placement.id, zoneRoot, placement.height)
+                    : ModelLibrary.Instantiate(placement.id, zoneRoot);
+                if (placement.IsKenney)
+                {
+                    var bounds = ModelLibrary.LocalBounds(piece.transform);
+                    if (placement.IsPine)
+                    {
+                        float canopyBottom = bounds.size.y * 0.4f;
+                        var trunk = piece.AddComponent<CapsuleCollider>();
+                        trunk.direction = 1;
+                        trunk.radius = Mathf.Min(bounds.extents.x, bounds.extents.z) * 0.12f;
+                        trunk.height = canopyBottom + trunk.radius;
+                        trunk.center = Vector3.up * (trunk.height * 0.5f);
+                        var canopy = new GameObject("Canopy");
+                        canopy.transform.SetParent(piece.transform, false);
+                        canopy.layer = coverLayer;
+                        var cover = canopy.AddComponent<BoxCollider>();
+                        cover.center = Vector3.up * ((bounds.max.y + canopyBottom) * 0.5f);
+                        cover.size = new Vector3(bounds.size.x, bounds.max.y - canopyBottom, bounds.size.z);
+                    }
+                    else
+                    {
+                        var solid = piece.AddComponent<BoxCollider>();
+                        solid.center = bounds.center;
+                        solid.size = bounds.size;
+                    }
+                }
+                piece.transform.localPosition = SurfacePoint(placement.x, placement.alongSlope);
+                piece.transform.localRotation = Quaternion.Euler(0f, placement.yaw, 0f);
+                piece.transform.localScale = Vector3.one * placement.scale;
+                if (placement.IsKenney) continue;
+                var spec = ModelLibrary.LoadSpec(placement.id);
+                foreach (var filter in piece.GetComponentsInChildren<MeshFilter>())
+                {
+                    var bounds = filter.sharedMesh.bounds;
+                    switch (filter.name)
+                    {
+                        case "Trunk":
+                            var trunk = filter.gameObject.AddComponent<CapsuleCollider>();
+                            trunk.direction = 1;
+                            trunk.center = spec.trunkCollider.center;
+                            trunk.radius = spec.trunkCollider.radius;
+                            trunk.height = spec.trunkCollider.height;
+                            break;
+                        case "Canopy":
+                            filter.gameObject.layer = coverLayer;
+                            var canopy = filter.gameObject.AddComponent<BoxCollider>();
+                            canopy.center = bounds.center;
+                            canopy.size = bounds.size;
+                            break;
+                        case "Bush":
+                            var hide = new GameObject("HideVolume");
+                            hide.transform.SetParent(filter.transform, false);
+                            hide.layer = LayerMask.NameToLayer("Ignore Raycast");
+                            var volume = hide.AddComponent<BoxCollider>();
+                            volume.isTrigger = true;
+                            volume.center = spec.hideVolume.center;
+                            volume.size = spec.hideVolume.size;
+                            break;
+                    }
+                }
+            }
+        }
+
+        public static void BakeNavMesh(Transform zoneRoot, string path = "Assets/Scenes/Generated/WitchNavMesh.asset")
         {
             var surface = zoneRoot.gameObject.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;
             surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            surface.layerMask = ~LayerMask.GetMask(ForestLayout.CoverLayer, "Ignore Raycast");
             Physics.SyncTransforms();
             surface.BuildNavMesh();
             surface.navMeshData.name = "WitchNavMesh";
-            const string path = "Assets/Scenes/Generated/WitchNavMesh.asset";
             var existing = AssetDatabase.LoadAssetAtPath<NavMeshData>(path);
             if (existing != null)
             {
