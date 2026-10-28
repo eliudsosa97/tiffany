@@ -17,6 +17,7 @@ namespace TiffanyGame
         private PlayerSoul soul;
         private RespawnPoint respawn;
         private PlayerController movement;
+        private PlayerHiding hiding;
         private CharacterController character;
         private PlayerLight playerLight;
 
@@ -25,6 +26,7 @@ namespace TiffanyGame
             soul = GetComponent<PlayerSoul>();
             respawn = soul.Respawn;
             movement = GetComponent<PlayerController>();
+            hiding = GetComponent<PlayerHiding>();
             character = GetComponent<CharacterController>();
             playerLight = GetComponent<PlayerLight>();
         }
@@ -35,6 +37,11 @@ namespace TiffanyGame
         public void Trigger()
         {
             sequence.Begin();
+            if (hiding != null)
+            {
+                if (hiding.Hidden) hiding.Leave();
+                hiding.enabled = false;
+            }
             if (movement != null) movement.enabled = false;
         }
 
@@ -65,6 +72,7 @@ namespace TiffanyGame
             if (wasActive && !Active)
             {
                 if (movement != null) movement.enabled = true;
+                if (hiding != null) hiding.enabled = true;
             }
         }
     }

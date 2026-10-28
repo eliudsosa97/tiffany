@@ -13,6 +13,7 @@ namespace TiffanyGame.Tests
         private GameObject world;
         private PlayerSoul soul;
         private PlayerController movement;
+        private PlayerHiding hiding;
         private CharacterController character;
         private PlayerRespawn respawn;
         private PlayerLight light;
@@ -25,6 +26,7 @@ namespace TiffanyGame.Tests
             SafeZones.Clear();
             GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
             GameInput.SlowOverride = GameInput.RunOverride = false;
+            GameInput.InteractOverride = false;
             world = new GameObject("RespawnTestWorld");
             world.SetActive(false);
             var ground = new GameObject("Ground");
@@ -41,6 +43,11 @@ namespace TiffanyGame.Tests
             character.radius = 0.25f;
             character.center = Vector3.up * 0.6f;
             movement = player.AddComponent<PlayerController>();
+            var body = new GameObject("Body");
+            body.transform.SetParent(player.transform, false);
+            body.AddComponent<MeshRenderer>();
+            hiding = player.AddComponent<PlayerHiding>();
+            hiding.body = PlayerHiding.BodyRenderers(player);
             light = player.AddComponent<PlayerLight>();
             light.spot = new GameObject("Soul Light").AddComponent<Light>();
             light.spot.transform.SetParent(player.transform, false);
@@ -132,6 +139,49 @@ namespace TiffanyGame.Tests
             GameInput.MoveOverride = Vector2.zero;
             yield return null;
             if (touchCandle) Assert.Greater(soul.Energy.Current, 50f);
+        }
+
+        [UnityTest]
+        public IEnumerator CaughtWhileHidingReturnsVisibleToCandleAndUnlocksControls()
+        {
+            yield return null;
+            PlacePlayer(candle.transform.position + Vector3.back);
+            yield return null;
+            yield return null;
+            Assert.AreEqual(candle.transform.position, soul.Respawn.Position);
+            PlacePlayer(new Vector3(15f, 0f, 8f));
+            var bush = new GameObject("Hide Test");
+            bush.transform.SetParent(world.transform);
+            bush.transform.position = soul.transform.position + Vector3.forward;
+            bush.layer = LayerMask.NameToLayer("Ignore Raycast");
+            var collider = bush.AddComponent<BoxCollider>();
+            collider.size = new Vector3(1.6f, 1.8f, 1.6f);
+            collider.center = Vector3.up * 0.9f;
+            var volume = bush.AddComponent<HideVolume>();
+            Physics.SyncTransforms();
+
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Escondida");
+            hiding.Hide(volume);
+            Assert.IsTrue(hiding.Hidden);
+            foreach (var renderer in hiding.body) Assert.IsFalse(renderer.enabled);
+
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Fuera del escondite");
+            respawn.Trigger();
+            Assert.IsFalse(movement.enabled);
+            Assert.IsFalse(hiding.enabled);
+            float deadline = Time.time + 4f;
+            while (respawn.Active && Time.time < deadline)
+            {
+                Assert.IsFalse(movement.enabled);
+                Assert.IsFalse(hiding.enabled);
+                yield return null;
+            }
+            Assert.IsFalse(respawn.Active);
+            Assert.IsFalse(hiding.Hidden);
+            foreach (var renderer in hiding.body) Assert.IsTrue(renderer.enabled);
+            Assert.IsTrue(hiding.enabled && movement.enabled && character.enabled);
+            Vector3 destination = candle.transform.position + Vector3.back * respawn.sideOffset;
+            Assert.Less(Vector3.Distance(destination, soul.transform.position), 0.01f);
         }
 
         private void PlacePlayer(Vector3 position)
