@@ -258,7 +258,9 @@ namespace TiffanyGame.EditorTools
                 source.playOnAwake = false;
                 source.spatialBlend = 1f;
                 source.rolloffMode = AudioRolloffMode.Linear;
-                source.maxDistance = 35f;
+                // El AudioListener va en la cámara, a unos 36 m de Tiffany.
+                source.minDistance = 30f;
+                source.maxDistance = 71f;
             }
             voice.barks = new AudioClip[4];
             for (int i = 0; i < voice.barks.Length; i++)
