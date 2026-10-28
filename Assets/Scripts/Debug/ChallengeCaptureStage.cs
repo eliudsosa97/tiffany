@@ -24,6 +24,128 @@ namespace TiffanyGame
         GameObject glow;
         bool spotEnabled, glowActive;
 
+#if UNITY_EDITOR
+        struct CameraTarget
+        {
+            public Transform owner;
+            public Bounds bounds;
+
+            public CameraTarget(Transform owner, Vector3 position, Vector3 size)
+            {
+                this.owner = owner;
+                bounds = new Bounds(position, size);
+            }
+        }
+
+        [ContextMenu("Frame Challenge Camera")]
+        public void FrameCamera()
+        {
+            Physics.SyncTransforms();
+            var root = challenge.transform;
+            var targets = new System.Collections.Generic.List<CameraTarget>
+            {
+                new CameraTarget(challenge.tracker.player, challenge.Entry + Vector3.up * 0.6f,
+                    new Vector3(0.7f, 1.2f, 0.7f)),
+                new CameraTarget(null, challenge.Exit + Vector3.up * 0.1f, new Vector3(0.7f, 0.2f, 0.7f)),
+                CandleTarget(challenge.checkpoint)
+            };
+            foreach (var candle in challenge.candles) targets.Add(CandleTarget(candle));
+            foreach (var gate in challenge.darkness)
+            {
+                var bounds = gate.GetComponent<Renderer>().bounds;
+                targets.Add(new CameraTarget(gate.transform, bounds.center, bounds.size));
+            }
+            if (challenge.kind != ChallengeKind.Candles)
+            {
+                var witch = challenge.Witch != null ? challenge.Witch.transform : null;
+                targets.Add(new CameraTarget(witch, challenge.post.position + Vector3.up * 1.15f,
+                    new Vector3(1f, 2.3f, 1f)));
+                if (challenge.lure != null)
+                {
+                    Vector3 position = challenge.lure.transform.position;
+                    position.y = challenge.post.position.y;
+                    targets.Add(new CameraTarget(witch, position + Vector3.up * 1.15f, new Vector3(1f, 2.3f, 1f)));
+                }
+            }
+            if (challenge.lure != null)
+            {
+                var bounds = challenge.lure.GetComponent<Renderer>().bounds;
+                targets.Add(new CameraTarget(challenge.lure.transform, bounds.center, bounds.size));
+                targets.Add(new CameraTarget(challenge.lure.transform, bounds.center + root.right * 0.35f, bounds.size));
+            }
+
+            var frame = targets[0].bounds;
+            foreach (var target in targets) frame.Encapsulate(target.bounds);
+            foreach (var renderer in challenge.GetComponentsInChildren<Renderer>(true)) frame.Encapsulate(renderer.bounds);
+            string obstruction = null;
+            for (int elevation = 0; elevation < 4; elevation++)
+            {
+                float pitch = (55f + elevation * 9f) * Mathf.Deg2Rad;
+                for (int side = 0; side < 4; side++)
+                {
+                    Vector3 diagonal = (root.right * (side % 2 == 0 ? -1f : 1f)
+                        + root.forward * (side < 2 ? -1f : 1f)).normalized;
+                    var rotation = Quaternion.LookRotation(-diagonal * Mathf.Cos(pitch) - Vector3.up * Mathf.Sin(pitch));
+                    Vector3 position = FitCamera(frame, rotation);
+                    if (!HasClearView(position, targets, out obstruction)) continue;
+                    foreach (var stage in challenge.GetComponentsInChildren<ChallengeCaptureStage>())
+                    {
+                        var stop = stage.GetComponent<CaptureStop>();
+                        stop.overrideCamera = true;
+                        stop.cameraPosition = position;
+                        stop.cameraRotation = rotation;
+                    }
+                    return;
+                }
+            }
+            throw new System.InvalidOperationException($"{GameInfo.LogPrefix} {challenge.name}: no hay encuadre sin oclusiones. {obstruction}");
+        }
+
+        static CameraTarget CandleTarget(CandleSpot candle) =>
+            new CameraTarget(candle.transform, candle.transform.position + Vector3.up * 0.15f,
+                new Vector3(0.25f, 0.3f, 0.25f));
+
+        static Vector3 FitCamera(Bounds frame, Quaternion rotation)
+        {
+            float vertical = Mathf.Tan(24f * Mathf.Deg2Rad * 0.5f) * 0.85f;
+            float horizontal = vertical * (16f / 9f);
+            var inverse = Quaternion.Inverse(rotation);
+            float distance = 1f;
+            for (int corner = 0; corner < 8; corner++)
+            {
+                Vector3 offset = Vector3.Scale(frame.extents, new Vector3((corner & 1) == 0 ? -1f : 1f,
+                    (corner & 2) == 0 ? -1f : 1f, (corner & 4) == 0 ? -1f : 1f));
+                Vector3 local = inverse * offset;
+                distance = Mathf.Max(distance, Mathf.Abs(local.x) / horizontal - local.z,
+                    Mathf.Abs(local.y) / vertical - local.z);
+            }
+            return frame.center - rotation * Vector3.forward * distance;
+        }
+
+        static bool HasClearView(Vector3 position, System.Collections.Generic.List<CameraTarget> targets,
+            out string obstruction)
+        {
+            foreach (var target in targets)
+                for (int sample = 0; sample < 3; sample++)
+                {
+                    Vector3 point = target.bounds.center + Vector3.up * (target.bounds.size.y * (sample - 1) * 0.3f);
+                    Vector3 ray = point - position;
+                    var hits = Physics.RaycastAll(position, ray.normalized, ray.magnitude - 0.02f,
+                        Physics.AllLayers, QueryTriggerInteraction.Ignore);
+                    foreach (var hit in hits)
+                    {
+                        if (target.owner != null && hit.transform.IsChildOf(target.owner)) continue;
+                        var renderer = hit.collider.GetComponent<Renderer>();
+                        if (renderer == null || !renderer.enabled) continue;
+                        obstruction = $"{hit.collider.name} tapa {(target.owner != null ? target.owner.name : "el paso o la bruja")}.";
+                        return false;
+                    }
+                }
+            obstruction = null;
+            return true;
+        }
+#endif
+
         public void Apply()
         {
             Clear();

@@ -13,6 +13,9 @@ namespace TiffanyGame.EditorTools
             BuildOne(tracker, soul, storm, ChallengeKind.Distract, 2, 0.5f);
             BuildOne(tracker, soul, storm, ChallengeKind.Vanish, 3, 0.35f);
             BuildOne(tracker, soul, storm, ChallengeKind.Hut, 3, 0.60f);
+            Physics.SyncTransforms();
+            foreach (var stage in tracker.GetComponentsInChildren<ChallengeCaptureStage>())
+                if (!stage.after) stage.FrameCamera();
         }
 
         static void BuildOne(WitchChapterTracker tracker, PlayerSoul soul, Storm storm,
@@ -65,8 +68,6 @@ namespace TiffanyGame.EditorTools
                 var stop = Point(root, $"{root.name} {(i == 0 ? "Before" : "After")}", new Vector3(0f, 0f, -0.3f));
                 var capture = stop.gameObject.AddComponent<CaptureStop>();
                 capture.overrideCamera = true;
-                capture.cameraPosition = root.TransformPoint(new Vector3(-8f, 11f, -12f));
-                capture.cameraRotation = Quaternion.LookRotation(root.TransformPoint(Vector3.forward) - capture.cameraPosition);
                 var stage = stop.gameObject.AddComponent<ChallengeCaptureStage>();
                 stage.challenge = challenge;
                 stage.after = i == 1;
