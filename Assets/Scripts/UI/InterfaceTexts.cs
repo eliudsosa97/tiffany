@@ -4,6 +4,15 @@ namespace TiffanyGame
 {
     public static class InterfaceTexts
     {
+        public const string Title = "Tiffany";
+        public const string StartHint = "Clic, Espacio o Start para empezar";
+        public const string Controls = "WASD  moverte\n"
+            + "Shift  correr · Ctrl  despacio\n"
+            + "Ratón  apuntar la luz\n"
+            + "F  prender la luz · Clic  destello\n"
+            + "Q E R  poderes\n"
+            + "Espacio  esconderte y recoger\n"
+            + "Tab  cuaderno · Esc o P  pausa";
         public const string PauseTitle = "Pausa";
         public const string PauseHint = "Esc o P para seguir";
         public const string NotebookEmpty = "Aún no recuerdas nada";

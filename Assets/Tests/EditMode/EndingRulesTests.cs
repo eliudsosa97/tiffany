@@ -68,12 +68,16 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void EndingCannotBeDismissedByPauseOrNotebookAndPreviewCanRestorePlay()
+        public void EndingCannotBeDismissedByPauseNotebookOrStartAndPreviewCanRestorePlay()
         {
-            var flow = new InterfaceFlow();
+            var flow = new InterfaceFlow(true);
+            flow.PressStart();
             flow.SetEnding(true);
             flow.PressPause();
+            Assert.AreEqual(InterfaceScreen.Ending, flow.Screen);
             flow.PressNotebook();
+            Assert.AreEqual(InterfaceScreen.Ending, flow.Screen);
+            flow.PressStart();
             Assert.AreEqual(InterfaceScreen.Ending, flow.Screen);
             Assert.IsTrue(flow.IsFrozen);
             flow.SetEnding(false);

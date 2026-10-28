@@ -146,6 +146,19 @@ namespace TiffanyGame
         public static bool InteractPressed => InteractOverride ??
             (KeyPressed(Key.Space) || Gamepad.current?.buttonSouth.wasPressedThisFrame == true);
 
+        public static bool StartPressed
+        {
+            get
+            {
+                bool clicked = Mouse.current?.leftButton.wasPressedThisFrame == true;
+                // El clic de inicio también cuenta como primer clic de foco en WebGL.
+                if (clicked) focusClickFilter.Accept(true, Time.realtimeSinceStartup);
+                return KeyPressed(Key.Space) || KeyPressed(Key.Enter) || clicked ||
+                    Gamepad.current?.startButton.wasPressedThisFrame == true ||
+                    Gamepad.current?.buttonSouth.wasPressedThisFrame == true;
+            }
+        }
+
         public static bool NotebookPressed => KeyPressed(Key.Tab) || Gamepad.current?.selectButton.wasPressedThisFrame == true;
 
         public static bool PausePressed => KeyPressed(Key.Escape) || KeyPressed(Key.P) ||

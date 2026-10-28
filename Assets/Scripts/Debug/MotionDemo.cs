@@ -15,6 +15,8 @@ namespace TiffanyGame
             return;
 #else
             if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-motiondemo") < 0) return;
+            var gameInterface = FindAnyObjectByType<GameInterface>();
+            if (gameInterface != null) gameInterface.StartGame();
             new GameObject("MotionDemo").AddComponent<MotionDemo>();
 #endif
         }
