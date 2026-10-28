@@ -38,9 +38,11 @@ namespace TiffanyGame.EditorTools
             var viewCamera = CreateCamera(player);
             BakeNavMesh(world);
             playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute);
+            route.GetComponent<WitchChapterTracker>().witch = playerLight.witch;
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
             respawn.witch = playerLight.witch;
             respawn.overlay = caughtFade;
+            BuildEnding(route.GetChild(7), player.GetComponent<PlayerSoul>(), playerLight.witch, gameInterface);
             var tyler = BuildTyler(route.GetChild(0), player.transform, testZone, memories[0]);
             tyler.transform.position = route.GetChild(0).Find("Ball").position + new Vector3(1.5f, -0.2f, 0f);
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories);
@@ -70,6 +72,7 @@ namespace TiffanyGame.EditorTools
             caughtCapture.overrideCamera = false;
             caughtCapture.wait = CaughtSequence.FireDuration + CaughtSequence.FadeOutDuration + CaughtSequence.FadeInDuration * 0.5f;
             caughtStop.AddComponent<CaughtCaptureStage>().spot = firstCandle;
+            BuildWitchVoice(playerLight.witch, tyler);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -209,7 +212,7 @@ namespace TiffanyGame.EditorTools
         {
             var witch = new GameObject("Witch");
             witch.transform.SetParent(zoneRoot, false);
-            witch.transform.position = route[0];
+            witch.transform.position = route[0] + Vector3.up * WitchProfiles.For(Chapter.Cemetery).FlightHeightOffset;
             var agent = witch.AddComponent<NavMeshAgent>();
             agent.radius = 0.35f;
             agent.height = 2.3f;
@@ -217,7 +220,7 @@ namespace TiffanyGame.EditorTools
             var controller = witch.AddComponent<WitchController>();
             controller.player = player;
             controller.skyRoute = route;
-            controller.chapter = Chapter.Ravine;
+            controller.chapter = Chapter.Cemetery;
             controller.figure = WitchBuilder.BuildFigure(witch.transform, out var stand, out var crouch);
             controller.figureStand = stand;
             controller.figureCrouch = crouch;
@@ -256,6 +259,32 @@ namespace TiffanyGame.EditorTools
             return controller;
         }
 
+        static void BuildWitchVoice(WitchController witch, TylerController tyler)
+        {
+            var voice = witch.gameObject.AddComponent<WitchVoice>();
+            voice.witch = witch;
+            voice.tyler = tyler;
+            voice.source = witch.gameObject.AddComponent<AudioSource>();
+            voice.echo = witch.gameObject.AddComponent<AudioSource>();
+            foreach (var source in new[] { voice.source, voice.echo })
+            {
+                source.playOnAwake = false;
+                source.spatialBlend = 1f;
+                source.rolloffMode = AudioRolloffMode.Linear;
+                // El AudioListener va en la cámara, a unos 36 m de Tiffany.
+                source.minDistance = 30f;
+                source.maxDistance = 71f;
+            }
+            voice.barks = new AudioClip[4];
+            for (int i = 0; i < voice.barks.Length; i++)
+            {
+                string path = $"Assets/Audio/Sfx/bark_{i + 1}.wav";
+                voice.barks[i] = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+                if (voice.barks[i] == null)
+                    throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el ladrido: {path}");
+            }
+        }
+
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
         {
             CandleSpot first = null;
@@ -266,6 +295,26 @@ namespace TiffanyGame.EditorTools
                 if (i == 0) first = spot;
             }
             return first;
+        }
+
+        static void BuildEnding(Transform house, PlayerSoul soul, WitchController witch, GameInterface gameInterface)
+        {
+            var ending = house.Find("Window Candle").gameObject.AddComponent<EndingController>();
+            ending.soul = soul;
+            ending.witch = witch;
+            ending.gameInterface = gameInterface;
+            for (int i = 0; i < 2; i++)
+            {
+                var stop = new GameObject(i == 0 ? "Ending 1 Fade" : "Ending 2 Credits");
+                stop.transform.SetParent(house, false);
+                stop.transform.position = new Vector3(ending.transform.position.x, house.position.y, ending.transform.position.z - 1.5f);
+                var capture = stop.AddComponent<CaptureStop>();
+                capture.overrideCamera = false;
+                capture.wait = 0.5f;
+                var stage = stop.AddComponent<EndingCaptureStage>();
+                stage.ending = ending;
+                stage.credits = i == 1;
+            }
         }
 
         internal static CandleSpot CreateCandle(Transform parent, string name, Vector3 position,
@@ -348,6 +397,7 @@ namespace TiffanyGame.EditorTools
             controller.voice = tyler.AddComponent<AudioSource>();
             controller.voice.spatialBlend = 0f;
             controller.voice.playOnAwake = false;
+            controller.growlClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/growl_1.wav");
             var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl" };
             var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl };
             for (int i = 0; i < reactions.Length; i++)
@@ -505,6 +555,13 @@ namespace TiffanyGame.EditorTools
                 new Vector2(0.15f, 0.025f), new Vector2(0.85f, 0.085f));
             ui.notebookEmpty = InterfaceText("Empty", notebook, font, InterfaceTexts.NotebookEmpty, 44,
                 new Vector2(0.1f, 0.4f), new Vector2(0.9f, 0.6f));
+
+            ui.endingPanel = InterfacePanel("Ending", root.transform, 0f).GetComponent<Image>();
+            ui.endingPanel.color = new Color(1f, 1f, 1f, 0f);
+            ui.endingText = InterfaceText("Ending Text", ui.endingPanel.transform, font, "", 48,
+                new Vector2(0.12f, 0.2f), new Vector2(0.88f, 0.8f));
+            ui.endingText.color = new Color(0.12f, 0.12f, 0.12f);
+            ui.endingPanel.gameObject.SetActive(false);
 
             ui.memoryAssets = LoadInterfaceAssets<TextAsset>("t:TextAsset", "Assets/Data/Memories");
             ui.drawings = LoadInterfaceAssets<Texture2D>("t:Texture2D", "Assets/Art/Memories");

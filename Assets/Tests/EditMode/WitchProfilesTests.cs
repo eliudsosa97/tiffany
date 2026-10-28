@@ -5,15 +5,14 @@ namespace TiffanyGame.Tests
 {
     public sealed class WitchProfilesTests
     {
-        [TestCase(Chapter.Prologue, false, false, false)]
-        [TestCase(Chapter.Grave, false, false, false)]
-        [TestCase(Chapter.Hut, false, false, false)]
-        [TestCase(Chapter.Trail, true, false, true)]
-        [TestCase(Chapter.Ravine, true, true, true)]
-        [TestCase(Chapter.OldCemetery, true, true, true)]
-        [TestCase(Chapter.Chapel, true, true, true)]
+        [TestCase(Chapter.Cemetery, false, false, false, false, 10f)]
+        [TestCase(Chapter.WaterPlant, true, false, false, false, 0f)]
+        [TestCase(Chapter.TrainTracks, true, false, true, false, 0f)]
+        [TestCase(Chapter.Stable, true, true, true, false, 0f)]
+        [TestCase(Chapter.WitchHut, true, true, true, false, 0f)]
+        [TestCase(Chapter.Return, true, true, false, true, 0f)]
         public void ForSetsChapterFlagsAndPreservesNumericDefaults(
-            Chapter chapter, bool canLand, bool canSprint, bool usesVoiceLure)
+            Chapter chapter, bool canLand, bool canSprint, bool usesVoiceLure, bool groundChase, float flightHeightOffset)
         {
             WitchProfile profile = WitchProfiles.For(chapter);
             var defaults = new WitchProfile();
@@ -21,6 +20,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(canLand, profile.CanLand);
             Assert.AreEqual(canSprint, profile.CanSprint);
             Assert.AreEqual(usesVoiceLure, profile.UsesVoiceLure);
+            Assert.AreEqual(groundChase, profile.GroundChase);
+            Assert.AreEqual(flightHeightOffset, profile.FlightHeightOffset);
             Assert.AreEqual(defaults.FlySpeed, profile.FlySpeed);
             Assert.AreEqual(defaults.StalkSpeed, profile.StalkSpeed);
             Assert.AreEqual(defaults.FollowSpeed, profile.FollowSpeed);

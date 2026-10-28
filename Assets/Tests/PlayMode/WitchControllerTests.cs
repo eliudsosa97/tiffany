@@ -415,6 +415,88 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator CemeteryRespawnKeepsTheHigherRouteWithoutAccumulatingHeight()
+        {
+            controller.chapter = Chapter.Cemetery;
+            Vector3 expected = controller.skyRoute[1] + Vector3.up * WitchProfiles.For(Chapter.Cemetery).FlightHeightOffset;
+            controller.ResetBrain();
+            Assert.AreEqual(expected, witch.transform.position);
+            controller.ResetBrain();
+            Assert.AreEqual(expected, witch.transform.position);
+            yield return null;
+            Assert.AreEqual(expected.y, witch.transform.position.y, 0.01f);
+            Assert.AreEqual(WitchState.Flying, controller.Decision.State);
+        }
+
+        [UnityTest]
+        public IEnumerator ChapterUpgradeKeepsLandingPositionAndEnablesVoiceWithoutRestarting()
+        {
+            controller.chapter = Chapter.WaterPlant;
+            controller.ResetBrain();
+            controller.raining = true;
+            yield return WaitForState(WitchState.Landing, 1f);
+            Vector3 position = witch.transform.position;
+            WitchDecision decision = controller.Decision;
+
+            controller.SetChapter(Chapter.TrainTracks);
+
+            Assert.AreEqual(Chapter.TrainTracks, controller.chapter);
+            Assert.AreEqual(position, witch.transform.position);
+            Assert.AreEqual(decision, controller.Decision);
+            Assert.IsFalse(agent.enabled);
+            yield return WaitForStalking();
+            Assert.IsTrue(controller.Decision.VoiceLure);
+            controller.SetChapter(Chapter.Cemetery);
+            Assert.AreEqual(Chapter.TrainTracks, controller.chapter);
+            yield return null;
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            Assert.IsTrue(controller.Decision.VoiceLure);
+        }
+
+        [UnityTest]
+        public IEnumerator ResetBrainKeepsReturnChaseOnGroundAwayFromPlayerAndSafeZones()
+        {
+            player.transform.position = Vector3.zero;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            controller.BeginReturn();
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: WindUp");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Sprinting");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Caught");
+            yield return WaitForState(WitchState.Caught, 8f);
+            var candle = AddFamilyCandle();
+            player.transform.position = candle.transform.position + Vector3.back;
+            SafeZones.Add(player.transform.position - player.transform.forward * 12f, 3f);
+            controller.Flash();
+            Physics.SyncTransforms();
+
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            controller.ResetBrain();
+
+            Assert.AreEqual(Chapter.Return, controller.chapter);
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            Assert.AreEqual(WitchForm.Grounded, controller.Decision.Form);
+            Assert.IsFalse(controller.Decision.FireLit || fireLight.enabled);
+            Assert.GreaterOrEqual(HorizontalDistanceToPlayer(), 10f);
+            Assert.IsFalse(SafeZones.Contains(witch.transform.position));
+            Assert.Less(Mathf.Abs(witch.transform.position.y), 0.3f);
+            yield return null;
+            yield return null;
+            Assert.IsTrue(agent.enabled && agent.isOnNavMesh);
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+
+            player.transform.position = Vector3.right * 20f;
+            Physics.SyncTransforms();
+            yield return null;
+            yield return null;
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            Assert.AreEqual(WitchForm.Grounded, controller.Decision.Form);
+            Assert.AreEqual(2.5f, controller.Decision.Speed);
+            Assert.AreEqual(player.transform.position, controller.Decision.MoveTarget);
+            Assert.IsFalse(controller.Decision.FireLit || fireLight.enabled);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator SprintStopsAtWallAndRecoversOnNavMesh()
         {
             witch.transform.position = Vector3.zero;
