@@ -76,7 +76,7 @@ namespace TiffanyGame
 
         public void Flash() => flashed = true;
 
-        private void Hear(StepNoise noise) => witchSenses.Hear(in noise);
+        private void Hear(StepNoise noise) => witchSenses.Hear(in noise, transform.position);
 
         private void Update()
         {

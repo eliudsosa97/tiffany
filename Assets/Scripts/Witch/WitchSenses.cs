@@ -8,8 +8,6 @@ namespace TiffanyGame
         private readonly WitchSenseProfile profile;
         private readonly StepNoise[] pendingNoises;
         private int pendingCount;
-        private Vector3 lastWitchPosition;
-        private bool hasSensed;
 
         public WitchSenses(WitchSenseProfile profile)
         {
@@ -17,7 +15,7 @@ namespace TiffanyGame
             pendingNoises = new StepNoise[8];
         }
 
-        public void Hear(in StepNoise noise)
+        public void Hear(in StepNoise noise, Vector3 witchPosition)
         {
             if (pendingCount < pendingNoises.Length)
             {
@@ -26,23 +24,21 @@ namespace TiffanyGame
             }
 
             int smallest = 0;
-            float smallestMargin = HearingMargin(in pendingNoises[0]);
+            float smallestMargin = HearingMargin(in pendingNoises[0], witchPosition);
             for (int i = 1; i < pendingCount; i++)
             {
-                float margin = HearingMargin(in pendingNoises[i]);
+                float margin = HearingMargin(in pendingNoises[i], witchPosition);
                 if (margin < smallestMargin)
                 {
                     smallest = i;
                     smallestMargin = margin;
                 }
             }
-            if (HearingMargin(in noise) > smallestMargin) pendingNoises[smallest] = noise;
+            if (HearingMargin(in noise, witchPosition) > smallestMargin) pendingNoises[smallest] = noise;
         }
 
         public WitchPerception Sense(in WitchSenseInputs input)
         {
-            lastWitchPosition = input.WitchPosition;
-            hasSensed = true;
             float distance = HorizontalDistance(input.WitchPosition, input.PlayerPosition);
             bool flying = input.Form == WitchForm.Flying;
             bool grounded = input.Form == WitchForm.Grounded;
@@ -93,9 +89,9 @@ namespace TiffanyGame
             };
         }
 
-        private float HearingMargin(in StepNoise noise)
+        private static float HearingMargin(in StepNoise noise, Vector3 witchPosition)
         {
-            return hasSensed ? noise.Radius - HorizontalDistance(lastWitchPosition, noise.Position) : noise.Radius;
+            return noise.Radius - HorizontalDistance(witchPosition, noise.Position);
         }
 
         private static float HorizontalDistance(Vector3 from, Vector3 to)
