@@ -119,7 +119,7 @@ namespace TiffanyGame.Tests
             var route = GameObject.Find("Route").transform;
             var cemetery = route.GetChild(0);
             Assert.AreEqual(8, route.childCount);
-            Assert.AreEqual(36, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length);
+            Assert.AreEqual(40, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(8, route.GetComponentsInChildren<CaptureStop>().Length);
             Assert.AreEqual(10, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length);
             var player = GameObject.FindGameObjectWithTag("Player");
