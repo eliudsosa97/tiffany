@@ -1,0 +1,18 @@
+{
+  "materials": [
+    { "name": "CandleGlass", "color": "#791F292E", "smoothness": 0.85, "surface": "transparent" },
+    { "name": "CandleWax", "color": "#F2EADC", "smoothness": 0.2 },
+    { "name": "CandleFlame", "color": "#FFB44A", "smoothness": 0.0, "unlit": true },
+    { "name": "CandleWick", "color": "#28201B", "smoothness": 0.0 }
+  ],
+  "sides": 12,
+  "family": { "height": 0.2, "radius": 0.03, "glassThickness": 0.0025, "waxHeight": 0.1 },
+  "kindled": {
+    "height": 0.09,
+    "radius": 0.023,
+    "rimOffsets": [0.0, -0.003, -0.006, -0.002, 0.002, -0.004, -0.007, -0.003, 0.001, -0.005, -0.002, 0.0],
+    "drips": [ { "angleDeg": 25, "bottom": 0.042 }, { "angleDeg": 155, "bottom": 0.059 }, { "angleDeg": 265, "bottom": 0.033 } ]
+  },
+  "flame": { "height": 0.027, "radius": 0.0045, "sides": 6 },
+  "preview": { "kindledOffsetX": 0.12 }
+}
