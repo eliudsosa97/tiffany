@@ -27,6 +27,8 @@ namespace TiffanyGame.EditorTools
             public string color;
             public float smoothness;
             public float metallic;
+            public string surface;
+            public bool unlit;
         }
 
         public static ModelSpec LoadSpec(string id)
@@ -64,9 +66,18 @@ namespace TiffanyGame.EditorTools
                     if (!ColorUtility.TryParseHtmlString(entry.color, out var color))
                         throw new InvalidDataException($"{GameInfo.LogPrefix} Color inválido '{entry.color}' en {entry.name}.");
                     // Sin _Color la segunda corrida reescribe el .mat: URP lo iguala a _BaseColor.
-                    var material = GeneratedMaterials.Get(entry.name, color, false, entry.smoothness);
+                    var material = GeneratedMaterials.Get(entry.name, color, entry.unlit, entry.smoothness);
                     material.SetColor("_Color", color);
                     material.SetFloat("_Metallic", entry.metallic);
+                    bool transparent = entry.surface == "transparent";
+                    if (transparent || material.GetFloat("_Surface") != 0f)
+                    {
+                        material.SetFloat("_Surface", transparent ? 1f : 0f);
+                        material.SetFloat("_Blend", 0f);
+                        BaseShaderGUI.SetupMaterialBlendMode(material);
+                        material.SetShaderPassEnabled("ShadowCaster", !transparent);
+                    }
+                    EditorUtility.SetDirty(material);
                 }
             }
             finally
@@ -95,16 +106,18 @@ namespace TiffanyGame.EditorTools
             foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
             {
                 var materials = renderer.sharedMaterials;
+                bool unlit = false;
                 for (int i = 0; i < materials.Length; i++)
                 {
                     string name = materials[i] != null ? materials[i].name : "(vacío)";
                     materials[i] = AssetDatabase.LoadAssetAtPath<Material>($"{materialFolder}/{name}.mat");
                     if (materials[i] == null)
                         throw new InvalidOperationException($"{GameInfo.LogPrefix} {renderer.name} usa el material '{name}', que no está en {materialFolder}.");
+                    unlit |= materials[i].shader.name == "Universal Render Pipeline/Unlit";
                 }
                 renderer.sharedMaterials = materials;
-                renderer.shadowCastingMode = ShadowCastingMode.On;
-                renderer.receiveShadows = true;
+                renderer.shadowCastingMode = unlit ? ShadowCastingMode.Off : ShadowCastingMode.On;
+                renderer.receiveShadows = !unlit;
             }
             return root;
         }

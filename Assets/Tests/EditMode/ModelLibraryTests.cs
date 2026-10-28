@@ -36,10 +36,7 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(model);
             foreach (string pose in new[] { "WitchStand", "WitchCrouch" })
             {
-                var mesh = model.transform.Find(pose).GetComponent<MeshFilter>().sharedMesh;
-                long indices = 0;
-                for (int i = 0; i < mesh.subMeshCount; i++) indices += mesh.GetIndexCount(i);
-                Assert.That(indices / 3, Is.InRange(1000, 6000), pose);
+                Assert.That(TriangleCount(model.transform.Find(pose)), Is.InRange(1000, 6000), pose);
             }
         }
 
@@ -146,14 +143,23 @@ namespace TiffanyGame.Tests
             Assert.DoesNotThrow(() => ModelLibrary.CheckSpec("rock-a", new ModelLibrary.ModelSpec { materials = new[] { stone } }));
         }
 
-        static void AssertNeutral(Transform t)
+        internal static long TriangleCount(Transform root)
+        {
+            long indices = 0;
+            foreach (var filter in root.GetComponentsInChildren<MeshFilter>(true))
+                for (int i = 0; i < filter.sharedMesh.subMeshCount; i++)
+                    indices += filter.sharedMesh.GetIndexCount(i);
+            return indices / 3;
+        }
+
+        internal static void AssertNeutral(Transform t)
         {
             Assert.AreEqual(Vector3.zero, t.localPosition, t.name);
             Assert.AreEqual(Quaternion.identity, t.localRotation, t.name);
             Assert.AreEqual(Vector3.one, t.localScale, t.name);
         }
 
-        static Bounds LocalBounds(Transform root, string pose)
+        internal static Bounds LocalBounds(Transform root, string pose)
         {
             var child = root.Find(pose);
             Assert.IsNotNull(child, pose);
