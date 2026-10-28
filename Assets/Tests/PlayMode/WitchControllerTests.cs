@@ -75,6 +75,82 @@ namespace TiffanyGame.Tests
             yield return null;
         }
 
+        [TestCase(WitchState.Flying, 1f)]
+        [TestCase(WitchState.Flying, 5f)]
+        [TestCase(WitchState.Flying, 14f)]
+        [TestCase(WitchState.TakingOff, 5f)]
+        public void ShowPoseKeepsGroundIlluminationAtCruiseLevel(WitchState state, float height)
+        {
+            controller.enabled = false;
+            float baseIntensity = fireLight.intensity;
+            witch.transform.position = Vector3.up * (height - 1.5f);
+            var ball = new GameObject("FireBall");
+            ball.transform.SetParent(witch.transform, false);
+            ball.transform.localPosition = Vector3.up * 1.5f;
+            controller.fireBall = ball;
+            fireLight.transform.SetParent(ball.transform, false);
+
+            controller.ShowPose(state, true);
+
+            Assert.IsTrue(fireLight.enabled);
+            Assert.AreEqual(baseIntensity / (14f * 14f), fireLight.intensity / (height * height), 1e-5f);
+        }
+
+        [Test]
+        public void ShowPoseUsesGroundMaskAndIgnoresTriggers()
+        {
+            controller.enabled = false;
+            float baseIntensity = fireLight.intensity;
+            witch.transform.position = Vector3.up * 5f;
+            var canopy = AddBox("Canopy", Vector3.up * 3f, Vector3.one);
+            canopy.gameObject.layer = 8;
+            var trigger = AddBox("Trigger", Vector3.up * 2f, Vector3.one);
+            trigger.isTrigger = true;
+            controller.groundMask = 1 << ground.layer;
+            Physics.SyncTransforms();
+
+            controller.ShowPose(WitchState.Flying, true);
+
+            Assert.AreEqual(baseIntensity * 25f / 196f, fireLight.intensity, 1e-5f);
+        }
+
+        [Test]
+        public void ShowPoseMeasuresFromLightAndIgnoresCharacterColliders()
+        {
+            controller.enabled = false;
+            float baseIntensity = fireLight.intensity;
+            witch.transform.position = Vector3.up * 5f;
+            fireLight.transform.localPosition = Vector3.up * 1.5f;
+            var ball = new GameObject("FireBall");
+            ball.transform.SetParent(witch.transform, false);
+            controller.fireBall = ball;
+            var body = AddBox("WitchBody", Vector3.up * 4f, Vector3.one);
+            body.transform.SetParent(witch.transform, true);
+            player.transform.position = Vector3.zero;
+            Physics.SyncTransforms();
+
+            controller.ShowPose(WitchState.Flying, true);
+
+            Assert.AreEqual(WitchPoses.FireIntensity(baseIntensity, 6.5f, controller.fireFullHeight),
+                fireLight.intensity, 1e-5f);
+        }
+
+        [Test]
+        public void ShowPoseRestoresBaseIntensityWithoutGround()
+        {
+            controller.enabled = false;
+            float baseIntensity = fireLight.intensity;
+            witch.transform.position = Vector3.up * 5f;
+            controller.ShowPose(WitchState.Flying, true);
+            Assert.Less(fireLight.intensity, baseIntensity);
+            ground.GetComponent<BoxCollider>().enabled = false;
+            Physics.SyncTransforms();
+
+            controller.ShowPose(WitchState.Flying, true);
+
+            Assert.AreEqual(baseIntensity, fireLight.intensity, 1e-5f);
+        }
+
         [UnityTest]
         public IEnumerator FlyingFollowsSkyRouteWithFireAndWithoutAgent()
         {
@@ -86,6 +162,92 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchState.Flying, controller.Decision.State);
             Assert.IsFalse(agent.enabled);
             Assert.IsTrue(fireLight.enabled);
+        }
+
+        [UnityTest]
+        public IEnumerator TakingOffKeepsFireDimNearGround()
+        {
+            float baseIntensity = fireLight.intensity;
+            fireLight.transform.localPosition = Vector3.up * 1.5f;
+            controller.raining = true;
+            yield return WaitForStalking();
+            controller.raining = false;
+            controller.playerVanished = true;
+            yield return WaitForState(WitchState.TakingOff, 10f);
+
+            float groundHeight = ground.GetComponent<BoxCollider>().bounds.max.y;
+            int nearGroundFrames = 0;
+            while (controller.Decision.State == WitchState.TakingOff)
+            {
+                float height = fireLight.transform.position.y - groundHeight;
+                if (height >= 4f) break;
+                Assert.IsTrue(fireLight.enabled);
+                Assert.Less(fireLight.intensity, baseIntensity * 0.1f);
+                Assert.AreEqual(WitchPoses.FireIntensity(baseIntensity, height, controller.fireFullHeight),
+                    fireLight.intensity, baseIntensity * 1e-5f);
+                nearGroundFrames++;
+                yield return null;
+            }
+
+            Assert.Greater(nearGroundFrames, 1);
+        }
+
+        [UnityTest]
+        public IEnumerator FlyingUsesLightHeightAboveFlatGround()
+        {
+            float baseIntensity = fireLight.intensity;
+            fireLight.transform.localPosition = Vector3.up * 1.5f;
+            controller.fireFullHeight = 18f;
+            float groundHeight = ground.GetComponent<BoxCollider>().bounds.max.y;
+
+            for (int i = 0; i < 5; i++)
+            {
+                yield return null;
+                Assert.AreEqual(WitchState.Flying, controller.Decision.State);
+                Assert.AreEqual(controller.skyRoute[0].y, witch.transform.position.y, 1e-4f);
+                float height = fireLight.transform.position.y - groundHeight;
+                float expected = WitchPoses.FireIntensity(baseIntensity, height, controller.fireFullHeight);
+                Assert.IsTrue(fireLight.enabled);
+                Assert.AreEqual(expected, fireLight.intensity, expected * 0.1f);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator LiveCaptureKeepsControllerRunningThroughLanding()
+        {
+            var character = player.AddComponent<CharacterController>();
+            character.height = 1.2f;
+            character.center = Vector3.up * 0.6f;
+            var stage = world.AddComponent<WitchCaptureStage>();
+            stage.live = true;
+            Vector3 witchPosition = witch.transform.position;
+
+            stage.Apply(player.transform);
+
+            Assert.IsTrue(controller.enabled);
+            Assert.IsTrue(character.enabled);
+            Assert.AreEqual(witchPosition, witch.transform.position);
+            Assert.AreEqual(new Vector3(witchPosition.x, 0f, witchPosition.z), player.transform.position);
+            Assert.IsNull(GameObject.Find("Witch Capture Light"));
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Landing");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Stalking");
+            yield return WaitForStalking();
+        }
+
+        [Test]
+        public void GroundCapturePlacesWitchOnSurfaceBelowOffset()
+        {
+            player.transform.position = Vector3.zero;
+            var platform = AddBox("Platform", new Vector3(1.5f, 0.5f, 3f), new Vector3(4f, 1f, 4f));
+            var stage = world.AddComponent<WitchCaptureStage>();
+            stage.state = WitchState.Stalking;
+            stage.witchOffset = new Vector3(1.5f, 0f, 3f);
+            stage.lightWitch = false;
+
+            stage.Apply(player.transform);
+
+            Assert.IsFalse(controller.enabled);
+            Assert.AreEqual(new Vector3(1.5f, platform.bounds.max.y, 3f), witch.transform.position);
         }
 
         [UnityTest]
@@ -219,6 +381,10 @@ namespace TiffanyGame.Tests
             AddBox("UnbakedPlatform", new Vector3(0f, 29.5f, 0f), new Vector3(6f, 1f, 6f));
             witch.transform.position = new Vector3(0f, 44f, 0f);
             controller.raining = true;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Landing");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Stalking");
+            LogAssert.Expect(LogType.Warning,
+                $"{GameInfo.LogPrefix} La bruja no encontró NavMesh cerca de {new Vector3(0f, 30f, 0f)}.");
             yield return WaitForState(WitchState.Stalking, 4f);
 
             int disconnectedFrames = 0;
@@ -238,6 +404,14 @@ namespace TiffanyGame.Tests
 
             Assert.IsTrue(agent.enabled && agent.isOnNavMesh);
             Assert.Less(Mathf.Abs(witch.transform.position.y), 0.3f);
+
+            agent.enabled = false;
+            controller.enabled = false;
+            witch.transform.position = new Vector3(0f, 30f, 0f);
+            controller.enabled = true;
+            for (int i = 0; i < 3; i++) yield return null;
+            Assert.IsFalse(agent.enabled);
+            LogAssert.NoUnexpectedReceived();
         }
 
         [UnityTest]

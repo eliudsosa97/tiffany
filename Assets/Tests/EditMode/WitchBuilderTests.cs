@@ -13,7 +13,7 @@ namespace TiffanyGame.Tests
         [SetUp]
         public void SetUp()
         {
-            WitchBuilder.materialFolder = "Assets/WitchBuilderTestTemp/Materials";
+            GeneratedMaterials.folder = "Assets/WitchBuilderTestTemp/Materials";
             root = new GameObject("WitchBuilderTests");
         }
 
@@ -22,7 +22,7 @@ namespace TiffanyGame.Tests
         {
             Object.DestroyImmediate(root);
             AssetDatabase.DeleteAsset("Assets/WitchBuilderTestTemp");
-            WitchBuilder.materialFolder = WitchBuilder.MaterialFolder;
+            GeneratedMaterials.folder = GeneratedMaterials.DefaultFolder;
         }
 
         [Test]
@@ -83,7 +83,7 @@ namespace TiffanyGame.Tests
             foreach (var renderer in renderers)
             {
                 Assert.IsTrue(AssetDatabase.Contains(renderer.sharedMaterial), renderer.name);
-                StringAssert.StartsWith(WitchBuilder.materialFolder + "/", AssetDatabase.GetAssetPath(renderer.sharedMaterial));
+                StringAssert.StartsWith(GeneratedMaterials.folder + "/", AssetDatabase.GetAssetPath(renderer.sharedMaterial));
                 Assert.AreEqual(ShadowCastingMode.On, renderer.shadowCastingMode, renderer.name);
                 Assert.IsTrue(renderer.receiveShadows, renderer.name);
                 Assert.AreEqual("Universal Render Pipeline/Lit", renderer.sharedMaterial.shader.name);
@@ -121,7 +121,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(ShadowCastingMode.Off, renderer.shadowCastingMode);
             Assert.IsFalse(renderer.receiveShadows);
             Assert.IsTrue(AssetDatabase.Contains(renderer.sharedMaterial));
-            StringAssert.StartsWith(WitchBuilder.materialFolder + "/", AssetDatabase.GetAssetPath(renderer.sharedMaterial));
+            StringAssert.StartsWith(GeneratedMaterials.folder + "/", AssetDatabase.GetAssetPath(renderer.sharedMaterial));
             Assert.AreEqual("Universal Render Pipeline/Unlit", renderer.sharedMaterial.shader.name);
         }
 
@@ -129,7 +129,7 @@ namespace TiffanyGame.Tests
         public void MaterialsKeepTheirGuidWhenRebuilt()
         {
             WitchBuilder.BuildFigure(root.transform);
-            string path = $"{WitchBuilder.materialFolder}/WitchSkin.mat";
+            string path = $"{GeneratedMaterials.folder}/WitchSkin.mat";
             string guid = AssetDatabase.AssetPathToGUID(path);
             Assert.IsNotEmpty(guid);
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -146,7 +146,7 @@ namespace TiffanyGame.Tests
         [Test]
         public void TestsLeaveNoMaterialsInTheSceneFolder()
         {
-            string path = WitchBuilder.MaterialFolder + "/WitchSkin.mat";
+            string path = GeneratedMaterials.DefaultFolder + "/WitchSkin.mat";
             if (AssetDatabase.LoadAssetAtPath<Material>(path) != null)
                 Assert.Ignore("El material de la escena ya existía antes del test.");
 

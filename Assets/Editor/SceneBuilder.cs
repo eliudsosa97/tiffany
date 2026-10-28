@@ -1,7 +1,9 @@
 using System;
+using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 
 namespace TiffanyGame.EditorTools
@@ -9,7 +11,6 @@ namespace TiffanyGame.EditorTools
     public static class SceneBuilder
     {
         public const string ScenePath = "Assets/Scenes/Main.unity";
-        const string MaterialFolder = "Assets/Scenes/Generated/Materials";
         const float SlopeAngle = 8f;
         const float PatchHeight = 0.1f;
         const float PatchElevation = 0.03f;
@@ -24,6 +25,7 @@ namespace TiffanyGame.EditorTools
             var spawn = BuildTestZone();
             var player = CreatePlayer(spawn);
             CreateCamera(player);
+            BuildWitch(spawn.parent, player.transform);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -75,7 +77,7 @@ namespace TiffanyGame.EditorTools
             var normal = rotation * Vector3.up;
             var slope = CreatePrimitive("Hillside", PrimitiveType.Cube, root,
                 -normal * 0.5f, new Vector3(60f, 1f, 60f),
-                GetMaterial("Hillside", new Color(0.095f, 0.11f, 0.14f)));
+                GeneratedMaterials.Get("Hillside", new Color(0.095f, 0.11f, 0.14f)));
             slope.transform.rotation = rotation;
 
             var colors = new[]
@@ -98,7 +100,7 @@ namespace TiffanyGame.EditorTools
                 var top = SurfacePoint(x, alongSlope) + normal * PatchElevation;
                 var patch = CreatePrimitive($"Ground {type}", PrimitiveType.Cube, root,
                     top - normal * (PatchHeight * 0.5f), new Vector3(10f, PatchHeight, 10f),
-                    GetMaterial($"Ground{type}", colors[i]));
+                    GeneratedMaterials.Get($"Ground{type}", colors[i]));
                 patch.transform.rotation = rotation;
                 patch.AddComponent<GroundSurface>().type = type;
 
@@ -121,6 +123,84 @@ namespace TiffanyGame.EditorTools
             spawn.SetParent(root, false);
             spawn.position = SurfacePoint(0f, 0f);
             return spawn;
+        }
+
+        static void BakeNavMesh(Transform zoneRoot)
+        {
+            var surface = zoneRoot.gameObject.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.Children;
+            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            Physics.SyncTransforms();
+            surface.BuildNavMesh();
+            surface.navMeshData.name = "WitchNavMesh";
+            const string path = "Assets/Scenes/Generated/WitchNavMesh.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<NavMeshData>(path);
+            if (existing != null)
+            {
+                EditorUtility.CopySerialized(surface.navMeshData, existing);
+                surface.navMeshData = existing;
+                EditorUtility.SetDirty(existing);
+            }
+            else
+            {
+                AssetDatabase.CreateAsset(surface.navMeshData, path);
+            }
+        }
+
+        static void BuildWitch(Transform zoneRoot, Transform player)
+        {
+            BakeNavMesh(zoneRoot);
+            var route = new[]
+            {
+                SurfacePoint(-20f, -20f) + Vector3.up * 14f,
+                SurfacePoint(20f, -20f) + Vector3.up * 14f,
+                SurfacePoint(20f, 20f) + Vector3.up * 14f,
+                SurfacePoint(-20f, 20f) + Vector3.up * 14f
+            };
+            var witch = new GameObject("Witch");
+            witch.transform.SetParent(zoneRoot, false);
+            witch.transform.position = route[0];
+            var agent = witch.AddComponent<NavMeshAgent>();
+            agent.radius = 0.35f;
+            agent.height = 2.3f;
+            agent.enabled = false;
+            var controller = witch.AddComponent<WitchController>();
+            controller.player = player;
+            controller.skyRoute = route;
+            controller.chapter = Chapter.Ravine;
+            controller.figure = WitchBuilder.BuildFigure(witch.transform);
+            controller.fireLight = WitchBuilder.BuildFireBall(witch.transform, out var ball);
+            ball.transform.localPosition = Vector3.up * 1.5f;
+            controller.fireBall = ball;
+
+            var liveStop = new GameObject("Witch 0 Live");
+            liveStop.transform.SetParent(zoneRoot, false);
+            liveStop.transform.position = SurfacePoint(0f, -4f);
+            liveStop.AddComponent<CaptureStop>().wait = 6f;
+            liveStop.AddComponent<WitchCaptureStage>().live = true;
+
+            var states = new[] { WitchState.Flying, WitchState.Landing, WitchState.Stalking, WitchState.WindUp,
+                WitchState.Sprinting, WitchState.Recovering, WitchState.TakingOff };
+            for (int i = 0; i < states.Length; i++)
+            {
+                var stop = new GameObject($"Witch {i + 1} {states[i]}");
+                stop.transform.SetParent(zoneRoot, false);
+                stop.transform.position = SurfacePoint(0f, -4f);
+                var capture = stop.AddComponent<CaptureStop>();
+                capture.overrideCamera = states[i] == WitchState.Flying;
+                if (capture.overrideCamera)
+                {
+                    capture.cameraPosition = SurfacePoint(0f, -4f) + new Vector3(0f, 8f, -34f);
+                    capture.cameraRotation = Quaternion.LookRotation(Vector3.forward);
+                }
+                capture.wait = 1.5f;
+                var stage = stop.AddComponent<WitchCaptureStage>();
+                stage.state = states[i];
+                stage.fireLit = stage.state == WitchState.Flying || stage.state == WitchState.TakingOff;
+                stage.witchOffset = stage.state == WitchState.Flying ? new Vector3(0f, 14f, 6f)
+                    : stage.state == WitchState.TakingOff ? new Vector3(2f, 3f, 5f)
+                    : stage.state == WitchState.Landing ? new Vector3(2f, 2.5f, 6f) : new Vector3(1.5f, 0f, 3f);
+            }
         }
 
         static Vector3 SurfacePoint(float x, float alongSlope)
@@ -151,11 +231,11 @@ namespace TiffanyGame.EditorTools
 
             var body = CreatePrimitive("Body", PrimitiveType.Capsule, player.transform,
                 new Vector3(0f, 0.6f, 0f), new Vector3(0.5f, 0.6f, 0.5f),
-                GetMaterial("TiffanyBody", new Color(0.86f, 0.86f, 0.72f)));
+                GeneratedMaterials.Get("TiffanyBody", new Color(0.86f, 0.86f, 0.72f)));
             UnityEngine.Object.DestroyImmediate(body.GetComponent<CapsuleCollider>());
             var facing = CreatePrimitive("Facing", PrimitiveType.Cube, player.transform,
                 new Vector3(0f, 0.97f, 0.26f), new Vector3(0.18f, 0.14f, 0.18f),
-                GetMaterial("TiffanyFacing", new Color(0.8f, 0.43f, 0.16f)));
+                GeneratedMaterials.Get("TiffanyFacing", new Color(0.8f, 0.43f, 0.16f)));
             UnityEngine.Object.DestroyImmediate(facing.GetComponent<BoxCollider>());
             return player.AddComponent<PlayerController>();
         }
@@ -186,36 +266,6 @@ namespace TiffanyGame.EditorTools
             instance.transform.localScale = scale;
             instance.GetComponent<Renderer>().sharedMaterial = material;
             return instance;
-        }
-
-        static Material GetMaterial(string name, Color color)
-        {
-            EnsureFolder(MaterialFolder);
-            var shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null)
-                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el shader URP/Lit.");
-
-            string path = $"{MaterialFolder}/{name}.mat";
-            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            bool isNew = material == null;
-            if (isNew) material = new Material(shader) { name = name };
-            else material.shader = shader;
-
-            material.SetColor("_BaseColor", color);
-            material.SetFloat("_Smoothness", 0.08f);
-            material.SetFloat("_Metallic", 0f);
-            if (isNew) AssetDatabase.CreateAsset(material, path);
-            else EditorUtility.SetDirty(material);
-            return material;
-        }
-
-        static void EnsureFolder(string path)
-        {
-            if (AssetDatabase.IsValidFolder(path)) return;
-            int separator = path.LastIndexOf('/');
-            string parent = path.Substring(0, separator);
-            EnsureFolder(parent);
-            AssetDatabase.CreateFolder(parent, path.Substring(separator + 1));
         }
 
         static void SaveScene()
