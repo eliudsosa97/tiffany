@@ -49,6 +49,9 @@ namespace TiffanyGame.EditorTools
             player.gameInterface = ui;
             player.blackout = blackout;
             player.stageRoot = stage.gameObject;
+            Physics.SyncTransforms();
+            if (Physics.Raycast(spot.transform.position + Vector3.up * 3f, Vector3.down, out var ground,
+                Mathf.Infinity, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) player.ground = ground.collider;
             player.girl = Root("Living Girl", stage);
             Part("Girl", PrimitiveType.Capsule, player.girl, new Vector3(0f, 0.6f, 0f), new Vector3(0.38f, 0.6f, 0.34f), palette.pale);
             Part("Facing", PrimitiveType.Sphere, player.girl, new Vector3(0f, 1f, 0.16f), Vector3.one * 0.1f, palette.stone);
@@ -61,6 +64,8 @@ namespace TiffanyGame.EditorTools
                 Part("Ear", PrimitiveType.Cube, player.tyler, new Vector3(i * 0.14f, 0.38f, 0.38f), new Vector3(0.08f, 0.24f, 0.16f), palette.pale);
                 Part("Paw", PrimitiveType.Cube, player.tyler, new Vector3(i * 0.14f, 0.07f, 0.24f), new Vector3(0.1f, 0.14f, 0.35f), palette.pale);
             }
+            player.ApplyPose(player.girl, EchoEvaluator.Pose(data.girl, 0f));
+            player.ApplyPose(player.tyler, EchoEvaluator.Pose(data.tyler, 0f));
             player.props = new Transform[data.props.Length];
             for (int i = 0; i < data.props.Length; i++)
             {
@@ -68,10 +73,7 @@ namespace TiffanyGame.EditorTools
                 var parent = prop.parent == "girl" ? player.girl : prop.parent == "tyler" ? player.tyler : stage;
                 var root = Root(prop.type, parent);
                 BuildProp(prop.type, root, palette);
-                var pose = EchoEvaluator.Pose(prop, 0f);
-                root.SetLocalPositionAndRotation(pose.Position, pose.Rotation);
-                root.localScale = pose.Scale;
-                root.gameObject.SetActive(pose.Visible);
+                player.ApplyPose(root, EchoEvaluator.Pose(prop, 0f));
                 player.props[i] = root;
             }
             int count = 0;

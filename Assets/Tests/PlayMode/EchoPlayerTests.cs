@@ -37,6 +37,11 @@ namespace TiffanyGame.Tests
             player.stageRoot = Child("Stage", owner.transform);
             player.girl = Child("Girl", player.stageRoot.transform).transform;
             player.tyler = Child("Tyler", player.stageRoot.transform).transform;
+            player.props = new[]
+            {
+                Child("Ball", player.stageRoot.transform).transform,
+                Child("Ribbon", player.girl).transform
+            };
             var data = new EchoData
             {
                 id = 1,
@@ -49,7 +54,11 @@ namespace TiffanyGame.Tests
                 tyler = new EchoTrack { disappear = 10f },
                 subtitles = new[] { new EchoSubtitle { time = 0.1f, duration = 8f, text = "¡Tyler!" } },
                 sounds = Array.Empty<EchoSound>(),
-                props = Array.Empty<EchoProp>(),
+                props = new[]
+                {
+                    new EchoProp { type = "ball", position = new Vector3(1f, 0.2f, 1f), disappear = 10f },
+                    new EchoProp { type = "ribbon", parent = "girl", position = new Vector3(0.2f, 0.7f, 0f), disappear = 10f }
+                },
                 blackout = new EchoBlackout { time = 1f, duration = 0.1f }
             };
             asset = new TextAsset(JsonUtility.ToJson(data)) { name = "test-echo" };
@@ -107,6 +116,38 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(player.stageRoot.activeSelf);
             Assert.IsFalse(player.blackout.gameObject.activeSelf);
             Assert.AreEqual("Anterior", ui.subtitleText.text);
+        }
+
+        [UnityTest] public IEnumerator MovingFiguresAndWorldPropsFollowTheGroundWhileHeldPropsKeepTheirOffsets()
+        {
+            root.transform.SetPositionAndRotation(new Vector3(108f, 7f, 168f), Quaternion.Euler(0f, 35f, 0f));
+            var ground = Child("Ground", root.transform, typeof(BoxCollider));
+            ground.transform.localPosition = Vector3.down;
+            ground.transform.localRotation = Quaternion.Euler(8f, 0f, -6f);
+            ground.transform.localScale = new Vector3(40f, 1f, 40f);
+            player.ground = ground.GetComponent<Collider>();
+            var roof = Child("Roof", root.transform, typeof(BoxCollider));
+            roof.transform.localPosition = Vector3.up * 3f;
+            roof.transform.localScale = new Vector3(40f, 0.5f, 40f);
+            Physics.SyncTransforms();
+            var surface = new Plane(ground.transform.up, ground.transform.TransformPoint(Vector3.up * 0.5f));
+            Assert.IsTrue(player.Play());
+            for (int i = 0; i < 2; i++)
+            {
+                AssertOnGround(player.girl, EchoEvaluator.Pose(player.Data.girl, player.Elapsed).Position.y, surface);
+                AssertOnGround(player.tyler, 0f, surface);
+                AssertOnGround(player.props[0], player.Data.props[0].position.y, surface);
+                Assert.AreEqual(player.Data.props[1].position, player.props[1].localPosition);
+                yield return new WaitForSeconds(0.2f);
+            }
+            Assert.Greater(player.girl.localPosition.x, 0f);
+        }
+
+        static void AssertOnGround(Transform target, float offset, Plane surface)
+        {
+            Vector3 position = target.position;
+            float height = -(surface.normal.x * position.x + surface.normal.z * position.z + surface.distance) / surface.normal.y;
+            Assert.AreEqual(height + offset, position.y, 0.001f, target.name);
         }
 
         static GameObject Child(string name, Transform parent, params Type[] components)

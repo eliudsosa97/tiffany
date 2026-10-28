@@ -10,6 +10,7 @@ namespace TiffanyGame
         public GameInterface gameInterface;
         public Image blackout;
         public GameObject stageRoot;
+        public Collider ground;
         public Transform girl;
         public Transform tyler;
         public Transform[] props = Array.Empty<Transform>();
@@ -109,11 +110,15 @@ namespace TiffanyGame
             ApplyAudio();
         }
 
-        static void ApplyPose(Transform target, EchoPose pose)
+        public void ApplyPose(Transform target, EchoPose pose)
         {
             if (target.gameObject.activeSelf != pose.Visible) target.gameObject.SetActive(pose.Visible);
             target.SetLocalPositionAndRotation(pose.Position, pose.Rotation);
             target.localScale = pose.Scale;
+            if (ground == null || target.parent != stageRoot.transform) return;
+            Vector3 position = stageRoot.transform.TransformPoint(new Vector3(pose.Position.x, 0f, pose.Position.z));
+            if (ground.Raycast(new Ray(position + Vector3.up * 30f, Vector3.down), out var hit, 60f))
+                target.position += Vector3.up * (hit.point.y - position.y);
         }
 
         void ApplyAudio()

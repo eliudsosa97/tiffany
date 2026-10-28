@@ -11,6 +11,7 @@ namespace TiffanyGame.Tests
     {
         private static readonly float[] SlopeAngles = { 8f, -8f };
         private static readonly bool[] CaptureFlashCases = { false, true };
+        private static readonly bool[] LightStates = { false, true };
         private static readonly (float, bool, bool)[] GroundedFlashCases =
         {
             (5f, true, true),
@@ -33,13 +34,25 @@ namespace TiffanyGame.Tests
         public void SetUp()
         {
             SafeZones.Clear();
+            Time.timeScale = 1f;
+            GameInput.InteractOverride = false;
             world = new GameObject("PlayerLightTestWorld");
             ground = AddBox("Ground", Vector3.down * 0.5f, new Vector3(80f, 1f, 80f)).gameObject;
+            CreatePlayer();
+        }
+
+        private void CreatePlayer(bool canHide = false)
+        {
             player = new GameObject("Player") { tag = "Player" };
             player.SetActive(false);
             player.transform.SetParent(world.transform, false);
             soul = player.AddComponent<PlayerSoul>();
             soul.startingPowers = new[] { Power.Light };
+            if (canHide)
+            {
+                player.AddComponent<PlayerController>().enabled = false;
+                player.AddComponent<PlayerHiding>();
+            }
             spot = new GameObject("Soul Light").AddComponent<Light>();
             spot.transform.SetParent(player.transform, false);
             spot.transform.localPosition = new Vector3(0f, 2.4f, -0.3f);
@@ -64,6 +77,8 @@ namespace TiffanyGame.Tests
         public IEnumerator TearDown()
         {
             SafeZones.Clear();
+            Time.timeScale = 1f;
+            GameInput.ClearOverrides();
             if (surface != null)
             {
                 surface.RemoveData();
@@ -259,6 +274,99 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(controller.playerLightOn);
             Assert.Greater(soul.Energy.Current, 98f);
             Assert.IsFalse(playerLight.State.IsFlashing);
+        }
+
+        [UnityTest]
+        public IEnumerator FlashRequiresClearChestRayOnSlope([ValueSource(nameof(SlopeAngles))] float angle)
+        {
+            ground.transform.rotation = Quaternion.Euler(angle, 0f, 0f);
+            ground.transform.position = -ground.transform.up * 0.5f;
+            player.transform.position = new Vector3(20f, 0f, 0f);
+            CreateWitch();
+            float deadline = Time.time + 6f;
+            while (Time.time < deadline && controller.Decision.State != WitchState.Stalking) yield return null;
+            Assert.AreEqual(WitchForm.Grounded, controller.Decision.Form);
+            PlacePlayerNearWitch(5f, true);
+            var position = player.transform.position;
+            position.y = -position.z * Mathf.Tan(angle * Mathf.Deg2Rad);
+            player.transform.position = position;
+            var middle = (position + controller.transform.position) * 0.5f + Vector3.up * 0.75f;
+            var size = new Vector3(1.5f, 1.5f, 0.5f);
+            var blocker = AddBox("Flash Blocker", middle, size);
+            Physics.SyncTransforms();
+            float energy = soul.Energy.Current;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello");
+            Assert.IsTrue(playerLight.TryFlash());
+            Assert.AreEqual(energy - SoulCosts.Flash, soul.Energy.Current, 1e-4f);
+            Assert.IsTrue(playerLight.State.IsFlashing);
+            yield return null;
+            Assert.IsTrue(spot.enabled && glow.gameObject.activeSelf);
+            Assert.AreNotEqual(WitchState.Stunned, controller.Decision.State);
+            blocker.enabled = false;
+            AddBox("Own Collider", middle, size).transform.SetParent(player.transform, true);
+            AddBox("Witch Collider", middle, size).transform.SetParent(controller.transform, true);
+            AddBox("Trigger", middle, size).isTrigger = true;
+            AddBox("Excluded", middle, size).gameObject.layer = 8;
+            playerLight.occluderMask = ~(1 << 8);
+            Physics.SyncTransforms();
+            soul.Energy.ResetTo(SoulEnergy.Max);
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello, la bruja queda aturdida");
+            Assert.IsTrue(playerLight.TryFlash());
+            deadline = Time.time + 0.5f;
+            while (Time.time < deadline && controller.Decision.State != WitchState.Stunned) yield return null;
+            Assert.AreEqual(WitchState.Stunned, controller.Decision.State);
+        }
+
+        [UnityTest]
+        public IEnumerator HidingExtinguishesLightAndBlocksToggleAndFlash()
+        {
+            player.SetActive(false);
+            CreatePlayer(true);
+            CreateWitch(Chapter.Grave);
+            yield return null;
+            Assert.IsTrue(playerLight.State.IsOn && controller.playerLightOn);
+            var volume = AddBox("Hide Volume", Vector3.up * 0.75f, Vector3.one * 1.5f)
+                .gameObject.AddComponent<HideVolume>();
+            Physics.SyncTransforms();
+            var hiding = player.GetComponent<PlayerHiding>();
+            hiding.Hide(volume);
+            yield return null;
+            Assert.IsFalse(controller.playerLightOn || playerLight.State.IsOn || spot.enabled || glow.gameObject.activeSelf);
+            float energy = soul.Energy.Current;
+            PressLightInput();
+            Assert.IsFalse(playerLight.State.Visible || controller.playerLightOn);
+            playerLight.Toggle();
+            Assert.IsFalse(playerLight.State.IsOn);
+            Assert.IsFalse(playerLight.TryFlash());
+            Assert.IsFalse(playerLight.State.Visible || controller.playerLightOn);
+            Assert.AreEqual(energy, soul.Energy.Current);
+            hiding.Leave();
+            yield return null;
+            Assert.IsFalse(playerLight.State.IsOn || controller.playerLightOn);
+        }
+
+        [UnityTest]
+        public IEnumerator PausedLightIgnoresToggleAndFlash([ValueSource(nameof(LightStates))] bool on)
+        {
+            yield return null;
+            if (!on) playerLight.Toggle();
+            Time.timeScale = 0f;
+            yield return null;
+            float energy = soul.Energy.Current;
+            PressLightInput();
+            yield return null;
+            Assert.AreEqual(on, playerLight.State.IsOn);
+            Assert.IsFalse(playerLight.State.IsFlashing);
+            Assert.AreEqual(energy, soul.Energy.Current);
+        }
+
+        private void PressLightInput()
+        {
+            GameInput.LightToggleOverride = true;
+            GameInput.FlashOverride = true;
+            Assert.IsTrue(GameInput.LightTogglePressed && GameInput.FlashPressed);
+            playerLight.SendMessage("Update");
+            GameInput.ClearOverrides();
         }
 
         private BoxCollider AddBox(string name, Vector3 position, Vector3? size = null)

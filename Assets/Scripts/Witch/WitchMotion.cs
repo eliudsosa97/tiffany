@@ -41,6 +41,21 @@ namespace TiffanyGame
             return height;
         }
 
+        public static Vector3 FarthestRoutePoint(IReadOnlyList<Vector3> route, Vector3 player, Vector3 fallback)
+        {
+            Vector3 result = fallback;
+            float farthest = -1f;
+            for (int i = 0; i < (route?.Count ?? 0); i++)
+            {
+                Vector3 offset = route[i] - player;
+                offset.y = 0f;
+                if (offset.sqrMagnitude <= farthest) continue;
+                farthest = offset.sqrMagnitude;
+                result = route[i];
+            }
+            return result;
+        }
+
         public static bool ShouldRepath(Vector3 current, Vector3 next, float threshold)
         {
             current.y = next.y;

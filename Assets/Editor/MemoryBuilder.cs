@@ -8,23 +8,21 @@ namespace TiffanyGame.EditorTools
     public static class MemoryBuilder
     {
         public static void Build(Transform zone, PlayerController player, GameInterface gameInterface,
-            TylerController tyler, Camera viewCamera)
+            TylerController tyler, Camera viewCamera, Transform[] positions,
+            string profilePath = "Assets/Scenes/Generated/EchoVolumeProfile.asset")
         {
-            var spots = new[]
-            {
-                BuildSpot(zone, 1, SceneBuilder.SurfacePoint(15f, 20f)),
-                BuildSpot(zone, 2, SceneBuilder.SurfacePoint(-15f, 22f)),
-                BuildSpot(zone, 3, SceneBuilder.SurfacePoint(0f, 22f)),
-                BuildSpot(zone, 4, SceneBuilder.SurfacePoint(-22f, 0f)),
-                BuildSpot(zone, 5, SceneBuilder.SurfacePoint(22f, 0f))
-            };
+            if (positions == null || positions.Length != 5)
+                throw new System.ArgumentException($"{GameInfo.LogPrefix} La ruta necesita cinco posiciones de recuerdos.", nameof(positions));
+            var spots = new MemorySpot[positions.Length];
+            for (int i = 0; i < spots.Length; i++)
+                spots[i] = BuildSpot(positions[i], i + 1, positions[i].position);
             var collector = player.gameObject.AddComponent<MemoryCollector>();
             collector.soul = player.GetComponent<PlayerSoul>();
             collector.hiding = player.GetComponent<PlayerHiding>();
             collector.gameInterface = gameInterface;
             collector.tyler = tyler;
             collector.spots = spots;
-            collector.echoVolume = BuildEchoVolume(zone);
+            collector.echoVolume = BuildEchoVolume(zone, profilePath);
             collector.viewCamera = viewCamera;
             var blackout = EchoBuilder.BuildBlackout(gameInterface);
             for (int i = 0; i < spots.Length; i++)
@@ -34,7 +32,8 @@ namespace TiffanyGame.EditorTools
                 EchoData.TryLoad(spot.echoPlayer.echoAsset.text, out var data, out _);
                 var stop = new GameObject($"Echo {spot.memoryId} Memory");
                 stop.transform.SetParent(zone, false);
-                stop.transform.SetPositionAndRotation(spot.transform.TransformPoint(new Vector3(-3f, 0f, -4f)), spot.transform.rotation);
+                Vector3 position = TylerCaptureStage.GroundPosition(spot.transform.TransformPoint(new Vector3(-3f, 0f, -4f)));
+                stop.transform.SetPositionAndRotation(position, spot.transform.rotation);
                 var capture = stop.AddComponent<CaptureStop>();
                 capture.wait = data.duration * 0.5f;
                 capture.overrideCamera = true;
@@ -47,8 +46,13 @@ namespace TiffanyGame.EditorTools
             }
             var preview = new GameObject("Memory 0 Spot");
             preview.transform.SetParent(zone, false);
-            preview.transform.position = SceneBuilder.SurfacePoint(15f, 18.5f);
-            preview.AddComponent<CaptureStop>();
+            var firstSpot = spots[0].transform;
+            preview.transform.SetPositionAndRotation(
+                TylerCaptureStage.GroundPosition(firstSpot.TransformPoint(Vector3.back * 1.5f)), firstSpot.rotation);
+            var previewCapture = preview.AddComponent<CaptureStop>();
+            previewCapture.overrideCamera = true;
+            previewCapture.cameraPosition = firstSpot.TransformPoint(new Vector3(4f, 3f, -3f));
+            previewCapture.cameraRotation = Quaternion.LookRotation(firstSpot.position - previewCapture.cameraPosition);
             preview.AddComponent<LightCaptureStage>().energy = SoulEnergy.Max;
             var memoryStage = preview.AddComponent<MemoryCaptureStage>();
             memoryStage.collector = collector;
@@ -56,10 +60,9 @@ namespace TiffanyGame.EditorTools
             memoryStage.collect = false;
         }
 
-        static Volume BuildEchoVolume(Transform zone)
+        static Volume BuildEchoVolume(Transform zone, string path)
         {
-            const string path = "Assets/Scenes/Generated/EchoVolumeProfile.asset";
-            GeneratedMaterials.EnsureFolder("Assets/Scenes/Generated");
+            GeneratedMaterials.EnsureFolder(System.IO.Path.GetDirectoryName(path));
             var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(path);
             if (profile == null)
             {
@@ -90,7 +93,7 @@ namespace TiffanyGame.EditorTools
             var root = new GameObject($"Memory {id}");
             root.transform.SetParent(zone, false);
             root.transform.position = position;
-            root.transform.rotation = Quaternion.LookRotation(SceneBuilder.SurfacePoint(0f, 1f) - SceneBuilder.SurfacePoint(0f, 0f));
+            GameObjectUtility.SetStaticEditorFlags(root, StaticEditorFlags.BatchingStatic);
             var sphere = root.AddComponent<SphereCollider>();
             sphere.radius = 1.2f;
             sphere.isTrigger = true;
@@ -108,7 +111,11 @@ namespace TiffanyGame.EditorTools
             material.SetColor("_EmissionColor", new Color(1f, 0.85f, 0.6f) * 0.2f);
             material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             EditorUtility.SetDirty(material);
-            visual.GetComponent<Renderer>().sharedMaterial = material;
+            var renderer = visual.GetComponent<Renderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            GameObjectUtility.SetStaticEditorFlags(visual, StaticEditorFlags.BatchingStatic);
             spot.visual = visual;
             return spot;
         }

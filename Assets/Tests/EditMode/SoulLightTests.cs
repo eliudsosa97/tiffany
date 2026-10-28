@@ -67,7 +67,7 @@ namespace TiffanyGame.Tests
         {
             powers.Unlock(Power.Light);
             light.Toggle();
-            Assert.IsTrue(light.TryFlash(false, false, out _));
+            Assert.IsTrue(light.TryFlash(false, false, true, out _));
             light.Tick(dt);
             Assert.AreEqual(50f, energy.Current);
             Assert.AreEqual(SoulLight.FlashDuration, light.FlashRemaining);
@@ -80,7 +80,7 @@ namespace TiffanyGame.Tests
         {
             powers.Unlock(Power.Light);
             if (on) light.Toggle();
-            Assert.IsTrue(light.TryFlash(false, false, out bool stuns));
+            Assert.IsTrue(light.TryFlash(false, false, true, out bool stuns));
             Assert.IsFalse(stuns);
             Assert.AreEqual(50f, energy.Current);
             Assert.AreEqual(on, light.IsOn);
@@ -105,7 +105,7 @@ namespace TiffanyGame.Tests
         {
             if (unlocked) powers.Unlock(Power.Light);
             energy.ResetTo(start);
-            Assert.IsFalse(light.TryFlash(true, true, out bool stuns));
+            Assert.IsFalse(light.TryFlash(true, true, true, out bool stuns));
             Assert.IsFalse(stuns);
             Assert.AreEqual(start, energy.Current);
             Assert.IsFalse(light.IsOn);
@@ -113,18 +113,47 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(light.Visible);
         }
 
-        [TestCase(false, false, false)]
-        [TestCase(false, true, false)]
-        [TestCase(true, false, false)]
-        [TestCase(true, true, true)]
-        public void FlashStunsOnlyGroundedWitchInCone(bool grounded, bool inCone, bool expected)
+        [TestCase(false, false, true, false)]
+        [TestCase(false, true, true, false)]
+        [TestCase(true, false, true, false)]
+        [TestCase(true, true, true, true)]
+        [TestCase(true, true, false, false)]
+        public void FlashStunsOnlyGroundedWitchInConeWithLineOfSight(
+            bool grounded, bool inCone, bool lineOfSight, bool expected)
         {
             powers.Unlock(Power.Light);
             energy.ResetTo(SoulCosts.Flash);
-            Assert.IsTrue(light.TryFlash(grounded, inCone, out bool stuns));
+            Assert.IsTrue(light.TryFlash(grounded, inCone, lineOfSight, out bool stuns));
             Assert.AreEqual(expected, stuns);
             Assert.AreEqual(0f, energy.Current);
             Assert.IsTrue(light.Visible);
+        }
+
+        [Test]
+        public void HidingExtinguishesLightAndFlashAndBlocksBothUntilLeaving()
+        {
+            powers.Unlock(Power.Light);
+            light.Toggle();
+            light.TryFlash(true, true, true, out _);
+            float remaining = energy.Current;
+            light.SetHidden(true);
+            Assert.IsFalse(light.IsOn || light.IsFlashing || light.Visible);
+            Assert.IsFalse(light.Toggle());
+            Assert.IsFalse(light.TryFlash(true, true, true, out bool stuns));
+            Assert.IsFalse(stuns);
+            Assert.AreEqual(remaining, energy.Current);
+            light.SetHidden(false);
+            Assert.IsFalse(light.Visible);
+            Assert.IsTrue(light.Toggle());
+        }
+
+        [TestCase(0f, false, false)]
+        [TestCase(1f, false, true)]
+        [TestCase(1f, true, false)]
+        public void InputRequiresRunningTimeAndExposedPlayer(float timeScale, bool hidden, bool expected)
+        {
+            light.SetHidden(hidden);
+            Assert.AreEqual(expected, light.CanReadInput(timeScale));
         }
 
         [TestCase(0f, 5f, 0f, true)]

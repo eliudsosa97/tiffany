@@ -89,6 +89,13 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(ui.notebookEmpty.gameObject.activeSelf);
             ui.ToggleNotebook();
 #endif
+            for (int id = 3; id <= 5; id++)
+            {
+                Assert.IsTrue(collector.Collect(id));
+                Assert.IsTrue(collector.soul.Powers.Has(PowerSet.ForMemory(id)));
+                if (id < 5) Assert.AreSame(collector.spots[id].transform, collector.tyler.nextMemory);
+            }
+            Assert.IsNull(collector.tyler.nextMemory);
             collector.enabled = false;
             Assert.AreEqual(0f, collector.echoVolume.weight);
             Assert.IsFalse(cameraData.renderPostProcessing);
@@ -100,6 +107,7 @@ namespace TiffanyGame.Tests
         {
             var stages = Object.FindObjectsByType<EchoCaptureStage>(FindObjectsSortMode.None);
             Assert.AreEqual(5, stages.Length);
+            var route = GameObject.Find("Route").transform;
             var player = collector.GetComponent<PlayerController>();
             player.enabled = false;
             var follow = collector.viewCamera.GetComponent<FollowCamera>();
@@ -115,6 +123,15 @@ namespace TiffanyGame.Tests
             collector.gameInterface.ReplaceSubtitle("Subtítulo anterior", 20f);
             foreach (var stage in stages)
             {
+                var clearing = route.GetChild(stage.spot.memoryId - 1);
+                Assert.AreSame(collector.spots[stage.spot.memoryId - 1], stage.spot);
+                Assert.IsTrue(stage.spot.transform.IsChildOf(clearing));
+                Assert.AreSame(stage.spot.transform, stage.spot.echoPlayer.stageRoot.transform.parent);
+                Assert.IsNotNull(stage.spot.echoPlayer.ground);
+                Assert.IsTrue(stage.spot.echoPlayer.ground.transform.IsChildOf(clearing));
+                Vector3 offset = stage.spot.transform.InverseTransformPoint(stage.transform.position);
+                Assert.AreEqual(-3f, offset.x, 0.001f);
+                Assert.AreEqual(-4f, offset.z, 0.001f);
                 Assert.AreEqual(stage.spot.memoryId, stage.spot.echoPlayer.Data.id);
                 Assert.AreEqual(stage.spot.echoPlayer.Data.duration * 0.5f, stage.GetComponent<CaptureStop>().wait);
                 foreach (var source in stage.spot.echoPlayer.sources)
@@ -126,6 +143,8 @@ namespace TiffanyGame.Tests
                 var power = PowerSet.ForMemory(stage.spot.memoryId);
                 bool hadPower = collector.soul.Powers.Has(power);
                 Assert.IsTrue(stage.Apply());
+                Assert.AreEqual(stage.transform.position, collector.transform.position);
+                Assert.AreEqual(stage.GetComponent<CaptureStop>().cameraPosition, collector.viewCamera.transform.position);
                 yield return new WaitForSeconds(0.1f);
                 Assert.IsTrue(stage.spot.echoPlayer.IsPlaying);
                 Assert.IsFalse(stage.spot.visual.activeSelf);
