@@ -24,29 +24,35 @@ namespace TiffanyGame.EditorTools
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             ConfigureNight();
             CreateMoon();
+            var world = new GameObject("World").transform;
             var spawn = BuildTestZone();
+            var testZone = spawn.parent;
+            testZone.SetParent(world, false);
             var player = CreatePlayer(spawn, out var playerLight);
-            var viewCamera = CreateCamera(player);
-            playerLight.witch = BuildWitch(spawn.parent, player.transform);
-            var tyler = BuildTyler(spawn.parent, player.transform);
             var storm = StormBuilder.BuildStorm(player.transform, spawn);
-            var firstCandle = BuildCandles(spawn.parent, player.GetComponent<PlayerSoul>(), storm);
+            var firstCandle = BuildCandles(testZone, player.GetComponent<PlayerSoul>(), storm);
             var gameInterface = BuildInterface(out var caughtFade);
+            BuildLightStops(testZone);
+            HidingBuilder.BuildHideTest(testZone, player);
+            var route = RouteBuilder.BuildRoute(world, player, storm, out var memories, out var skyRoute);
+            var viewCamera = CreateCamera(player);
+            BakeNavMesh(world);
+            playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute);
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
             respawn.witch = playerLight.witch;
             respawn.overlay = caughtFade;
-            BuildLightStops(spawn.parent);
-            HidingBuilder.BuildHideTest(spawn.parent, player);
-            MemoryBuilder.Build(spawn.parent, player, gameInterface, tyler, viewCamera);
-            PanicBuilder.BuildPanic(spawn, playerLight, tyler);
+            var tyler = BuildTyler(route.GetChild(0), player.transform, testZone, memories[0]);
+            tyler.transform.position = route.GetChild(0).Find("Ball").position + new Vector3(1.5f, -0.2f, 0f);
+            MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories);
+            PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
             var candleStop = new GameObject("Candle 1 Safe");
-            candleStop.transform.SetParent(spawn.parent, false);
+            candleStop.transform.SetParent(testZone, false);
             candleStop.transform.position = SurfacePoint(-5f, 1.5f);
             var capture = candleStop.AddComponent<CaptureStop>();
             capture.overrideCamera = false;
             capture.wait = 1.5f;
             candleStop.AddComponent<LightCaptureStage>().energy = SoulEnergy.Max;
-            PowerBuilder.BuildPowers(playerLight, spawn.parent, storm);
+            PowerBuilder.BuildPowers(playerLight, route.GetChild(0), storm);
             var caughtStop = new GameObject("Witch 8 Caught");
             caughtStop.transform.SetParent(spawn.parent, false);
             caughtStop.transform.position = spawn.position;
@@ -174,8 +180,12 @@ namespace TiffanyGame.EditorTools
             var existing = AssetDatabase.LoadAssetAtPath<NavMeshData>(path);
             if (existing != null)
             {
+                surface.RemoveData();
+                var generated = surface.navMeshData;
                 EditorUtility.CopySerialized(surface.navMeshData, existing);
                 surface.navMeshData = existing;
+                UnityEngine.Object.DestroyImmediate(generated);
+                surface.AddData();
                 EditorUtility.SetDirty(existing);
             }
             else
@@ -184,16 +194,8 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static WitchController BuildWitch(Transform zoneRoot, Transform player)
+        static WitchController BuildWitch(Transform zoneRoot, Transform player, Transform captureRoot, Vector3[] route)
         {
-            BakeNavMesh(zoneRoot);
-            var route = new[]
-            {
-                SurfacePoint(-20f, -20f) + Vector3.up * 14f,
-                SurfacePoint(20f, -20f) + Vector3.up * 14f,
-                SurfacePoint(20f, 20f) + Vector3.up * 14f,
-                SurfacePoint(-20f, 20f) + Vector3.up * 14f
-            };
             var witch = new GameObject("Witch");
             witch.transform.SetParent(zoneRoot, false);
             witch.transform.position = route[0];
@@ -213,7 +215,7 @@ namespace TiffanyGame.EditorTools
             controller.fireBall = ball;
 
             var liveStop = new GameObject("Witch 0 Live");
-            liveStop.transform.SetParent(zoneRoot, false);
+            liveStop.transform.SetParent(captureRoot, false);
             liveStop.transform.position = SurfacePoint(0f, -4f);
             liveStop.AddComponent<CaptureStop>().wait = 6f;
             liveStop.AddComponent<WitchCaptureStage>().live = true;
@@ -223,7 +225,7 @@ namespace TiffanyGame.EditorTools
             for (int i = 0; i < states.Length; i++)
             {
                 var stop = new GameObject($"Witch {i + 1} {states[i]}");
-                stop.transform.SetParent(zoneRoot, false);
+                stop.transform.SetParent(captureRoot, false);
                 stop.transform.position = SurfacePoint(0f, -4f);
                 var capture = stop.AddComponent<CaptureStop>();
                 capture.overrideCamera = states[i] == WitchState.Flying;
@@ -314,7 +316,7 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static TylerController BuildTyler(Transform zoneRoot, Transform player)
+        static TylerController BuildTyler(Transform zoneRoot, Transform player, Transform captureRoot, Transform nextMemory)
         {
             var tyler = new GameObject("Tyler");
             tyler.transform.SetParent(zoneRoot, false);
@@ -327,6 +329,7 @@ namespace TiffanyGame.EditorTools
             var controller = tyler.AddComponent<TylerController>();
             controller.player = player;
             controller.witch = zoneRoot.GetComponentInChildren<WitchController>();
+            controller.nextMemory = nextMemory;
             controller.figure = TylerBuilder.BuildFigure(tyler.transform, out var head, out var stand, out var crouch);
             controller.head = head;
             controller.standBody = stand;
@@ -339,7 +342,7 @@ namespace TiffanyGame.EditorTools
             for (int i = 0; i < reactions.Length; i++)
             {
                 var stop = new GameObject(names[i]);
-                stop.transform.SetParent(zoneRoot, false);
+                stop.transform.SetParent(captureRoot, false);
                 stop.transform.position = SurfacePoint(-6f, 4f);
                 var capture = stop.AddComponent<CaptureStop>();
                 var stage = stop.AddComponent<TylerCaptureStage>();
@@ -350,7 +353,7 @@ namespace TiffanyGame.EditorTools
                 Vector3 position = stage.GetTylerPosition(stop.transform);
                 Vector3 target = TylerPoses.For(stage.reaction).FaceWitch
                     ? stop.transform.position + stop.transform.rotation * stage.witchOffset
-                    : stage.reaction == TylerReaction.Guide ? SurfacePoint(15f, 20f) : stop.transform.position;
+                    : stage.reaction == TylerReaction.Guide ? nextMemory.position : stop.transform.position;
                 Vector3 direction = Vector3.ProjectOnPlane(target - position, Vector3.up).normalized;
                 Vector3 side = Vector3.Cross(Vector3.up, direction);
                 Vector3 toPlayer = Vector3.ProjectOnPlane(stop.transform.position - position, Vector3.up);
@@ -371,7 +374,7 @@ namespace TiffanyGame.EditorTools
             return new Vector3(x, z * Mathf.Tan(angle), z);
         }
 
-        static void CreateBorder(string name, Transform parent, Vector3 position,
+        internal static void CreateBorder(string name, Transform parent, Vector3 position,
             Quaternion rotation, Vector3 size)
         {
             var border = new GameObject(name);
@@ -546,7 +549,7 @@ namespace TiffanyGame.EditorTools
             return text;
         }
 
-        static GameObject CreatePrimitive(string name, PrimitiveType type, Transform parent,
+        internal static GameObject CreatePrimitive(string name, PrimitiveType type, Transform parent,
             Vector3 position, Vector3 scale, Material material)
         {
             var instance = GameObject.CreatePrimitive(type);
