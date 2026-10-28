@@ -101,6 +101,7 @@ namespace TiffanyGame.EditorTools
                 batches.Add(new ForestInstanceData.Batch { mesh = mesh, material = material, bounds = bounds, matrices = matrices.ToArray() });
                 triangles += mesh.GetIndexCount(0) / 3 * matrices.Count;
             }
+            triangles += ForestGroundBuilder.AddTreePatches(forest, batches);
             string folder = Path.GetDirectoryName(GeneratedMaterials.folder) + "/Forest";
             GeneratedMaterials.EnsureFolder(folder);
             string path = $"{folder}/{clearing.name}.asset";
