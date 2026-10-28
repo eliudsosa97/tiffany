@@ -7,6 +7,7 @@ namespace TiffanyGame
         public Transform[] clearings = System.Array.Empty<Transform>();
         public float clearingRadius = 30f;
         public WitchController witch;
+        public TensionMusic music;
         public PanicController panic;
         public AudioSource[] loops = System.Array.Empty<AudioSource>();
         public AudioClip[] loopClips = System.Array.Empty<AudioClip>();
@@ -38,7 +39,8 @@ namespace TiffanyGame
             {
                 var source = loops[i];
                 if (source == null) continue;
-                float previous = source.volume, volume = mix.Volume((AmbienceLayer)i);
+                float previous = source.volume, volume = mix.Volume((AmbienceLayer)i)
+                    * (music != null ? TensionMusicRules.AmbienceDuck(music.Level) : 1f);
                 source.volume = volume;
                 if (volume > 0f && previous <= 0f) source.Play();
                 else if (volume <= 0f && previous > 0f) source.Stop();
