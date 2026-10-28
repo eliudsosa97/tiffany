@@ -169,7 +169,9 @@ namespace TiffanyGame.EditorTools
             controller.player = player;
             controller.skyRoute = route;
             controller.chapter = Chapter.Ravine;
-            controller.figure = WitchBuilder.BuildFigure(witch.transform);
+            controller.figure = WitchBuilder.BuildFigure(witch.transform, out var stand, out var crouch);
+            controller.figureStand = stand;
+            controller.figureCrouch = crouch;
             controller.fireLight = WitchBuilder.BuildFireBall(witch.transform, out var ball);
             ball.transform.localPosition = Vector3.up * 1.5f;
             controller.fireBall = ball;

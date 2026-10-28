@@ -12,6 +12,8 @@ namespace TiffanyGame
         public Chapter chapter = Chapter.Ravine;
         public WitchSenseProfile senses = new WitchSenseProfile();
         public GameObject figure;
+        public GameObject figureStand;
+        public GameObject figureCrouch;
         public GameObject fireBall;
         public Light fireLight;
         public float fireFullHeight = 14f;
@@ -298,7 +300,7 @@ namespace TiffanyGame
         private void ApplyPose(WitchPose pose)
         {
             if (hasPose && lastPose.FigureVisible == pose.FigureVisible && lastPose.BallVisible == pose.BallVisible
-                && lastPose.LightOn == pose.LightOn && lastPose.FigureScale == pose.FigureScale
+                && lastPose.LightOn == pose.LightOn && lastPose.Crouched == pose.Crouched
                 && lastPose.FigureLean == pose.FigureLean) return;
 
             if (fireBall != null) fireBall.SetActive(pose.BallVisible);
@@ -306,7 +308,8 @@ namespace TiffanyGame
             if (figure != null)
             {
                 figure.SetActive(pose.FigureVisible);
-                figure.transform.localScale = pose.FigureScale;
+                if (figureStand != null) figureStand.SetActive(!pose.Crouched);
+                if (figureCrouch != null) figureCrouch.SetActive(pose.Crouched);
                 figure.transform.localRotation = Quaternion.Euler(pose.FigureLean, 0f, 0f);
             }
             lastPose = pose;

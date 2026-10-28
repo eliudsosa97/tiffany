@@ -75,6 +75,36 @@ namespace TiffanyGame.Tests
             yield return null;
         }
 
+        [Test]
+        public void ShowPoseSwitchesCrouchForWindUpWithoutScalingFigure()
+        {
+            controller.enabled = false;
+            var figure = new GameObject("WitchFigure");
+            figure.transform.SetParent(witch.transform, false);
+            controller.figure = figure;
+            var stand = new GameObject("WitchStand");
+            stand.transform.SetParent(figure.transform, false);
+            controller.figureStand = stand;
+            var crouch = new GameObject("WitchCrouch");
+            crouch.transform.SetParent(figure.transform, false);
+            controller.figureCrouch = crouch;
+            controller.ShowPose(WitchState.Stalking, false);
+
+            controller.ShowPose(WitchState.WindUp, false);
+
+            Assert.IsTrue(figure.activeSelf);
+            Assert.IsFalse(stand.activeSelf);
+            Assert.IsTrue(crouch.activeSelf);
+            Assert.AreEqual(Vector3.one, figure.transform.localScale);
+
+            controller.ShowPose(WitchState.Stalking, false);
+
+            Assert.IsTrue(figure.activeSelf);
+            Assert.IsTrue(stand.activeSelf);
+            Assert.IsFalse(crouch.activeSelf);
+            Assert.AreEqual(Vector3.one, figure.transform.localScale);
+        }
+
         [TestCase(WitchState.Flying, 1f)]
         [TestCase(WitchState.Flying, 5f)]
         [TestCase(WitchState.Flying, 14f)]

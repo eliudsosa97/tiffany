@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using UnityEngine;
 
 namespace TiffanyGame.Tests
 {
@@ -8,12 +7,12 @@ namespace TiffanyGame.Tests
         [Test]
         public void ConstructorPreservesEveryProperty()
         {
-            var pose = new WitchPose(true, true, true, new Vector3(2f, 3f, 4f), 12f);
+            var pose = new WitchPose(true, true, true, true, 12f);
 
             Assert.IsTrue(pose.FigureVisible);
             Assert.IsTrue(pose.BallVisible);
             Assert.IsTrue(pose.LightOn);
-            Assert.AreEqual(new Vector3(2f, 3f, 4f), pose.FigureScale);
+            Assert.IsTrue(pose.Crouched);
             Assert.AreEqual(12f, pose.FigureLean);
         }
 
@@ -30,17 +29,17 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(pose.FigureVisible);
             Assert.IsTrue(pose.BallVisible);
             Assert.AreEqual(lightOn, pose.LightOn);
-            Assert.AreEqual(Vector3.one, pose.FigureScale);
+            Assert.IsFalse(pose.Crouched);
             Assert.AreEqual(0f, pose.FigureLean);
         }
 
-        [TestCase(WitchState.Stalking, 1f, 1f, 0f)]
-        [TestCase(WitchState.Stunned, 1f, 1f, 0f)]
-        [TestCase(WitchState.Caught, 1f, 1f, 0f)]
-        [TestCase(WitchState.WindUp, 1.15f, 0.75f, 0f)]
-        [TestCase(WitchState.Sprinting, 1f, 1f, 30f)]
-        [TestCase(WitchState.Recovering, 1f, 1f, 15f)]
-        public void GroundedPoseShowsFigureWithoutFire(WitchState state, float width, float height, float lean)
+        [TestCase(WitchState.Stalking, false, 0f)]
+        [TestCase(WitchState.Stunned, false, 0f)]
+        [TestCase(WitchState.Caught, false, 0f)]
+        [TestCase(WitchState.WindUp, true, 0f)]
+        [TestCase(WitchState.Sprinting, false, 30f)]
+        [TestCase(WitchState.Recovering, false, 15f)]
+        public void GroundedPoseShowsFigureWithoutFire(WitchState state, bool crouched, float lean)
         {
             foreach (bool fireLit in new[] { false, true })
             {
@@ -49,7 +48,7 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(pose.FigureVisible);
                 Assert.IsFalse(pose.BallVisible);
                 Assert.IsFalse(pose.LightOn);
-                Assert.AreEqual(new Vector3(width, height, width), pose.FigureScale);
+                Assert.AreEqual(crouched, pose.Crouched);
                 Assert.AreEqual(lean, pose.FigureLean);
             }
         }

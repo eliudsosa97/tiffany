@@ -7,15 +7,15 @@ namespace TiffanyGame
         public bool FigureVisible { get; }
         public bool BallVisible { get; }
         public bool LightOn { get; }
-        public Vector3 FigureScale { get; }
+        public bool Crouched { get; }
         public float FigureLean { get; }
 
-        public WitchPose(bool figureVisible, bool ballVisible, bool lightOn, Vector3 figureScale, float figureLean)
+        public WitchPose(bool figureVisible, bool ballVisible, bool lightOn, bool crouched, float figureLean)
         {
             FigureVisible = figureVisible;
             BallVisible = ballVisible;
             LightOn = lightOn;
-            FigureScale = figureScale;
+            Crouched = crouched;
             FigureLean = figureLean;
         }
     }
@@ -27,19 +27,19 @@ namespace TiffanyGame
             switch (state)
             {
                 case WitchState.Flying:
-                    return new WitchPose(false, true, fireLit, Vector3.one, 0f);
+                    return new WitchPose(false, true, fireLit, false, 0f);
                 case WitchState.Landing:
-                    return new WitchPose(false, true, false, Vector3.one, 0f);
+                    return new WitchPose(false, true, false, false, 0f);
                 case WitchState.TakingOff:
-                    return new WitchPose(false, true, true, Vector3.one, 0f);
+                    return new WitchPose(false, true, true, false, 0f);
                 case WitchState.WindUp:
-                    return new WitchPose(true, false, false, new Vector3(1.15f, 0.75f, 1.15f), 0f);
+                    return new WitchPose(true, false, false, true, 0f);
                 case WitchState.Sprinting:
-                    return new WitchPose(true, false, false, Vector3.one, 30f);
+                    return new WitchPose(true, false, false, false, 30f);
                 case WitchState.Recovering:
-                    return new WitchPose(true, false, false, Vector3.one, 15f);
+                    return new WitchPose(true, false, false, false, 15f);
                 default:
-                    return new WitchPose(true, false, false, Vector3.one, 0f);
+                    return new WitchPose(true, false, false, false, 0f);
             }
         }
 
