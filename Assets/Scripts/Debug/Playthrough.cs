@@ -12,6 +12,10 @@ namespace TiffanyGame
         PlaythroughNavigation navigation;
         bool quitOnFinish, reported;
         int selected = -1;
+        int currentClearing = -1;
+        Bounds[] clearingBounds;
+        string[] clearingLabels;
+        float nextClearingCheck;
         string earlyError;
         static string startupError;
         public PlaythroughPlan Plan { get; private set; }
@@ -19,16 +23,23 @@ namespace TiffanyGame
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void BeforeSceneLoad()
         {
-#if !UNITY_WEBGL || UNITY_EDITOR
+#if UNITY_WEBGL && !UNITY_EDITOR
+#if TIFFANY_WEB_DEBUG
+            if (WebDebugQuery.Has(Application.absoluteURL, "playthrough")) SetStartupErrorCapture(true);
+#endif
+#else
             CaptureStartupErrors(Environment.GetCommandLineArgs());
 #endif
         }
 
-        public static void CaptureStartupErrors(string[] args)
+        public static void CaptureStartupErrors(string[] args) =>
+            SetStartupErrorCapture(Array.IndexOf(args, "-playthrough") >= 0);
+
+        static void SetStartupErrorCapture(bool enabled)
         {
             Application.logMessageReceived -= ReceiveStartupLog;
             startupError = null;
-            if (Array.IndexOf(args, "-playthrough") >= 0) Application.logMessageReceived += ReceiveStartupLog;
+            if (enabled) Application.logMessageReceived += ReceiveStartupLog;
         }
 
         static void ReceiveStartupLog(string message, string stackTrace, LogType type)
@@ -40,14 +51,19 @@ namespace TiffanyGame
         static void Boot()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
+#if TIFFANY_WEB_DEBUG
+            string url = Application.absoluteURL;
+            if (!WebDebugQuery.Has(url, "playthrough")) return;
+            float timeout = PlaythroughPlan.ParseTimeout(WebDebugQuery.Get(url, "playthrough-timeout"));
+            new GameObject("Playthrough").AddComponent<Playthrough>().Configure(new PlaythroughPlan(timeout: timeout));
+#endif
             return;
 #else
             var args = Environment.GetCommandLineArgs();
             if (Array.IndexOf(args, "-playthrough") < 0) return;
             float timeout = PlaythroughPlan.DefaultTimeout;
             for (int i = 0; i < args.Length - 1; i++)
-                if (args[i] == "-playthrough-timeout" && float.TryParse(args[i + 1], NumberStyles.Float,
-                    CultureInfo.InvariantCulture, out float value) && value > 0f && !float.IsInfinity(value)) timeout = value;
+                if (args[i] == "-playthrough-timeout") timeout = PlaythroughPlan.ParseTimeout(args[i + 1], timeout);
             new GameObject("Playthrough").AddComponent<Playthrough>().Configure(new PlaythroughPlan(timeout: timeout), true);
 #endif
         }
@@ -55,7 +71,11 @@ namespace TiffanyGame
         public void Configure(PlaythroughPlan plan, bool quit = false)
         {
             Plan = plan ?? throw new ArgumentNullException(nameof(plan));
+#if UNITY_WEBGL && !UNITY_EDITOR
+            quitOnFinish = false;
+#else
             quitOnFinish = quit;
+#endif
             if (startupError != null) Plan.RecordConsoleError(startupError);
             if (earlyError != null) Plan.RecordConsoleError(earlyError);
             Application.logMessageReceived -= ReceiveStartupLog;
@@ -76,6 +96,7 @@ namespace TiffanyGame
                 scene = new PlaythroughScene();
                 scene.Prepare(Plan, LogMilestone);
                 navigation = new PlaythroughNavigation();
+                CacheClearings();
             }
             catch (Exception exception) { FailException(exception); }
         }
@@ -103,6 +124,7 @@ namespace TiffanyGame
                 && PlaythroughPlan.NeedsNavigation(milestone) && !CalculatePath()) return;
             int missingCount = Plan.MissingContent.Count;
             var command = Plan.Tick(Time.unscaledDeltaTime, in observation);
+            LogClearing();
             if (Plan.MissingContent.Count > missingCount) LogMilestone("faltante: " + Plan.MissingContent[missingCount]);
             if (Plan.CompletedCount != selected)
             {
@@ -126,6 +148,26 @@ namespace TiffanyGame
             GameInput.FadeOverride = command.Vanish;
             scene.Apply(in command);
             if (command.ForceRespawn) LogMilestone("captura (forzado)");
+        }
+
+        void CacheClearings()
+        {
+            var tracker = FindAnyObjectByType<WitchChapterTracker>();
+            if (tracker == null) return;
+            clearingBounds = tracker.ClearingBounds;
+            clearingLabels = new string[tracker.clearings.Length];
+            for (int i = 0; i < clearingLabels.Length; i++)
+                if (tracker.clearings[i] != null) clearingLabels[i] = "claro: " + tracker.clearings[i].name;
+        }
+
+        void LogClearing()
+        {
+            if (clearingBounds == null || Time.unscaledTime < nextClearingCheck) return;
+            nextClearingCheck = Time.unscaledTime + 0.5f;
+            int clearing = RouteChapters.FindClearing(scene.Position, clearingBounds);
+            if (clearing < 0 || clearing == currentClearing) return;
+            currentClearing = clearing;
+            LogMilestone(clearingLabels[clearing]);
         }
 
         bool CalculatePath()

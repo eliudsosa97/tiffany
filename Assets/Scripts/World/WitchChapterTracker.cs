@@ -10,6 +10,7 @@ namespace TiffanyGame
         public Transform[] clearings = Array.Empty<Transform>();
 
         private Bounds[] bounds;
+        public Bounds[] ClearingBounds => bounds;
 
         private void Start()
         {
@@ -33,16 +34,8 @@ namespace TiffanyGame
         private void Update()
         {
             if (witch == null || player == null || witch.chapter == Chapter.Return) return;
-            Vector3 position = player.position;
-            for (int i = 0; i < bounds.Length; i++)
-            {
-                if (bounds[i].size == Vector3.zero) continue;
-                Vector3 min = bounds[i].min;
-                Vector3 max = bounds[i].max;
-                if (position.x < min.x || position.x > max.x || position.z < min.z || position.z > max.z) continue;
-                witch.SetChapter(RouteChapters.Resolve(witch.chapter, i + 1));
-                return;
-            }
+            int clearing = RouteChapters.FindClearing(player.position, bounds);
+            if (clearing >= 0) witch.SetChapter(RouteChapters.Resolve(witch.chapter, clearing + 1));
         }
     }
 }

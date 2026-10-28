@@ -109,18 +109,47 @@ namespace TiffanyGame.Tests
             }
         }
 
-        [Test]
-        public void SyncMaterialsIsStable()
+        [TestCase("witch", false)]
+        [TestCase("witch", true)]
+        [TestCase("oak", false)]
+        [TestCase("oak", true)]
+        [TestCase("bougainvillea", false)]
+        [TestCase("bougainvillea", true)]
+        public void SyncMaterialsIsStable(string id, bool useCommittedMaterials)
         {
-            ModelLibrary.SyncMaterials("witch");
-            string path = $"{ModelLibrary.materialFolder}/WitchSkin.mat";
-            string guid = AssetDatabase.AssetPathToGUID(path);
-            string text = File.ReadAllText(path);
-            Resources.UnloadAsset(AssetDatabase.LoadAssetAtPath<Material>(path));
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-            ModelLibrary.SyncMaterials("witch");
-            Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(path));
-            Assert.AreEqual(text, File.ReadAllText(path));
+            var entries = ModelLibrary.LoadSpec(id).materials;
+            var paths = new string[entries.Length];
+            var guids = new string[entries.Length];
+            var contents = new byte[entries.Length][];
+            GeneratedMaterials.EnsureFolder(ModelLibrary.materialFolder);
+            if (!useCommittedMaterials) ModelLibrary.SyncMaterials(id);
+            for (int i = 0; i < entries.Length; i++)
+            {
+                string source = $"{ModelLibrary.MaterialFolder}/{entries[i].name}.mat";
+                paths[i] = $"{ModelLibrary.materialFolder}/{entries[i].name}.mat";
+                contents[i] = File.ReadAllBytes(useCommittedMaterials ? source : paths[i]);
+                if (useCommittedMaterials) Assert.IsTrue(AssetDatabase.CopyAsset(source, paths[i]), source);
+                guids[i] = AssetDatabase.AssetPathToGUID(paths[i]);
+                Assert.IsNotEmpty(guids[i], paths[i]);
+            }
+            for (int pass = 0; pass < 2; pass++)
+            {
+                foreach (string path in paths)
+                {
+                    Resources.UnloadAsset(AssetDatabase.LoadAssetAtPath<Material>(path));
+                    AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                }
+                ModelLibrary.SyncMaterials(id);
+                for (int i = 0; i < paths.Length; i++)
+                {
+                    Assert.AreEqual(guids[i], AssetDatabase.AssetPathToGUID(paths[i]), paths[i]);
+                    CollectionAssert.AreEqual(contents[i], File.ReadAllBytes(paths[i]), paths[i]);
+                    var material = AssetDatabase.LoadAssetAtPath<Material>(paths[i]);
+                    var baseColor = material.GetColor("_BaseColor");
+                    var legacyColor = material.GetColor("_Color");
+                    for (int c = 0; c < 4; c++) Assert.AreEqual(baseColor[c], legacyColor[c], 1e-5f, paths[i]);
+                }
+            }
         }
 
         [Test]
