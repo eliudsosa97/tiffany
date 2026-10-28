@@ -6,9 +6,12 @@ namespace TiffanyGame.EditorTools
 {
     public class ModelImportRules : AssetPostprocessor
     {
-        public override uint GetVersion() => 3;
+        public override uint GetVersion() => 4;
 
         bool IsLibraryModel => Path.GetDirectoryName(assetPath).Replace('\\', '/') == ModelLibrary.ModelFolder &&
+                               Path.GetExtension(assetPath).ToLowerInvariant() == ".fbx";
+
+        bool IsKenneyNature => assetPath.StartsWith(ModelLibrary.KenneyFolder + "/Nature/", System.StringComparison.Ordinal) &&
                                Path.GetExtension(assetPath).ToLowerInvariant() == ".fbx";
 
         ModelLibrary.ModelSpec Spec()
@@ -19,7 +22,7 @@ namespace TiffanyGame.EditorTools
 
         void OnPreprocessModel()
         {
-            if (!IsLibraryModel) return;
+            if (!IsLibraryModel && !IsKenneyNature) return;
 
             var importer = (ModelImporter)assetImporter;
             bool rigged = Spec()?.Rigged ?? false;
@@ -38,6 +41,7 @@ namespace TiffanyGame.EditorTools
             }
             importer.importBlendShapes = false;
             importer.addCollider = false;
+            importer.preserveHierarchy = true;
             importer.isReadable = false;
             importer.globalScale = 1f;
             importer.useFileScale = true;
