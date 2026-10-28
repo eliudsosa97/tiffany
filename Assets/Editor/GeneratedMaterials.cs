@@ -34,7 +34,7 @@ namespace TiffanyGame.EditorTools
             return material;
         }
 
-        static void EnsureFolder(string path)
+        public static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path)) return;
             int separator = path.LastIndexOf('/');

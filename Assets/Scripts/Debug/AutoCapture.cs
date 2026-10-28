@@ -70,9 +70,12 @@ namespace TiffanyGame
 
                 var witchStage = stop.GetComponent<WitchCaptureStage>();
                 if (witchStage != null && player != null) witchStage.Apply(player.transform);
+                var stormStage = stop.GetComponent<StormCaptureStage>();
+                if (stormStage != null) stormStage.Apply();
                 yield return new WaitForSecondsRealtime(stop.wait);
                 yield return Capture($"{i + 1:00}_{stop.name}");
                 if (witchStage != null) witchStage.Clear();
+                if (stormStage != null) stormStage.Clear();
             }
 
             Debug.Log($"{GameInfo.LogPrefix} Recorrido terminado: {stops.Length + 1} capturas en {directory}.");
