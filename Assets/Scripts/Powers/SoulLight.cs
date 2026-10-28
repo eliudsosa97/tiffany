@@ -12,6 +12,7 @@ namespace TiffanyGame
 
         private readonly PowerSet powers;
         private readonly SoulEnergy energy;
+        private bool hidden;
 
         public SoulLight(PowerSet powers, SoulEnergy energy)
         {
@@ -24,15 +25,27 @@ namespace TiffanyGame
         public float FlashRemaining { get; private set; }
         public bool Visible => IsOn || IsFlashing;
 
+        public void SetHidden(bool hidden)
+        {
+            this.hidden = hidden;
+            if (!hidden) return;
+            IsOn = false;
+            FlashRemaining = 0f;
+        }
+
+        public bool CanReadInput(float timeScale) => !hidden && timeScale > 0f;
+
         public bool Toggle()
         {
-            IsOn = !IsOn && PowerRules.CanUseLight(powers, energy);
+            IsOn = !hidden && !IsOn && PowerRules.CanUseLight(powers, energy);
             return IsOn;
         }
 
-        public bool TryFlash(bool witchGrounded, bool witchInCone, out bool stunsWitch)
+        public bool TryFlash(bool witchGrounded, bool witchInCone, bool lineOfSight, out bool stunsWitch)
         {
-            if (!PowerRules.TryFlash(powers, energy, witchGrounded, witchInCone, out stunsWitch)) return false;
+            stunsWitch = false;
+            if (hidden || !PowerRules.TryFlash(powers, energy, witchGrounded, witchInCone, out stunsWitch)) return false;
+            stunsWitch &= lineOfSight;
             FlashRemaining = FlashDuration;
             return true;
         }
