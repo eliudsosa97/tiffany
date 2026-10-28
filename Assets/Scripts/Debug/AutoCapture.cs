@@ -30,10 +30,15 @@ namespace ElVelador
         IEnumerator Start()
         {
             if (string.IsNullOrEmpty(directory)) yield break;
+            GameInput.MoveOverride = Vector2.zero;
+            GameInput.SlowOverride = false;
+            GameInput.RunOverride = false;
+            GameInput.AimOverride = Vector2.zero;
             Directory.CreateDirectory(directory);
             yield return new WaitForSecondsRealtime(2f);
             yield return Capture("00_start");
 
+            var followCamera = FindAnyObjectByType<FollowCamera>();
             var stops = FindObjectsByType<CaptureStop>(FindObjectsSortMode.None);
             System.Array.Sort(stops, (a, b) => string.CompareOrdinal(a.name, b.name));
             var player = GameObject.FindGameObjectWithTag("Player");
@@ -53,8 +58,14 @@ namespace ElVelador
 
                 if (stop.overrideCamera)
                 {
+                    if (followCamera != null) followCamera.enabled = false;
                     var camera = Camera.main;
                     if (camera != null) camera.transform.SetPositionAndRotation(stop.cameraPosition, stop.cameraRotation);
+                }
+                else if (followCamera != null)
+                {
+                    followCamera.enabled = true;
+                    followCamera.Snap();
                 }
 
                 yield return new WaitForSecondsRealtime(stop.wait);
@@ -63,6 +74,7 @@ namespace ElVelador
 
             Debug.Log($"{GameInfo.LogPrefix} Recorrido terminado: {stops.Length + 1} capturas en {directory}.");
             yield return new WaitForSecondsRealtime(1f);
+            GameInput.ClearOverrides();
             Application.Quit();
         }
 

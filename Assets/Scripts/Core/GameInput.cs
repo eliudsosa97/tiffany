@@ -10,6 +10,7 @@ namespace ElVelador
         public static Vector2? MoveOverride;
         public static bool? SlowOverride;
         public static bool? RunOverride;
+        public static Vector2? AimOverride;
 
         static bool commandWasPressed;
 
@@ -29,6 +30,7 @@ namespace ElVelador
             MoveOverride = null;
             SlowOverride = null;
             RunOverride = null;
+            AimOverride = null;
         }
 
         static bool CommandHeld(Keyboard keyboard) =>
@@ -101,12 +103,14 @@ namespace ElVelador
 
         public static Vector2 PointerPosition => Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
 
-        public static bool PointerMoved => Mouse.current != null && Mouse.current.delta.ReadValue().sqrMagnitude > 1f;
+        public static bool PointerMoved => !AimOverride.HasValue &&
+            Mouse.current != null && Mouse.current.delta.ReadValue().sqrMagnitude > 1f;
 
         public static Vector2 AimStick
         {
             get
             {
+                if (AimOverride.HasValue) return AimOverride.Value;
                 var gamepad = Gamepad.current;
                 return gamepad != null ? ShapeStick(gamepad.rightStick.ReadUnprocessedValue()) : Vector2.zero;
             }
