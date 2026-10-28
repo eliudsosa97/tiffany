@@ -73,7 +73,7 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(collector.Collect(2));
             Assert.IsTrue(collector.soul.Powers.Has(Power.Candles));
             Assert.IsFalse(collector.spots[1].visual.activeSelf);
-            Assert.IsNull(collector.tyler.nextMemory);
+            Assert.AreSame(collector.spots[2].transform, collector.tyler.nextMemory);
 #if UNITY_EDITOR
             Assert.AreEqual(InterfaceTexts.PowerNotice(Power.Candles), ui.noticeText.text);
             Assert.AreEqual("Listón · Jacal de la bruja", ui.subtitleText.text);
@@ -82,6 +82,13 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(ui.notebookEmpty.gameObject.activeSelf);
             ui.ToggleNotebook();
 #endif
+            for (int id = 3; id <= 5; id++)
+            {
+                Assert.IsTrue(collector.Collect(id));
+                Assert.IsTrue(collector.soul.Powers.Has(PowerSet.ForMemory(id)));
+                if (id < 5) Assert.AreSame(collector.spots[id].transform, collector.tyler.nextMemory);
+            }
+            Assert.IsNull(collector.tyler.nextMemory);
             collector.enabled = false;
             Assert.AreEqual(0f, collector.echoVolume.weight);
             Assert.IsFalse(cameraData.renderPostProcessing);
