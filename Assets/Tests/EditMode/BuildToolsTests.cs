@@ -21,6 +21,27 @@ namespace TiffanyGame.Tests
         [SetUp]
         public void SetUp() => switches = 0;
 
+        [TestCase(false, "Builds/Web")]
+        [TestCase(true, "Builds/WebDebug")]
+        public void WebBuildsKeepPublicAndDebugOutputsSeparate(bool debug, string path)
+        {
+            var scenes = new[] { "Assets/Scenes/Main.unity" };
+            var options = BuildTools.WebOptions(scenes, debug);
+            CollectionAssert.AreEqual(scenes, options.scenes);
+            Assert.AreEqual(BuildTarget.WebGL, options.target);
+            Assert.AreEqual(BuildOptions.None, options.options);
+            Assert.AreEqual(path, options.locationPathName);
+            CollectionAssert.AreEqual(debug ? new[] { WebDebugQuery.Define } : System.Array.Empty<string>(),
+                options.extraScriptingDefines);
+        }
+
+        [Test]
+        public void PublicBuildAfterDebugDoesNotInheritTheDefine()
+        {
+            BuildTools.WebOptions(System.Array.Empty<string>(), true);
+            Assert.IsEmpty(BuildTools.WebOptions(System.Array.Empty<string>(), false).extraScriptingDefines);
+        }
+
         [TestCase(BuildTarget.StandaloneOSX, BuildTarget.WebGL, BuildTargetGroup.WebGL)]
         [TestCase(BuildTarget.WebGL, BuildTarget.StandaloneOSX, BuildTargetGroup.Standalone)]
         public void BuildSwitchesToItsTargetFirst(BuildTarget active, BuildTarget target, BuildTargetGroup group)

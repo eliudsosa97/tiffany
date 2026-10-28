@@ -5,6 +5,26 @@ namespace TiffanyGame.Tests
 {
     public sealed class PlaythroughPlanTests
     {
+        [TestCase("15", 15f)]
+        [TestCase(" 2.5 ", 2.5f)]
+        [TestCase("1e2", 100f)]
+        [TestCase(null, PlaythroughPlan.DefaultTimeout)]
+        [TestCase("", PlaythroughPlan.DefaultTimeout)]
+        [TestCase("invalid", PlaythroughPlan.DefaultTimeout)]
+        [TestCase("1,5", PlaythroughPlan.DefaultTimeout)]
+        [TestCase("0", PlaythroughPlan.DefaultTimeout)]
+        [TestCase("-1", PlaythroughPlan.DefaultTimeout)]
+        [TestCase("NaN", PlaythroughPlan.DefaultTimeout)]
+        [TestCase("Infinity", PlaythroughPlan.DefaultTimeout)]
+        [TestCase("-Infinity", PlaythroughPlan.DefaultTimeout)]
+        [TestCase("1e40", PlaythroughPlan.DefaultTimeout)]
+        public void TimeoutAcceptsOnlyPositiveFiniteInvariantSeconds(string value, float expected) =>
+            Assert.AreEqual(expected, PlaythroughPlan.ParseTimeout(value));
+
+        [Test]
+        public void InvalidTimeoutKeepsThePreviousCommandLineValue() =>
+            Assert.AreEqual(30f, PlaythroughPlan.ParseTimeout("invalid", 30f));
+
         [Test]
         public void FullRouteRequiresMemoriesPowersHidingCaptureAndHomeInOrder()
         {
