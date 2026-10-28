@@ -97,14 +97,8 @@ namespace TiffanyGame.EditorTools
                             new Vector3(width, 3f, 0.5f));
                 }
             }
-            var trees = Root("Forest", clearing, Vector3.zero);
-            for (int side = -1; side <= 1; side += 2)
-                for (int i = -1; i <= 1; i++)
-                {
-                    Part($"Trunk X {side} {i}", trees, new Vector3(side * 17f, 3f, i * 11f), new Vector3(1.2f, 6f, 1.2f), forest);
-                    if (i != 0)
-                        Part($"Trunk Z {side} {i}", trees, new Vector3(i * 11f, 3.5f, side * 17f), new Vector3(1.4f, 7f, 1.4f), forest);
-                }
+            ForestBuilder.Populate(clearing, 17389 + index, ClearingSize, PathWidth,
+                ForestBuilder.RouteExclusions(index), ForestBuilder.RouteViewPoints(index));
         }
 
         static void BuildPath(Transform clearing, Material floor, Material forest, Material stone, bool river)

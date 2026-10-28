@@ -1,9 +1,40 @@
 using NUnit.Framework;
+using UnityEngine;
 
 namespace TiffanyGame.Tests
 {
     public sealed class RouteChaptersTests
     {
+        [TestCase(0f, 0f, 0f, 1)]
+        [TestCase(-2f, 50f, -3f, 1)]
+        [TestCase(2f, -50f, 3f, 1)]
+        [TestCase(-2.01f, 0f, 0f, -1)]
+        [TestCase(2.01f, 0f, 0f, -1)]
+        [TestCase(0f, 0f, -3.01f, -1)]
+        [TestCase(0f, 0f, 3.01f, -1)]
+        [TestCase(10f, 0f, 0f, 2)]
+        public void ClearingUsesHorizontalBoundsAndIncludesEdges(float x, float y, float z, int expected)
+        {
+            var bounds = new[] { default(Bounds), new Bounds(Vector3.zero, new Vector3(4f, 1f, 6f)),
+                new Bounds(Vector3.right * 10f, Vector3.one * 2f) };
+            Assert.AreEqual(expected, RouteChapters.FindClearing(new Vector3(x, y, z), bounds));
+        }
+
+        [Test]
+        public void OverlappingClearingsUseTheFirstMatch()
+        {
+            var bounds = new Bounds(Vector3.zero, Vector3.one);
+            Assert.AreEqual(0, RouteChapters.FindClearing(Vector3.zero, new[] { bounds, bounds }));
+        }
+
+        [Test]
+        public void MissingOrEmptyBoundsDoNotMatch()
+        {
+            Assert.AreEqual(-1, RouteChapters.FindClearing(Vector3.zero, null));
+            Assert.AreEqual(-1, RouteChapters.FindClearing(Vector3.zero, System.Array.Empty<Bounds>()));
+            Assert.AreEqual(-1, RouteChapters.FindClearing(Vector3.zero, new Bounds[1]));
+        }
+
         [TestCase(1, Chapter.Cemetery)]
         [TestCase(2, Chapter.WaterPlant)]
         [TestCase(3, Chapter.TrainTracks)]

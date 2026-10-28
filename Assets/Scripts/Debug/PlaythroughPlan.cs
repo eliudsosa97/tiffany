@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 
 namespace TiffanyGame
@@ -81,6 +82,10 @@ namespace TiffanyGame
                 : (PlaythroughMilestone[])milestones.Clone();
             if (Count == 0) throw new ArgumentException("La partida necesita hitos.", nameof(milestones));
         }
+
+        public static float ParseTimeout(string value, float fallback = DefaultTimeout) =>
+            float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float seconds)
+                && seconds > 0f && !float.IsInfinity(seconds) ? seconds : fallback;
 
         public bool Includes(PlaythroughMilestone milestone) => Array.IndexOf(milestones, milestone) >= 0;
 

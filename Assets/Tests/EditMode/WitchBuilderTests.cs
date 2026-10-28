@@ -29,38 +29,80 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void FigureHasNeutralRootAndDirectPoseChildren()
+        public void BuiltWitchGroundMaskExcludesCoverAndKeepsDefaultRaycastLayers()
+        {
+            var followCamera = new GameObject("Camera").AddComponent<FollowCamera>();
+            followCamera.transform.SetParent(root.transform, false);
+            var controller = SceneBuilder.BuildWitch(root.transform, null, root.transform, new[] { Vector3.zero }, followCamera);
+            int cover = LayerMask.GetMask(ForestLayout.CoverLayer);
+            Assert.AreNotEqual(0, cover);
+            Assert.AreEqual(0, controller.groundMask.value & cover);
+            Assert.AreNotEqual(0, controller.groundMask.value & LayerMask.GetMask("Default"));
+            Assert.AreEqual(Physics.DefaultRaycastLayers, controller.groundMask.value | cover);
+        }
+
+        [Test]
+        public void FigureHasNeutralRootAndAnimator()
         {
             root.transform.SetPositionAndRotation(new Vector3(4f, 3f, -2f), Quaternion.Euler(10f, 30f, 5f));
             root.transform.localScale = new Vector3(2f, 3f, 4f);
-            var figure = WitchBuilder.BuildFigure(root.transform, out var stand, out var crouch);
+            var figure = WitchBuilder.BuildFigure(root.transform);
 
             Assert.AreEqual("WitchFigure", figure.name);
             Assert.AreSame(root.transform, figure.transform.parent);
             Assert.AreEqual(Vector3.zero, figure.transform.localPosition);
             Assert.AreEqual(Quaternion.identity, figure.transform.localRotation);
             Assert.AreEqual(Vector3.one, figure.transform.localScale);
-            Assert.AreEqual("WitchStand", stand.name);
-            Assert.AreEqual("WitchCrouch", crouch.name);
-            Assert.AreSame(figure.transform, stand.transform.parent);
-            Assert.AreSame(figure.transform, crouch.transform.parent);
-            Assert.IsTrue(stand.activeSelf);
-            Assert.IsFalse(crouch.activeSelf);
+            var animator = figure.GetComponent<Animator>();
+            Assert.IsNotNull(animator);
+            Assert.AreSame(AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(WitchAnimator.ControllerPath),
+                animator.runtimeAnimatorController);
+            Assert.IsFalse(animator.applyRootMotion);
+            Assert.AreEqual(AnimatorCullingMode.CullUpdateTransforms, animator.cullingMode);
         }
 
         [Test]
-        public void FigurePosesHaveExpectedHeights()
+        public void FigureHasOneSkinnedMeshUnderRig()
         {
-            WitchBuilder.BuildFigure(root.transform, out var stand, out var crouch);
+            var figure = WitchBuilder.BuildFigure(root.transform);
+            var rig = figure.transform.Find("WitchRig");
+            var skins = figure.GetComponentsInChildren<SkinnedMeshRenderer>(true);
 
-            Assert.That(CombinedBounds(stand.transform).size.y, Is.InRange(2.1f, 2.4f));
-            Assert.That(CombinedBounds(crouch.transform).size.y, Is.InRange(1.3f, 1.6f));
+            Assert.IsNotNull(rig);
+            Assert.AreEqual(1, skins.Length);
+            Assert.AreEqual("Witch", skins[0].name);
+            Assert.IsNotNull(skins[0].sharedMesh);
+            Assert.IsNotEmpty(skins[0].bones);
+            foreach (var bone in skins[0].bones) Assert.IsTrue(bone.IsChildOf(rig), bone.name);
+        }
+
+        [Test]
+        public void FigureSkinsWithFourBonesOnEveryQualityLevel()
+        {
+            var figure = WitchBuilder.BuildFigure(root.transform);
+            foreach (var skin in figure.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                Assert.AreEqual(SkinQuality.Bone4, skin.quality, skin.name);
+
+            // El renderer no supera el límite global: WebGL usa Mobile y el pelo y la tela pesan cuatro huesos.
+            int previous = QualitySettings.GetQualityLevel();
+            try
+            {
+                for (int level = 0; level < QualitySettings.names.Length; level++)
+                {
+                    QualitySettings.SetQualityLevel(level, false);
+                    Assert.AreEqual(SkinWeights.FourBones, QualitySettings.skinWeights, QualitySettings.names[level]);
+                }
+            }
+            finally
+            {
+                QualitySettings.SetQualityLevel(previous, false);
+            }
         }
 
         [Test]
         public void FigureHasNoCollidersAndUsesModelMaterials()
         {
-            var figure = WitchBuilder.BuildFigure(root.transform, out _, out _);
+            var figure = WitchBuilder.BuildFigure(root.transform);
 
             Assert.IsEmpty(figure.GetComponentsInChildren<Collider>(true));
             var renderers = figure.GetComponentsInChildren<Renderer>(true);
@@ -142,15 +184,6 @@ namespace TiffanyGame.Tests
             WitchBuilder.BuildFireBall(root.transform, out _);
 
             Assert.IsNull(AssetDatabase.LoadAssetAtPath<Material>(path));
-        }
-
-        static Bounds CombinedBounds(Transform parent)
-        {
-            var renderers = parent.GetComponentsInChildren<Renderer>(true);
-            Assert.IsNotEmpty(renderers);
-            var bounds = renderers[0].bounds;
-            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
-            return bounds;
         }
     }
 }

@@ -88,5 +88,64 @@
       "hipR": [0.11, 0.92, -0.12], "kneeR": [0.36, 0.58, 0.32], "ankleR": [0.27, 0.07, 0.04], "toeR": [0.33, 0.022, 0.27]
     }
   },
+  "clips": [
+    { "name": "Idle", "frames": 150, "loop": true, "step": 1 },
+    { "name": "Stalking", "frames": 60, "loop": true, "step": 1 },
+    { "name": "WindUp", "frames": 18, "loop": false, "step": 1 },
+    { "name": "Sprinting", "frames": 12, "loop": true, "step": 1 },
+    { "name": "Recovering", "frames": 24, "loop": false, "step": 1 },
+    { "name": "Stunned", "frames": 60, "loop": true, "step": 1 },
+    { "name": "Caught", "frames": 30, "loop": false, "step": 1 },
+    { "name": "Landing", "frames": 45, "loop": false, "step": 1 },
+    { "name": "TakingOff", "frames": 45, "loop": false, "step": 1 }
+  ],
+  "rig": {
+    "hair": { "bone": 0.28, "chains": { "L": -100, "R": 100, "B": 180 } },
+    "cloth": { "bone": 0.3, "outset": 0.03, "anchorHeight": 1.16, "chains": { "F": 0, "R": 90, "B": 180, "L": -90 } },
+    "sim": {
+      "settle": 3.0,
+      "hair": { "gravity": 1.0, "drag": 2.8, "quadratic": 0.25, "stiffness": 24, "falloff": 0.4, "damping": 0.045, "radius": 0.02,
+                "lateralDamping": 12, "lateralStiffness": 35 },
+      "cloth": { "gravity": 1.0, "drag": 1.6, "quadratic": 0.16, "stiffness": 20, "falloff": 0.5, "damping": 0.025, "radius": 0.035,
+                 "lift": 0.24, "flutter": 0.7 }
+    }
+  },
+  "motion": {
+    "Idle": { "twitch": [0.3, 0.62], "clench": [0.45, 0.8], "glance": [0.12, 0.2], "sway": 0.012, "hitchDeg": 7,
+              "twitchRoll": 12, "twitchPitch": 6, "clenchDeg": 28 },
+    "Stalking": {
+      "speed": 1.2, "pelvis": [0.0, 0.93, -0.06], "bow": [20, 14, 10], "lurchDeg": 9, "hipDrop": 4, "hipYaw": 7, "bob": 0.025,
+      "shoulderHitch": 6, "neckDeg": -22, "headRoll": -22, "headPitch": -4, "scanDeg": 10, "hang": 1.02, "trail": 0.12, "claw": 20,
+      "twitches": [[0.17, 0.8], [0.39, -1.2], [0.8, 1.4]], "pauses": [[0.26, 0.31], [0.75, 0.8]],
+      "steps": {
+        "R": [
+          { "td": 0.0, "lo": 0.33, "x": 0.15, "z": 0.36, "lift": 0.11, "toeIn": 16, "heelOff": 38, "swingPitch": -12, "yaw": -6, "load": 1.0 },
+          { "td": 0.5, "lo": 0.8, "x": 0.13, "z": 0.3, "lift": 0.13, "toeIn": 16, "heelOff": 38, "swingPitch": -12, "yaw": -6, "load": 0.8 }
+        ],
+        "L": [
+          { "td": 0.24, "lo": 0.58, "x": -0.16, "z": 0.4, "lift": 0.1, "toeIn": 16, "heelOff": 36, "swingPitch": -10, "yaw": 6, "load": 1.4 },
+          { "td": 0.73, "lo": 1.03, "x": -0.14, "z": 0.34, "lift": 0.035, "toeIn": 18, "heelOff": 32, "swingPitch": -8, "yaw": 8, "load": 0.7 }
+        ]
+      }
+    },
+    "Sprinting": {
+      "speed": 9.0, "phase": { "HL": 0.0, "HR": 0.09, "FR": 0.43, "FL": 0.53 }, "duty": { "H": 0.25, "F": 0.24 },
+      "pelvis": [0.0, 0.92, -0.42], "neckHeight": 0.98, "bodyHalf": 0.45, "gyration": 0.55, "dynamicGain": 1.0, "surge": 0.25,
+      "bend": [8, 4], "chestLean": 11, "rightDrop": 18, "flexDeg": [10, 8], "flexReach": 0.05, "twist": 3, "roll": 3, "protract": 14,
+      "flex": [[0.0, 0.6], [0.18, 0.0], [0.38, -1.0], [0.55, -0.6], [0.72, 0.2], [0.9, 1.0]],
+      "head": [0.0, 1.0, 0.62], "headBob": 0.3, "headRoll": -18, "headPitch": 8, "jaw": 8, "knee": 0.3, "elbow": 0.8,
+      "hind": { "x": 0.16, "z": -0.22, "lift": 0.32, "outward": 0.035, "yaw": 4,
+                "pitch": [[0.0, 40], [0.12, 30], [0.25, 72], [0.45, 105], [0.8, 45]] },
+      "fore": { "x": 0.3, "z": { "L": 1.12, "R": 0.78 }, "lift": 0.4, "outward": 0.24, "tuck": 0.06, "yaw": 8,
+                "hand": [[0.0, 55], [0.12, 80], [0.24, 108], [0.45, 165], [0.8, 25], [0.93, 45]],
+                "fingers": [[0.0, 0], [0.14, 0], [0.24, 45], [0.4, 150], [0.75, -15], [0.92, -5]] }
+    },
+    "WindUp": { "hipHeight": 0.52, "jerks": [[0.04, 0.22, 0.38], [0.3, 0.48, 0.28], [0.58, 0.84, 0.34]] },
+    "Recovering": { "brakeForward": 0.16, "brakeDrop": 0.12, "braceLift": 0.12 },
+    "Stunned": { "sway": 0.035, "tremorDeg": 2.5, "coverOffset": [0.1, 0.06, 0.17] },
+    "Caught": { "reach": 1.35, "height": 1.05, "spread": 0.24, "clenchDeg": 100 },
+    "Landing": { "impact": 0.07 },
+    "TakingOff": { "jumpHeight": 0.7, "tuck": 0.28 }
+  },
   "preview": { "crouchOffsetX": 1.4, "faceDistance": 1.1, "handDistance": 0.9, "handCamera": [0.35, 0.3, 1] }
 }
