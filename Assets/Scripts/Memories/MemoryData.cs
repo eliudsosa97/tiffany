@@ -9,7 +9,6 @@ namespace ElVelador
         public int id;
         public string title;
         public string place;
-        public string power;
         public MemoryDrawing[] drawings;
     }
 
