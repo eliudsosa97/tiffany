@@ -3,6 +3,7 @@
     "rootNamespace": "TiffanyGame.Tests",
     "references": [
         "TiffanyGame",
+        "Unity.AI.Navigation",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
