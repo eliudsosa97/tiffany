@@ -20,12 +20,92 @@ namespace TiffanyGame.Tests
         [Test]
         public void ReturnProfileUsesTwentyMetersSixSecondsAndFourteenMetersAhead()
         {
+            Assert.AreEqual(8f, profile.ReturnGraceDuration);
             Assert.AreEqual(20f, profile.CatchUpDistance);
             Assert.AreEqual(6f, profile.CatchUpDelay);
             Assert.AreEqual(14f, profile.CatchUpReappearDistance);
             Assert.AreEqual(18f, profile.CatchUpReappearMaxDistance);
             Assert.Less(profile.CatchUpReappearMaxDistance, profile.CatchUpDistance);
             Assert.Greater(profile.CatchUpReappearDistance, profile.SprintTriggerDistance);
+        }
+
+        [TestCase(8f, 5f)]
+        [TestCase(8f, 0.5f)]
+        [TestCase(2f, 5f)]
+        public void ReturnGraceIgnoresSensesUntilItsDurationThenWarnsBeforeLunging(float duration, float distance)
+        {
+            profile.ReturnGraceDuration = duration;
+            p.PlayerPosition = p.NoisePosition = p.PlayerLightPosition = Vector3.forward * distance;
+            p.SeesPlayer = p.SeesPlayerLight = p.SmellsPlayer = p.HeardNoise = true;
+            brain.StartGrace();
+            for (int i = 0; i < duration * 4f - 1f; i++)
+            {
+                WitchDecision decision = Step(0.25f);
+                Assert.AreEqual(WitchState.Stalking, decision.State);
+                Assert.AreEqual(WitchForm.Grounded, decision.Form);
+                Assert.AreEqual(WitchIntent.None, decision.Intent);
+                Assert.AreEqual(p.WitchPosition, decision.MoveTarget);
+                Assert.AreEqual(0f, decision.Speed);
+                Assert.IsFalse(brain.Chasing || decision.VoiceLure || decision.CatchUp);
+            }
+            Assert.AreEqual(WitchState.WindUp, Step(0.25f).State);
+            Assert.IsTrue(brain.Chasing);
+            Assert.AreEqual(WitchState.WindUp, Step(profile.WindUpDuration - 0.125f).State);
+            Assert.AreEqual(WitchState.Sprinting, Step(0.125f).State);
+            if (distance < profile.CatchDistance) Assert.AreEqual(WitchState.Caught, Step(0f).State);
+        }
+
+        [TestCase(0f)]
+        [TestCase(2f)]
+        public void ReappearanceClockExcludesGraceEvenWhenAFrameCrossesItsEnd(float afterGrace)
+        {
+            brain.StartGrace();
+            Assert.IsFalse(Step(7.75f).CatchUp);
+            Assert.IsFalse(Step(0.25f + afterGrace).CatchUp);
+            Assert.IsFalse(Step(profile.CatchUpDelay - afterGrace - 0.25f).CatchUp);
+            Assert.IsTrue(Step(0.25f).CatchUp);
+        }
+
+        [Test]
+        public void GraceDoesNotRememberTheGirlForALaterSearch()
+        {
+            brain.StartGrace();
+            p.PlayerPosition = p.NoisePosition = Vector3.forward * 5f;
+            p.SeesPlayer = p.HeardNoise = true;
+            Step(7.75f);
+            p.SeesPlayer = p.HeardNoise = false;
+            p.PlayerHidden = true;
+            p.PlayerPosition = Vector3.forward * 25f;
+            WitchDecision decision = Step(0.25f);
+            Assert.AreEqual(WitchState.Stalking, decision.State);
+            Assert.AreEqual(WitchIntent.None, decision.Intent);
+            Assert.AreEqual(p.WitchPosition, decision.MoveTarget);
+            Assert.AreEqual(0f, decision.Speed);
+            Assert.IsFalse(brain.Chasing || decision.CatchUp);
+        }
+
+        [Test]
+        public void FirstReturnHuntsAndWarnsWithoutGrace()
+        {
+            Assert.AreEqual(profile.FollowSpeed, Step(0f).Speed);
+            p.PlayerPosition = Vector3.forward * 5f;
+            Assert.AreEqual(WitchState.WindUp, Step(0f).State);
+            Assert.IsTrue(brain.Chasing);
+        }
+
+        [TestCase(Chapter.Cemetery, WitchState.Flying)]
+        [TestCase(Chapter.WaterPlant, WitchState.Landing)]
+        [TestCase(Chapter.TrainTracks, WitchState.Landing)]
+        [TestCase(Chapter.Stable, WitchState.Landing)]
+        [TestCase(Chapter.WitchHut, WitchState.Landing)]
+        public void GraceDoesNotDelayDetectionOutsideReturn(Chapter chapter, WitchState expected)
+        {
+            profile = WitchProfiles.For(chapter);
+            brain = new WitchBrain(profile, null);
+            p.PlayerPosition = Vector3.forward * 5f;
+            p.SeesPlayer = true;
+            brain.StartGrace();
+            Assert.AreEqual(expected, Step(0.25f).State);
         }
 
         [Test]

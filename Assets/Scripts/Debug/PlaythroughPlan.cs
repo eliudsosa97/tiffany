@@ -47,7 +47,7 @@ namespace TiffanyGame
         readonly float timeout;
         Vector3 progressPosition;
         float stalledSeconds, pressCooldown;
-        bool trackingMovement, forceRequested;
+        bool trackingMovement, forceRequested, wasRespawning;
 
         public int CompletedCount { get; private set; }
         public int Count => milestones.Length;
@@ -110,6 +110,8 @@ namespace TiffanyGame
             if (!(dt >= 0f) || float.IsInfinity(dt)) throw new ArgumentOutOfRangeException(nameof(dt));
             Elapsed += dt;
             MilestoneElapsed += dt;
+            if (wasRespawning && !observation.Respawning) MilestoneElapsed = 0f;
+            wasRespawning = observation.Respawning;
             pressCooldown -= dt;
             if (ChallengeIndex(Current) >= 0 && (observation.Respawning || observation.RetryChallenge))
             {

@@ -138,13 +138,14 @@ namespace TiffanyGame
 
         public void Flash() => flashed = true;
 
-        public void ResetBrain()
+        public void ResetBrain(bool afterCapture = false)
         {
             WatchPassage = null;
             InitializeBrain();
             if (profile.GroundChase)
             {
                 PlaceForGroundChase();
+                if (afterCapture) brain.StartGrace();
             }
             else
             {

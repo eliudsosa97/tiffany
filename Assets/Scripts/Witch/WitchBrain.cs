@@ -17,6 +17,7 @@ namespace TiffanyGame
         private WitchState state = WitchState.Flying;
         private int routeIndex;
         private float stateTime;
+        private float returnGraceRemaining;
         private float timeWithoutPerception;
         private bool hasTarget;
         private bool targetIsPlayer;
@@ -59,6 +60,8 @@ namespace TiffanyGame
 
         public bool Chasing => chasing;
 
+        public void StartGrace() => returnGraceRemaining = profile.GroundChase ? profile.ReturnGraceDuration : 0f;
+
         public WitchBrain(WitchProfile profile, IReadOnlyList<Vector3> skyRoute, System.Random random = null,
             Func<Vector3, Vector3> resolveGroundTarget = null)
         {
@@ -78,6 +81,19 @@ namespace TiffanyGame
         public WitchDecision Tick(float dt, in WitchPerception p)
         {
             dt = dt < 0f || float.IsNaN(dt) || float.IsInfinity(dt) ? 0f : dt;
+            if (returnGraceRemaining > 0f)
+            {
+                float graceTime = Mathf.Min(dt, returnGraceRemaining);
+                returnGraceRemaining -= graceTime;
+                dt -= graceTime;
+                if (returnGraceRemaining > 0f)
+                    return new WitchDecision
+                    {
+                        State = WitchState.Stalking,
+                        Form = WitchForm.Grounded,
+                        MoveTarget = p.WitchPosition
+                    };
+            }
             WitchDecision decision = TickState(dt, in p);
             decision.CatchUp = catchUp.Tick(dt, profile, in p, decision.State);
             return decision;
