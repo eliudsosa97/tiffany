@@ -164,7 +164,7 @@ namespace TiffanyGame.Tests
             {
                 PlaythroughMilestone.Hide, PlaythroughMilestone.Memory2, PlaythroughMilestone.Kindle, PlaythroughMilestone.Memory3,
                 PlaythroughMilestone.MoveObject, PlaythroughMilestone.Memory4, PlaythroughMilestone.Memory5,
-                PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
+                PlaythroughMilestone.RampCandle, PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
             };
             foreach (var target in targets)
             {
@@ -305,7 +305,7 @@ namespace TiffanyGame.Tests
 
         void RecordMilestone(string message, string stackTrace, LogType type)
         {
-            if (type == LogType.Log && Regex.IsMatch(message, @"^\[Tiffany\] Partida \d+\.\ds (?!claro: )")) milestones.Add(message);
+            if (type == LogType.Log && Regex.IsMatch(message, @"^\[Tiffany\] Partida \d+\.\ds (?!claro: |bruja: |esquiva la embestida$)")) milestones.Add(message);
             if (message.EndsWith("recoger la pelota"))
                 ballVisitPosition = Object.FindAnyObjectByType<PlayerController>().transform.position;
         }

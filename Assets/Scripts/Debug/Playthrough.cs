@@ -162,7 +162,7 @@ namespace TiffanyGame
             }
             else if (command.Move)
             {
-                GameInput.MoveOverride = navigation.Move(scene.Position, scene.CameraYaw, Time.deltaTime, out bool run);
+                GameInput.MoveOverride = navigation.Move(scene.Position, scene.CameraYaw, Time.deltaTime, out bool run, command.Run);
                 GameInput.RunOverride = run;
             }
             GameInput.AimOverride = scene.Aim;
@@ -258,6 +258,7 @@ namespace TiffanyGame
         void OnDisable()
         {
             Application.logMessageReceived -= ReceiveLog;
+            scene?.Dispose();
             GameInput.ClearOverrides();
         }
     }

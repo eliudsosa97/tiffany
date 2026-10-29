@@ -11,6 +11,43 @@ namespace TiffanyGame.Tests
 {
     public sealed partial class RouteBuilderTests
     {
+        [Test]
+        public void RampCandleApproachStaysOnTheTrailSideAndTouchRegistersRespawn()
+        {
+            var candle = route.Find("Landscape/" + RouteTerrain.RampCandleName).GetComponent<CandleSpot>();
+            Vector3 position = route.TransformPoint(RouteLayout.Path(4)[1]);
+            Vector3 target = candle.transform.position + Vector3.back * 1.5f;
+            candle.GetComponent<NavMeshObstacle>().enabled = false;
+            var exclusion = candle.gameObject.AddComponent<NavMeshModifierVolume>();
+            exclusion.area = NavMesh.GetAreaFromName("Not Walkable");
+            exclusion.center = Vector3.up;
+            exclusion.size = new Vector3(candle.radius * 2f, 2f, candle.radius * 2f);
+            int handle = SafeZones.Add(candle.transform.position, candle.radius);
+            try
+            {
+                BakeRouteNavMesh();
+                var navigation = new PlaythroughNavigation();
+                Assert.IsTrue(navigation.Calculate(position, target), NavigationDetails(candle.name, position, target, navigation));
+                Assert.IsFalse(NavMesh.SamplePosition(target, out _, 0.5f, NavMesh.AllAreas), "La zona segura recorta el NavMesh de la bruja.");
+                Assert.IsTrue(SafeZones.TryPushOut(target, 0.5f, out var approach));
+                Assert.IsTrue(NavMesh.SamplePosition(approach, out _, 0.5f, NavMesh.AllAreas), "La aproximación debe quedar en el NavMesh.");
+                var terrain = new RouteTerrain();
+                Vector3 localCandle = route.InverseTransformPoint(candle.transform.position);
+                Vector3 localApproach = route.InverseTransformPoint(approach);
+                Assert.Less(terrain.DistanceToRoute(localApproach.x, localApproach.z), terrain.DistanceToRoute(localCandle.x, localCandle.z));
+                Vector3 localTarget = route.InverseTransformPoint(target);
+                Assert.Less(Mathf.Abs(terrain.Height(localTarget.x, localTarget.z) - localTarget.y), 0.8f, "Destino alcanzable a pie en la ladera.");
+                var site = new CandleSite(new Candle(CandleKind.Family, candle.transform.position), candle.radius);
+                var respawn = new RespawnPoint(position);
+                var energy = new SoulEnergy(SoulEnergy.Max);
+                site.Tick(0.1f, false, target, energy, respawn);
+                Assert.IsTrue(site.PlayerInside);
+                Assert.IsTrue(site.Recharging);
+                Assert.AreEqual(candle.transform.position, respawn.Position, "Entrar registra el checkpoint incluso con energía llena.");
+            }
+            finally { SafeZones.Remove(handle); }
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void ReturnFromHutCandlesLeavesTheCheckpointBehindAndUsesTheCliffTrail(bool challengeCheckpoint)

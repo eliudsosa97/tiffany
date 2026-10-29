@@ -13,17 +13,19 @@ namespace TiffanyGame
         Challenge1Recharge, Challenge1Candle1, Challenge1Candle2, Challenge1Cross,
         Challenge2Recharge, Challenge2Distract, Challenge2Wait, Challenge2Cross,
         Challenge3Recharge, Challenge3Entry, Challenge3Vanish, Challenge3Cross,
-        Challenge4Recharge, Challenge4Candle1, Challenge4Candle2, Challenge4Distract, Challenge4Wait, Challenge4Vanish, Challenge4Cross
+        Challenge4Recharge, Challenge4Candle1, Challenge4Candle2, Challenge4Distract, Challenge4Wait, Challenge4Vanish, Challenge4Cross,
+        RampCandle
     }
 
     public enum ChallengeAction { None, Recharge, Candle1, Candle2, Distract, Wait, Entry, Vanish, Cross }
 
     public struct PlaythroughObservation
     {
-        public Vector3 Position;
+        public Vector3 Position, Target;
         public bool AtTarget, MemoryFound, BallCollected, LightOn, Flashing, Hidden;
         public bool CandleLit, ObjectMoved, Vanished, CheckpointReached, Respawning, AtRespawn, Credits, Frozen;
-        public float Energy;
+        public float Energy, RespawnGraceRemaining;
+        public bool InSafeZone;
         public string MissingContent;
         public bool ChallengeCompleted, Distracted, RetryChallenge;
         public WitchState WitchState;
@@ -32,15 +34,19 @@ namespace TiffanyGame
 
     public struct PlaythroughCommand
     {
-        public bool Move, Repath, Interact, ToggleLight, Flash, Kindle, MoveObject, Vanish, ForceRespawn;
+        public bool Move, Run, Repath, Interact, ToggleLight, Flash, Kindle, MoveObject, Vanish, ForceRespawn;
     }
 
     public sealed class PlaythroughPlan
     {
         public const float DefaultTimeout = 90f;
+        public const float LakeCandleTimeout = 180f;
         public const float CaptureTimeout = 40f;
+        public const float WalkLightEnergy = 30f, WitchFireNear = 25f;
+        public const float WitchGroundNear = 30f;
         public const float StuckSeconds = 3f;
         public const float ProgressDistance = 1f;
+        public const float ReturnDepartureClearance = 12f;
         const float PressInterval = 0.3f;
         readonly PlaythroughMilestone[] milestones;
         readonly List<string> missingContent = new List<string>();
@@ -79,7 +85,8 @@ namespace TiffanyGame
                     PlaythroughMilestone.Challenge4Distract, PlaythroughMilestone.Challenge4Wait,
                     PlaythroughMilestone.Challenge4Vanish, PlaythroughMilestone.Challenge4Cross,
                     PlaythroughMilestone.Memory5, PlaythroughMilestone.Capture, PlaythroughMilestone.Respawn,
-                    PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
+                    PlaythroughMilestone.RampCandle, PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road,
+                    PlaythroughMilestone.Manifest
                 }
                 : (PlaythroughMilestone[])milestones.Clone();
             if (Count == 0) throw new ArgumentException("La partida necesita hitos.", nameof(milestones));
@@ -126,7 +133,8 @@ namespace TiffanyGame
                 trackingMovement = false;
                 return default;
             }
-            if (MilestoneElapsed >= timeout)
+            float milestoneTimeout = Current == PlaythroughMilestone.LakeCandle ? LakeCandleTimeout : timeout;
+            if (MilestoneElapsed >= milestoneTimeout)
             {
                 Fail("tiempo límite agotado");
                 return default;
@@ -151,13 +159,19 @@ namespace TiffanyGame
             var command = new PlaythroughCommand();
             ChallengeAction action = Action(Current);
             if (observation.Frozen || observation.Respawning) return command;
-            command.Move = NeedsNavigation(Current) && !observation.AtTarget;
+            bool returning = Current == PlaythroughMilestone.Respawn || Current == PlaythroughMilestone.RampCandle
+                || Current == PlaythroughMilestone.LakeCandle || Current == PlaythroughMilestone.Road;
+            bool waiting = returning && observation.InSafeZone && observation.RespawnGraceRemaining > 0f
+                && HorizontalDistance(observation.WitchPosition, observation.Target) < ReturnDepartureClearance;
+            command.Run = returning && !waiting;
+            command.Move = NeedsNavigation(Current) && !observation.AtTarget && !waiting;
             command.Repath = (command.Move && repathAfterRespawn) || CheckStuck(dt, observation.Position, command.Move);
             if (command.Repath) repathAfterRespawn = false;
             bool press = pressCooldown <= 0f;
             bool wantsLight = Current == PlaythroughMilestone.Light || Current == PlaythroughMilestone.MoveObject
                 || action == ChallengeAction.Distract || action == ChallengeAction.Wait
-                || (Current == PlaythroughMilestone.Capture && observation.AtTarget);
+                || (Current == PlaythroughMilestone.Capture && observation.AtTarget)
+                || WalksWithLight(Current, command.Move, in observation);
             command.ToggleLight = press && observation.LightOn != wantsLight;
             if (observation.AtTarget && press)
             {
@@ -204,6 +218,7 @@ namespace TiffanyGame
                 case PlaythroughMilestone.Recharge2:
                 case PlaythroughMilestone.Recharge3:
                 case PlaythroughMilestone.Recharge4:
+                case PlaythroughMilestone.RampCandle:
                 case PlaythroughMilestone.LakeCandle: return o.CheckpointReached && o.Energy >= SoulEnergy.Max - 1f;
                 case PlaythroughMilestone.Capture: return o.Respawning;
                 case PlaythroughMilestone.Respawn: return !o.Respawning && o.AtRespawn;
@@ -235,12 +250,21 @@ namespace TiffanyGame
             && milestone != PlaythroughMilestone.LeaveHide && milestone != PlaythroughMilestone.Vanish
             && milestone != PlaythroughMilestone.Capture && milestone != PlaythroughMilestone.Respawn;
 
+        public static bool WalksWithLight(PlaythroughMilestone milestone, bool moving, in PlaythroughObservation o) =>
+            moving && ChallengeIndex(milestone) < 0 && milestone != PlaythroughMilestone.Hide
+            && milestone != PlaythroughMilestone.LeaveHide && milestone != PlaythroughMilestone.Vanish
+            && o.Energy >= WalkLightEnergy
+            && !(o.WitchState == WitchState.Flying && HorizontalDistance(o.Position, o.WitchPosition) < WitchFireNear)
+            && (o.WitchState == WitchState.Flying || o.WitchState == WitchState.Landing || o.WitchState == WitchState.TakingOff
+                || HorizontalDistance(o.Position, o.WitchPosition) > WitchGroundNear);
+
         public static int ChallengeIndex(PlaythroughMilestone milestone)
         {
+            if (milestone < PlaythroughMilestone.Challenge1Recharge || milestone > PlaythroughMilestone.Challenge4Cross) return -1;
             if (milestone >= PlaythroughMilestone.Challenge4Recharge) return 3;
             if (milestone >= PlaythroughMilestone.Challenge3Recharge) return 2;
             if (milestone >= PlaythroughMilestone.Challenge2Recharge) return 1;
-            return milestone >= PlaythroughMilestone.Challenge1Recharge ? 0 : -1;
+            return 0;
         }
 
         public static ChallengeAction Action(PlaythroughMilestone milestone) => milestone switch
@@ -289,6 +313,7 @@ namespace TiffanyGame
             PlaythroughMilestone.Recharge4 => "veladora del establo",
             PlaythroughMilestone.Vanish => "desvanecerse",
             PlaythroughMilestone.Memory5 => "brazalete (recuerdo 5)",
+            PlaythroughMilestone.RampCandle => "veladora de la rampa",
             PlaythroughMilestone.LakeCandle => "veladora del lago",
             PlaythroughMilestone.Capture => "captura durante el regreso",
             PlaythroughMilestone.Respawn => "reaparición en la última veladora",

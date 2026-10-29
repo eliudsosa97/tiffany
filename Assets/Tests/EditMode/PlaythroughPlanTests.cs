@@ -25,6 +25,133 @@ namespace TiffanyGame.Tests
         public void InvalidTimeoutKeepsThePreviousCommandLineValue() =>
             Assert.AreEqual(30f, PlaythroughPlan.ParseTimeout("invalid", 30f));
 
+        [TestCase(PlaythroughMilestone.Respawn)]
+        [TestCase(PlaythroughMilestone.RampCandle)]
+        [TestCase(PlaythroughMilestone.LakeCandle)]
+        [TestCase(PlaythroughMilestone.Road)]
+        public void ReturnRequestsRunningAfterRespawn(PlaythroughMilestone milestone)
+        {
+            var plan = new PlaythroughPlan(new[] { milestone });
+            var observation = new PlaythroughObservation { Respawning = true };
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsFalse(command.Move || command.Run);
+            observation.Respawning = false;
+            command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Run);
+            Assert.AreEqual(PlaythroughPlan.NeedsNavigation(milestone), command.Move);
+        }
+
+        [Test]
+        public void OtherMilestonesDoNotRequestRunning()
+        {
+            foreach (PlaythroughMilestone milestone in System.Enum.GetValues(typeof(PlaythroughMilestone)))
+            {
+                if (milestone == PlaythroughMilestone.Respawn || milestone == PlaythroughMilestone.RampCandle
+                    || milestone == PlaythroughMilestone.LakeCandle || milestone == PlaythroughMilestone.Road) continue;
+                var plan = new PlaythroughPlan(new[] { milestone });
+                var observation = new PlaythroughObservation();
+                Assert.IsFalse(plan.Tick(0.1f, in observation).Run, milestone.ToString());
+            }
+        }
+
+        [TestCase(PlaythroughMilestone.RampCandle)]
+        [TestCase(PlaythroughMilestone.LakeCandle)]
+        [TestCase(PlaythroughMilestone.Road)]
+        public void ReturnWaitsInsideSafeZoneUntilWitchLeavesNextDestination(PlaythroughMilestone milestone)
+        {
+            var plan = new PlaythroughPlan(new[] { milestone });
+            var observation = new PlaythroughObservation
+            {
+                Target = Vector3.forward * 30f, WitchPosition = Vector3.forward * 35f,
+                InSafeZone = true, Respawning = true
+            };
+            plan.Tick(0.1f, in observation);
+            observation.Respawning = false;
+            observation.RespawnGraceRemaining = 7f;
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsFalse(command.Move || command.Run || command.Repath);
+            observation.RespawnGraceRemaining = 3f;
+            command = plan.Tick(4f, in observation);
+            Assert.IsFalse(command.Move || command.Run || command.Repath);
+            Assert.AreEqual(milestone, plan.Current);
+            observation.WitchPosition = observation.Target + Vector3.forward * PlaythroughPlan.ReturnDepartureClearance;
+            command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Move && command.Run && command.Repath);
+            Assert.IsFalse(plan.Tick(0.1f, in observation).Repath);
+        }
+
+        [TestCase(0f)]
+        [TestCase(-1f)]
+        public void ReturnLeavesSafeZoneWhenGraceEndsEvenIfWitchStillBlocksDestination(float remaining)
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.LakeCandle });
+            var observation = new PlaythroughObservation
+            {
+                Target = Vector3.forward * 30f, WitchPosition = Vector3.forward * 30f,
+                InSafeZone = true, RespawnGraceRemaining = 0.01f
+            };
+            Assert.IsFalse(plan.Tick(0.1f, in observation).Move);
+            observation.RespawnGraceRemaining = remaining;
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Move && command.Run);
+            Assert.IsFalse(command.Repath);
+        }
+
+        [Test]
+        public void WitchNearPlayerDoesNotBlockDepartureWhenNextDestinationIsClear()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.RampCandle });
+            var observation = new PlaythroughObservation
+            {
+                Target = Vector3.forward * 30f, WitchPosition = Vector3.forward * 5f,
+                InSafeZone = true, RespawnGraceRemaining = 7f
+            };
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Move && command.Run);
+        }
+
+        [TestCase(false, 7f)]
+        [TestCase(true, 0f)]
+        public void ReturnDoesNotWaitOutsideSafeZoneOrWithoutRespawnGrace(bool safe, float grace)
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.LakeCandle });
+            var observation = new PlaythroughObservation
+            {
+                InSafeZone = safe, RespawnGraceRemaining = grace
+            };
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Move && command.Run);
+        }
+
+        [Test]
+        public void RespawnWaitDoesNotApplyOutsideReturn()
+        {
+            var plan = new PlaythroughPlan();
+            var observation = new PlaythroughObservation { InSafeZone = true, RespawnGraceRemaining = 7f };
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Move);
+            Assert.IsFalse(command.Run);
+        }
+
+        [Test]
+        public void RampCandleIsAStandaloneCheckpointAndRequiresTouchAndFullRecharge()
+        {
+            Assert.AreEqual(-1, PlaythroughPlan.ChallengeIndex(PlaythroughMilestone.RampCandle));
+            Assert.AreEqual(ChallengeAction.None, PlaythroughPlan.Action(PlaythroughMilestone.RampCandle));
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.RampCandle, PlaythroughMilestone.LakeCandle });
+            var observation = new PlaythroughObservation { AtTarget = true, Energy = SoulEnergy.Max };
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.RampCandle, plan.Current);
+            observation.CheckpointReached = true;
+            observation.Energy = SoulEnergy.Max - 2f;
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.RampCandle, plan.Current);
+            observation.Energy = SoulEnergy.Max;
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.LakeCandle, plan.Current);
+            Assert.AreEqual(1, plan.CompletedCount);
+        }
+
         [Test]
         public void FullRouteRequiresMemoriesPowersHidingCaptureAndHomeInOrder()
         {
@@ -43,7 +170,8 @@ namespace TiffanyGame.Tests
                 PlaythroughMilestone.Challenge4Distract, PlaythroughMilestone.Challenge4Wait,
                 PlaythroughMilestone.Challenge4Vanish, PlaythroughMilestone.Challenge4Cross,
                 PlaythroughMilestone.Memory5, PlaythroughMilestone.Capture, PlaythroughMilestone.Respawn,
-                PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
+                PlaythroughMilestone.RampCandle, PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road,
+                PlaythroughMilestone.Manifest
             };
             var plan = new PlaythroughPlan();
             Assert.AreEqual(expected.Length, plan.Count);
@@ -190,6 +318,34 @@ namespace TiffanyGame.Tests
             plan.Tick(2.5f, in observation);
             Assert.IsFalse(plan.Finished);
             Assert.AreEqual(5f, plan.Elapsed);
+        }
+
+        [Test]
+        public void LakeCandleTimesOutAfterOneHundredEightySeconds()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.LakeCandle });
+            var observation = new PlaythroughObservation();
+            plan.Tick(100f, in observation);
+            Assert.IsFalse(plan.Finished);
+            plan.Tick(79f, in observation);
+            Assert.IsFalse(plan.Finished);
+            plan.Tick(1.1f, in observation);
+            Assert.IsTrue(plan.Finished);
+            Assert.AreEqual(1, plan.ExitCode);
+            StringAssert.Contains("tiempo límite", plan.FailureReason);
+        }
+
+        [Test]
+        public void OtherMilestonesStillTimeOutAtNinetySeconds()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Road });
+            var observation = new PlaythroughObservation();
+            plan.Tick(89f, in observation);
+            Assert.IsFalse(plan.Finished);
+            plan.Tick(1f, in observation);
+            Assert.IsTrue(plan.Finished);
+            Assert.AreEqual(1, plan.ExitCode);
+            StringAssert.Contains("tiempo límite", plan.FailureReason);
         }
 
         [TestCase(PlaythroughMilestone.Memory1, false)]
@@ -378,5 +534,93 @@ namespace TiffanyGame.Tests
             CheckpointReached = true, Energy = SoulEnergy.Max, Respawning = milestone == PlaythroughMilestone.Capture,
             AtRespawn = true, Credits = true, ChallengeCompleted = true, Distracted = true
         };
+
+        [Test]
+        public void BotWalksWithItsLightAndTurnsItOffUnderTheWitchFire()
+        {
+            var o = new PlaythroughObservation { Energy = 80f, WitchState = WitchState.Flying, WitchPosition = new Vector3(60f, 20f, 0f) };
+            Assert.IsTrue(PlaythroughPlan.WalksWithLight(PlaythroughMilestone.Memory2, true, in o));
+            Assert.IsFalse(PlaythroughPlan.WalksWithLight(PlaythroughMilestone.Memory2, false, in o), "Quieta no la necesita.");
+            o.WitchPosition = new Vector3(20f, 20f, 0f);
+            Assert.IsFalse(PlaythroughPlan.WalksWithLight(PlaythroughMilestone.Memory2, true, in o), "La apaga con el fuego a menos de 25 m.");
+            o.WitchState = WitchState.Stalking;
+            Assert.IsFalse(PlaythroughPlan.WalksWithLight(PlaythroughMilestone.Memory2, true, in o), "Huye a oscuras de la bruja cercana en tierra.");
+            o.WitchPosition = new Vector3(60f, 20f, 0f);
+            o.Energy = 29f;
+            Assert.IsFalse(PlaythroughPlan.WalksWithLight(PlaythroughMilestone.Memory2, true, in o), "Ahorra energía bajo 30.");
+        }
+
+        [TestCase(WitchState.Stalking)]
+        [TestCase(WitchState.WindUp)]
+        [TestCase(WitchState.Sprinting)]
+        [TestCase(WitchState.Recovering)]
+        [TestCase(WitchState.Stunned)]
+        [TestCase(WitchState.Caught)]
+        [TestCase(WitchState.Suspicious)]
+        public void WalkingLightStaysOffWithinThirtyHorizontalMetersOfTheGroundedWitch(WitchState state)
+        {
+            var o = new PlaythroughObservation
+            {
+                Energy = 80f, WitchState = state, Position = new Vector3(10f, 2f, -4f),
+                WitchPosition = new Vector3(39f, 60f, -4f)
+            };
+            Assert.IsFalse(PlaythroughPlan.WalksWithLight(PlaythroughMilestone.Memory2, true, in o), "Huye a oscuras a menos de 30 m.");
+            o.WitchPosition.x = 40f;
+            Assert.IsFalse(PlaythroughPlan.WalksWithLight(PlaythroughMilestone.Memory2, true, in o), "Incluye los 30 m e ignora el desnivel.");
+            o.WitchPosition.x = 40.01f;
+            Assert.IsTrue(PlaythroughPlan.WalksWithLight(PlaythroughMilestone.Memory2, true, in o), "Puede alumbrar fuera de los 30 m.");
+        }
+
+        [TestCase(WitchState.Flying, false)]
+        [TestCase(WitchState.Landing, true)]
+        [TestCase(WitchState.TakingOff, true)]
+        public void AirborneStatesKeepTheirExistingWalkingLightRule(WitchState state, bool lightAtTwentyMeters)
+        {
+            var o = new PlaythroughObservation { Energy = 80f, WitchState = state, WitchPosition = new Vector3(30f, 20f, 0f) };
+            Assert.IsTrue(PlaythroughPlan.WalksWithLight(PlaythroughMilestone.Memory2, true, in o), "El radio terrestre no se aplica en vuelo.");
+            o.WitchPosition.x = 25f;
+            Assert.IsTrue(PlaythroughPlan.WalksWithLight(PlaythroughMilestone.Memory2, true, in o), "El fuego solo obliga a apagarla por debajo de 25 m.");
+            o.WitchPosition.x = 20f;
+            Assert.AreEqual(lightAtTwentyMeters, PlaythroughPlan.WalksWithLight(PlaythroughMilestone.Memory2, true, in o));
+        }
+
+        [TestCase(PlaythroughMilestone.Memory2)]
+        [TestCase(PlaythroughMilestone.LakeCandle)]
+        [TestCase(PlaythroughMilestone.Road)]
+        [TestCase(PlaythroughMilestone.Manifest)]
+        public void WalkingTurnsTheLightOffNearTheGroundedWitchAndBackOnAtADistance(PlaythroughMilestone milestone)
+        {
+            var plan = new PlaythroughPlan(new[] { milestone });
+            var o = new PlaythroughObservation
+            {
+                Energy = 80f, LightOn = true, WitchState = WitchState.Stalking,
+                WitchPosition = new Vector3(30f, 0f, 0f)
+            };
+            var command = plan.Tick(0.1f, in o);
+            Assert.IsTrue(command.Move);
+            Assert.IsTrue(command.ToggleLight, "Apaga la luz para seguir huyendo a oscuras.");
+            o.LightOn = false;
+            Assert.IsFalse(plan.Tick(0.3f, in o).ToggleLight, "La mantiene apagada mientras la bruja sigue cerca.");
+            o.WitchPosition.x = 30.01f;
+            Assert.IsTrue(plan.Tick(0.3f, in o).ToggleLight, "Vuelve a alumbrar cuando la bruja queda lejos.");
+        }
+
+        [TestCase(PlaythroughMilestone.Hide)]
+        [TestCase(PlaythroughMilestone.LeaveHide)]
+        [TestCase(PlaythroughMilestone.Vanish)]
+        [TestCase(PlaythroughMilestone.Challenge2Cross)]
+        public void BotKeepsTheScriptedLightOnHidingVanishingAndChallenges(PlaythroughMilestone milestone)
+        {
+            var o = new PlaythroughObservation { Energy = 80f, WitchPosition = new Vector3(100f, 20f, 0f) };
+            Assert.IsFalse(PlaythroughPlan.WalksWithLight(milestone, true, in o));
+        }
+
+        [Test]
+        public void WalkingLightTogglesTheLampOnTheWayToAMemory()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Memory2 });
+            var o = new PlaythroughObservation { Energy = 80f, WitchPosition = new Vector3(100f, 20f, 0f) };
+            Assert.IsTrue(plan.Tick(0.1f, in o).ToggleLight);
+        }
     }
 }

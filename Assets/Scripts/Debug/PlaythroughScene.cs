@@ -5,7 +5,7 @@ using Object = UnityEngine.Object;
 
 namespace TiffanyGame
 {
-    public sealed class PlaythroughScene
+    public sealed class PlaythroughScene : IDisposable
     {
         readonly MemoryCollector collector;
         readonly PlayerController player;
@@ -25,8 +25,8 @@ namespace TiffanyGame
         readonly MemorySpot[] memories = new MemorySpot[5];
         readonly PowerChallenge[] challenges = new PowerChallenge[4];
         PowerChallenge challenge;
-        float selectedAt;
-        CandleSpot kindleTarget, checkpoint;
+        float selectedAt, respawnGraceUntil;
+        CandleSpot kindleTarget, checkpoint, rampCandle;
         MovableObject movable;
         HideVolume hideVolume;
         PlaythroughMilestone milestone;
@@ -66,6 +66,7 @@ namespace TiffanyGame
                     if (candle.kind == CandleKind.Family) { family[i] = candle; break; }
                 Require(family[i], "veladora familiar");
             }
+            rampCandle = Require(route.Find("Landscape/" + RouteTerrain.RampCandleName), "veladora de la rampa").GetComponent<CandleSpot>();
             ball = clearings[0].Find("Ball");
             foreach (var memory in collector.spots)
             {
@@ -73,7 +74,13 @@ namespace TiffanyGame
                 if (memory.memoryId == MemoryProgress.BallId && memory.kind == MemorySpotKind.Ball) ballPickup = memory;
                 else if (memory.memoryId >= 1 && memory.memoryId <= 5) memories[memory.memoryId - 1] = memory;
             }
+            respawn.Respawned += OnRespawned;
         }
+
+        void OnRespawned() => respawnGraceUntil = Time.time
+            + (witch != null && witch.isActiveAndEnabled && witch.Profile.GroundChase ? witch.Profile.ReturnGraceDuration : 0f);
+
+        public void Dispose() => respawn.Respawned -= OnRespawned;
 
         public void Prepare(PlaythroughPlan plan, Action<string> log)
         {
@@ -173,6 +180,10 @@ namespace TiffanyGame
                 case PlaythroughMilestone.Recharge2: SelectCandle(1); break;
                 case PlaythroughMilestone.Recharge3: SelectCandle(2); break;
                 case PlaythroughMilestone.Recharge4: SelectCandle(3); break;
+                case PlaythroughMilestone.RampCandle:
+                    checkpoint = rampCandle;
+                    Target = checkpoint.transform.position + Vector3.back * 1.5f;
+                    break;
                 case PlaythroughMilestone.LakeCandle: SelectCandle(5); break;
                 case PlaythroughMilestone.Kindle: Target = kindleTarget.transform.position + Vector3.back * 1.4f; break;
                 case PlaythroughMilestone.MoveObject: Target = movable.transform.position + Vector3.back * 2f; break;
@@ -197,6 +208,9 @@ namespace TiffanyGame
         public PlaythroughObservation Observe() => new PlaythroughObservation
         {
             Position = Position,
+            Target = Target,
+            InSafeZone = SafeZones.Contains(Position),
+            RespawnGraceRemaining = Mathf.Max(0f, respawnGraceUntil - Time.time),
             AtTarget = AtTarget,
             MemoryFound = PlaythroughPlan.MemoryId(milestone) > 0 && collector.IsFound(PlaythroughPlan.MemoryId(milestone)),
             BallCollected = collector.IsFound(MemoryProgress.BallId),

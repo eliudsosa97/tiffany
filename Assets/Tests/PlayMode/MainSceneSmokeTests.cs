@@ -104,6 +104,39 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator MainSceneHasBackgroundAndTensionMusicWired()
+        {
+            var tracks = Object.FindObjectsByType<BackgroundMusic>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            Assert.That(tracks, Has.Length.EqualTo(1));
+            var music = tracks[0];
+            Assert.IsNotNull(music.gameInterface);
+            Assert.IsNotNull(music.tracker);
+            Assert.IsNotNull(music.tension);
+            Assert.IsNotNull(music.witch);
+            Assert.IsNotNull(music.source);
+            Assert.IsNotNull(music.theme);
+            Assert.IsTrue(music.source.ignoreListenerPause);
+            Assert.IsTrue(music.source.loop);
+            Assert.IsFalse(music.source.playOnAwake);
+            Assert.AreEqual(0f, music.source.spatialBlend);
+            Assert.AreEqual("music_theme", music.theme.name);
+            Assert.AreSame(music.theme, music.finale);
+
+            var tension = Object.FindAnyObjectByType<TensionMusic>();
+            Assert.IsNotNull(tension);
+            Assert.AreSame(tension, music.tension);
+            Assert.IsNotNull(tension.drone);
+            Assert.IsNotNull(tension.pulse);
+            Assert.IsNotNull(tension.drone.clip);
+            Assert.IsNotNull(tension.pulse.clip);
+            Assert.AreEqual("music_stalk", tension.drone.clip.name);
+            Assert.AreEqual("music_chase", tension.pulse.clip.name);
+
+            yield return null;
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator MainSceneHasSilhouettesOnlyOnTiffanyAndTyler()
         {
             var player = GameObject.FindGameObjectWithTag("Player");
@@ -243,7 +276,7 @@ namespace TiffanyGame.Tests
             Assert.AreSame(witch, save.witch);
             var family = System.Array.FindAll(Object.FindObjectsByType<CandleSpot>(FindObjectsInactive.Include, FindObjectsSortMode.None),
                 candle => candle.kind == CandleKind.Family);
-            Assert.AreEqual(14, family.Length);
+            Assert.AreEqual(15, family.Length, "Catorce veladoras familiares originales y la de la rampa.");
             CollectionAssert.AreEquivalent(family, save.candles);
             var ids = new HashSet<string>();
             foreach (var candle in family)
@@ -429,8 +462,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(29, route.GetComponentsInChildren<CaptureStop>().Length, "21 paradas previas y ocho vistas de los retos.");
             Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
-            Assert.AreEqual(20, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length,
-                "Doce originales, cuatro de recarga y cuatro para encender en los retos.");
+            Assert.AreEqual(21, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length,
+                "Doce originales, la de la rampa, cuatro de recarga y cuatro para encender en los retos.");
             foreach (var movable in MovableObject.Active)
                 Assert.IsTrue(movable.transform.IsChildOf(cemetery) || movable.GetComponentInParent<PowerChallenge>() != null);
             var player = GameObject.FindGameObjectWithTag("Player");

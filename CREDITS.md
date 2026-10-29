@@ -19,7 +19,7 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/rain.wav` | [Rain light 2 (rural)](https://freesound.org/s/200273/) | jmbphilmes | CC0 |
 | `Assets/Audio/Sfx/river_loop.wav` | [Ambiance_River_Flow_Small_Loop_Stereo.wav](https://freesound.org/s/479321/) | Nox_Sound | CC0 |
 | `Assets/Audio/Sfx/lake_loop.wav` | [Water_Lapping_River.wav](https://freesound.org/s/318064/) | ceich93 | CC0 |
-| `Assets/Audio/Sfx/heartbeat.wav` | [Single Heartbeat Clean HQ](https://freesound.org/s/22440/) | Lunardrive | CC0 |
+| `Assets/Audio/Sfx/heartbeat.wav` | [Heart Beating](https://freesound.org/s/273150/) | michorvath | CC0 |
 | `Assets/Audio/Sfx/growl_1.wav` | [Animal Dog Growl 01](https://freesound.org/s/625500/) | abhisheky948 | CC0 |
 | `Assets/Audio/Sfx/growl_2.wav` | [growl](https://freesound.org/s/13789/) | wingz | CC0 |
 | `Assets/Audio/Sfx/whine.wav` | [Dog Whining](https://freesound.org/s/155321/) | Jace | CC0 |
@@ -56,6 +56,9 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/frogs.wav` | [FrogsAndCrickets_ExcerptA](https://freesound.org/s/32654/) | greysound | CC0 |
 | `Assets/Audio/Sfx/tension_drone.wav` | [Deep rumbling drone](https://freesound.org/s/632682/) | xkeril | CC0 |
 | `Assets/Audio/Sfx/tension_pulse.wav` | [Horror Pulsating Drone Loop](https://freesound.org/s/457046/) | gerainsan | CC0 |
+| `Assets/Audio/Sfx/music_theme.wav` | Música de fundo suspense e terror (Pixabay, ID 423727) | luisranm | Licencia de contenido de Pixabay |
+| `Assets/Audio/Sfx/music_stalk.wav` | Drones of Dread, Dark Cinematic Industrial Ambient (Pixabay, ID 497226) | nickpanek | Licencia de contenido de Pixabay |
+| `Assets/Audio/Sfx/music_chase.wav` | Horror Drone (Pixabay, ID 599271) | soundreality | Licencia de contenido de Pixabay |
 | `Assets/Audio/Sfx/bottle.wav` | [Small_Glass_Bottle_Wood_Floor.wav](https://freesound.org/s/235602/) | tcrocker68 | CC0 |
 | `Assets/Audio/Sfx/can.wav` | [CanBounce 2.wav](https://freesound.org/s/92622/) | nigelcoop | CC0 |
 | `Assets/Audio/Sfx/pot.wav` | [Breaking pot short](https://freesound.org/s/810043/) | anna_bliss | CC0 |

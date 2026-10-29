@@ -60,6 +60,47 @@ namespace TiffanyGame.Tests
             LogAssert.NoUnexpectedReceived();
         }
 
+        [UnityTest]
+        public IEnumerator RainRemovesKindledSafetyAndKeepsFamilyLit()
+        {
+            candle.startLit = true;
+            var family = AddCandle(Vector3.right * 10f, true);
+            family.kind = CandleKind.Family;
+            var stormObject = new GameObject("Storm");
+            stormObject.transform.SetParent(world.transform, false);
+            var storm = stormObject.AddComponent<Storm>();
+            candle.storm = family.storm = storm;
+            world.SetActive(true);
+            Assert.IsTrue(SafeZones.Contains(candle.transform.position));
+
+            storm.raining = true;
+            yield return null;
+
+            Assert.IsFalse(candle.Candle.IsLit);
+            Assert.IsFalse(candle.flame.enabled);
+            Assert.IsFalse(candle.flameMesh.enabled);
+            Assert.IsFalse(SafeZones.Contains(candle.transform.position));
+            Assert.IsTrue(family.Candle.IsLit);
+            Assert.IsTrue(family.flame.enabled);
+            Assert.IsTrue(SafeZones.Contains(family.transform.position));
+            Assert.IsFalse(kindler.TryKindle());
+            Assert.AreEqual(100f, soul.Energy.Current);
+        }
+
+        [Test]
+        public void RainBlocksKindlingBeforeTheCandleTicks()
+        {
+            var stormObject = new GameObject("Storm");
+            stormObject.transform.SetParent(world.transform, false);
+            candle.storm = stormObject.AddComponent<Storm>();
+            candle.storm.raining = true;
+            world.SetActive(true);
+
+            Assert.IsFalse(kindler.TryKindle());
+            Assert.IsFalse(candle.Candle.IsLit);
+            Assert.AreEqual(100f, soul.Energy.Current);
+        }
+
         [Test]
         public void IgnoresCandlesBeyondTwoMeters()
         {

@@ -18,6 +18,23 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void StableProfileResamplesThePendingTrainTracksRoamDelay()
+        {
+            profile = WitchProfiles.For(Chapter.TrainTracks);
+            brain = new WitchBrain(profile, null, new FixedRandom(2d / 3d));
+            p.PlayerPosition = Vector3.forward * 60f;
+            Assert.AreEqual(p.WitchPosition, Step(5f).MoveTarget);
+
+            profile = WitchProfiles.For(Chapter.Stable);
+            brain.SetProfile(profile);
+            Assert.AreEqual(p.WitchPosition, Step(26.5f).MoveTarget);
+            WitchDecision roam = Step(0.25f);
+            Assert.AreEqual(WitchState.Flying, roam.State);
+            Assert.AreEqual(WitchIntent.None, roam.Intent);
+            Assert.That(Distance(p.PlayerPosition, roam.MoveTarget), Is.InRange(profile.RoamMinDistance, profile.RoamMaxDistance));
+        }
+
+        [Test]
         public void SearchVisitsLastKnownPositionThenGrowsThreeMetersPerTurnAndExhaustsTheSpiral()
         {
             profile.SearchDuration = 1000f;

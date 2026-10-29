@@ -45,6 +45,22 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(wasLit || used, candle.IsLit);
         }
 
+        [Test]
+        public void RainBlocksCandleLightingWithoutSpendingEnergy()
+        {
+            var powers = new PowerSet();
+            powers.Unlock(Power.Candles);
+            var energy = new SoulEnergy();
+            var candle = new Candle(CandleKind.Kindled, Vector3.zero);
+
+            Assert.IsFalse(PowerRules.TryLightCandle(powers, energy, candle, true));
+            Assert.AreEqual(100f, energy.Current);
+            Assert.IsFalse(candle.IsLit);
+            Assert.IsTrue(PowerRules.TryLightCandle(powers, energy, candle, false));
+            Assert.AreEqual(80f, energy.Current);
+            Assert.IsTrue(candle.IsLit);
+        }
+
         [TestCase(false, 100f, 12f, true, false, 100f)]
         [TestCase(true, 100f, 12.1f, true, false, 100f)]
         [TestCase(true, 100f, 12f, true, true, 85f)]

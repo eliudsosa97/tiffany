@@ -33,7 +33,10 @@ namespace TiffanyGame
             }
 
             int target = KindleTargeting.Nearest(transform.position, positions, eligible, PowerRules.KindleRange);
-            if (target < 0 || !PowerRules.TryLightCandle(soul.Powers, soul.Energy, candles[target].Candle)) return false;
+            if (target < 0) return false;
+            var chosen = candles[target];
+            if (!PowerRules.TryLightCandle(soul.Powers, soul.Energy, chosen.Candle,
+                chosen.storm != null && chosen.storm.raining)) return false;
             Debug.Log($"{GameInfo.LogPrefix} Tiffany enciende una veladora");
             return true;
         }

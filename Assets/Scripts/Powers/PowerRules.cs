@@ -34,7 +34,7 @@ namespace TiffanyGame
             return true;
         }
 
-        public static bool TryLightCandle(PowerSet powers, SoulEnergy energy, Candle candle)
+        public static bool TryLightCandle(PowerSet powers, SoulEnergy energy, Candle candle, bool raining = false)
         {
             if (powers == null)
             {
@@ -48,13 +48,13 @@ namespace TiffanyGame
             {
                 throw new ArgumentNullException(nameof(candle));
             }
-            if (!powers.Has(Power.Candles) || candle.Kind != CandleKind.Kindled || candle.IsLit
+            if (raining || !powers.Has(Power.Candles) || candle.Kind != CandleKind.Kindled || candle.IsLit
                 || !energy.TrySpend(SoulCosts.LightCandle))
             {
                 return false;
             }
 
-            return candle.TryLight();
+            return candle.TryLight(raining);
         }
 
         public static bool TryMove(PowerSet powers, SoulEnergy energy, Throwable target,
