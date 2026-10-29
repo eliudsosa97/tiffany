@@ -62,7 +62,7 @@ namespace TiffanyGame
             {
                 respawn.Respawn(soul.Energy);
                 PlaceAtCheckpoint();
-                if (witch != null) witch.ResetBrain();
+                if (witch != null) witch.ResetBrain(afterCapture: true);
                 Respawned?.Invoke();
                 if (playerLight != null && playerLight.State != null && playerLight.State.IsOn) playerLight.Toggle();
                 Debug.Log($"{GameInfo.LogPrefix} Atrapada: regreso a la veladora");

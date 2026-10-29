@@ -95,6 +95,7 @@ namespace TiffanyGame.EditorTools
             save.candles = Array.FindAll(world.GetComponentsInChildren<CandleSpot>(true), candle => candle.kind == CandleKind.Family);
             save.initialCandle = route.GetChild(0).GetComponentInChildren<CandleSpot>();
             BuildTrailTension(route.GetComponent<WitchChapterTracker>(), playerLight.witch, tyler);
+            GroundLitterBuilder.Scatter(world);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
