@@ -12,7 +12,7 @@ namespace TiffanyGame
         {
             if (dt <= 0f || float.IsNaN(dt) || float.IsInfinity(dt)) return TrailEvent.None;
             cooldown = chase ? ChaseCooldown : System.Math.Max(0f, cooldown - dt);
-            if (!onTrail) { remaining = FirstDelay; return TrailEvent.None; }
+            if (!onTrail) return TrailEvent.None;
             remaining -= dt;
             if (remaining > 0f) return TrailEvent.None;
             if (chase || cooldown > 0f || witchDistance < WitchNear)

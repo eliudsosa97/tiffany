@@ -8,12 +8,12 @@ namespace TiffanyGame.Tests
         private TrailEvent Tick(float dt, bool trail = true, bool chase = false, float distance = 100f,
             bool tyler = true, bool flying = false) => rules.Tick(dt, trail, chase, distance, tyler, flying);
         [Test]
-        public void ClearingsStayQuietAndResetFirstDelay()
+        public void ClearingsStayQuietAndPauseTheTimer()
         {
             Assert.AreEqual(TrailEvent.None, Tick(100f, trail: false));
-            Assert.AreEqual(TrailEvent.None, Tick(9f));
-            Assert.AreEqual(TrailEvent.None, Tick(1f, trail: false));
-            Assert.AreEqual(TrailEvent.None, Tick(9f));
+            Assert.AreEqual(TrailEvent.None, Tick(5f));
+            Assert.AreEqual(TrailEvent.None, Tick(30f, trail: false));
+            Assert.AreEqual(TrailEvent.None, Tick(4f));
             Assert.AreEqual(TrailEvent.PhantomSteps, Tick(1f));
         }
         [Test] public void IntervalsCycleAfterFirstTenSeconds()
