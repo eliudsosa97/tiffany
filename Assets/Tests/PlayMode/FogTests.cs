@@ -44,8 +44,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual("World/" + GroundFog.RootName, fog.transform.parent.name + "/" + fog.name);
             Assert.IsFalse(fog.transform.IsChildOf(tracker.transform));
             Assert.AreSame(tracker.player, fog.player);
-            Assert.AreEqual(109, fog.layers.Length, "16 de claros, 54 del sendero, 8 del bosque embrujado y 31 de agua.");
-            Assert.AreEqual(31, System.Array.FindAll(fog.layers, layer => layer.water).Length);
+            Assert.AreEqual(108, fog.layers.Length, "16 de claros, 54 del sendero, 8 del bosque embrujado y 30 de agua.");
+            Assert.AreEqual(30, System.Array.FindAll(fog.layers, layer => layer.water).Length);
             Assert.AreEqual(fog.layers.Length, fog.GetComponentsInChildren<Renderer>().Length);
             var material = fog.layers[0].renderer.sharedMaterial;
             Assert.AreEqual("Universal Render Pipeline/Tiffany Ground Fog", material.shader.name);

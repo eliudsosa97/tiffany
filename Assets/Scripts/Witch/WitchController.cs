@@ -52,6 +52,8 @@ namespace TiffanyGame
         private Animator animator;
         private WitchState lastAnimationState;
         private bool hasAnimationState;
+        private NavMeshPath chasePath;
+        private readonly GroundChasePlacement.Candidate[] chaseCandidates = new GroundChasePlacement.Candidate[8];
         private static readonly int SpeedHash = Animator.StringToHash("Speed");
         private static readonly int IdleHash = Animator.StringToHash("Idle");
         private static readonly int StalkingHash = Animator.StringToHash(nameof(WitchState.Stalking));
@@ -146,26 +148,23 @@ namespace TiffanyGame
         private void PlaceForGroundChase()
         {
             if (player == null || !NavMeshPlacement.TrySample(player.position, 6f, agent.areaMask, out var target)) return;
-            var path = new NavMeshPath();
-            float shortest = float.PositiveInfinity;
-            for (int i = 0; i < 8; i++)
+            chasePath ??= new NavMeshPath();
+            int count = 0;
+            for (int i = 0; i < chaseCandidates.Length; i++)
             {
                 Vector3 offset = Quaternion.AngleAxis(i * 45f, Vector3.up) * -player.forward * 12f;
                 if (!SafeZones.TryPushOut(player.position + offset, landingMargin, out var entry)
                     || !NavMeshPlacement.TrySample(entry, 6f, agent.areaMask, out var hit)
                     || SafeZones.Contains(hit.position)) continue;
-                Vector3 separation = hit.position - player.position;
-                separation.y = 0f;
-                if (separation.sqrMagnitude < profile.SprintTriggerDistance * profile.SprintTriggerDistance) continue;
-                if (!NavMesh.CalculatePath(hit.position, target.position, agent.areaMask, path)
-                    || path.status != NavMeshPathStatus.PathComplete) continue;
+                var status = NavMesh.CalculatePath(hit.position, target.position, agent.areaMask, chasePath)
+                    ? chasePath.status : NavMeshPathStatus.PathInvalid;
                 float length = 0f;
-                var corners = path.corners;
+                var corners = chasePath.corners;
                 for (int corner = 1; corner < corners.Length; corner++) length += Vector3.Distance(corners[corner - 1], corners[corner]);
-                if (length >= shortest) continue;
-                shortest = length;
-                transform.position = hit.position;
+                chaseCandidates[count++] = new GroundChasePlacement.Candidate { Position = hit.position, Status = status, PathLength = length };
             }
+            int chosen = GroundChasePlacement.Choose(chaseCandidates, count, player.position, profile.SprintTriggerDistance);
+            if (chosen >= 0) transform.position = chaseCandidates[chosen].Position;
         }
 
         private void Hear(StepNoise noise) => witchSenses.Hear(in noise, transform.position);

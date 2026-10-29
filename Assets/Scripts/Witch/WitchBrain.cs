@@ -6,6 +6,9 @@ namespace TiffanyGame
 {
     public sealed class WitchBrain
     {
+        // Tiffany mide 1.2 m: con más desnivel entre los pies, un tablero o un talud las separa.
+        public const float CatchHeight = 1.5f;
+
         private WitchProfile profile;
         private readonly Vector3[] route;
         private readonly System.Random random;
@@ -234,7 +237,7 @@ namespace TiffanyGame
                     break;
                 case WitchState.Stalking:
                     if (hasTarget && resolveGroundTarget != null) target = resolveGroundTarget(target);
-                    if (detected && ((chasing && warned) || !profile.CanSprint) && p.DistanceToPlayer < profile.CatchDistance)
+                    if (detected && ((chasing && warned) || !profile.CanSprint) && InCatchRange(in p))
                     {
                         Enter(WitchState.Caught, p.WitchPosition);
                         break;
@@ -309,7 +312,7 @@ namespace TiffanyGame
                     }
                     break;
                 case WitchState.Sprinting:
-                    if (trackable && p.DistanceToPlayer < profile.CatchDistance)
+                    if (trackable && InCatchRange(in p))
                         Enter(WitchState.Caught, p.WitchPosition);
                     else if (stateTime >= profile.SprintDuration)
                         Enter(WitchState.Recovering, p.WitchPosition);
@@ -450,6 +453,9 @@ namespace TiffanyGame
             if (next == WitchState.TakingOff || next == WitchState.Landing)
                 roaming = hasNoiseTarget = hasHideTarget = inspectingNoise = retreatingNoise = false;
         }
+
+        private bool InCatchRange(in WitchPerception p) => p.DistanceToPlayer < profile.CatchDistance
+            && Mathf.Abs(p.PlayerPosition.y - p.WitchPosition.y) < CatchHeight;
 
         private Vector3 FlightPoint(int index) => route[index] + Vector3.up * profile.FlightHeightOffset;
 

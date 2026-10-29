@@ -44,7 +44,7 @@ namespace TiffanyGame.EditorTools
                     new Vector3(0f, 0f, side * (RiverWidth + bankLength) * 0.5f),
                     new Vector2(pathWidth, bankLength), GroundType.Dirt, floor);
             var river = Root("River", path, Vector3.zero);
-            Water("Water", river, new Vector3(0f, -0.15f, 0f), new Vector2(12f, RiverWidth), "river_loop", true);
+            Sound(Root("River Sound", river, new Vector3(0f, -0.15f, 0f)).gameObject, "river_loop");
             float blockedWidth = (pathWidth - CrossingWidth) * 0.5f;
             for (int side = -1; side <= 1; side += 2)
                 Block($"Water Block {side}", river, new Vector3(side * (CrossingWidth + blockedWidth) * 0.5f, 1.5f, 0f),
@@ -78,12 +78,17 @@ namespace TiffanyGame.EditorTools
             Object.DestroyImmediate(visual.GetComponent<Collider>());
         }
 
-        static void Water(string name, Transform parent, Vector3 position, Vector2 size, string clip, bool river = false)
+        static void Water(string name, Transform parent, Vector3 position, Vector2 size, string clip)
         {
             var water = SceneBuilder.CreatePrimitive(name, PrimitiveType.Plane, parent, position,
-                new Vector3(size.x * 0.1f, 1f, size.y * 0.1f), GeneratedMaterials.GetWater(river));
+                new Vector3(size.x * 0.1f, 1f, size.y * 0.1f), GeneratedMaterials.GetWater());
             Object.DestroyImmediate(water.GetComponent<Collider>());
-            var source = water.AddComponent<AudioSource>();
+            Sound(water, clip);
+        }
+
+        static void Sound(GameObject host, string clip)
+        {
+            var source = host.AddComponent<AudioSource>();
             source.clip = AudioBuilder.LoadClip(clip);
             source.loop = true;
             source.playOnAwake = true;

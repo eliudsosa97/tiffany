@@ -354,8 +354,6 @@ namespace TiffanyGame.Tests
         {
             var river = PrepareRiverWalk(out var player);
             var body = player.GetComponent<CharacterController>();
-            var water = river.Find("Water");
-            var waterBounds = water.GetComponent<MeshFilter>().sharedMesh.bounds;
             float minimumHeight = river.Find("Stone 1").GetComponent<Collider>().bounds.max.y - 0.15f;
             foreach (int direction in new[] { 1, -1 })
             {
@@ -382,8 +380,7 @@ namespace TiffanyGame.Tests
                 bool branches = false;
                 foreach (var step in steps)
                 {
-                    float z = water.InverseTransformPoint(step.Position).z;
-                    if (z < waterBounds.min.z || z > waterBounds.max.z) continue;
+                    if (Mathf.Abs(river.InverseTransformPoint(step.Position).z) > RouteTerrain.RiverWidth * 0.5f) continue;
                     gravel |= Mathf.Approximately(step.Radius, NoiseModel.GravelRadius);
                     branches |= Mathf.Approximately(step.Radius, NoiseModel.BranchesRadius);
                 }

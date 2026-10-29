@@ -281,9 +281,9 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(fog);
             Assert.IsFalse(fog.transform.IsChildOf(route));
             Assert.AreSame(player.transform, fog.player);
-            Assert.AreEqual(109, fog.layers.Length, "16 de claros, 54 del sendero, 8 del bosque embrujado y 31 de agua.");
-            Assert.AreEqual(109, fog.GetComponentsInChildren<Renderer>().Length);
-            Assert.AreEqual(31, System.Array.FindAll(fog.layers, layer => layer.water).Length);
+            Assert.AreEqual(108, fog.layers.Length, "16 de claros, 54 del sendero, 8 del bosque embrujado y 30 de agua.");
+            Assert.AreEqual(108, fog.GetComponentsInChildren<Renderer>().Length);
+            Assert.AreEqual(30, System.Array.FindAll(fog.layers, layer => layer.water).Length);
             Assert.IsEmpty(fog.GetComponentsInChildren<Collider>());
             Assert.IsEmpty(fog.GetComponentsInChildren<Light>());
             foreach (var layer in fog.layers)
@@ -388,7 +388,7 @@ namespace TiffanyGame.Tests
                     Assert.IsTrue(System.Array.Exists(layers, layer => Covers(layer, point)), $"Agua {water.name}: {point}");
                 }
             }
-            Assert.AreEqual(7, surfaces, "Lago, cruce y cinco tramos del río en Landscape.");
+            Assert.AreEqual(6, surfaces, "Lago y cinco tramos del río en Landscape.");
             bool Covers(GroundFog.Layer layer, Vector3 point)
             {
                 point.y = layer.renderer.transform.position.y;
@@ -617,7 +617,8 @@ namespace TiffanyGame.Tests
         {
             var river = route.GetChild(5).Find("Path to Next Clearing/River Crossing/River");
             Assert.IsNotNull(river);
-            Assert.IsNull(river.Find("Water").GetComponent<Collider>());
+            foreach (var renderer in river.GetComponentsInChildren<Renderer>(true))
+                Assert.AreNotEqual("Universal Render Pipeline/Tiffany Water", renderer.sharedMaterial.shader.name, renderer.name);
             Assert.IsNull(river.parent.Find("Ground"));
             RouteLayout.RiverSpan(out var start, out var end);
             Assert.Less(Vector3.Distance(route.TransformPoint((start + end) * 0.5f), river.position), 0.001f);
@@ -649,14 +650,17 @@ namespace TiffanyGame.Tests
         public void WaterHasSavedShaderPositionedLoopsAndLitCaptureStops()
         {
             var lake = route.GetChild(5).Find("Water");
-            var river = route.GetChild(5).Find("Path to Next Clearing/River Crossing/River/Water");
-            foreach (var water in new[] { lake, river })
+            var river = route.GetChild(5).Find("Path to Next Clearing/River Crossing/River/River Sound");
+            foreach (var surface in new[] { lake, route.Find("Landscape/River/Water 1") })
             {
-                var material = water.GetComponent<Renderer>().sharedMaterial;
+                var material = surface.GetComponent<Renderer>().sharedMaterial;
                 Assert.IsTrue(AssetDatabase.Contains(material));
                 Assert.AreEqual("Universal Render Pipeline/Tiffany Water", material.shader.name);
                 Assert.IsFalse(ShaderUtil.ShaderHasError(material.shader));
                 Assert.Less(material.GetColor("_BaseColor").a, 1f);
+            }
+            foreach (var water in new[] { lake, river })
+            {
                 var source = water.GetComponent<AudioSource>();
                 Assert.IsNotNull(source.clip);
                 Assert.AreEqual(water == lake ? "lake_loop" : "river_loop", source.clip.name);
