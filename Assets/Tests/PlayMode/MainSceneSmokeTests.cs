@@ -141,22 +141,23 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(soul);
             Assert.IsNotNull(playerLight.spot);
             Assert.AreSame(playerLight.spot, poltergeist.handLight);
-            Assert.IsTrue(soul.Powers.Has(Power.Poltergeist));
+            Assert.IsFalse(soul.Powers.Has(Power.Poltergeist));
             Assert.IsTrue(soul.Powers.Has(Power.Light));
 
             var objects = MovableObject.Active;
-            Assert.AreEqual(4, objects.Count);
+            Assert.AreEqual(6, objects.Count, "Cuatro objetos originales y dos campanas de los retos.");
             foreach (ThrowableKind kind in System.Enum.GetValues(typeof(ThrowableKind)))
             {
                 if (kind == ThrowableKind.Candle) continue;
                 int count = 0;
                 foreach (var movable in objects)
                     if (movable.kind == kind) count++;
-                Assert.AreEqual(1, count, $"Debe haber un objeto de tipo {kind}.");
+                Assert.AreEqual(kind == ThrowableKind.Bell ? 3 : 1, count, $"Objetos de tipo {kind}.");
             }
             foreach (var movable in objects)
             {
-                Assert.LessOrEqual(Vector3.Distance(player.transform.position, movable.transform.position), 12f);
+                if (movable.GetComponentInParent<PowerChallenge>() == null)
+                    Assert.LessOrEqual(Vector3.Distance(player.transform.position, movable.transform.position), 12f);
                 var body = movable.GetComponent<Rigidbody>();
                 Assert.IsNotNull(body);
                 Assert.IsTrue(body.isKinematic);
@@ -166,6 +167,7 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(0f, movable.sound.spatialBlend);
             }
 
+            soul.Powers.Unlock(Power.Poltergeist);
             float expectedEnergy = soul.Energy.Current - 15f;
             playerLight.Toggle();
             yield return null;
@@ -213,14 +215,17 @@ namespace TiffanyGame.Tests
             var route = GameObject.Find("Route").transform;
             var cemetery = route.GetChild(0);
             Assert.AreEqual(8, route.childCount);
-            Assert.AreEqual(65, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
+            Assert.AreEqual(4, Object.FindAnyObjectByType<MemoryCollector>().challenges.Length);
+            Assert.AreEqual(73, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
                 "58 paradas de main (48 de escena, una vista previa, cinco ecos, dos de la pelota " +
-                "y dos vistas del agua), Witch Suspicious y seis comparaciones de neblina.");
-            Assert.AreEqual(21, route.GetComponentsInChildren<CaptureStop>().Length, "19 paradas previas y dos vistas del agua.");
+                "y dos vistas del agua), Witch Suspicious, seis comparaciones de neblina y ocho vistas de los retos.");
+            Assert.AreEqual(29, route.GetComponentsInChildren<CaptureStop>().Length, "21 paradas previas y ocho vistas de los retos.");
             Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
-            Assert.AreEqual(12, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length);
-            foreach (var movable in MovableObject.Active) Assert.IsTrue(movable.transform.IsChildOf(cemetery));
+            Assert.AreEqual(20, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length,
+                "Doce originales, cuatro de recarga y cuatro para encender en los retos.");
+            foreach (var movable in MovableObject.Active)
+                Assert.IsTrue(movable.transform.IsChildOf(cemetery) || movable.GetComponentInParent<PowerChallenge>() != null);
             var player = GameObject.FindGameObjectWithTag("Player");
             Vector3 start = cemetery.InverseTransformPoint(player.transform.position);
             Assert.That(start.x, Is.InRange(-17f, 17f));
@@ -278,7 +283,7 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator MainSceneHasTwoCandlesTiffanyCanKindle()
+        public IEnumerator MainSceneHasSixCandlesUnlockedByTheSecondMemory()
         {
             var player = GameObject.FindGameObjectWithTag("Player");
             Assert.IsNotNull(player);
@@ -286,8 +291,10 @@ namespace TiffanyGame.Tests
             var soul = player.GetComponent<PlayerSoul>();
             Assert.IsNotNull(kindler);
             Assert.IsNotNull(soul);
-            Assert.IsTrue(soul.Powers.Has(Power.Candles));
-            Assert.AreEqual(2, kindler.candles.Length);
+            Assert.IsFalse(soul.Powers.Has(Power.Candles));
+            Assert.IsFalse(kindler.TryKindle());
+            soul.Powers.Unlock(Power.Candles);
+            Assert.AreEqual(6, kindler.candles.Length, "Dos originales y dos en cada tramo oscuro.");
             foreach (var candle in kindler.candles)
             {
                 Assert.IsNotNull(candle);

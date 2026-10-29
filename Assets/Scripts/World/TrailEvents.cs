@@ -9,14 +9,15 @@ namespace TiffanyGame
         private float remaining = FirstDelay, cooldown;
         private int interval;
         private TrailEvent next = TrailEvent.PhantomSteps, last;
-        public TrailEvent Tick(float dt, bool onTrail, bool chase, float witchDistance, bool tylerNear, bool witchFlyingNear)
+        public TrailEvent Tick(float dt, bool onTrail, bool chase, bool inChallenge, float witchDistance,
+            bool tylerNear, bool witchFlyingNear)
         {
             if (dt <= 0f || float.IsNaN(dt) || float.IsInfinity(dt)) return TrailEvent.None;
-            cooldown = chase ? ChaseCooldown : System.Math.Max(0f, cooldown - dt);
+            cooldown = chase || inChallenge ? ChaseCooldown : System.Math.Max(0f, cooldown - dt);
             if (!onTrail) return TrailEvent.None;
             remaining -= dt;
             if (remaining > 0f) return TrailEvent.None;
-            if (chase || cooldown > 0f || witchDistance < WitchNear)
+            if (chase || inChallenge || cooldown > 0f || witchDistance < WitchNear)
             {
                 remaining = RetryDelay;
                 return TrailEvent.None;
