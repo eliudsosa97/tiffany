@@ -442,6 +442,7 @@ namespace TiffanyGame.EditorTools
             var tension = root.AddComponent<TrailTension>();
             tension.clearingRadius = RouteBuilder.TrailRadius;
             (tension.tracker, tension.witch, tension.tyler) = (tracker, witch, tyler);
+            tension.challenges = tracker.GetComponentsInChildren<PowerChallenge>(true);
             tension.oneShot = root.AddComponent<AudioSource>();
             (tension.oneShot.playOnAwake, tension.oneShot.spatialBlend) = (false, 0f);
             tension.phantomSteps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
@@ -567,10 +568,9 @@ namespace TiffanyGame.EditorTools
             controller.shareLight = TylerBuilder.BuildShareLight(tyler.transform);
             controller.witch = zoneRoot.GetComponentInChildren<WitchController>();
             controller.nextMemory = nextMemory;
-            controller.figure = TylerBuilder.BuildFigure(tyler.transform, out var head, out var stand, out var crouch);
+            controller.figure = TylerBuilder.BuildFigure(tyler.transform, out var head);
             controller.head = head;
-            controller.standBody = stand;
-            controller.crouchBody = crouch;
+            controller.animator = controller.figure.GetComponent<Animator>();
             controller.voice = tyler.AddComponent<AudioSource>();
             controller.voice.spatialBlend = 0f;
             controller.voice.playOnAwake = false;

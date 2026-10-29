@@ -59,7 +59,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual("Route", route.name);
             Assert.AreEqual(8, route.childCount);
             var captures = route.GetComponentsInChildren<CaptureStop>();
-            Assert.AreEqual(10, captures.Length, "Ocho claros y dos vistas del agua.");
+            Assert.AreEqual(18, captures.Length, "Ocho claros, dos vistas del agua y dos vistas por cada uno de los cuatro retos.");
             captures = System.Array.FindAll(captures, capture => capture.name.StartsWith("Route "));
             System.Array.Sort(captures, (a, b) => string.CompareOrdinal(a.name, b.name));
             for (int i = 0; i < names.Length; i++)
@@ -69,13 +69,14 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(names[i], captures[i].name);
                 Assert.IsTrue(captures[i].transform.IsChildOf(clearing));
                 Assert.IsFalse(captures[i].overrideCamera);
-                Assert.AreEqual(i == 4 || i == 5 ? 2 : 1, clearing.GetComponentsInChildren<CaptureStop>().Length);
+                int challenges = i == 3 ? 2 : i == 1 || i == 2 ? 1 : 0;
+                Assert.AreEqual((i == 4 || i == 5 ? 2 : 1) + challenges * 2, clearing.GetComponentsInChildren<CaptureStop>().Length);
                 var ground = clearing.GetComponentInChildren<GroundSurface>();
                 Assert.AreEqual(groundTypes[i], ground.type);
                 Assert.AreEqual(36f, ground.GetComponent<Collider>().bounds.size.z);
                 Assert.GreaterOrEqual(clearing.position.x - 18f, 90f);
                 var candles = clearing.GetComponentsInChildren<CandleSpot>();
-                Assert.AreEqual(1, candles.Length);
+                Assert.AreEqual(1 + challenges + (i == 1 || i == 3 ? 2 : 0), candles.Length);
                 Assert.AreEqual(CandleKind.Family, candles[0].kind);
                 Assert.AreSame(player.GetComponent<PlayerSoul>(), candles[0].player);
                 Assert.AreSame(storm, candles[0].storm);
@@ -279,6 +280,49 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void FourChallengesFollowTheirClearingSegmentsAndStayWithinRendererBudget()
+        {
+            var tracker = route.GetComponent<WitchChapterTracker>();
+            var challenges = route.GetComponentsInChildren<PowerChallenge>();
+            Assert.AreEqual(4, challenges.Length);
+            int[] sources = { 1, 2, 3, 3 };
+            float[] fractions = { 0.5f, 0.5f, 0.35f, 0.6f };
+            foreach (var challenge in challenges)
+            {
+                int i = (int)challenge.kind;
+                var source = tracker.clearings[sources[i]];
+                var next = tracker.clearings[sources[i] + 1];
+                Assert.AreSame(tracker, challenge.tracker);
+                Assert.Less(Vector3.Distance(Vector3.Lerp(source.position, next.position, fractions[i]), challenge.transform.position), 0.001f);
+                Assert.Greater(Vector3.Dot(challenge.transform.forward, (next.position - source.position).normalized), 0.999f);
+                Assert.AreEqual(CandleKind.Family, challenge.checkpoint.kind);
+                Assert.Less(challenge.checkpoint.transform.localPosition.z, -3f);
+                Assert.AreEqual(i == 0 || i == 3 ? 2 : 0, challenge.candles.Length);
+                Assert.AreEqual(i == 1 || i == 3, challenge.lure != null);
+                if (challenge.lure != null)
+                {
+                    Vector3 direction = Vector3.ProjectOnPlane(challenge.lure.transform.position - challenge.Entry, Vector3.up).normalized;
+                    Vector3 origin = challenge.Entry + Vector3.up * 3.2f - direction * 0.4f;
+                    Vector3 ray = challenge.lure.transform.position - origin;
+                    Assert.IsTrue(!Physics.Raycast(origin, ray, out var hit, ray.magnitude, Physics.DefaultRaycastLayers,
+                        QueryTriggerInteraction.Ignore) || hit.collider.GetComponentInParent<MovableObject>() == challenge.lure,
+                        "La campana debe verse desde la entrada para poder moverla con la luz.");
+                }
+                var captures = challenge.GetComponentsInChildren<ChallengeCaptureStage>();
+                Assert.AreEqual(2, captures.Length);
+                CollectionAssert.AreEquivalent(new[] { challenge.name + " Before", challenge.name + " After" },
+                    System.Array.ConvertAll(captures, stage => stage.name));
+            }
+            var stable = System.Array.Find(challenges, challenge => challenge.kind == ChallengeKind.Vanish);
+            var hut = System.Array.Find(challenges, challenge => challenge.kind == ChallengeKind.Hut);
+            float rechargeClearance = Vector3.Dot(hut.checkpoint.transform.position - stable.Exit, stable.transform.forward);
+            Assert.Greater(rechargeClearance, hut.checkpoint.radius + NavMesh.GetSettingsByIndex(0).agentRadius,
+                "La zona segura de la choza debe dejar libre la salida del pasillo del establo.");
+            foreach (var clearing in tracker.clearings)
+                Assert.LessOrEqual(clearing.GetComponentsInChildren<Renderer>(true).Length, 200, clearing.name);
+        }
+
+        [Test]
         public void ConsecutiveClearingsLeaveATrailBetweenThem()
         {
             for (int i = 1; i < skyRoute.Length; i++)
@@ -342,7 +386,8 @@ namespace TiffanyGame.Tests
                 renderer => renderer.GetComponentInParent<HideVolume>() != null).Length);
             foreach (var renderer in renderers)
             {
-                Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic), renderer.name);
+                Assert.AreEqual(!ChallengeBuilder.IsMoving(renderer.transform),
+                    GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic), renderer.name);
                 Assert.AreEqual(ShadowCastingMode.Off, renderer.shadowCastingMode, renderer.name);
                 Assert.IsNotEmpty(renderer.sharedMaterials, renderer.name);
                 foreach (var material in renderer.sharedMaterials)
@@ -357,7 +402,7 @@ namespace TiffanyGame.Tests
             var graveMaterial = route.GetChild(0).Find("Tiffany Gravestone").GetComponentInChildren<Renderer>().sharedMaterial;
             Assert.AreEqual("Assets/Art/Kenney/Graveyard/Models/Textures/colormap.png", AssetDatabase.GetAssetPath(graveMaterial.GetTexture("_BaseMap")));
             var lights = route.GetComponentsInChildren<Light>(true);
-            Assert.AreEqual(8, lights.Length);
+            Assert.AreEqual(16, lights.Length, "Ocho veladoras originales, cuatro de recarga y cuatro para encender.");
             foreach (var light in lights)
             {
                 Assert.IsNotNull(light.GetComponentInParent<CandleSpot>());
@@ -524,10 +569,13 @@ namespace TiffanyGame.Tests
                 var modifier = collider.GetComponent<NavMeshModifier>();
                 Assert.IsNotNull(modifier, collider.name);
                 Assert.IsTrue(modifier.isActiveAndEnabled, collider.name);
-                Assert.IsTrue(modifier.overrideArea, collider.name);
-                Assert.AreEqual(notWalkable, modifier.area, collider.name);
+                if (!modifier.ignoreFromBuild)
+                {
+                    Assert.IsTrue(modifier.overrideArea, collider.name);
+                    Assert.AreEqual(notWalkable, modifier.area, collider.name);
+                }
                 Assert.IsTrue(modifier.AffectsAgentType(NavMesh.GetSettingsByIndex(0).agentTypeID), collider.name);
-                Assert.IsFalse(modifier.ignoreFromBuild, collider.name);
+                Assert.AreEqual(ChallengeBuilder.IsMoving(collider.transform), modifier.ignoreFromBuild, collider.name);
                 if (collider.name == "Roof") roofCount++;
                 if (collider.name.StartsWith("Tank ")) tankCount++;
             }

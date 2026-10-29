@@ -11,7 +11,7 @@ namespace TiffanyGame.Tests
     public class ModelLibraryTests
     {
         const string TempFolder = "Assets/ModelLibraryTestTemp";
-        static readonly string[] ExpectedClips = { "Idle", "Stalking", "WindUp", "Sprinting", "Recovering", "Stunned", "Caught", "Landing", "TakingOff" };
+        static readonly string[] ExpectedClips = { "Idle", "Stalking", "WindUp", "Sprinting", "Recovering", "Stunned", "Caught", "Landing", "TakingOff", "Suspicious" };
         GameObject parent;
 
         [SetUp]
@@ -58,6 +58,7 @@ namespace TiffanyGame.Tests
         [TestCase("Caught")]
         [TestCase("Landing")]
         [TestCase("TakingOff")]
+        [TestCase("Suspicious")]
         public void WitchClipsMatchTheirSpecAndStayInPlace(string name)
         {
             var clips = WitchAnimator.Clips();
@@ -101,6 +102,7 @@ namespace TiffanyGame.Tests
         [TestCase("Stalking")]
         [TestCase("Sprinting")]
         [TestCase("Stunned")]
+        [TestCase("Suspicious")]
         public void WitchClipsLoopWithoutAJump(string name)
         {
             var root = Object.Instantiate(Model());
@@ -125,6 +127,37 @@ namespace TiffanyGame.Tests
             finally
             {
                 Object.DestroyImmediate(clip);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void SuspiciousKeepsIdleFootPlacementAndLowersHips()
+        {
+            var root = Object.Instantiate(Model());
+            try
+            {
+                var clips = WitchAnimator.Clips();
+                var hips = Bone(root.transform, "Hips");
+                var left = Bone(root.transform, "Foot.L");
+                var right = Bone(root.transform, "Foot.R");
+                clips["Idle"].SampleAnimation(root, 0f);
+                float standing = hips.position.y;
+                Vector3 leftPosition = left.position, rightPosition = right.position;
+                Quaternion leftRotation = left.rotation, rightRotation = right.rotation;
+                var clip = clips["Suspicious"];
+                for (int frame = 0; frame <= 90; frame++)
+                {
+                    clip.SampleAnimation(root, frame / 30f);
+                    Assert.That(standing - hips.position.y, Is.InRange(0.04f, 0.06f), $"cuadro {frame}");
+                    Assert.Less(Vector3.Distance(leftPosition, left.position), 0.01f, $"L, cuadro {frame}");
+                    Assert.Less(Vector3.Distance(rightPosition, right.position), 0.01f, $"R, cuadro {frame}");
+                    Assert.Less(Quaternion.Angle(leftRotation, left.rotation), 1f, $"L, cuadro {frame}");
+                    Assert.Less(Quaternion.Angle(rightRotation, right.rotation), 1f, $"R, cuadro {frame}");
+                }
+            }
+            finally
+            {
                 Object.DestroyImmediate(root);
             }
         }
@@ -213,6 +246,11 @@ namespace TiffanyGame.Tests
                 Assert.IsEmpty(state.transitions, name);
                 Assert.IsNotNull(state.motion, name);
                 if (name != "Stalking") Assert.AreSame(clips[name], state.motion, name);
+                if (name != "Sprinting")
+                {
+                    Assert.AreEqual(1f, state.speed, name);
+                    Assert.IsFalse(state.speedParameterActive, name);
+                }
             }
             var stalking = System.Array.Find(machine.states, s => s.state.name == "Stalking").state;
             var tree = (BlendTree)stalking.motion;

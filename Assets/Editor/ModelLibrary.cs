@@ -23,6 +23,7 @@ namespace TiffanyGame.EditorTools
         {
             ["witch"] = WitchAnimator.Controller,
             ["tyler"] = () => TylerAnimatorBuilder.Build(),
+            ["tiffany-provisional"] = () => ModelAnimatorBuilder.Build("tiffany-provisional"),
         };
 
         [Serializable]
@@ -32,11 +33,14 @@ namespace TiffanyGame.EditorTools
             public string controllerPath;
             public string rootMotionBone;
             public bool bakeAxisConversion;
+            public bool preserveAnimationKeys;
             public int fps;
             public MaterialSpec[] materials;
             public ClipSpec[] clips;
             public CapsuleSpec trunkCollider;
             public BoxSpec hideVolume;
+            public BoneSpec[] skeleton;
+            public ControllerSpec controller;
 
             public bool Rigged => clips != null && clips.Length > 0;
         }
@@ -54,6 +58,63 @@ namespace TiffanyGame.EditorTools
         {
             public Vector3 center;
             public Vector3 size;
+        }
+
+        [Serializable]
+        public class BoneSpec
+        {
+            public string name;
+            public string parent;
+            public float[] head;
+            public float[] tail;
+        }
+
+        [Serializable]
+        public class ControllerSpec
+        {
+            public string speedParameter;
+            public LayerSpec[] layers;
+        }
+
+        [Serializable]
+        public class LayerSpec
+        {
+            public string name;
+            public string defaultState;
+            public float weight = 1f;
+            public bool writeDefaultValues = true;
+            public MaskSpec mask;
+            public StateSpec[] states;
+        }
+
+        [Serializable]
+        public class MaskSpec
+        {
+            public string path;
+            public string[] bones;
+        }
+
+        [Serializable]
+        public class StateSpec
+        {
+            public string name;
+            public string clip;
+            public BlendTreeSpec blendTree;
+        }
+
+        [Serializable]
+        public class BlendTreeSpec
+        {
+            public string name;
+            public bool normalizeSpeed;
+            public BlendChildSpec[] children;
+        }
+
+        [Serializable]
+        public class BlendChildSpec
+        {
+            public string clip;
+            public float threshold;
         }
 
         [Serializable]

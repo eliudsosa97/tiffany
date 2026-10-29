@@ -5,6 +5,7 @@ using UnityEngine.AI;
 namespace TiffanyGame
 {
     [RequireComponent(typeof(NavMeshAgent))]
+    [RequireComponent(typeof(CapsuleCollider))]
     public sealed class WitchController : MonoBehaviour
     {
         public Transform player;
@@ -34,9 +35,13 @@ namespace TiffanyGame
         public Vector3? NextClearingOverride { get; set; }
         public WitchProfile Profile => profile;
         public bool Chasing => brain != null && brain.Chasing;
+        public Transform WatchPassage { get; private set; }
+        public bool WatchInvestigating => brain.Watch != null && brain.Watch.Investigating;
+        public bool WatchPassageClear => brain.Watch != null && brain.Watch.PassageClear(transform.position);
         public event Action Caught;
 
         private NavMeshAgent agent;
+        private CapsuleCollider watchBody;
         private WitchProfile profile;
         private WitchSenses witchSenses;
         private WitchBrain brain;
@@ -67,6 +72,7 @@ namespace TiffanyGame
         private static readonly int SpeedHash = Animator.StringToHash("Speed");
         private static readonly int IdleHash = Animator.StringToHash("Idle");
         private static readonly int StalkingHash = Animator.StringToHash(nameof(WitchState.Stalking));
+        private static readonly int SuspiciousHash = Animator.StringToHash(nameof(WitchState.Suspicious));
         private static readonly int WindUpHash = Animator.StringToHash(nameof(WitchState.WindUp));
         private static readonly int SprintingHash = Animator.StringToHash(nameof(WitchState.Sprinting));
         private static readonly int RecoveringHash = Animator.StringToHash(nameof(WitchState.Recovering));
@@ -78,6 +84,11 @@ namespace TiffanyGame
         private void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
+            watchBody = GetComponent<CapsuleCollider>();
+            watchBody.height = 2.3f;
+            watchBody.radius = 0.5f;
+            watchBody.center = Vector3.up * 1.15f;
+            watchBody.enabled = false;
             hits = new RaycastHit[32];
             noiseHandler = Hear;
             if (figure != null)
@@ -118,6 +129,7 @@ namespace TiffanyGame
 
         public void ResetBrain()
         {
+            WatchPassage = null;
             InitializeBrain();
             if (profile.GroundChase)
             {
@@ -139,6 +151,20 @@ namespace TiffanyGame
             chapter = Chapter.Return;
             ResetBrain();
         }
+
+        public void BeginWatch(Transform passage, Vector3 post, bool requiresVanish, bool blocksPassage = false)
+        {
+            InitializeBrain();
+            WatchPassage = passage;
+            watchBody.enabled = blocksPassage;
+            transform.SetPositionAndRotation(post, Quaternion.LookRotation(-passage.forward));
+            Physics.SyncTransforms();
+            brain.BeginWatch(post, requiresVanish);
+            Decision = new WitchDecision { State = WitchState.Stalking, Form = WitchForm.Grounded, MoveTarget = post };
+            ApplyView(transform.position, 0f);
+        }
+
+        public void EndWatch() => ResetBrain();
 
         public void SetChapter(Chapter next)
         {
@@ -164,6 +190,7 @@ namespace TiffanyGame
             brain = new WitchBrain(profile, skyRoute, resolveGroundTarget: ResolveGroundTarget);
             witchSenses = new WitchSenses(senses, hidePoints);
             agent.enabled = false;
+            watchBody.enabled = false;
             hasDestination = hasPose = flashed = false;
             stateTime = 0f;
             Decision = new WitchDecision
@@ -243,8 +270,15 @@ namespace TiffanyGame
             WitchState previousState = Decision.State;
             WitchIntent previousIntent = Decision.Intent;
             bool wasInspectingHide = Decision.InspectingHide;
-            Perception = witchSenses.Sense(in inputs);
-            Decision = brain.Tick(dt, Perception);
+            var perception = witchSenses.Sense(in inputs);
+            if (WatchPassage != null)
+            {
+                Vector3 local = WatchPassage.InverseTransformPoint(playerPosition);
+                perception.InWatchPassage = local.z >= 0f && local.z <= ChallengeRules.PassageLength
+                    && Mathf.Abs(local.x) <= 2.5f;
+            }
+            Perception = perception;
+            Decision = brain.Tick(dt, in perception);
             stateTime += dt;
             if (Decision.State != previousState)
             {
@@ -498,8 +532,7 @@ namespace TiffanyGame
             int hash = state switch
             {
                 WitchState.Stalking => StalkingHash,
-                // Provisional hasta que E haga el clip de sospecha: Stalking con Speed 0 usa Idle.
-                WitchState.Suspicious => StalkingHash,
+                WitchState.Suspicious => SuspiciousHash,
                 WitchState.WindUp => WindUpHash,
                 WitchState.Sprinting => SprintingHash,
                 WitchState.Recovering => RecoveringHash,

@@ -5,12 +5,13 @@ namespace TiffanyGame.Tests
 {
     public sealed class FogDensityTests
     {
-        [TestCase(false, false, 0.78f, 0.663f)]
-        [TestCase(true, false, 0.96f, 0.816f)]
-        [TestCase(false, true, 0.90f, 0.765f)]
-        [TestCase(true, true, 1f, 0.85f)]
-        public void BanksRemainDenseAndThePathKeepsMostOfTheirDensity(bool water, bool trees, float bank, float path)
+        [TestCase(false, false, 0.6f, 0.24f)]
+        [TestCase(true, false, 1f, 0.4f)]
+        [TestCase(false, true, 0.95f, 0.38f)]
+        [TestCase(true, true, 1f, 0.4f)]
+        public void BanksThickenAwayFromThePathAndThePathKeepsLessThanHalf(bool water, bool trees, float bank, float path)
         {
+            Assert.LessOrEqual(path, bank * 0.5f);
             Assert.AreEqual(bank, FogDensity.Ambient(water, trees), 0.0001f);
             Assert.AreEqual(bank, FogDensity.Evaluate(Vector3.right * 10f,
                 Vector3.back * 20f, Vector3.zero, Vector3.forward * 20f, water, trees), 0.0001f);
