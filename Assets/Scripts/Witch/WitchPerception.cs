@@ -21,6 +21,7 @@ namespace TiffanyGame
         public bool Flashed;
         public bool Raining;
         public bool HearingMuted;
+        public bool InWatchPassage;
         public Vector3 PlayerForward;
         public bool HasNextClearing;
         public Vector3 NextClearingPosition;

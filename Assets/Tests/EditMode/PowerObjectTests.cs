@@ -1,11 +1,27 @@
 using System;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace TiffanyGame.Tests
 {
     public sealed class PowerObjectTests
     {
+        [Test]
+        public void AddingMovableObjectInEditorDoesNotLogErrors()
+        {
+            var instance = new GameObject(nameof(AddingMovableObjectInEditorDoesNotLogErrors));
+            try
+            {
+                Assert.IsNotNull(instance.AddComponent<MovableObject>());
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(instance);
+            }
+        }
+
         [TestCase(false, 100f, CandleKind.Kindled, false, false, 100f)]
         [TestCase(true, 19f, CandleKind.Kindled, false, false, 19f)]
         [TestCase(true, 100f, CandleKind.Kindled, false, true, 80f)]

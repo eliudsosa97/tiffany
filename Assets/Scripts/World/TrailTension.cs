@@ -2,9 +2,11 @@ using System.Collections;
 using UnityEngine;
 namespace TiffanyGame
 {
+    [DefaultExecutionOrder(200)]
     public sealed class TrailTension : MonoBehaviour
     {
         public WitchChapterTracker tracker;
+        public PowerChallenge[] challenges = System.Array.Empty<PowerChallenge>();
         public float clearingRadius = 20f;
         public WitchController witch;
         public TylerController tyler;
@@ -17,7 +19,7 @@ namespace TiffanyGame
         private Camera view;
         private FollowCamera framing;
         private int step, branch;
-        private bool paused, wasChasing, forestLeft;
+        private bool paused, wasChasing, wasInChallenge, forestLeft;
         private void Start()
         {
             view = Camera.main;
@@ -41,9 +43,13 @@ namespace TiffanyGame
                     { onTrail = false; break; }
             float distance = witch != null ? Mathf.Sqrt(HorizontalSquared(position - witch.transform.position)) : float.PositiveInfinity;
             bool chase = witch != null && TensionMusicRules.IsChasing(witch.Decision, witch.Profile.FollowSpeed);
-            if (chase && !wasChasing) StopEffects();
+            bool inChallenge = false;
+            foreach (var challenge in challenges)
+                if (challenge != null && challenge.Underway) { inChallenge = true; break; }
+            if ((chase && !wasChasing) || (inChallenge && !wasInChallenge)) StopEffects();
             wasChasing = chase;
-            TrailEvent result = rules.Tick(Time.deltaTime, onTrail, chase, distance, tyler != null && tyler.NearPlayer,
+            wasInChallenge = inChallenge;
+            TrailEvent result = rules.Tick(Time.deltaTime, onTrail, chase, inChallenge, distance, tyler != null && tyler.NearPlayer,
                 witch != null && witch.Decision.Form == WitchForm.Flying && distance < TrailEvents.WitchFlyingNear);
             if (result == TrailEvent.None) return;
             Debug.Log($"{GameInfo.LogPrefix} Sendero: {result}");
