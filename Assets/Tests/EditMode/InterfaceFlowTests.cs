@@ -5,6 +5,21 @@ namespace TiffanyGame.Tests
 {
     public sealed class InterfaceFlowTests
     {
+        [TestCase(false)]
+        [TestCase(true)]
+        public void TitleOffersContinueOnlyWithValidSave(bool validSave)
+        {
+            var flow = new InterfaceFlow(true);
+            flow.ConfigureTitle(validSave);
+            Assert.AreEqual(validSave, flow.HasContinue);
+            Assert.AreEqual(validSave, flow.ContinueSelected);
+            flow.SelectTitleOption(false);
+            Assert.IsFalse(flow.ContinueSelected);
+            flow.SelectTitleOption(true);
+            Assert.AreEqual(validSave, flow.ContinueSelected);
+            Assert.AreEqual(InterfaceScreen.Title, flow.Screen);
+        }
+
         [TestCase(false, InterfaceScreen.Playing)]
         [TestCase(true, InterfaceScreen.Title)]
         public void ConstructorSelectsInitialScreen(bool startOnTitle, InterfaceScreen screen)

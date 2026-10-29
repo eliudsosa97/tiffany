@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -7,6 +8,7 @@ namespace TiffanyGame
     {
         public CandleKind kind = CandleKind.Family;
         public bool startLit = true;
+        public string saveId;
         public float radius = CandleSite.DefaultRadius;
         public PlayerSoul player;
         public Storm storm;
@@ -15,6 +17,7 @@ namespace TiffanyGame
 
         public CandleSite Site { get; private set; }
         public Candle Candle => Site.Candle;
+        public event Action<CandleSpot> FamilyTouched;
 
         private NavMeshObstacle obstacle;
         private int zoneHandle;
@@ -36,10 +39,12 @@ namespace TiffanyGame
 
         private void Update()
         {
+            bool wasInside = Site.PlayerInside;
             Site.Tick(Time.deltaTime, storm != null && storm.raining,
                 player != null ? player.transform.position : Vector3.positiveInfinity,
                 player != null ? player.Energy : null, player != null ? player.Respawn : null);
             if (Site.Recharging && player != null) player.RegisterCandleRecharge();
+            if (!wasInside && Site.Recharging && player != null) FamilyTouched?.Invoke(this);
             Synchronize();
         }
 

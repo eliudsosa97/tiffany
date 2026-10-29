@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace TiffanyGame
@@ -9,6 +10,8 @@ namespace TiffanyGame
         public GameInterface gameInterface;
 
         public EndingRules Rules { get; } = new EndingRules();
+        public event Action CreditsReached;
+        bool creditsReported;
 
         void Update()
         {
@@ -20,6 +23,11 @@ namespace TiffanyGame
             }
             Rules.Tick(Time.unscaledDeltaTime);
             gameInterface.ShowEnding(Rules);
+            if (Rules.Stage == EndingStage.Credits && !creditsReported)
+            {
+                creditsReported = true;
+                CreditsReached?.Invoke();
+            }
         }
     }
 }

@@ -35,9 +35,10 @@ def make_materials(entries):
 
 
 class Mesh:
-    def __init__(self, name):
+    def __init__(self, name, recalculate_normals=True):
         self.name = name
         self.vertices, self.faces, self.materials = [], [], []
+        self.recalculate_normals = recalculate_normals
 
     def vertex(self, point):
         self.vertices.append(Vector(point))
@@ -92,11 +93,11 @@ class Mesh:
             self.face((top, rings[-1][i], rings[-1][j]), material)
 
 
-def finish(meshes, materials):
+def finish(meshes, materials, pivot=None):
     points = [point for mesh in meshes for point in mesh.vertices]
     low = Vector(tuple(min(point[i] for point in points) for i in range(3)))
     high = Vector(tuple(max(point[i] for point in points) for i in range(3)))
-    offset = Vector(((low.x + high.x) / 2, low.y, (low.z + high.z) / 2))
+    offset = Vector(pivot) if pivot is not None else Vector(((low.x + high.x) / 2, low.y, (low.z + high.z) / 2))
     objects = []
     for source in meshes:
         mesh = bpy.data.meshes.new(source.name)
@@ -107,11 +108,12 @@ def finish(meshes, materials):
         for polygon, name in zip(mesh.polygons, source.materials):
             polygon.material_index = names.index(name)
             polygon.use_smooth = False
-        bm = bmesh.new()
-        bm.from_mesh(mesh)
-        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
-        bm.to_mesh(mesh)
-        bm.free()
+        if source.recalculate_normals:
+            bm = bmesh.new()
+            bm.from_mesh(mesh)
+            bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+            bm.to_mesh(mesh)
+            bm.free()
         mesh.update()
         obj = bpy.data.objects.new(source.name, mesh)
         bpy.context.scene.collection.objects.link(obj)
@@ -131,7 +133,7 @@ def add(name, data, position, target=None):
     return obj
 
 
-def render(folder, model_id, size):
+def render(folder, model_id, size, center=None):
     os.makedirs(folder, exist_ok=True)
     scene = bpy.context.scene
     scene.render.engine = "BLENDER_EEVEE"
@@ -144,20 +146,20 @@ def render(folder, model_id, size):
     scene.world.use_nodes = True
     scene.world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.003, 0.003, 0.005, 1)
     span = max(size)
+    target = Vector(center) if center is not None else Vector((0, size.y / 2, 0))
     ground = bpy.data.meshes.new("Ground")
     ground.from_pydata([(-span, -span, 0), (span, -span, 0), (span, span, 0), (-span, span, 0)], [], [(0, 1, 2, 3)])
     ground.materials.append(make_materials([{"name": "PreviewGround", "color": "#17171C", "smoothness": 0}])["PreviewGround"])
-    add("Ground", ground, (0, -0.01, 0))
+    add("Ground", ground, (target.x, target.y - size.y / 2 - 0.01, target.z))
     warm = bpy.data.lights.new("Warm", "POINT")
     warm.energy, warm.color, warm.shadow_soft_size = 100 * span * span, (1.0, 0.72, 0.42), span * 0.12
-    add("Warm", warm, (span * 0.5, span * 0.25, span * 1.2))
+    add("Warm", warm, target + Vector((span * 0.5, span * 0.25 - size.y / 2, span * 1.2)))
     moon = bpy.data.lights.new("Moon", "SUN")
     moon.energy, moon.color = 0.35, (0.55, 0.65, 1.0)
     add("Moon", moon, (-3, 8, -4), (0, 0, 0))
     camera = add("Camera", bpy.data.cameras.new("Camera"), (0, 0, 0))
     camera.data.type, camera.data.ortho_scale = "ORTHO", span * 1.7
     scene.camera = camera
-    target = Vector((0, size.y / 2, 0))
     elevation, azimuth = math.radians(42), math.radians(35)
     views = {"front": Vector((0, 0, 1)),
              "threequarter": Vector((math.sin(azimuth) * math.cos(elevation), math.sin(elevation),
@@ -183,7 +185,8 @@ def run(script, build):
     scene = bpy.context.scene
     scene.unit_settings.system, scene.unit_settings.scale_length = "METRIC", 1
     meshes = build(spec, random.Random(spec["seed"]))
-    objects, size = finish(meshes, make_materials(spec["materials"]))
+    pivot = spec.get("pivot")
+    objects, size = finish(meshes, make_materials(spec["materials"]), pivot)
     if not args.no_export:
         path = os.path.abspath(os.path.join(folder, "..", "..", "Assets", "Art", "Models", model_id + ".fbx"))
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -192,7 +195,12 @@ def run(script, build):
                                  add_leaf_bones=False, bake_anim=False, use_custom_props=False)
         print(f"[Tiffany] Exportado {path}")
     if args.render:
-        render(args.render, model_id, size)
+        center = None
+        if pivot is not None:
+            points = [point for mesh in meshes for point in mesh.vertices]
+            center = Vector(tuple((min(p[i] for p in points) + max(p[i] for p in points)) / 2 - pivot[i]
+                                  for i in range(3)))
+        render(args.render, model_id, size, center)
     if not bpy.app.background:
         for obj in objects:
             obj.select_set(True)

@@ -28,6 +28,8 @@ namespace TiffanyGame
         float previousWeight;
 
         public EchoPlayer ActiveEcho { get; private set; }
+        public MemoryProgress Progress => progress;
+        public event Action<int> Collected;
 
         public bool IsFound(int memoryId) => progress.IsFound(memoryId);
 
@@ -93,6 +95,7 @@ namespace TiffanyGame
                 GuideTyler();
                 if (tyler != null) tyler.Appear(transform.position);
                 Debug.Log($"{GameInfo.LogPrefix} Tyler aparece");
+                Collected?.Invoke(memoryId);
                 return true;
             }
             bool hasPower = memoryId >= 1 && memoryId <= 5;
@@ -105,7 +108,22 @@ namespace TiffanyGame
             ApplyEcho(echo.Weight, echo.Active);
             GuideTyler();
             Debug.Log($"{GameInfo.LogPrefix} Recuerdo {memoryId} encontrado");
+            Collected?.Invoke(memoryId);
             return true;
+        }
+
+        public void RestoreFound()
+        {
+            StopEcho();
+            for (int i = 0; i < spots.Length; i++)
+            {
+                var spot = spots[i];
+                if (spot == null || !progress.IsFound(spot.memoryId)) continue;
+                if (spot.visual != null) spot.visual.SetActive(false);
+                if (spot.memoryId != MemoryProgress.BallId) gameInterface.MemoryFound(spot.memoryId, false);
+            }
+            if (progress.IsFound(MemoryProgress.BallId) && tyler != null) tyler.Appear(transform.position);
+            GuideTyler();
         }
 
         public bool PlayEcho(MemorySpot spot)
