@@ -5,7 +5,6 @@ namespace TiffanyGame
     public sealed class Candle
     {
         public const float LitDuration = 90f;
-        public const float RainBurnMultiplier = 2f;
 
         public CandleKind Kind { get; }
         public Vector3 Position { get; }
@@ -20,9 +19,9 @@ namespace TiffanyGame
             Remaining = kind == CandleKind.Family ? float.PositiveInfinity : lit ? LitDuration : 0f;
         }
 
-        public bool TryLight()
+        public bool TryLight(bool raining = false)
         {
-            if (IsLit)
+            if (raining || IsLit)
             {
                 return false;
             }
@@ -38,9 +37,14 @@ namespace TiffanyGame
 
         public void Tick(float dt, bool raining)
         {
+            if (raining)
+            {
+                Extinguish();
+                return;
+            }
             if (Kind == CandleKind.Kindled && IsLit && dt > 0f)
             {
-                Remaining = Mathf.Max(0f, Remaining - dt * (raining ? RainBurnMultiplier : 1f));
+                Remaining = Mathf.Max(0f, Remaining - dt);
             }
         }
     }

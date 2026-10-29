@@ -6,6 +6,8 @@ namespace TiffanyGame
     public sealed class Storm : MonoBehaviour
     {
         public bool raining;
+        public WitchController witch;
+        public bool followChapter = true;
         public Light moon;
         public float moonFlashBoost = 2.5f;
         public Color flashAmbient = new Color(0.32f, 0.36f, 0.45f);
@@ -24,13 +26,23 @@ namespace TiffanyGame
 
         public bool Flashing => cycle != null && cycle.Flashing;
 
-        public void Strike() => (cycle ??= new StormCycle(System.Environment.TickCount)).Strike();
+        public void Strike()
+        {
+            if (followChapter && witch != null && !StormSchedule.IsRaining(witch.chapter)) return;
+            (cycle ??= new StormCycle(System.Environment.TickCount)).Strike();
+        }
+
+        void ApplySchedule()
+        {
+            if (followChapter && witch != null) raining = StormSchedule.IsRaining(witch.chapter);
+        }
 
         void Start()
         {
             cycle ??= new StormCycle(System.Environment.TickCount);
             players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
             witches = FindObjectsByType<WitchController>(FindObjectsSortMode.None);
+            ApplySchedule();
             previousRaining = !raining;
             if (moon != null) baseMoonIntensity = moon.intensity;
             baseAmbient = RenderSettings.ambientLight;
@@ -49,6 +61,7 @@ namespace TiffanyGame
 
         void Update()
         {
+            ApplySchedule();
             cycle.Active = raining;
             cycle.Tick(Time.deltaTime);
             float flashLevel = cycle.FlashLevel;
@@ -77,11 +90,11 @@ namespace TiffanyGame
             {
                 if (player != null) player.raining = raining;
             }
-            foreach (var witch in witches)
+            foreach (var target in witches)
             {
-                if (witch == null) continue;
-                witch.raining = raining;
-                witch.hearingMuted = cycle.ThunderSounding;
+                if (target == null) continue;
+                target.raining = raining;
+                target.hearingMuted = cycle.ThunderSounding;
             }
             if (cycle.ThunderStartedThisTick && thunderSource != null && thunderClips != null && thunderClips.Length > 0)
             {

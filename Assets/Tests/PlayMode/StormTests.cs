@@ -10,6 +10,104 @@ namespace TiffanyGame.Tests
     public sealed class StormTests : TiffanyLogTests
     {
         [UnityTest]
+        public IEnumerator ChapterScheduleKeepsOutboundDryAndStartsRainOnReturn()
+        {
+            var witchObject = new GameObject("Witch");
+            witchObject.SetActive(false);
+            witchObject.AddComponent<NavMeshAgent>().enabled = false;
+            var witch = witchObject.AddComponent<WitchController>();
+            witch.enabled = false;
+            witch.chapter = Chapter.Cemetery;
+            witchObject.SetActive(true);
+            var storm = new GameObject("Storm").AddComponent<Storm>();
+            storm.witch = witch;
+            try
+            {
+                storm.raining = true;
+                storm.Strike();
+                yield return null;
+                Assert.IsFalse(storm.raining);
+                Assert.IsFalse(storm.Flashing);
+                Assert.IsFalse(witch.raining);
+
+                witch.chapter = Chapter.Return;
+                yield return null;
+                Assert.IsTrue(storm.raining);
+                Assert.IsTrue(witch.raining);
+                storm.Strike();
+                yield return null;
+                Assert.IsTrue(storm.Flashing);
+                storm.raining = false;
+                yield return null;
+                Assert.IsTrue(storm.raining);
+            }
+            finally
+            {
+                Object.Destroy(storm.gameObject);
+                Object.Destroy(witchObject);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureOverridesChapterWeatherAndRestoresItAfterCleanup()
+        {
+            var witchObject = new GameObject("Witch");
+            witchObject.SetActive(false);
+            witchObject.AddComponent<NavMeshAgent>().enabled = false;
+            var witch = witchObject.AddComponent<WitchController>();
+            witch.enabled = false;
+            witch.chapter = Chapter.Cemetery;
+            witchObject.SetActive(true);
+            var storm = new GameObject("Storm").AddComponent<Storm>();
+            storm.witch = witch;
+            var stage = storm.gameObject.AddComponent<StormCaptureStage>();
+            try
+            {
+                yield return null;
+                stage.raining = stage.lightning = true;
+                stage.Apply();
+                yield return null;
+                Assert.IsFalse(storm.followChapter);
+                Assert.IsTrue(storm.raining);
+                Assert.IsTrue(storm.Flashing);
+                stage.Clear();
+                yield return null;
+                Assert.IsTrue(storm.followChapter);
+                Assert.IsFalse(storm.raining);
+                Assert.IsFalse(storm.Flashing);
+
+                witch.chapter = Chapter.Return;
+                yield return null;
+                Assert.IsTrue(storm.raining);
+                stage.raining = stage.lightning = false;
+                stage.Apply();
+                yield return null;
+                Assert.IsFalse(storm.raining);
+                stage.Clear();
+                yield return null;
+                Assert.IsTrue(storm.followChapter);
+                Assert.IsTrue(storm.raining);
+
+                storm.followChapter = false;
+                stage.Apply();
+                yield return null;
+                Assert.IsFalse(storm.raining);
+                stage.Clear();
+                yield return null;
+                Assert.IsFalse(storm.followChapter);
+                Assert.IsTrue(storm.raining);
+            }
+            finally
+            {
+                stage.Clear();
+                Object.Destroy(storm.gameObject);
+                Object.Destroy(witchObject);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator RainAndThunderReachWitchAndStopWithRain()
         {
             var witchObject = new GameObject("Witch");

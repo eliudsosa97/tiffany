@@ -47,6 +47,7 @@ namespace TiffanyGame.EditorTools
             playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute,
                 viewCamera.GetComponent<FollowCamera>());
             route.GetComponent<WitchChapterTracker>().witch = playerLight.witch;
+            storm.witch = playerLight.witch;
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
             respawn.witch = playerLight.witch;
             respawn.overlay = caughtFade;

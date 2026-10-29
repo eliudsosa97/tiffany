@@ -54,10 +54,11 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(site.Recharging);
             Assert.AreEqual(10f, energy.Current);
             Assert.AreEqual(Vector3.one, respawn.Position);
-            site.Tick(Candle.LitDuration / 2f, true, Vector3.zero, energy, respawn);
+            site.Tick(0f, true, Vector3.zero, energy, respawn);
             Assert.IsFalse(site.PlayerInside);
             Assert.IsFalse(site.Contains(Vector3.zero));
-            Assert.IsTrue(site.Candle.TryLight());
+            Assert.IsFalse(site.Candle.TryLight(true));
+            Assert.IsTrue(site.Candle.TryLight(false));
             Assert.IsTrue(site.Contains(Vector3.zero));
         }
 
