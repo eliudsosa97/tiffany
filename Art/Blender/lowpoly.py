@@ -35,9 +35,10 @@ def make_materials(entries):
 
 
 class Mesh:
-    def __init__(self, name):
+    def __init__(self, name, recalculate_normals=True):
         self.name = name
         self.vertices, self.faces, self.materials = [], [], []
+        self.recalculate_normals = recalculate_normals
 
     def vertex(self, point):
         self.vertices.append(Vector(point))
@@ -107,11 +108,12 @@ def finish(meshes, materials, pivot=None):
         for polygon, name in zip(mesh.polygons, source.materials):
             polygon.material_index = names.index(name)
             polygon.use_smooth = False
-        bm = bmesh.new()
-        bm.from_mesh(mesh)
-        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
-        bm.to_mesh(mesh)
-        bm.free()
+        if source.recalculate_normals:
+            bm = bmesh.new()
+            bm.from_mesh(mesh)
+            bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+            bm.to_mesh(mesh)
+            bm.free()
         mesh.update()
         obj = bpy.data.objects.new(source.name, mesh)
         bpy.context.scene.collection.objects.link(obj)

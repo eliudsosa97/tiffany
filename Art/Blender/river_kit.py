@@ -165,7 +165,8 @@ def bank_lift(inset, along, spec):
 
 
 def build_bank(spec, rng):
-    soil, stones, roots, lip = (Mesh(name) for name in ("BankProfile", "BankStones", "BankRoots", "BankErosion"))
+    soil = Mesh("BankProfile", recalculate_normals=False)
+    stones, roots, lip = (Mesh(name) for name in ("BankStones", "BankRoots", "BankErosion"))
     columns = [-spec["outside"], -0.75, -0.26, 0] + spec["profileInsets"] + [spec["inside"]]
     rows = []
     for row in range(spec["segments"] + 1):
