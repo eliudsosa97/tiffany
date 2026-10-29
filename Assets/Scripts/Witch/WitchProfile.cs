@@ -9,6 +9,34 @@ namespace TiffanyGame
         public bool CanSprint = true;
         public bool UsesVoiceLure = true;
         public bool GroundChase;
+        public bool SearchEnabled;
+        public bool AmbushEnabled;
+        public bool CandleWatchEnabled;
+        public bool BarkLureEnabled;
+        public bool LastSeenEnabled;
+        public float SearchDuration = 20f;
+        public float SearchStartRadius = 3f;
+        public float SearchRadiusGrowth = 3f;
+        public float SearchAngleStep = 60f;
+        public float SearchMaxRadius = 15f;
+        public float AmbushMinDelay = 40f;
+        public float AmbushMaxDelay = 70f;
+        public float AmbushMinPlayerDistance = 25f;
+        public float AmbushEdgeOffset = 8f;
+        public float AmbushWait = 45f;
+        public float CandleWatchRadius = 6f;
+        public float CandleWatchMargin = 3f;
+        public float CandleWatchAngleStep = 30f;
+        public float CandleWatchLimit = 20f;
+        public float CandleWatchCooldown = 60f;
+        public float CandleWatchRetreatDistance = 6f;
+        public float CandleWatchRetreatDuration = 6f;
+        public float BarkLureMinDelay = 25f;
+        public float BarkLureMaxDelay = 40f;
+        public float BarkLureDistance = 15f;
+        public float BarkLureTravelLimit = 15f;
+        public float BarkLureDuration = 10f;
+        public float LastSeenDuration = 20f;
         public float FlySpeed = 6f;
         public float FlightHeightOffset;
         public float StalkSpeed = 1.2f;
@@ -36,5 +64,7 @@ namespace TiffanyGame
         public float FarDistance = 25f;
         public float RoamMinDistance = 8f;
         public float RoamMaxDistance = 12f;
+
+        public WitchProfile Copy() => (WitchProfile)MemberwiseClone();
     }
 }

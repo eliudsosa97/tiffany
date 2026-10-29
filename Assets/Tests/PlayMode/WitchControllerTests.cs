@@ -607,7 +607,7 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator ChapterUpgradeKeepsLandingPositionAndEnablesVoiceWithoutRestarting()
+        public IEnumerator ChapterUpgradeKeepsLandingPositionAndEnablesForestLureWithoutRestarting()
         {
             controller.chapter = Chapter.WaterPlant;
             controller.ResetBrain();
@@ -623,12 +623,13 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(decision, controller.Decision);
             Assert.IsFalse(agent.enabled);
             yield return WaitForStalking();
-            Assert.IsTrue(controller.Decision.VoiceLure);
+            Assert.IsTrue(controller.Profile.BarkLureEnabled);
+            Assert.IsFalse(controller.Decision.VoiceLure, "Las vías habilitan el ladrido del bosque, no la voz al aterrizar.");
             controller.SetChapter(Chapter.Cemetery);
             Assert.AreEqual(Chapter.TrainTracks, controller.chapter);
             yield return null;
             Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
-            Assert.IsTrue(controller.Decision.VoiceLure);
+            Assert.IsFalse(controller.Decision.VoiceLure, "El ladrido permanece apagado fuera de su punto de llamada.");
         }
 
         [UnityTest]

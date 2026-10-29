@@ -61,10 +61,11 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator GroundedLureMimicsWithinThreeSecondsAndRespectsPause()
         {
+            voice.witch.Profile.BarkLureEnabled = false;
             voice.witch.raining = true;
             yield return new WaitForSeconds(2f);
             Assert.AreEqual(WitchState.Stalking, voice.witch.Decision.State);
-            Assert.IsTrue(voice.witch.Decision.VoiceLure);
+            Assert.IsTrue(voice.witch.Decision.VoiceLure, "El perfil sin la nueva conducta conserva la voz continua del audio original.");
             Time.timeScale = 0f;
             yield return new WaitForSecondsRealtime(3f);
             Assert.AreEqual(0, voice.Count);
@@ -81,6 +82,26 @@ namespace TiffanyGame.Tests
             yield return new WaitForSeconds(3f);
             Assert.AreEqual(WitchForm.Flying, voice.witch.Decision.Form);
             Assert.AreEqual(0, voice.Count);
+        }
+
+        [UnityTest]
+        public IEnumerator ForestLureReusesBarksAndStopsAudioWhenInterrupted()
+        {
+            voice.witch.Profile.BarkLureMinDelay = voice.witch.Profile.BarkLureMaxDelay = 0f;
+            voice.witch.Profile.BarkLureTravelLimit = 0f;
+            voice.witch.raining = true;
+            yield return new WaitForSeconds(2f);
+            Assert.IsFalse(voice.witch.Decision.VoiceLure);
+            voice.witch.raining = false;
+            yield return new WaitForSeconds(3f);
+            Assert.AreEqual(WitchIntent.BarkLure, voice.witch.Decision.Intent);
+            Assert.AreEqual(1, voice.Count);
+            Assert.AreSame(voice.barks[0], voice.echo.clip);
+            voice.witch.Flash();
+            yield return null;
+            yield return null;
+            Assert.IsFalse(voice.witch.Decision.VoiceLure);
+            Assert.IsFalse(voice.source.isPlaying || voice.echo.isPlaying);
         }
     }
 }

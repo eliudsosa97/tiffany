@@ -118,6 +118,33 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchState.Suspicious, stop.GetComponent<WitchCaptureStage>().state);
         }
 
+        [UnityTest] public IEnumerator SearchDemoStartsWithinTwentyFiveSeconds() => CheckBehavior("search", WitchIntent.Search);
+        [UnityTest] public IEnumerator AmbushDemoStartsWithinTwentyFiveSeconds() => CheckBehavior("ambush", WitchIntent.Ambush);
+        [UnityTest] public IEnumerator CandleDemoStartsWithinTwentyFiveSeconds() => CheckBehavior("candle", WitchIntent.CandleWatch);
+        [UnityTest] public IEnumerator BarkDemoStartsWithinTwentyFiveSeconds() => CheckBehavior("bark", WitchIntent.BarkLure);
+        [UnityTest] public IEnumerator LightsOffDemoStartsWithinTwentyFiveSeconds() => CheckBehavior("lightsoff", WitchIntent.LastSeen);
+
+        private IEnumerator CheckBehavior(string mode, WitchIntent expected)
+        {
+            demo = new GameObject("WitchDemo Test").AddComponent<WitchDemo>();
+            demo.mode = mode;
+            float deadline = Time.time + 25f;
+            while (witch.Decision.Intent != expected && Time.time < deadline) yield return null;
+            Assert.AreEqual(expected, witch.Decision.Intent, "La demo debe disparar su conducta antes de 25 segundos.");
+            if (mode == "ambush")
+            {
+                yield return WaitForState(WitchState.Stalking, 6f);
+                Assert.AreEqual(0f, witch.Decision.Speed);
+                Assert.IsFalse(witch.Decision.FireLit || witch.Decision.VoiceLure);
+            }
+            if (mode == "bark")
+            {
+                while (!witch.Decision.VoiceLure && Time.time < deadline) yield return null;
+                Assert.IsTrue(witch.Decision.VoiceLure);
+                Assert.AreEqual(0f, witch.Decision.Speed);
+            }
+        }
+
         void CountNoise(StepNoise noise)
         {
             if (Mathf.Approximately(noise.Radius, 20f))

@@ -92,6 +92,14 @@ namespace TiffanyGame
                 Flashed = input.Flashed,
                 Raining = input.Raining,
                 HearingMuted = input.HearingMuted,
+                PlayerForward = input.PlayerForward,
+                HasNextClearing = input.HasNextClearing,
+                NextClearingPosition = input.NextClearingPosition,
+                HasFamilyCandle = input.HasFamilyCandle,
+                FamilyCandlePosition = input.FamilyCandlePosition,
+                FamilyCandleRadius = input.FamilyCandleRadius,
+                PlayerAtFamilyCandle = input.HasFamilyCandle && input.PlayerInSafeZone
+                    && HorizontalDistance(input.PlayerPosition, input.FamilyCandlePosition) < input.FamilyCandleRadius,
                 DistanceToPlayer = distance,
                 SeesPlayer = !input.PlayerVanished
                     && ((flying && input.FireLit && !input.PlayerUnderCover && distance <= profile.OverheadSightRadius)
