@@ -61,8 +61,8 @@ namespace TiffanyGame
         }
         private UnseenZone Zone(Vector3 player)
         {
-            int clearing = RouteChapters.FindClearing(player, tracker.ClearingBounds);
-            if (clearing >= 0) return clearing == 6 || clearing == 7 ? UnseenZone.Town : UnseenZone.Trail;
+            if (terrain.Town.Contains(new Vector2(player.x, player.z))) return UnseenZone.Town;
+            if (RouteChapters.FindClearing(player, tracker.ClearingBounds) >= 0) return UnseenZone.Trail;
             foreach (var path in paths)
                 for (int i = 1; i < path.Length; i++)
                     if (FogDensity.DistanceToSegment(player, path[i - 1], path[i]) <= RouteLayout.PathWidth) return UnseenZone.Trail;
