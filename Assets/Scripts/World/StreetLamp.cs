@@ -14,8 +14,11 @@ namespace TiffanyGame
         MaterialPropertyBlock properties;
         Color bulbColor;
 
-        void Start()
+        void Start() => Init();
+
+        public void Init()
         {
+            if (flicker != null) return;
             flicker = new LampFlicker(seed);
             properties = new MaterialPropertyBlock();
             if (bulb == null) return;

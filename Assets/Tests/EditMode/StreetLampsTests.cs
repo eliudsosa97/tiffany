@@ -107,7 +107,7 @@ namespace TiffanyGame.Tests
             var material = component.bulb.sharedMaterial;
             int colorId = Shader.PropertyToID("_BaseColor");
             Color original = material.GetColor(colorId);
-            component.SendMessage("Start");
+            component.Init();
             for (int i = 0; i < 100; i++) component.Apply(0.016f);
             float value = component.lamp.intensity / component.baseIntensity;
             Assert.That(value, Is.InRange(LampFlicker.MinIntensity, 1f));
