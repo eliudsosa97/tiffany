@@ -43,7 +43,7 @@ namespace TiffanyGame.EditorTools
                 if (i == 5) WaterBuilder.BuildLake(clearing, floor);
                 else Ground("Ground", clearing, Vector3.zero, new Vector2(size, size), ClearingGrounds[i], floor);
                 BuildEdges(clearing, i, terrain);
-                if (i < names.Length - 1) BuildPath(clearing, i, pathFloor, GroundMaterials.For(GroundType.Gravel), terrain);
+                if (i < names.Length - 1) BuildPath(clearing, i, pathFloor, terrain);
                 Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush);
                 if (i < memories.Length) memories[i] = Root("Memory Point", clearing, memoryPosition);
 
@@ -91,7 +91,7 @@ namespace TiffanyGame.EditorTools
                 ForestBuilder.RouteExclusions(index), ForestBuilder.RouteViewPoints(index), index == 4 ? HauntedRingPines : 0, terrain);
         }
 
-        static void BuildPath(Transform clearing, int index, Material floor, Material stone, RouteTerrain terrain)
+        static void BuildPath(Transform clearing, int index, Material floor, RouteTerrain terrain)
         {
             var points = RouteLayout.Path(index);
             Vector3 center = PathMidpoint(points);
@@ -105,7 +105,7 @@ namespace TiffanyGame.EditorTools
                 {
                     var crossing = Root("River Crossing", path, (a + b) * 0.5f - center);
                     crossing.localRotation = Quaternion.LookRotation(b - a);
-                    WaterBuilder.BuildRiver(crossing, PathWidth, Vector3.Distance(a, b), floor, stone);
+                    WaterBuilder.BuildRiver(crossing, PathWidth, Vector3.Distance(a, b), floor);
                 }
                 else TerrainBuilder.PathFloor(path, $"Ground {i}", a, b, center, terrain, floor);
             }

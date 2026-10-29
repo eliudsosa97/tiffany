@@ -48,6 +48,23 @@ namespace TiffanyGame.EditorTools
 
         public static GameObject Plant(Transform parent) => Create("plant-tussock", parent);
 
+        public static void LayBanks(Transform parent, RouteTerrain terrain)
+        {
+            var pieces = RiverBankLayout.Pieces(terrain, BankLength, BankLength);
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                var piece = pieces[i];
+                var bank = Bank(false, parent, piece.Mirror).transform;
+                bank.localPosition = new Vector3(piece.Start.x, terrain.Crossing.y, piece.Start.y);
+                bank.localRotation = Quaternion.LookRotation(new Vector3(piece.Direction.x, 0f, piece.Direction.y));
+                bank.localScale = new Vector3(piece.Mirror ? -1f : 1f, 1f, piece.Length / BankLength);
+                if (i % 3 != 1) continue;
+                var outward = new Vector2(piece.Direction.y, -piece.Direction.x) * (piece.Mirror ? 1f : -1f);
+                var spot = piece.Middle + outward * 1.6f;
+                Plant(parent).transform.localPosition = new Vector3(spot.x, terrain.GroundHeight(spot.x, spot.y), spot.y);
+            }
+        }
+
         static void AddStoneColliders(GameObject root, bool walkable)
         {
             foreach (var filter in root.GetComponentsInChildren<MeshFilter>(true))

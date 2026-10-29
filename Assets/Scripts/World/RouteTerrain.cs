@@ -32,6 +32,17 @@ namespace TiffanyGame
         public int RiverPointCount => river.Length;
         public Vector2 RiverPoint(int index) => river[index];
 
+        public Vector2 RiverBankPoint(int index, int sign)
+        {
+            var point = river[index];
+            var before = index == 0 ? river[1] - point : point - river[index - 1];
+            var after = index == river.Length - 1 ? before : river[index + 1] - point;
+            before = new Vector2(before.y, -before.x).normalized;
+            after = new Vector2(after.y, -after.x).normalized;
+            Vector2 normal = (before + after).normalized;
+            return point + normal * (sign * RiverWidth * 0.5f / Vector2.Dot(normal, before));
+        }
+
         public RouteTerrain()
         {
             RouteLayout.RiverSpan(out var start, out var end);
