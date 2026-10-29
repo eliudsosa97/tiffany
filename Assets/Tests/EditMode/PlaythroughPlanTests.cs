@@ -320,6 +320,34 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(5f, plan.Elapsed);
         }
 
+        [Test]
+        public void LakeCandleTimesOutAfterOneHundredEightySeconds()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.LakeCandle });
+            var observation = new PlaythroughObservation();
+            plan.Tick(100f, in observation);
+            Assert.IsFalse(plan.Finished);
+            plan.Tick(79f, in observation);
+            Assert.IsFalse(plan.Finished);
+            plan.Tick(1.1f, in observation);
+            Assert.IsTrue(plan.Finished);
+            Assert.AreEqual(1, plan.ExitCode);
+            StringAssert.Contains("tiempo límite", plan.FailureReason);
+        }
+
+        [Test]
+        public void OtherMilestonesStillTimeOutAtNinetySeconds()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Road });
+            var observation = new PlaythroughObservation();
+            plan.Tick(89f, in observation);
+            Assert.IsFalse(plan.Finished);
+            plan.Tick(1f, in observation);
+            Assert.IsTrue(plan.Finished);
+            Assert.AreEqual(1, plan.ExitCode);
+            StringAssert.Contains("tiempo límite", plan.FailureReason);
+        }
+
         [TestCase(PlaythroughMilestone.Memory1, false)]
         [TestCase(PlaythroughMilestone.Road, true)]
         [TestCase(PlaythroughMilestone.Manifest, false)]

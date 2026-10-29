@@ -40,6 +40,7 @@ namespace TiffanyGame
     public sealed class PlaythroughPlan
     {
         public const float DefaultTimeout = 90f;
+        public const float LakeCandleTimeout = 180f;
         public const float CaptureTimeout = 40f;
         public const float WalkLightEnergy = 30f, WitchFireNear = 25f;
         public const float WitchGroundNear = 30f;
@@ -132,7 +133,8 @@ namespace TiffanyGame
                 trackingMovement = false;
                 return default;
             }
-            if (MilestoneElapsed >= timeout)
+            float milestoneTimeout = Current == PlaythroughMilestone.LakeCandle ? LakeCandleTimeout : timeout;
+            if (MilestoneElapsed >= milestoneTimeout)
             {
                 Fail("tiempo límite agotado");
                 return default;
