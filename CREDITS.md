@@ -56,6 +56,9 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/frogs.wav` | [FrogsAndCrickets_ExcerptA](https://freesound.org/s/32654/) | greysound | CC0 |
 | `Assets/Audio/Sfx/tension_drone.wav` | [Deep rumbling drone](https://freesound.org/s/632682/) | xkeril | CC0 |
 | `Assets/Audio/Sfx/tension_pulse.wav` | [Horror Pulsating Drone Loop](https://freesound.org/s/457046/) | gerainsan | CC0 |
+| `Assets/Audio/Sfx/music_theme.wav` | Música de fundo suspense e terror (Pixabay, ID 423727) | luisranm | Licencia de contenido de Pixabay |
+| `Assets/Audio/Sfx/music_stalk.wav` | Drones of Dread, Dark Cinematic Industrial Ambient (Pixabay, ID 497226) | nickpanek | Licencia de contenido de Pixabay |
+| `Assets/Audio/Sfx/music_chase.wav` | Horror Drone (Pixabay, ID 599271) | soundreality | Licencia de contenido de Pixabay |
 | `Assets/Audio/Sfx/bottle.wav` | [Small_Glass_Bottle_Wood_Floor.wav](https://freesound.org/s/235602/) | tcrocker68 | CC0 |
 | `Assets/Audio/Sfx/can.wav` | [CanBounce 2.wav](https://freesound.org/s/92622/) | nigelcoop | CC0 |
 | `Assets/Audio/Sfx/pot.wav` | [Breaking pot short](https://freesound.org/s/810043/) | anna_bliss | CC0 |

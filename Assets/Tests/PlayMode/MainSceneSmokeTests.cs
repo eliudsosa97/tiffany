@@ -104,6 +104,39 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator MainSceneHasBackgroundAndTensionMusicWired()
+        {
+            var tracks = Object.FindObjectsByType<BackgroundMusic>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            Assert.That(tracks, Has.Length.EqualTo(1));
+            var music = tracks[0];
+            Assert.IsNotNull(music.gameInterface);
+            Assert.IsNotNull(music.tracker);
+            Assert.IsNotNull(music.tension);
+            Assert.IsNotNull(music.witch);
+            Assert.IsNotNull(music.source);
+            Assert.IsNotNull(music.theme);
+            Assert.IsTrue(music.source.ignoreListenerPause);
+            Assert.IsTrue(music.source.loop);
+            Assert.IsFalse(music.source.playOnAwake);
+            Assert.AreEqual(0f, music.source.spatialBlend);
+            Assert.AreEqual("music_theme", music.theme.name);
+            Assert.AreSame(music.theme, music.finale);
+
+            var tension = Object.FindAnyObjectByType<TensionMusic>();
+            Assert.IsNotNull(tension);
+            Assert.AreSame(tension, music.tension);
+            Assert.IsNotNull(tension.drone);
+            Assert.IsNotNull(tension.pulse);
+            Assert.IsNotNull(tension.drone.clip);
+            Assert.IsNotNull(tension.pulse.clip);
+            Assert.AreEqual("music_stalk", tension.drone.clip.name);
+            Assert.AreEqual("music_chase", tension.pulse.clip.name);
+
+            yield return null;
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator MainSceneHasSilhouettesOnlyOnTiffanyAndTyler()
         {
             var player = GameObject.FindGameObjectWithTag("Player");
