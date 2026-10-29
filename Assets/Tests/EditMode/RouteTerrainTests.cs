@@ -181,11 +181,31 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(Rect.MinMaxRect(-118f, -98f, 218f, 262f), terrain.Bounds);
             for (float x = terrain.Town.xMin; x <= terrain.Town.xMax; x++)
                 Assert.GreaterOrEqual(terrain.Town.yMin, terrain.RoadCenterZ(x) + RouteTerrain.RoadWidth * 0.5f);
+        }
+
+        [Test]
+        public void CemeteryNorthEdgeHasTenMetersOfForestBeforeTheRoadAcrossItsFullWidth()
+        {
             var cemetery = RouteLayout.Clearing(0);
             float half = RouteLayout.ClearingSizeOf(0) * 0.5f;
+            float north = cemetery.z + half;
             Assert.AreEqual(new Vector3(180f, 0f, 140f), cemetery);
             for (float x = cemetery.x - half; x <= cemetery.x + half; x += 0.5f)
-                Assert.Greater(terrain.RoadCenterZ(x) - RouteTerrain.RoadWidth * 0.5f, cemetery.z + half);
+            {
+                float roadSouth = terrain.RoadCenterZ(x) - RouteTerrain.RoadWidth * 0.5f;
+                Assert.GreaterOrEqual(roadSouth - north, 10f, $"Separación al norte del cementerio en x={x}");
+                float density = 0f;
+                for (float z = north + 0.5f; z < roadSouth; z += 0.5f)
+                {
+                    Assert.IsFalse(terrain.IsWalkable(x, z), $"Atajo en {x}, {z}");
+                    Assert.IsFalse(terrain.InClearingSquare(x, z));
+                    Assert.IsFalse(terrain.Town.Contains(new Vector2(x, z)));
+                    Assert.IsFalse(terrain.IsWater(x, z));
+                    if (!terrain.InClearingSquare(x, z, 3f) && terrain.DistanceToRoute(x, z) > 3.5f)
+                        density += terrain.ForestDensity(x, z);
+                }
+                Assert.Greater(density, 0f, $"Bosque de relleno al norte del cementerio en x={x}");
+            }
         }
 
         [Test]

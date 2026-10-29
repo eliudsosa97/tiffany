@@ -73,7 +73,7 @@ namespace TiffanyGame
 
         public float RoadCenterZ(float x)
         {
-            float north = RouteLayout.Clearing(0).z + RouteLayout.ClearingSizeOf(0) * 0.5f + RoadWidth * 0.5f + 2f;
+            float north = RouteLayout.Clearing(0).z + RouteLayout.ClearingSizeOf(0) * 0.5f + RoadWidth * 0.5f + 10f;
             return Mathf.Lerp(Road.center.y, north, Mathf.InverseLerp(FenceStart.x, RoadBendEnd, x));
         }
 
