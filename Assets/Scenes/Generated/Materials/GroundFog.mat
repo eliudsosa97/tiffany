@@ -27,7 +27,7 @@ Material:
     m_Floats:
     - _CameraFadeEnd: 4
     - _CameraFadeStart: 1
-    - _Density: 0.78
+    - _Density: 0.6
     - _EdgeFade: 0.2
     - _GroundHeight: 0
     - _HaloRadius: 4.5
@@ -35,17 +35,17 @@ Material:
     - _HeightFadeStart: 0.35
     - _LightStrength: 0.35
     - _MoonStrength: 0.08
-    - _NoiseScale: 0.65
-    - _NoiseStretch: 2.5
-    - _PathHalfWidth: 2.5
-    - _PathMultiplier: 0.85
-    - _PathSoftness: 3
+    - _NoiseScale: 0.45
+    - _NoiseStretch: 1.25
+    - _PathHalfWidth: 2
+    - _PathMultiplier: 0.4
+    - _PathSoftness: 7
     - _PlayerFadeEnd: 2
     - _PlayerFadeStart: 0.5
     - _WaterLayer: 0
     - _WindSpeed: 0.32
     m_Colors:
-    - _BaseColor: {r: 0.3810918, g: 0.3958812, b: 0.41002083, a: 0.45}
+    - _BaseColor: {r: 0.20598412, g: 0.23479503, b: 0.28277925, a: 0.5}
     - _PathCorner: {r: 0, g: 0, b: 0, a: 0}
     - _PathEnd: {r: 0, g: 0, b: 0, a: 0}
     - _PathStart: {r: 0, g: 0, b: 0, a: 0}

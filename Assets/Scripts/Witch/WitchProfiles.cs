@@ -28,6 +28,8 @@ namespace TiffanyGame
                     break;
                 case Chapter.Stable:
                 case Chapter.WitchHut:
+                    profile.RoamMinDelay = 25f;
+                    profile.RoamMaxDelay = 35f;
                     break;
                 case Chapter.Return:
                     profile.GroundChase = true;

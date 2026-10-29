@@ -379,7 +379,7 @@ namespace TiffanyGame.Tests
         {
             var terrain = new RouteTerrain();
             var houses = route.Find("Landscape/Town");
-            Assert.That(houses.childCount, Is.InRange(16, 24));
+            Assert.That(houses.childCount, Is.InRange(4, 7));
             foreach (Transform house in houses)
             {
                 var collider = house.GetComponent<BoxCollider>();
@@ -388,6 +388,12 @@ namespace TiffanyGame.Tests
                 Assert.That(collider.bounds.size.x, Is.InRange(6f - 0.001f, 10f + 0.001f));
                 Assert.That(collider.bounds.size.y, Is.InRange(4f - 0.001f, 7f + 0.001f));
                 Assert.IsTrue(terrain.Town.Contains(new Vector2(house.localPosition.x, house.localPosition.z)));
+                Vector3 min = route.InverseTransformPoint(collider.bounds.min), max = route.InverseTransformPoint(collider.bounds.max);
+                Assert.IsTrue(terrain.Town.Contains(new Vector2(min.x, min.z)), house.name);
+                Assert.IsTrue(terrain.Town.Contains(new Vector2(max.x, max.z)), house.name);
+                Assert.GreaterOrEqual(min.z, terrain.RoadCenterZ(min.x) + RouteTerrain.RoadWidth * 0.5f);
+                foreach (var other in houses.GetComponentsInChildren<BoxCollider>())
+                    if (other != collider) Assert.IsFalse(collider.bounds.Intersects(other.bounds), $"{house.name}/{other.name}");
                 Assert.IsFalse(terrain.IsWalkable(house.localPosition.x, house.localPosition.z));
                 Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(house.gameObject, StaticEditorFlags.BatchingStatic));
                 Assert.AreEqual(NavMesh.GetAreaFromName("Not Walkable"), house.GetComponent<NavMeshModifier>().area);
@@ -396,12 +402,41 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(route.GetChild(7).Find("House/Window"));
             Assert.IsNotNull(route.GetChild(7).Find("Window Candle"));
             Assert.IsNotNull(route.GetChild(7).Find("Tiffany Sign/Label"));
+            foreach (var wall in route.GetChild(7).Find("House").GetComponentsInChildren<Collider>())
+            {
+                Vector3 min = route.InverseTransformPoint(wall.bounds.min), max = route.InverseTransformPoint(wall.bounds.max);
+                Assert.IsTrue(terrain.Town.Contains(new Vector2(min.x, min.z)));
+                Assert.IsTrue(terrain.Town.Contains(new Vector2(max.x, max.z)));
+            }
             var fence = route.Find("Landscape/Fence").GetComponentsInChildren<Collider>();
             for (float z = terrain.FenceStart.y + 1f; z < terrain.FenceEnd.y; z += 0.5f)
             {
                 float height = terrain.Height(terrain.FenceStart.x, z);
                 var ray = new Ray(route.TransformPoint(new Vector3(terrain.FenceStart.x - 2f, height + 0.8f, z)), Vector3.right);
                 Assert.IsTrue(System.Array.Exists(fence, collider => collider.Raycast(ray, out _, 4f)), $"Cerca en z={z}");
+            }
+            Assert.IsNull(route.Find("Landscape/Fence/North Collision"));
+        }
+
+        [Test]
+        public void RoadSurfaceSpansTheMapAndBendsNorthOfTheCemeteryWithoutChangingMaterial()
+        {
+            var terrain = new RouteTerrain();
+            var road = route.Find("Landscape/Road");
+            var surfaces = road.GetComponentsInChildren<MeshCollider>();
+            Assert.IsNotEmpty(surfaces);
+            foreach (var surface in surfaces)
+            {
+                Assert.AreEqual(GroundType.Slab, surface.GetComponent<GroundSurface>().type);
+                Assert.AreSame(GroundMaterials.For(GroundType.Slab), surface.GetComponent<Renderer>().sharedMaterial);
+                Assert.IsTrue(surface.GetComponent<NavMeshModifier>().ignoreFromBuild);
+            }
+            for (float x = terrain.Bounds.xMin + 0.01f; x < terrain.Bounds.xMax; x += 2f)
+            for (int lane = -1; lane <= 1; lane++)
+            {
+                var point = new Vector3(x, 1f, terrain.RoadCenterZ(x) + lane * (RouteTerrain.RoadWidth * 0.5f - 0.1f));
+                var ray = new Ray(route.TransformPoint(point), Vector3.down);
+                Assert.IsTrue(System.Array.Exists(surfaces, surface => surface.Raycast(ray, out _, 2f)), point.ToString());
             }
         }
 

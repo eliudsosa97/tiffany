@@ -48,6 +48,7 @@ namespace TiffanyGame.EditorTools
             playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute,
                 viewCamera.GetComponent<FollowCamera>());
             route.GetComponent<WitchChapterTracker>().witch = playerLight.witch;
+            storm.witch = playerLight.witch;
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
             respawn.witch = playerLight.witch;
             respawn.overlay = caughtFade;
@@ -61,6 +62,7 @@ namespace TiffanyGame.EditorTools
             PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
             var ambience = BuildForestAmbience(player.transform, route, playerLight.witch);
             ambience.music = BuildTensionMusic(playerLight.witch, player.transform);
+            BuildBackgroundMusic(gameInterface, route.GetComponent<WitchChapterTracker>(), ambience.music, playerLight.witch);
             var heartbeat = player.gameObject.AddComponent<Heartbeat>();
             heartbeat.panic = player.GetComponent<PanicController>();
             heartbeat.witch = playerLight.witch;
@@ -430,7 +432,19 @@ namespace TiffanyGame.EditorTools
             music.pulse = root.AddComponent<AudioSource>();
             foreach (var source in new[] { music.drone, music.pulse })
                 (source.loop, source.playOnAwake, source.spatialBlend, source.volume) = (true, false, 0f, 0f);
-            (music.drone.clip, music.pulse.clip) = (LoadClip("tension_drone"), LoadClip("tension_pulse"));
+            (music.drone.clip, music.pulse.clip) = (LoadClip("music_stalk"), LoadClip("music_chase"));
+            return music;
+        }
+
+        static BackgroundMusic BuildBackgroundMusic(GameInterface gameInterface, WitchChapterTracker tracker, TensionMusic tension, WitchController witch)
+        {
+            var root = new GameObject("Background Music");
+            var music = root.AddComponent<BackgroundMusic>();
+            (music.gameInterface, music.tracker, music.tension, music.witch) = (gameInterface, tracker, tension, witch);
+            music.source = root.AddComponent<AudioSource>();
+            (music.source.loop, music.source.playOnAwake, music.source.spatialBlend, music.source.volume) = (true, false, 0f, 0f);
+            music.source.ignoreListenerPause = true;
+            music.theme = music.finale = LoadClip("music_theme");
             return music;
         }
 

@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d60d67974c54497688347f4fe12f6e28, type: 3}
+  m_Name: Fill -3 6
+  m_EditorClassIdentifier: TiffanyGame::TiffanyGame.ForestInstanceData
+  batches:
+  - mesh: {fileID: 4300000, guid: fbea8e6d69db44bcb976653f886c2531, type: 2}
+    material: {fileID: 2100000, guid: 6a7b2534971464130bc0591e9af499f6, type: 2}
+    matrices:
+    - e00: 0.6847998
+      e01: 0
+      e02: -0.33141372
+      e03: 13.529312
+      e10: 0
+      e11: 1.0868282
+      e12: 0
+      e13: -0.067848764
+      e20: 0.33141372
+      e21: 0
+      e22: 0.6847998
+      e23: 17.912155
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    bounds:
+      m_Center: {x: 13.726364, y: 3.291467, z: 17.924398}
+      m_Extent: {x: 2.9548979, y: 3.608309, z: 3.008071}
+  - mesh: {fileID: 4300000, guid: 3f154d7bd414d469193da48045a4602d, type: 2}
+    material: {fileID: 2100000, guid: 098258d305d944927a6b940165b371c3, type: 2}
+    matrices:
+    - e00: 0.6847998
+      e01: 0
+      e02: -0.33141372
+      e03: 13.529312
+      e10: 0
+      e11: 1.0868282
+      e12: 0
+      e13: -0.067848764
+      e20: 0.33141372
+      e21: 0
+      e22: 0.6847998
+      e23: 17.912155
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    bounds:
+      m_Center: {x: 13.73172, y: 5.10137, z: 17.976942}
+      m_Extent: {x: 3.3074045, y: 1.9030885, z: 3.332141}
