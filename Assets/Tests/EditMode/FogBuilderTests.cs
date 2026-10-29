@@ -56,10 +56,11 @@ namespace TiffanyGame.Tests
             Assert.AreSame(material, GeneratedMaterials.GetGroundFog());
             Color color = material.GetColor("_BaseColor").linear;
             float luminance = color.r * 0.2126f + color.g * 0.7152f + color.b * 0.0722f;
-            Assert.That(luminance, Is.InRange(0.1f, 0.18f));
-            Assert.AreEqual(0.45f, color.a);
-            Assert.AreEqual(0.65f, material.GetFloat("_NoiseScale"));
-            Assert.AreEqual(2.5f, material.GetFloat("_NoiseStretch"));
+            Assert.That(luminance, Is.InRange(0.005f, 0.015f), "La neblina se mezcla hacia el color de la noche.");
+            Assert.Greater(color.b, color.r);
+            Assert.AreEqual(0.7f, color.a, 0.0001f);
+            Assert.AreEqual(0.45f, material.GetFloat("_NoiseScale"));
+            Assert.AreEqual(1.25f, material.GetFloat("_NoiseStretch"));
             Assert.AreEqual(0.35f, material.GetFloat("_LightStrength"));
             Assert.AreEqual(0.2f, material.GetFloat("_EdgeFade"));
             Assert.AreEqual(0.35f, material.GetFloat("_HeightFadeStart"));
@@ -240,7 +241,7 @@ namespace TiffanyGame.Tests
             var bank = waterLayers[0];
             Assert.AreEqual(surface.bounds.max.y, bank.groundHeight, 0.001f);
             Assert.AreEqual(surface.bounds.max.y + FogBuilder.WaterHeight, bank.renderer.transform.position.y, 0.001f);
-            Assert.AreEqual(0.96f, bank.density, 0.0001f);
+            Assert.AreEqual(0.95f, bank.density, 0.0001f);
             Assert.AreEqual(6f, bank.waterFootprint.z, 0.001f);
             Assert.AreEqual(length * 0.5f, bank.waterFootprint.w, 0.001f);
             foreach (float x in new[] { -0.5f, 0.5f })

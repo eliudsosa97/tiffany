@@ -4,12 +4,12 @@ namespace TiffanyGame
 {
     public static class FogDensity
     {
-        public const float BaseDensity = 0.78f;
-        public const float WaterBoost = 0.18f;
-        public const float TreeBoost = 0.12f;
-        public const float PathHalfWidth = 2.5f;
-        public const float PathSoftness = 3f;
-        public const float PathMultiplier = 0.85f;
+        public const float BaseDensity = 0.45f;
+        public const float WaterBoost = 0.5f;
+        public const float TreeBoost = 0.35f;
+        public const float PathHalfWidth = 2f;
+        public const float PathSoftness = 7f;
+        public const float PathMultiplier = 0.2f;
 
         public static float Ambient(bool nearWater, bool nearTrees) =>
             Mathf.Clamp01(BaseDensity + (nearWater ? WaterBoost : 0f) + (nearTrees ? TreeBoost : 0f));
