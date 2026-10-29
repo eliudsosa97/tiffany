@@ -729,6 +729,65 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator ReturnCatchUpReappearsOnNavMeshOutsideSafeZonesBeyondTheWarningAndOutOfView()
+        {
+            player.transform.position = Vector3.zero;
+            var view = new GameObject("Main Camera") { tag = "MainCamera" }.AddComponent<Camera>();
+            view.transform.SetParent(world.transform);
+            view.transform.SetPositionAndRotation(new Vector3(0f, 9f, -12f), Quaternion.LookRotation(new Vector3(0f, -9f, 26f)));
+            view.fieldOfView = 40f;
+            view.aspect = 16f / 9f;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            controller.BeginReturn();
+            SafeZones.Add(Vector3.right * 14f, 3f);
+            var profile = controller.Profile.Copy();
+            profile.CatchUpDistance = 15f;
+            profile.CatchUpDelay = 0.2f;
+            controller.SetProfile(profile);
+            Assert.Greater(HorizontalDistanceToPlayer(), profile.CatchUpDistance);
+            Assert.IsTrue(InCameraView(view, Vector3.forward * profile.CatchUpReappearDistance), "El punto de adelante queda en cámara.");
+
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: reaparece adelante");
+            Vector3 previous = witch.transform.position;
+            bool reappeared = false;
+            float deadline = Time.time + 3f;
+            while (!reappeared && Time.time < deadline)
+            {
+                yield return null;
+                reappeared = Vector3.Distance(previous, witch.transform.position) > 5f;
+                previous = witch.transform.position;
+            }
+
+            Assert.IsTrue(reappeared);
+            Vector3 position = witch.transform.position;
+            Assert.IsTrue(NavMesh.SamplePosition(position, out _, 0.5f, NavMesh.AllAreas));
+            Assert.IsFalse(SafeZones.Contains(position));
+            Assert.Greater(HorizontalDistanceToPlayer(), controller.Profile.SprintTriggerDistance);
+            Assert.AreEqual(profile.CatchUpReappearDistance, HorizontalDistanceToPlayer(), 1f);
+            Assert.IsFalse(InCameraView(view, position));
+            Assert.IsFalse(InCameraView(view, position + Vector3.up * 2.5f));
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            yield return null;
+            Assert.IsTrue(agent.enabled && agent.isOnNavMesh);
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            Assert.AreEqual(controller.Profile.FollowSpeed, controller.Decision.Speed);
+            Assert.Less(HorizontalDistance(controller.Decision.MoveTarget, player.transform.position), 0.5f);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        private static bool InCameraView(Camera view, Vector3 position)
+        {
+            Vector3 v = view.WorldToViewportPoint(position);
+            return v.z > 0f && v.x >= 0f && v.x <= 1f && v.y >= 0f && v.y <= 1f;
+        }
+
+        private static float HorizontalDistance(Vector3 a, Vector3 b)
+        {
+            a.y = b.y;
+            return Vector3.Distance(a, b);
+        }
+
+        [UnityTest]
         public IEnumerator SprintStopsAtWallAndRecoversOnNavMesh()
         {
             witch.transform.position = Vector3.zero;

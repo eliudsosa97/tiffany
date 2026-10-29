@@ -11,6 +11,7 @@ namespace TiffanyGame
         private readonly System.Random random;
         private readonly Func<Vector3, Vector3> resolveGroundTarget;
         private readonly WitchTactics tactics;
+        private readonly WitchCatchUp catchUp = new WitchCatchUp();
         private WitchDecision tacticDecision;
         private bool hasTacticDecision;
         private WitchState state = WitchState.Flying;
@@ -76,8 +77,28 @@ namespace TiffanyGame
 
         public WitchDecision Tick(float dt, in WitchPerception p)
         {
-            hasTacticDecision = false;
             dt = dt < 0f || float.IsNaN(dt) || float.IsInfinity(dt) ? 0f : dt;
+            WitchDecision decision = TickState(dt, in p);
+            decision.CatchUp = catchUp.Tick(dt, profile, in p, decision.State);
+            return decision;
+        }
+
+        public void CatchUpPlaced(Vector3 playerPosition)
+        {
+            catchUp.Reset();
+            tactics.Forget();
+            target = playerPosition;
+            targetIsPlayer = hasTarget = chasing = true;
+            warned = hasNoiseTarget = hasHideTarget = inspectingNoise = retreatingNoise = false;
+            timeWithoutPerception = 0f;
+            Enter(WitchState.Stalking, playerPosition);
+        }
+
+        public void CatchUpBlocked() => catchUp.Retry(profile);
+
+        private WitchDecision TickState(float dt, in WitchPerception p)
+        {
+            hasTacticDecision = false;
             sawHiding = p.PlayerHidden && (wasHidden ? sawHiding : sawPlayer);
             if (p.PlayerVanished && !wasVanished) sawHiding = false;
             bool trackable = !p.PlayerVanished && !p.PlayerInSafeZone && (!p.PlayerHidden || sawHiding);

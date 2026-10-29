@@ -69,6 +69,11 @@ namespace TiffanyGame
         private Quaternion figureRotation = Quaternion.identity;
         private bool trembling;
         private const float TrembleOffset = 0.05f, TrembleAngle = 5f;
+        private NavMeshPath catchUpPath;
+        private readonly Vector3[] catchUpCorners = new Vector3[64];
+        private static readonly float[] CatchUpAngles = { 0f, 60f, -60f, 90f, -90f };
+        private const float CatchUpViewMargin = 0.1f;
+        private const float CatchUpPathRatio = 1.6f;
         private static readonly int SpeedHash = Animator.StringToHash("Speed");
         private static readonly int IdleHash = Animator.StringToHash("Idle");
         private static readonly int StalkingHash = Animator.StringToHash(nameof(WitchState.Stalking));
@@ -90,6 +95,7 @@ namespace TiffanyGame
             watchBody.center = Vector3.up * 1.15f;
             watchBody.enabled = false;
             hits = new RaycastHit[32];
+            catchUpPath = new NavMeshPath();
             noiseHandler = Hear;
             if (figure != null)
             {
@@ -224,6 +230,56 @@ namespace TiffanyGame
             return false;
         }
 
+        private void CatchUp(Vector3 playerPosition)
+        {
+            if (!TryFindCatchUpPoint(playerPosition, out var point))
+            {
+                brain.CatchUpBlocked();
+                return;
+            }
+            if (agent.enabled && agent.isOnNavMesh) agent.Warp(point);
+            else transform.position = point;
+            hasDestination = false;
+            brain.CatchUpPlaced(playerPosition);
+            Debug.Log($"{GameInfo.LogPrefix} Bruja: reaparece adelante");
+        }
+
+        private bool TryFindCatchUpPoint(Vector3 playerPosition, out Vector3 point)
+        {
+            point = default;
+            if (!NavMeshPlacement.TrySample(playerPosition, 3f, agent.areaMask, out var start)) return false;
+            Vector3 ahead = WitchTargets.Direction(playerPosition,
+                Perception.HasNextClearing ? Perception.NextClearingPosition : playerPosition + player.forward);
+            Camera view = Camera.main;
+            for (int i = 0; i < CatchUpAngles.Length; i++)
+            {
+                Vector3 candidate = playerPosition
+                    + Quaternion.AngleAxis(CatchUpAngles[i], Vector3.up) * ahead * profile.CatchUpReappearDistance;
+                if (!NavMeshPlacement.TrySample(candidate, 3f, agent.areaMask, out var hit)
+                    || SafeZones.Contains(hit.position)
+                    || WitchTargets.Distance(hit.position, playerPosition) <= profile.SprintTriggerDistance
+                    || InView(view, hit.position) || InView(view, hit.position + Vector3.up * 2.5f)
+                    || !NavMesh.CalculatePath(start.position, hit.position, agent.areaMask, catchUpPath)
+                    || catchUpPath.status != NavMeshPathStatus.PathComplete) continue;
+                int corners = catchUpPath.GetCornersNonAlloc(catchUpCorners);
+                if (corners >= catchUpCorners.Length) continue;
+                float length = 0f;
+                for (int c = 1; c < corners; c++) length += Vector3.Distance(catchUpCorners[c - 1], catchUpCorners[c]);
+                if (length >= CatchUpPathRatio * Vector3.Distance(start.position, hit.position)) continue;
+                point = hit.position;
+                return true;
+            }
+            return false;
+        }
+
+        private static bool InView(Camera view, Vector3 position)
+        {
+            if (view == null) return false;
+            Vector3 v = view.WorldToViewportPoint(position);
+            return v.z > 0f && v.x > -CatchUpViewMargin && v.x < 1f + CatchUpViewMargin
+                && v.y > -CatchUpViewMargin && v.y < 1f + CatchUpViewMargin;
+        }
+
         private void Hear(StepNoise noise) => witchSenses.Hear(in noise, transform.position);
 
         private void Update()
@@ -286,6 +342,7 @@ namespace TiffanyGame
                     transform.position = verticalTarget;
                 EnterState();
             }
+            if (Decision.CatchUp) CatchUp(playerPosition);
             if (Decision.InspectingHide && !wasInspectingHide)
                 Debug.Log($"{GameInfo.LogPrefix} Bruja: revisa escondite en {Decision.MoveTarget}");
             jerk.Tick(dt, Decision);
