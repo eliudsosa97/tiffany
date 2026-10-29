@@ -722,6 +722,9 @@ def main():
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     for obj in list(bpy.data.objects):
         bpy.data.objects.remove(obj, do_unlink=True)
+    for name in MATS:
+        if name in bpy.data.materials:
+            bpy.data.materials.remove(bpy.data.materials[name])
     scene = bpy.context.scene
     scene.unit_settings.system, scene.unit_settings.scale_length = "METRIC", 1.0
     scene.render.fps = FPS
