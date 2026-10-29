@@ -13,16 +13,16 @@ float4 _TiffanyOcclusionParams;
 float _TiffanyOcclusionDisabled;
 static const float TiffanyBayer4[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
 
-float TiffanyKeepFraction(float3 point)
+float TiffanyKeepFraction(float3 positionWS)
 {
     float radius = _TiffanyFocusWS.w;
     float3 toFocus = _TiffanyFocusWS.xyz - _TiffanyCameraWS.xyz;
-    float distance = length(toFocus);
-    if (_TiffanyOcclusionDisabled > 0.5 || radius <= 0 || distance <= 0.0001) return 1;
-    float3 axis = toFocus / distance;
-    float3 offset = point - _TiffanyCameraWS.xyz;
+    float focusDistance = length(toFocus);
+    if (_TiffanyOcclusionDisabled > 0.5 || radius <= 0 || focusDistance <= 0.0001) return 1;
+    float3 axis = toFocus / focusDistance;
+    float3 offset = positionWS - _TiffanyCameraWS.xyz;
     float along = dot(offset, axis);
-    if (along <= _TiffanyOcclusionParams.w || along >= distance - _TiffanyOcclusionParams.y) return 1;
+    if (along <= _TiffanyOcclusionParams.w || along >= focusDistance - _TiffanyOcclusionParams.y) return 1;
     float radial = length(offset - axis * along);
     float softness = _TiffanyOcclusionParams.x;
     float edge = saturate((radial - max(0, radius - softness)) / max(0.0001, softness));

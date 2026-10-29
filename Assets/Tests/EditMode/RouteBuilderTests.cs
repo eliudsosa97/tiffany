@@ -18,12 +18,15 @@ namespace TiffanyGame.Tests
         Vector3[] skyRoute;
         NavMeshData navMeshData;
         string previousMaterialFolder;
+        string previousModelMaterialFolder;
 
         [SetUp]
         public void SetUp()
         {
             previousMaterialFolder = GeneratedMaterials.folder;
             GeneratedMaterials.folder = TempFolder + "/Materials";
+            previousModelMaterialFolder = ModelLibrary.materialFolder;
+            ModelLibrary.materialFolder = TempFolder + "/ModelMaterials";
             root = new GameObject(nameof(RouteBuilderTests));
             var girl = new GameObject("Player");
             girl.transform.SetParent(root.transform, false);
@@ -47,6 +50,22 @@ namespace TiffanyGame.Tests
             if (navMeshData != null) Object.DestroyImmediate(navMeshData);
             AssetDatabase.DeleteAsset(TempFolder);
             GeneratedMaterials.folder = previousMaterialFolder;
+            ModelLibrary.materialFolder = previousModelMaterialFolder;
+        }
+
+        [Test]
+        public void EchoTylerMaterialsStayInsideTheTestFolder()
+        {
+            var echoes = root.GetComponentsInChildren<EchoPlayer>(true);
+            Assert.AreEqual(5, echoes.Length);
+            foreach (var echo in echoes)
+            {
+                var renderers = echo.tyler.GetComponentsInChildren<Renderer>(true);
+                Assert.IsNotEmpty(renderers);
+                foreach (var renderer in renderers)
+                    foreach (var material in renderer.sharedMaterials)
+                        Assert.AreEqual($"{TempFolder}/ModelMaterials/{material.name}.mat", AssetDatabase.GetAssetPath(material));
+            }
         }
 
         [Test]

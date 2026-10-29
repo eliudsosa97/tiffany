@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 using TiffanyGame.EditorTools;
 using UnityEditor;
@@ -40,9 +41,13 @@ namespace TiffanyGame.Tests
             renderer.sharedMaterial = material;
             body.SetActive(false);
             Assert.AreEqual(1, CharacterSilhouetteBuilder.Add(root.transform));
-            CharacterSilhouetteBuilder.Add(root.transform);
+            var mesh = body.GetComponent<MeshFilter>().sharedMesh;
+            GeneratedMaterials.Get("Body", Color.cyan, unlit);
+            Assert.IsFalse(material.IsKeywordEnabled("_TIFFANY_CHARACTER"));
+            Assert.AreEqual(1, CharacterSilhouetteBuilder.Add(root.transform));
 
             Assert.AreEqual(1, root.GetComponentsInChildren<Renderer>(true).Length);
+            Assert.AreSame(mesh, body.GetComponent<MeshFilter>().sharedMesh);
             Assert.AreEqual(2, renderer.sharedMaterials.Length);
             material = renderer.sharedMaterials[0];
             Assert.IsTrue(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string actualGuid, out long actualId));
@@ -108,8 +113,18 @@ namespace TiffanyGame.Tests
                 var spec = ModelLibrary.LoadSpec(model);
 
                 Assert.AreEqual(1, CharacterSilhouetteBuilder.Add(figure.transform));
+                AssetDatabase.SaveAssets();
+                var materialFiles = new Dictionary<string, byte[]>();
+                foreach (var material in skin.sharedMaterials)
+                {
+                    string materialPath = AssetDatabase.GetAssetPath(material);
+                    materialFiles[materialPath] = File.ReadAllBytes(materialPath);
+                }
                 ModelLibrary.SyncMaterials(model);
+                foreach (var material in materials) Assert.AreEqual(0f, material.GetFloat("_TiffanyStencil"));
                 Assert.AreEqual(1, CharacterSilhouetteBuilder.Add(figure.transform));
+                AssetDatabase.SaveAssets();
+                foreach (var file in materialFiles) CollectionAssert.AreEqual(file.Value, File.ReadAllBytes(file.Key), file.Key);
 
                 Assert.AreEqual(1, figure.GetComponentsInChildren<Renderer>(true).Length);
                 Assert.AreEqual(source.subMeshCount + 1, skin.sharedMesh.subMeshCount);
@@ -129,6 +144,7 @@ namespace TiffanyGame.Tests
                     Assert.AreEqual(AssetDatabase.GetAssetPath(materials[i]), AssetDatabase.GetAssetPath(material));
                     Assert.AreEqual(ModelLibrary.SpiritShader, material.shader.name);
                     Assert.AreEqual(1f, material.GetFloat("_TiffanyStencil"));
+                    Assert.IsFalse(material.IsKeywordEnabled("_TIFFANY_CHARACTER"));
                     var entry = System.Array.Find(spec.materials, item => item.name == material.name);
                     ColorUtility.TryParseHtmlString(entry.rimColor, out var color);
                     for (int c = 0; c < 4; c++) Assert.AreEqual(color[c], material.GetColor("_RimColor")[c], 1e-4f);
@@ -147,9 +163,15 @@ namespace TiffanyGame.Tests
                     {
                         Resources.UnloadAsset(AssetDatabase.LoadAssetAtPath<Mesh>(path));
                         AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                        foreach (string materialPath in materialFiles.Keys)
+                        {
+                            Resources.UnloadAsset(AssetDatabase.LoadAssetAtPath<Material>(materialPath));
+                            AssetDatabase.ImportAsset(materialPath, ImportAssetOptions.ForceUpdate);
+                        }
                         var rebuilt = ModelLibrary.Instantiate(model, root.transform);
                         CharacterSilhouetteBuilder.Add(rebuilt.transform);
                         AssetDatabase.SaveAssets();
+                        foreach (var file in materialFiles) CollectionAssert.AreEqual(file.Value, File.ReadAllBytes(file.Key), file.Key);
                         var rebuiltSkin = rebuilt.GetComponentInChildren<SkinnedMeshRenderer>();
                         Assert.AreEqual(bounds, rebuiltSkin.localBounds);
                         var mesh = rebuiltSkin.sharedMesh;

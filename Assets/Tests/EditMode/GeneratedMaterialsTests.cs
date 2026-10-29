@@ -104,6 +104,18 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void MaterialSnapshotPreservesAndChecksRenderTypeOverrides()
+        {
+            var material = GeneratedMaterials.Get("Tagged", Color.white);
+            material.SetOverrideTag("RenderType", "TransparentCutout");
+            using var snapshot = new MaterialAssetSnapshot(material);
+
+            snapshot.AssertUnchanged(material);
+            material.SetOverrideTag("RenderType", "Opaque");
+            Assert.Throws<AssertionException>(() => snapshot.AssertUnchanged(material));
+        }
+
+        [Test]
         public void OccluderKeepsSavedMapsTilingAndInstancingWhenRegenerated()
         {
             var material = GeneratedMaterials.GetTextured("Tree", Color.green, "pine_bark", 2f, instancing: true);

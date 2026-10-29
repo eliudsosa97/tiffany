@@ -11,10 +11,12 @@ namespace TiffanyGame.Tests
         readonly Material saved;
         readonly string guid;
         readonly long fileId;
+        readonly string renderType;
 
         public MaterialAssetSnapshot(Material material)
         {
             Assert.IsTrue(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out guid, out fileId));
+            renderType = material.GetTag("RenderType", false);
             saved = new Material(material);
         }
 
@@ -28,7 +30,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(saved.enableInstancing, actual.enableInstancing, actual.name);
             Assert.AreEqual(saved.doubleSidedGI, actual.doubleSidedGI, actual.name);
             Assert.AreEqual(saved.globalIlluminationFlags, actual.globalIlluminationFlags, actual.name);
-            Assert.AreEqual(saved.GetTag("RenderType", false), actual.GetTag("RenderType", false), actual.name);
+            Assert.AreEqual(renderType, actual.GetTag("RenderType", false), actual.name);
             CollectionAssert.AreEquivalent(saved.shaderKeywords, actual.shaderKeywords, actual.name);
             var subshader = ShaderUtil.GetShaderData(saved.shader).GetSubshader(0);
             for (int pass = 0; pass < subshader.PassCount; pass++)
