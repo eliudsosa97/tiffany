@@ -16,12 +16,7 @@ namespace TiffanyGame
             target = destination;
             corner = count = 0;
             Vector3 start = position;
-            if (SafeZones.Contains(position))
-            {
-                Vector3 exit = destination - position;
-                exit.y = 0f;
-                start += Quaternion.Euler(0f, 45f, 0f) * exit.normalized * 4f;
-            }
+            if (SafeZones.Contains(position) && !SafeZones.TryPushOut(position, 0.5f, out start)) return false;
             int forest = NavMesh.GetAreaFromName(RouteTerrain.ForestArea);
             filter.areaMask = forest < 0 ? NavMesh.AllAreas : NavMesh.AllAreas & ~(1 << forest);
             if (TryPath(start, destination)) return true;

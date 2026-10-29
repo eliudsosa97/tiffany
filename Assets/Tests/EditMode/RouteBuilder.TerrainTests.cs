@@ -10,6 +10,59 @@ namespace TiffanyGame.Tests
 {
     public sealed partial class RouteBuilderTests
     {
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ReturnFromHutCandlesLeavesTheCheckpointBehindAndUsesTheCliffTrail(bool challengeCheckpoint)
+        {
+            var hut = route.GetChild(4);
+            var checkpoint = hut.Find("Family Candle").GetComponent<CandleSpot>();
+            if (challengeCheckpoint)
+                foreach (var challenge in route.GetComponentsInChildren<PowerChallenge>())
+                    if (challenge.kind == ChallengeKind.Hut) checkpoint = challenge.checkpoint;
+            var exclusion = checkpoint.gameObject.AddComponent<NavMeshModifierVolume>();
+            exclusion.area = NavMesh.GetAreaFromName("Not Walkable");
+            exclusion.center = Vector3.up;
+            exclusion.size = new Vector3(checkpoint.radius * 2f, 2f, checkpoint.radius * 2f);
+            var surface = route.gameObject.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.Children;
+            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            surface.overrideVoxelSize = true;
+            surface.voxelSize = 0.1f;
+            surface.layerMask = ~LayerMask.GetMask(ForestLayout.CoverLayer, "Ignore Raycast");
+            surface.BuildNavMesh();
+            navMeshData = surface.navMeshData;
+
+            Vector3 position = checkpoint.transform.position + Vector3.back;
+            Vector3 target = route.GetChild(5).Find("Family Candle").position + Vector3.back * 1.5f;
+            int handle = SafeZones.Add(checkpoint.transform.position, checkpoint.radius);
+            try
+            {
+                var navigation = new PlaythroughNavigation();
+                Assert.IsTrue(navigation.Calculate(position, target));
+                Vector2 move = navigation.Move(position, 0f, 0.02f, out _);
+                Assert.Less(move.y, 0f, "Debe salir por detrás de la veladora, sin atravesar el vaso.");
+
+                Assert.IsTrue(SafeZones.TryPushOut(position, 0.5f, out var exit));
+                int walkable = 1 << NavMesh.GetAreaFromName("Walkable");
+                Assert.IsTrue(NavMesh.SamplePosition(exit, out var start, 1f, walkable));
+                Assert.IsTrue(NavMesh.SamplePosition(target, out var end, 0.5f, walkable));
+                var path = new NavMeshPath();
+                Assert.IsTrue(NavMesh.CalculatePath(start.position, end.position, walkable, path));
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
+                var corners = path.corners;
+                float length = 0f;
+                for (int i = 0; i < corners.Length; i++)
+                {
+                    Vector3 point = route.InverseTransformPoint(corners[i]);
+                    Assert.Greater(point.z, 25f, "El regreso no debe rodear por el establo ni las vías.");
+                    Assert.Less(point.z, 110f, "El regreso no debe rodear por el río ni la carretera.");
+                    if (i > 0) length += Vector3.Distance(corners[i - 1], corners[i]);
+                }
+                Assert.Less(length, 140f, "La veladora del lago debe alcanzarse por la rampa de la choza.");
+            }
+            finally { SafeZones.Remove(handle); }
+        }
+
         [Test]
         public void HutLandmarksKeepTheirPositionsAndFitInsideTwentyFourMeters()
         {
