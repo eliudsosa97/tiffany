@@ -89,6 +89,109 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void ClearingsAndPathsKeepSurfaceTypesWithTexturedMeterScaleGround()
+        {
+            var types = new[] { GroundType.Grass, GroundType.Slab, GroundType.Gravel, GroundType.Branches,
+                GroundType.Leaves, GroundType.Grass, GroundType.Slab, GroundType.Dirt };
+            for (int i = 0; i < route.childCount; i++)
+            {
+                var clearing = route.GetChild(i);
+                var floors = i == 5 ? new[] { "West Bank", "East Bank", "South Bank", "North Bank" } : new[] { "Ground" };
+                foreach (string name in floors) AssertGround(clearing.Find(name), types[i]);
+                if (i == 7) continue;
+                var path = clearing.Find("Path to Next Clearing");
+                foreach (string name in i == 4 ? new[] { "South Bank", "North Bank" } : new[] { "Ground" })
+                    AssertGround(path.Find(name), GroundType.Dirt);
+            }
+        }
+
+        [Test]
+        public void EveryGroundSurfaceUsesTheMaterialForItsFootstepType()
+        {
+            var surfaces = route.GetComponentsInChildren<GroundSurface>(true);
+            Assert.IsNotEmpty(surfaces);
+            foreach (var surface in surfaces)
+            {
+                var expected = GroundMaterials.For(surface.type);
+                var renderers = surface.GetComponentsInChildren<Renderer>(true);
+                Assert.IsNotEmpty(renderers, surface.name);
+                foreach (var renderer in renderers)
+                {
+                    Assert.IsNotEmpty(renderer.sharedMaterials, surface.name);
+                    foreach (var material in renderer.sharedMaterials)
+                        Assert.AreSame(expected, material, $"{surface.name} ({surface.type}), renderer {renderer.name}");
+                }
+            }
+        }
+
+        static void AssertGround(Transform ground, GroundType type)
+        {
+            Assert.IsNotNull(ground);
+            Assert.AreEqual(type, GroundSurface.TypeOf(ground.GetComponent<Collider>()));
+            Assert.AreEqual(type, ground.GetComponent<GroundSurface>().type);
+            var material = ground.GetComponent<Renderer>().sharedMaterial;
+            Assert.AreEqual("Route" + type, material.name);
+            Assert.AreNotEqual("RouteGround", material.name);
+            string textureName = type switch
+            {
+                GroundType.Dirt or GroundType.Grass => "dry_ground_rocks",
+                GroundType.Slab => "rock_boulder_dry",
+                GroundType.Gravel => "gravel_ground_01",
+                GroundType.Leaves => "dry_decay_leaves",
+                GroundType.Branches => "burned_ground_01",
+                _ => throw new System.ArgumentOutOfRangeException(nameof(type))
+            };
+            Assert.AreEqual(textureName + "_diff", material.GetTexture("_BaseMap").name);
+            Assert.AreEqual(textureName + "_nor_gl", material.GetTexture("_BumpMap").name);
+            Assert.IsTrue(AssetDatabase.Contains(material));
+            Assert.AreEqual("Universal Render Pipeline/Tiffany Forest Ground", material.shader.name);
+            Assert.IsFalse(ShaderUtil.ShaderHasError(material.shader));
+            Assert.AreEqual(Vector2.one / GroundMaterials.TileMeters, material.GetTextureScale("_BaseMap"));
+            Assert.Greater(material.GetFloat("_Mix"), 0f);
+            Assert.AreEqual(0f, material.GetFloat("_Patch"));
+            Assert.AreEqual(1f, material.GetFloat("_ZWrite"));
+            foreach (string property in new[] { "_BaseMap", "_BumpMap", "_DetailMap", "_DetailNormal" })
+            {
+                var texture = material.GetTexture(property);
+                Assert.IsNotNull(texture, ground.name + " " + property);
+                Assert.IsTrue(AssetDatabase.Contains(texture));
+                Assert.LessOrEqual(Mathf.Max(texture.width, texture.height), 1024);
+                var importer = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(texture));
+                Assert.AreEqual(TextureWrapMode.Repeat, importer.wrapMode);
+                Assert.IsTrue(importer.mipmapEnabled);
+                Assert.AreNotEqual(TextureImporterCompression.Uncompressed, importer.textureCompression);
+                if (property == "_BumpMap" || property == "_DetailNormal") Assert.AreEqual(TextureImporterType.NormalMap, importer.textureType);
+            }
+        }
+
+        [Test]
+        public void ClearingsFitGeometryBudgetIncludingInstancedFloorCover()
+        {
+            foreach (Transform clearing in route)
+            {
+                var renderers = clearing.GetComponentsInChildren<Renderer>(true);
+                Assert.LessOrEqual(renderers.Length, 200, clearing.name);
+                long triangles = 0;
+                int draws = 0;
+                foreach (var renderer in renderers)
+                {
+                    draws += renderer.sharedMaterials.Length;
+                    var mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
+                    if (mesh == null) continue;
+                    for (int submesh = 0; submesh < mesh.subMeshCount; submesh++) triangles += mesh.GetIndexCount(submesh) / 3;
+                }
+                foreach (var instances in clearing.GetComponentsInChildren<ForestInstances>())
+                foreach (var batch in instances.data.batches)
+                {
+                    triangles += batch.mesh.GetIndexCount(0) / 3 * batch.matrices.Length;
+                    draws += Mathf.CeilToInt(batch.matrices.Length / (float)ForestInstances.MaxInstancesPerDraw);
+                }
+                Assert.LessOrEqual(draws, 150, clearing.name);
+                Assert.LessOrEqual(triangles, 150000, clearing.name);
+            }
+        }
+
+        [Test]
         public void FiveMemoriesBelongToTheirClearingsAndEchoesStayOutsideTheRoute()
         {
             var collector = player.GetComponent<MemoryCollector>();

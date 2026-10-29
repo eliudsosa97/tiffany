@@ -129,7 +129,7 @@ namespace TiffanyGame.Tests
             Assert.IsEmpty(Understory.GetComponentsInChildren<Renderer>());
             Assert.IsEmpty(Understory.GetComponentsInChildren<Collider>());
             Assert.IsTrue(AssetDatabase.Contains(Understory.data));
-            Assert.AreEqual(4, Understory.data.batches.Length);
+            Assert.AreEqual(7, Understory.data.batches.Length);
             foreach (var batch in Understory.data.batches)
             {
                 Assert.IsTrue(batch.material.enableInstancing);
@@ -141,6 +141,45 @@ namespace TiffanyGame.Tests
                 foreach (var vertex in batch.mesh.vertices) Assert.IsTrue(bounds.Contains(matrix.MultiplyPoint3x4(vertex)));
             }
         }
+        [Test]
+        public void EveryTreeHasFeatheredFloorCoverAndPinesHaveNeedlesWithoutColliders()
+        {
+            Populate();
+            var batches = Understory.data.batches;
+            var oak = System.Array.Find(batches, batch => batch.material.name == "ForestGroundOak");
+            var pine = System.Array.Find(batches, batch => batch.material.name == "ForestGroundPine");
+            var needles = System.Array.Find(batches, batch => batch.material.name == "ForestGroundNeedles");
+            Assert.IsNotNull(oak);
+            Assert.IsNotNull(pine);
+            Assert.IsNotNull(needles);
+            Assert.IsEmpty(Understory.GetComponentsInChildren<Collider>(true));
+            Assert.IsEmpty(Understory.GetComponentsInChildren<GroundSurface>(true));
+            int trees = 0;
+            foreach (Transform tree in root.transform.Find("Forest"))
+            {
+                if (tree.name != "Oak" && tree.name != "Pine") continue;
+                trees++;
+                var batch = tree.name == "Pine" ? pine : oak;
+                Assert.AreEqual(1, System.Array.FindAll(batch.matrices, matrix =>
+                    Vector3.Distance(matrix.MultiplyPoint3x4(Vector3.zero), tree.localPosition + Vector3.up * 0.012f) < 0.001f).Length);
+            }
+            Assert.AreEqual(trees, oak.matrices.Length + pine.matrices.Length);
+            CollectionAssert.AreEqual(pine.matrices, needles.matrices);
+            Assert.Greater(needles.material.renderQueue, pine.material.renderQueue);
+            long triangles = 0;
+            foreach (var batch in new[] { oak, pine, needles })
+            {
+                Assert.IsTrue(AssetDatabase.Contains(batch.mesh));
+                Assert.IsTrue(batch.material.enableInstancing);
+                Assert.IsFalse(ShaderUtil.ShaderHasError(batch.material.shader));
+                Assert.AreEqual(1f, batch.material.GetFloat("_Patch"));
+                Assert.AreEqual(0f, batch.material.GetFloat("_ZWrite"));
+                Assert.Greater(batch.material.renderQueue, (int)RenderQueue.Geometry);
+                triangles += batch.mesh.GetIndexCount(0) / 3 * batch.matrices.Length;
+            }
+            Assert.LessOrEqual(triangles, 792);
+        }
+
         [Test]
         public void SameSeedRebuildsIdenticallyAndDifferentSeedChangesPlacement()
         {

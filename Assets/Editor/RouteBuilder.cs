@@ -24,8 +24,8 @@ namespace TiffanyGame.EditorTools
             var names = new[] { "Cemetery", "Water Plant", "Train Tracks", "Stable", "Witch Hut", "Lake", "Road", "Tiffany House" };
             var grounds = new[] { GroundType.Grass, GroundType.Slab, GroundType.Gravel, GroundType.Branches,
                 GroundType.Leaves, GroundType.Grass, GroundType.Slab, GroundType.Dirt };
-            var floor = GeneratedMaterials.Get("RouteGround", new Color(0.25f, 0.25f, 0.25f));
-            var pathDirt = GeneratedMaterials.Get("RoutePathDirt", new Color(0.36f, 0.27f, 0.18f));
+            var terrainFloor = GeneratedMaterials.Get("RouteGround", new Color(0.25f, 0.25f, 0.25f));
+            var pathFloor = GroundMaterials.For(GroundType.Dirt);
             var structure = GeneratedMaterials.Get("RouteStructure", new Color(0.4f, 0.4f, 0.4f));
             var dark = GeneratedMaterials.Get("RouteForest", new Color(0.09f, 0.09f, 0.09f));
             var bush = GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f));
@@ -38,10 +38,11 @@ namespace TiffanyGame.EditorTools
             {
                 var clearing = Root($"Route {i + 1} {names[i]}", route, RouteLayout.Clearing(i));
                 tracker.clearings[i] = clearing;
+                var floor = GroundMaterials.For(grounds[i]);
                 if (i == 5) WaterBuilder.BuildLake(clearing, floor);
                 else Ground("Ground", clearing, Vector3.zero, new Vector2(ClearingSize, ClearingSize), grounds[i], floor);
                 BuildEdges(clearing, i);
-                if (i < names.Length - 1) BuildPath(clearing, i, pathDirt, structure, terrain);
+                if (i < names.Length - 1) BuildPath(clearing, i, pathFloor, GroundMaterials.For(GroundType.Gravel), terrain);
                 Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush);
                 if (i < memories.Length) memories[i] = Root("Memory Point", clearing, memoryPosition);
 
@@ -55,7 +56,7 @@ namespace TiffanyGame.EditorTools
                     clearing.TransformPoint(candlePosition), CandleKind.Family, true, player.GetComponent<PlayerSoul>(), storm);
             }
 
-            TerrainBuilder.Build(route, terrain, floor, structure, dark);
+            TerrainBuilder.Build(route, terrain, terrainFloor, structure, dark);
             var spawn = Root("Spawn", route.GetChild(0), new Vector3(0f, 0f, -13f));
             spawn.rotation = Quaternion.LookRotation(memories[0].position - spawn.position);
             player.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
@@ -174,10 +175,10 @@ namespace TiffanyGame.EditorTools
                     tracks.localRotation = Quaternion.Euler(0f, 90f, 0f);
                     for (int i = 0; i < 7; i++)
                         Part($"Sleeper {i + 1}", tracks, new Vector3(-6.6f + i * 2.2f, 0.04f, 0f),
-                            new Vector3(0.45f, 0.08f, RouteLayout.TrainWidth), structure).AddComponent<GroundSurface>().type = GroundType.Gravel;
+                            new Vector3(0.45f, 0.08f, RouteLayout.TrainWidth), GroundMaterials.For(GroundType.Gravel)).AddComponent<GroundSurface>().type = GroundType.Gravel;
                     for (int side = -1; side <= 1; side += 2)
                         Part($"Rail {side}", tracks, new Vector3(0f, TerrainBuilder.FloorOffset + 0.04f, side * 0.9f),
-                            new Vector3(14f, 0.08f, 0.12f), dark).AddComponent<GroundSurface>().type = GroundType.Gravel;
+                            new Vector3(14f, 0.08f, 0.12f), GroundMaterials.For(GroundType.Gravel)).AddComponent<GroundSurface>().type = GroundType.Gravel;
                     HidingBuilder.BuildHideSpot(clearing, "Hide Tracks Bush", new Vector3(6f, 0f, -4f), bush);
                     return new Vector3(0f, 0f, -3f);
                 case 3:
@@ -189,7 +190,7 @@ namespace TiffanyGame.EditorTools
                     HidingBuilder.BuildHideSpot(clearing, "Hide Hut Bush", new Vector3(-6f, 0f, 3f), bush);
                     return new Vector3(0f, 0f, 3f);
                 case 6:
-                    Part("Asphalt", clearing, new Vector3(0f, 0.02f, 0f), new Vector3(35f, 0.04f, 8f), dark)
+                    Part("Asphalt", clearing, new Vector3(0f, 0.02f, 0f), new Vector3(35f, 0.04f, 8f), GroundMaterials.For(GroundType.Slab))
                         .AddComponent<GroundSurface>().type = GroundType.Slab;
                     for (int i = -1; i <= 1; i++)
                     {
