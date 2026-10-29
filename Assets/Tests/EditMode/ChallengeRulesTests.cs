@@ -4,6 +4,21 @@ namespace TiffanyGame.Tests
 {
     public sealed class ChallengeRulesTests
     {
+        [TestCase(ChallengeKind.Candles)]
+        [TestCase(ChallengeKind.Distract)]
+        [TestCase(ChallengeKind.Vanish)]
+        [TestCase(ChallengeKind.Hut)]
+        public void RestoredCompletionKeepsPassageOpenAcrossRetriesWithoutPowers(ChallengeKind kind)
+        {
+            var rules = new ChallengeRules(kind);
+            rules.MarkCompleted();
+            rules.ResetAttempt();
+            rules.Tick(-1f, true, 0, false, false);
+            rules.Tick(ChallengeRules.PassageLength, true, 0, false, false);
+            Assert.IsTrue(rules.Completed);
+            Assert.IsTrue(rules.GateOpen(0) && rules.GateOpen(1));
+        }
+
         [Test]
         public void DarknessNeedsBothCandlesAndNeverTrapsPlayerWhenTheyBurnOut()
         {

@@ -6,6 +6,8 @@ namespace TiffanyGame
     {
         public const string Title = "Tiffany";
         public const string StartHint = "Clic, Espacio o Start para empezar";
+        public const string Continue = "Continuar";
+        public const string NewGame = "Nueva partida";
         public const string Controls = "WASD  moverte\n"
             + "Shift  correr · Ctrl  despacio\n"
             + "Ratón  apuntar la luz\n"
