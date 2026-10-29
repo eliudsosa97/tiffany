@@ -8,6 +8,8 @@ Shader "Universal Render Pipeline/Tiffany Forest Ground"
         _DetailMap ("Scattered ground", 2D) = "white" {}
         [Normal] _DetailNormal ("Scattered normal", 2D) = "bump" {}
         _Mix ("Scattered proportion", Range(0, 1)) = 0.25
+        _NormalStrength ("Normal strength", Range(0, 3)) = 1
+        _Cavity ("Cavity contrast", Range(0, 0.75)) = 0
         _Patch ("Feathered patch", Float) = 0
         [HideInInspector] _SrcBlend ("Source blend", Float) = 1
         [HideInInspector] _DstBlend ("Destination blend", Float) = 0
@@ -45,6 +47,8 @@ Shader "Universal Render Pipeline/Tiffany Forest Ground"
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
                 half _Mix;
+                half _NormalStrength;
+                half _Cavity;
                 half _Patch;
             CBUFFER_END
 
@@ -110,7 +114,7 @@ Shader "Universal Render Pipeline/Tiffany Forest Ground"
                 float macro = Fbm(p * 0.16);
                 float2 uv = p * _BaseMap_ST.xy + _BaseMap_ST.zw;
                 float2 rotated = float2(-uv.y, uv.x) * 1.37 + float2(7.31, 19.17);
-                half variation = smoothstep(0.25, 0.75, macro);
+                half variation = smoothstep(0.32, 0.68, macro);
                 half3 baseColor = lerp(SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv).rgb,
                     SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, rotated).rgb, variation);
                 half3 normalA = UnpackNormal(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, uv));
@@ -121,9 +125,15 @@ Shader "Universal Render Pipeline/Tiffany Forest Ground"
                 half3 detail = SAMPLE_TEXTURE2D(_DetailMap, sampler_DetailMap, uv * 0.83 + 31).rgb;
                 half3 detailNormal = UnpackNormal(SAMPLE_TEXTURE2D(_DetailNormal, sampler_DetailNormal, uv * 0.83 + 31));
                 normal = lerp(normal, detailNormal, blend);
+                normal.xy *= _NormalStrength;
                 half3 normalWS = normalize(normalize(input.normalWS) * max(normal.z, 0.2h)
                     + half3(normal.x, 0, normal.y) * saturate(input.normalWS.y));
-                half3 albedo = lerp(baseColor, detail, blend) * _BaseColor.rgb * lerp(0.86h, 1.14h, macro);
+                half3 groundColor = lerp(baseColor, detail, blend);
+                half luminance = dot(groundColor, half3(0.2126h, 0.7152h, 0.0722h));
+                half cavity = 1 - smoothstep(0.04h, 0.32h, luminance);
+                half cavityContrast = 1 + _Cavity * (1 - cavity);
+                half macroContrast = lerp(0.48h, 1.60h, variation);
+                half3 albedo = groundColor * _BaseColor.rgb * macroContrast * cavityContrast;
                 half3 lighting = SampleSH(normalWS) + Diffuse(GetMainLight(), normalWS);
                 InputData inputData = (InputData)0;
                 inputData.positionWS = input.positionWS;
