@@ -6,18 +6,21 @@ namespace TiffanyGame
 {
     public static class SaveRules
     {
-        public const int Version = 1;
+        public const int Version = 2;
 
         public static SaveData Capture(MemoryProgress progress, IReadOnlyList<int> memoryIds,
-            string candleId, Chapter chapter, SoulEnergy energy)
+            string candleId, Chapter chapter, SoulEnergy energy, IReadOnlyList<ChallengeRules> challenges)
         {
             var found = new List<int>();
             for (int i = 0; i < memoryIds.Count; i++)
                 if (progress.IsFound(memoryIds[i])) found.Add(memoryIds[i]);
+            int completed = 0;
+            for (int i = 0; i < challenges.Count; i++)
+                if (challenges[i] != null && challenges[i].Completed) completed |= 1 << (int)challenges[i].Kind;
             return new SaveData
             {
                 version = Version, memories = found.ToArray(), candleId = candleId,
-                chapter = chapter, energy = energy.Current
+                chapter = chapter, energy = energy.Current, completedChallenges = completed
             };
         }
 
@@ -27,13 +30,14 @@ namespace TiffanyGame
                 || data.memories.Length > memoryIds.Count || string.IsNullOrEmpty(data.candleId)
                 || !Contains(candleIds, data.candleId) || data.chapter < Chapter.Cemetery
                 || data.chapter > Chapter.Return || float.IsNaN(data.energy) || float.IsInfinity(data.energy)
-                || data.energy < 0f || data.energy > SoulEnergy.Max) return false;
+                || data.energy < 0f || data.energy > SoulEnergy.Max || (data.completedChallenges & ~15) != 0) return false;
             bool lastMemory = false;
             for (int i = 0; i < data.memories.Length; i++)
             {
                 int id = data.memories[i];
                 if ((id < 1 || id > 5) && id != MemoryProgress.BallId) return false;
                 if (!Contains(memoryIds, id)) return false;
+                if (!RouteProgress.CanCollectMemory(id, data.completedChallenges)) return false;
                 for (int j = 0; j < i; j++)
                     if (data.memories[j] == id) return false;
                 if (RouteProgress.StartsReturn(id)) lastMemory = true;
@@ -57,7 +61,8 @@ namespace TiffanyGame
         }
 
         public static Chapter Apply(SaveData data, MemoryProgress progress, PowerSet powers,
-            IReadOnlyList<Power> startingPowers, RespawnPoint respawn, Candle candle, SoulEnergy energy)
+            IReadOnlyList<Power> startingPowers, RespawnPoint respawn, Candle candle, SoulEnergy energy,
+            IReadOnlyList<ChallengeRules> challenges)
         {
             progress.Clear();
             powers.Clear();
@@ -68,8 +73,11 @@ namespace TiffanyGame
                 progress.MarkFound(id);
                 if (id >= 1 && id <= 5) powers.Unlock(PowerSet.ForMemory(id));
             }
+            for (int i = 0; i < challenges.Count; i++)
+                if (challenges[i] != null && (data.completedChallenges & (1 << (int)challenges[i].Kind)) != 0)
+                    challenges[i].MarkCompleted();
             respawn.Touch(candle);
-            energy.ResetTo(data.energy);
+            respawn.Respawn(energy);
             return data.chapter;
         }
 

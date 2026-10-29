@@ -7,6 +7,7 @@ namespace TiffanyGame
     {
         public int version;
         public int[] memories;
+        public int completedChallenges;
         public string candleId;
         public Chapter chapter;
         public float energy;

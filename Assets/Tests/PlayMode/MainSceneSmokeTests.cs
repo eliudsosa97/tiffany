@@ -103,12 +103,16 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(save);
             Assert.AreSame(soul, save.soul);
             Assert.AreSame(witch, save.witch);
-            Assert.AreEqual(10, save.candles.Length);
+            var family = System.Array.FindAll(Object.FindObjectsByType<CandleSpot>(FindObjectsInactive.Include, FindObjectsSortMode.None),
+                candle => candle.kind == CandleKind.Family);
+            Assert.AreEqual(14, family.Length);
+            CollectionAssert.AreEquivalent(family, save.candles);
             var ids = new HashSet<string>();
-            foreach (var candle in save.candles)
+            foreach (var candle in family)
             {
-                Assert.IsFalse(string.IsNullOrEmpty(candle.saveId));
-                Assert.IsTrue(ids.Add(candle.saveId));
+                Assert.IsFalse(string.IsNullOrEmpty(candle.saveId), candle.name);
+                Assert.IsTrue(ids.Add(candle.saveId), candle.saveId);
+                Assert.AreEqual(candle.transform.parent.name + "/" + candle.name, candle.saveId);
             }
             Assert.AreSame(witch, respawn.witch);
             Assert.IsNotNull(respawn.overlay);

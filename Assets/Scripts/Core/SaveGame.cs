@@ -23,6 +23,7 @@ namespace TiffanyGame
         CandleSpot checkpoint;
         int[] memoryIds;
         string[] candleIds;
+        ChallengeRules[] challengeRules;
         string key;
         bool persistenceEnabled;
         PlayerRespawn respawn;
@@ -56,6 +57,8 @@ namespace TiffanyGame
 
         void Start()
         {
+            challengeRules = new ChallengeRules[memories.challenges.Length];
+            for (int i = 0; i < challengeRules.Length; i++) challengeRules[i] = memories.challenges[i]?.Rules;
             if (persistenceEnabled) SaveRules.TryRead(PlayerPrefs.GetString(key, string.Empty), memoryIds, candleIds, out loaded);
             gameInterface.ConfigureSave(this, loaded != null);
         }
@@ -66,7 +69,8 @@ namespace TiffanyGame
             for (int i = 0; i < candles.Length; i++)
                 if (candles[i].saveId == loaded.candleId) { checkpoint = candles[i]; break; }
             witch.chapter = SaveRules.Apply(loaded, memories.Progress, soul.Powers, soul.startingPowers,
-                soul.Respawn, checkpoint.Candle, soul.Energy);
+                soul.Respawn, checkpoint.Candle, soul.Energy, challengeRules);
+            for (int i = 0; i < memories.challenges.Length; i++) memories.challenges[i]?.ApplyRestoredState();
             respawn.PlaceAtCheckpoint();
             witch.ResetBrain();
             memories.RestoreFound();
@@ -98,7 +102,7 @@ namespace TiffanyGame
             Chapter chapter = witch.chapter;
             int clearing = RouteChapters.FindClearing(soul.transform.position, route.ClearingBounds);
             if (clearing >= 0) chapter = RouteChapters.Resolve(chapter, clearing + 1);
-            var data = SaveRules.Capture(memories.Progress, memoryIds, checkpoint.saveId, chapter, soul.Energy);
+            var data = SaveRules.Capture(memories.Progress, memoryIds, checkpoint.saveId, chapter, soul.Energy, challengeRules);
             if (!SaveRules.IsValid(data, memoryIds, candleIds)) return;
             PlayerPrefs.SetString(key, JsonUtility.ToJson(data));
             PlayerPrefs.Save();

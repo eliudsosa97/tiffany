@@ -92,7 +92,7 @@ namespace TiffanyGame.EditorTools
             save.route = route.GetComponent<WitchChapterTracker>();
             save.gameInterface = gameInterface;
             save.ending = route.GetChild(7).GetComponentInChildren<EndingController>();
-            save.candles = Array.FindAll(world.GetComponentsInChildren<CandleSpot>(), candle => candle.kind == CandleKind.Family);
+            save.candles = Array.FindAll(world.GetComponentsInChildren<CandleSpot>(true), candle => candle.kind == CandleKind.Family);
             save.initialCandle = route.GetChild(0).GetComponentInChildren<CandleSpot>();
             BuildTrailTension(route.GetComponent<WitchChapterTracker>(), playerLight.witch, tyler);
             SaveScene();
