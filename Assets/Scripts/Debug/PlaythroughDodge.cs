@@ -21,6 +21,12 @@ namespace TiffanyGame
         public bool Tick(float dt, Vector3 girl, Vector3 girlForward, WitchState witchState, Vector3 witch, bool canStart)
         {
             Started = Repath = false;
+            if (witchState == WitchState.Caught)
+            {
+                remaining = 0f;
+                dodging = false;
+                return false;
+            }
             if (dodging)
             {
                 remaining -= dt;

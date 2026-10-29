@@ -715,6 +715,34 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator ReturnChaseStartsOnThePlayersSideOfADisconnectedNavMesh()
+        {
+            var wall = new GameObject("Separating Wall");
+            wall.transform.SetParent(world.transform, false);
+            wall.transform.position = new Vector3(0f, 2f, -6f);
+            wall.AddComponent<BoxCollider>().size = new Vector3(82f, 4f, 1f);
+            var modifier = wall.AddComponent<NavMeshModifier>();
+            modifier.overrideArea = true;
+            modifier.area = NavMesh.GetAreaFromName("Not Walkable");
+            Physics.SyncTransforms();
+            surface.BuildNavMesh();
+            player.transform.position = Vector3.zero;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+
+            controller.BeginReturn();
+
+            Assert.Greater(witch.transform.position.z, -6f);
+            var path = new NavMeshPath();
+            Assert.IsTrue(NavMesh.CalculatePath(witch.transform.position, player.transform.position, agent.areaMask, path));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: WindUp");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Sprinting");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Caught");
+            yield return WaitForState(WitchState.Caught, 8f);
+            Assert.AreEqual(WitchForm.Grounded, controller.Decision.Form);
+        }
+
+        [UnityTest]
         public IEnumerator ReturnStartsAtTheReturnPlacementDistance()
         {
             player.transform.position = Vector3.zero;

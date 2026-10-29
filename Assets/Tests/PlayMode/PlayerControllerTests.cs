@@ -63,6 +63,30 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator FootstepsUseTheHighestSurfaceWhenMoreThanFourCollidersOverlap()
+        {
+            for (int i = 12; i >= 1; i--)
+            {
+                var layer = new GameObject($"Ground Layer {i}");
+                layer.transform.SetParent(ground.transform, true);
+                layer.transform.position = Vector3.up * (i * 0.02f - 0.005f);
+                layer.AddComponent<BoxCollider>().size = new Vector3(60f, 0.01f, 60f);
+                layer.AddComponent<GroundSurface>().type = i == 12 ? GroundType.Gravel : GroundType.Dirt;
+            }
+            var body = player.GetComponent<CharacterController>();
+            body.enabled = false;
+            player.transform.position = Vector3.up * 0.24f;
+            body.enabled = true;
+            Physics.SyncTransforms();
+            Assert.Greater(Physics.RaycastAll(player.transform.position + Vector3.up * 0.5f, Vector3.down,
+                1.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore).Length, 4);
+
+            yield return new WaitForSeconds(2f);
+
+            AssertSteps(5, 7, NoiseModel.GravelRadius);
+        }
+
+        [UnityTest]
         public IEnumerator WalkingBackwardsKeepsAimAndRunningFacesMovement()
         {
             cameraObject.transform.rotation = Quaternion.Euler(45f, 35f, 0f);

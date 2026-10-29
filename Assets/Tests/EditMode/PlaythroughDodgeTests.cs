@@ -54,6 +54,21 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void CaptureCancelsTheDodgeWithoutRepathingBeforeRespawn()
+        {
+            var dodge = new PlaythroughDodge((_, _) => true);
+            Assert.IsTrue(dodge.Tick(0f, Vector3.zero, Vector3.forward, WitchState.Sprinting, Witch, true));
+            Assert.IsFalse(dodge.Tick(0.1f, Vector3.zero, Vector3.forward, WitchState.Caught, Witch, false));
+            Assert.IsFalse(dodge.Started);
+            Assert.IsFalse(dodge.Repath);
+            Assert.IsFalse(dodge.Tick(PlaythroughDodge.Duration, Vector3.back * 10f, Vector3.forward,
+                WitchState.Stalking, Witch, false));
+            Assert.IsFalse(dodge.Repath);
+            Assert.IsTrue(dodge.Tick(0.1f, Vector3.zero, Vector3.forward, WitchState.Sprinting, Witch, true));
+            Assert.IsTrue(dodge.Started);
+        }
+
+        [Test]
         public void LastsThroughALongerSprintThenRequestsRepathOnce()
         {
             var dodge = new PlaythroughDodge((_, _) => true);

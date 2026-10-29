@@ -47,7 +47,7 @@ namespace TiffanyGame
         readonly float timeout;
         Vector3 progressPosition;
         float stalledSeconds, pressCooldown;
-        bool trackingMovement, forceRequested, wasRespawning;
+        bool trackingMovement, forceRequested, wasRespawning, repathAfterRespawn;
 
         public int CompletedCount { get; private set; }
         public int Count => milestones.Length;
@@ -110,7 +110,12 @@ namespace TiffanyGame
             if (!(dt >= 0f) || float.IsInfinity(dt)) throw new ArgumentOutOfRangeException(nameof(dt));
             Elapsed += dt;
             MilestoneElapsed += dt;
-            if (wasRespawning && !observation.Respawning) MilestoneElapsed = 0f;
+            if (wasRespawning && !observation.Respawning)
+            {
+                MilestoneElapsed = stalledSeconds = 0f;
+                trackingMovement = false;
+                repathAfterRespawn = true;
+            }
             wasRespawning = observation.Respawning;
             pressCooldown -= dt;
             if (ChallengeIndex(Current) >= 0 && (observation.Respawning || observation.RetryChallenge))
@@ -139,7 +144,7 @@ namespace TiffanyGame
                     else { Finished = true; ExitCode = missingContent.Count == 0 ? 0 : 2; }
                 }
                 MilestoneElapsed = stalledSeconds = pressCooldown = 0f;
-                trackingMovement = forceRequested = false;
+                trackingMovement = forceRequested = repathAfterRespawn = false;
                 return default;
             }
 
@@ -147,7 +152,8 @@ namespace TiffanyGame
             ChallengeAction action = Action(Current);
             if (observation.Frozen || observation.Respawning) return command;
             command.Move = NeedsNavigation(Current) && !observation.AtTarget;
-            command.Repath = CheckStuck(dt, observation.Position, command.Move);
+            command.Repath = (command.Move && repathAfterRespawn) || CheckStuck(dt, observation.Position, command.Move);
+            if (command.Repath) repathAfterRespawn = false;
             bool press = pressCooldown <= 0f;
             bool wantsLight = Current == PlaythroughMilestone.Light || Current == PlaythroughMilestone.MoveObject
                 || action == ChallengeAction.Distract || action == ChallengeAction.Wait

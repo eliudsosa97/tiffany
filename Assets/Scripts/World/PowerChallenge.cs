@@ -13,11 +13,13 @@ namespace TiffanyGame
         public GameObject[] darkness = Array.Empty<GameObject>();
         public MovableObject lure;
         public Transform post;
+        public Vector3 entryOffset = new Vector3(0f, 0f, -0.3f);
+        public Vector3 exitOffset = Vector3.forward * (ChallengeRules.PassageLength + 0.3f);
         public ChallengeRules Rules { get; private set; }
         public bool Underway { get; private set; }
         public WitchController Witch => tracker.witch;
-        public Vector3 Entry => transform.TransformPoint(new Vector3(0f, 0f, -0.3f));
-        public Vector3 Exit => transform.TransformPoint(Vector3.forward * (ChallengeRules.PassageLength + 0.3f));
+        public Vector3 Entry => transform.TransformPoint(entryOffset);
+        public Vector3 Exit => transform.TransformPoint(exitOffset);
         public Vector3 RechargePoint => checkpoint.transform.position + transform.right * 0.6f;
         public bool Distracted => lure != null && lure.Used && Witch != null && Witch.WatchPassage == transform
             && Witch.WatchPassageClear;

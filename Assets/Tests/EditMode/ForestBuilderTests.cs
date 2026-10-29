@@ -41,20 +41,27 @@ namespace TiffanyGame.Tests
             hide.GetComponent<SphereCollider>().radius = 3f;
             var zones = new List<(Vector2 center, float radius)>(ForestBuilder.RouteExclusions(index));
             zones.Add((new Vector2(11f, -4f), 3f));
-            ForestBuilder.Populate(root.transform, 17389 + index, 36f, 5f, zones.ToArray());
+            float half = RouteLayout.ClearingSizeOf(index) * 0.5f;
+            ForestBuilder.Populate(root.transform, 17389 + index, half * 2f, 5f, zones.ToArray());
+            foreach (Vector3 opening in RouteLayout.Openings(index))
+            {
+                Vector3 local = opening - RouteLayout.Clearing(index);
+                for (int sample = 0; sample <= 40; sample++)
+                    zones.Add((new Vector2(local.x, local.z) * (sample / 40f), RouteLayout.PathWidth * 0.5f));
+            }
             var filters = root.GetComponentsInChildren<MeshFilter>();
             Assert.IsNotEmpty(filters);
             foreach (var filter in filters)
-                CheckFootprint(filter.sharedMesh, root.transform.worldToLocalMatrix * filter.transform.localToWorldMatrix, zones);
+                CheckFootprint(filter.sharedMesh, root.transform.worldToLocalMatrix * filter.transform.localToWorldMatrix, zones, half);
             foreach (var batch in Understory.data.batches)
-            foreach (var matrix in batch.matrices) CheckFootprint(batch.mesh, matrix, zones);
+            foreach (var matrix in batch.matrices) CheckFootprint(batch.mesh, matrix, zones, half);
         }
-        static void CheckFootprint(Mesh mesh, Matrix4x4 matrix, List<(Vector2 center, float radius)> zones)
+        static void CheckFootprint(Mesh mesh, Matrix4x4 matrix, List<(Vector2 center, float radius)> zones, float half, bool centralPath = true)
         {
             var bounds = ForestInstances.TransformBounds(mesh.bounds, matrix);
-            Assert.IsTrue(bounds.min.x >= 2.5f || bounds.max.x <= -2.5f, mesh.name);
-            Assert.GreaterOrEqual(Mathf.Min(bounds.min.x, bounds.min.z), -18f);
-            Assert.LessOrEqual(Mathf.Max(bounds.max.x, bounds.max.z), 18f);
+            if (centralPath) Assert.IsTrue(bounds.min.x >= 2.5f || bounds.max.x <= -2.5f, mesh.name);
+            Assert.GreaterOrEqual(Mathf.Min(bounds.min.x, bounds.min.z), -half);
+            Assert.LessOrEqual(Mathf.Max(bounds.max.x, bounds.max.z), half);
             foreach (var zone in zones)
             {
                 var local = matrix.inverse.MultiplyPoint3x4(new Vector3(zone.center.x, 0f, zone.center.y));
@@ -65,6 +72,26 @@ namespace TiffanyGame.Tests
                     zone.radius * zone.radius, mesh.name);
             }
         }
+        [TestCase(24f)]
+        [TestCase(36f)]
+        public void RingPinesStandAtTheClearingEdgeAndKeepReservedZonesClear(float size)
+        {
+            var zones = new List<(Vector2 center, float radius)>(ForestBuilder.RouteExclusions(4));
+            ForestBuilder.Populate(root.transform, 17393, size, 5f, zones.ToArray(), ForestBuilder.RouteViewPoints(4), 16);
+            int ring = 0, pines = 0;
+            foreach (Transform tree in root.transform.Find("Forest"))
+            {
+                if (tree.name != "Pine") continue;
+                pines++;
+                if (Mathf.Max(Mathf.Abs(tree.localPosition.x), Mathf.Abs(tree.localPosition.z)) >= size * 0.5f) ring++;
+                var filter = tree.GetComponent<MeshFilter>();
+                CheckFootprint(filter.sharedMesh, root.transform.worldToLocalMatrix * filter.transform.localToWorldMatrix, zones, size * 0.5f + 6f, false);
+            }
+            Assert.GreaterOrEqual(ring, 12);
+            Assert.Greater(pines, 16);
+            Assert.LessOrEqual(root.GetComponentsInChildren<Renderer>(true).Length, 200);
+        }
+
         [Test]
         public void CanopiesProvideCoverAbovePlayerAndTrunksRemainSolid()
         {

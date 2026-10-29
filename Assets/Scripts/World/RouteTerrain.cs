@@ -38,7 +38,7 @@ namespace TiffanyGame
             Crossing = (start + end) * 0.5f;
             Town = Rect.MinMaxRect(-73f, 160f, 146f, 242f);
             Bounds = Rect.MinMaxRect(WestBoundary,
-                RouteLayout.Clearing(2).z - RouteLayout.ClearingSize * 0.5f - Margin, 218f, Town.yMax + Margin);
+                RouteLayout.Clearing(2).z - RouteLayout.ClearingSizeOf(2) * 0.5f - Margin, 218f, Town.yMax + Margin);
             Road = Rect.MinMaxRect(Bounds.xMin, RouteLayout.Clearing(6).z - RoadWidth * 0.5f,
                 150f, RouteLayout.Clearing(6).z + RoadWidth * 0.5f);
             river = new[] { new Vector2(150f, 116f), new Vector2(120f, 121f),
@@ -52,9 +52,9 @@ namespace TiffanyGame
 
         public float ClearingRadius(int index, float angle)
         {
-            RouteLayout.Clearing(index);
             float noise = Mathf.Sin(angle * 3f + index * 1.7f) * 1.1f + Mathf.Cos(angle * 7f - index) * 0.5f;
-            return index == 0 ? 17.35f + noise * 0.09f : 15.9f + noise;
+            return (index == 0 ? 17.35f + noise * 0.09f : 15.9f + noise)
+                * (RouteLayout.ClearingSizeOf(index) / RouteLayout.ClearingSize);
         }
 
         public bool IsWalkable(float x, float z) => WalkableDistance(x, z) <= 0f;
@@ -69,8 +69,11 @@ namespace TiffanyGame
         public bool IsHauntedForest(float x, float z)
         {
             float distance = Vector2.Distance(new Vector2(x, z), Xz(RouteLayout.Clearing(4)));
-            return distance > RouteLayout.ClearingSize * 0.5f && distance <= 45f;
+            return distance > RouteLayout.ClearingSizeOf(4) * 0.5f && distance <= 45f;
         }
+
+        public const float WallDistance = 25f;
+        const float WallFullDistance = 6f;
 
         public float ForestDensity(float x, float z)
         {
@@ -81,7 +84,9 @@ namespace TiffanyGame
             float patch = 0.5f + 0.25f * Mathf.Sin(x * 0.23f + Mathf.Sin(z * 0.07f))
                 + 0.25f * Mathf.Cos(z * 0.22f - x * 0.05f);
             bool haunted = IsHauntedForest(x, z);
-            return Smooth((patch - (haunted ? 0.58f : 0.64f)) / 0.2f) * (haunted ? 0.95f : 0.35f);
+            float clusters = Smooth((patch - (haunted ? 0.58f : 0.64f)) / 0.2f) * (haunted ? 0.95f : 0.35f);
+            float wall = 1f - Smooth((DistanceToRoute(x, z) - WallFullDistance) / (WallDistance - WallFullDistance));
+            return Mathf.Max(clusters * (haunted ? 1f : Mathf.Lerp(0.5f, 1f, wall)), wall * (haunted ? 0.95f : 0.7f));
         }
 
         public float TrainDistance(float x, float z) => SegmentDistance(new Vector2(x, z),
@@ -158,7 +163,7 @@ namespace TiffanyGame
             for (int i = 0; i < RouteLayout.Count; i++)
             {
                 var center = RouteLayout.Clearing(i);
-                if (Mathf.Max(Mathf.Abs(x - center.x), Mathf.Abs(z - center.z)) <= 18f + padding) return true;
+                if (Mathf.Max(Mathf.Abs(x - center.x), Mathf.Abs(z - center.z)) <= RouteLayout.ClearingSizeOf(i) * 0.5f + padding) return true;
             }
             return false;
         }
@@ -192,7 +197,8 @@ namespace TiffanyGame
             for (int i = 0; i < RouteLayout.Count; i++)
             {
                 Vector3 center = RouteLayout.Clearing(i);
-                float distance = RectangleDistance(point, new Rect(center.x - 18f, center.z - 18f, 36f, 36f));
+                float size = RouteLayout.ClearingSizeOf(i);
+                float distance = RectangleDistance(point, new Rect(center.x - size * 0.5f, center.z - size * 0.5f, size, size));
                 if (distance <= 0f) { nearest = 0f; return center.y; }
                 Accumulate(distance, center.y, ref nearest, ref sum, ref weight);
             }

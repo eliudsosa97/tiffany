@@ -1,4 +1,5 @@
 using System;
+using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEngine;
 
@@ -91,6 +92,7 @@ namespace TiffanyGame.EditorTools
             instance.transform.position = position;
             instance.transform.localScale = new Vector3(width, sphere ? height : height * 0.5f, width);
             instance.GetComponent<Renderer>().sharedMaterial = GeneratedMaterials.Get($"Movable{kind}", color);
+            instance.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
             var body = instance.AddComponent<Rigidbody>();
             body.mass = mass;
             body.isKinematic = true;

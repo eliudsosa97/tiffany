@@ -352,7 +352,8 @@ namespace TiffanyGame.Tests
         {
             var route = GameObject.Find("Route").transform;
             var cemetery = route.GetChild(0);
-            Assert.AreEqual(8, route.childCount);
+            Assert.AreEqual(RouteLayout.Count + 1, route.childCount);
+            Assert.IsNotNull(route.Find("Landscape/Terrain"));
             Assert.AreEqual(4, Object.FindAnyObjectByType<MemoryCollector>().challenges.Length);
             Assert.AreEqual(79, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
                 "58 paradas de main (48 de escena, una vista previa, cinco ecos, dos de la pelota " +
@@ -376,9 +377,16 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(witch.transform.IsChildOf(cemetery));
             Assert.IsTrue(tyler.transform.IsChildOf(cemetery));
             Assert.Less(Vector3.Distance(tyler.transform.position, cemetery.Find("Ball").position), 3f);
-            Assert.AreEqual(8, witch.skyRoute.Length);
+            Assert.GreaterOrEqual(witch.skyRoute.Length, 8);
+            int cursor = 0;
             for (int i = 0; i < 8; i++)
-                Assert.AreEqual(route.GetChild(i).position + Vector3.up * 7.9f, witch.skyRoute[i]);
+            {
+                Assert.AreEqual(RouteLayout.Clearing(i), route.GetChild(i).localPosition);
+                Vector3 expected = route.GetChild(i).position + Vector3.up * 7.9f;
+                int index = System.Array.FindIndex(witch.skyRoute, cursor, point => Vector3.Distance(point, expected) < 0.001f);
+                Assert.GreaterOrEqual(index, cursor);
+                cursor = index + 1;
+            }
 
             var surfaces = Object.FindObjectsByType<NavMeshSurface>(FindObjectsSortMode.None);
             Assert.AreEqual(1, surfaces.Length);
@@ -407,7 +415,7 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, hide.name);
             }
             Assert.IsFalse(NavMesh.SamplePosition(route.GetChild(5).Find("Water").position, out _, 1f, NavMesh.AllAreas));
-            var river = route.GetChild(4).Find("Path to Next Clearing/River");
+            var river = route.GetChild(5).Find("Path to Next Clearing/River Crossing/River");
             foreach (float side in new[] { -1.8f, 1.8f })
                 Assert.IsFalse(NavMesh.SamplePosition(river.TransformPoint(new Vector3(side, 0f, 0f)), out _, 0.25f, NavMesh.AllAreas));
             var logBounds = river.Find("Log").GetComponent<Collider>().bounds;
@@ -491,14 +499,13 @@ namespace TiffanyGame.Tests
         {
             var river = PrepareRiverWalk(out var player);
             var body = player.GetComponent<CharacterController>();
-            var water = river.Find("Water").GetComponent<Renderer>().bounds;
             float minimumHeight = river.Find("Stone 1").GetComponent<Collider>().bounds.max.y - 0.15f;
             foreach (int direction in new[] { 1, -1 })
             {
                 GameInput.MoveOverride = Vector2.zero;
                 body.enabled = false;
                 player.transform.SetPositionAndRotation(river.TransformPoint(new Vector3(0f, 0.03f, -3f * direction)),
-                    Quaternion.LookRotation(Vector3.forward * direction));
+                    Quaternion.LookRotation(river.forward * direction));
                 body.enabled = true;
                 Physics.SyncTransforms();
                 yield return new WaitForSeconds(0.15f);
@@ -518,7 +525,7 @@ namespace TiffanyGame.Tests
                 bool branches = false;
                 foreach (var step in steps)
                 {
-                    if (step.Position.z < water.min.z || step.Position.z > water.max.z) continue;
+                    if (Mathf.Abs(river.InverseTransformPoint(step.Position).z) > RouteTerrain.RiverWidth * 0.5f) continue;
                     gravel |= Mathf.Approximately(step.Radius, NoiseModel.GravelRadius);
                     branches |= Mathf.Approximately(step.Radius, NoiseModel.BranchesRadius);
                 }
@@ -537,7 +544,7 @@ namespace TiffanyGame.Tests
             {
                 GameInput.MoveOverride = Vector2.zero;
                 body.enabled = false;
-                player.transform.SetPositionAndRotation(river.TransformPoint(new Vector3(side, 0.03f, -3f)), Quaternion.identity);
+                player.transform.SetPositionAndRotation(river.TransformPoint(new Vector3(side, 0.03f, -3f)), river.rotation);
                 body.enabled = true;
                 Physics.SyncTransforms();
                 yield return new WaitForSeconds(0.15f);
@@ -560,8 +567,9 @@ namespace TiffanyGame.Tests
             player = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerController>();
             var follow = player.viewCamera.GetComponent<FollowCamera>();
             follow.enabled = false;
-            player.viewCamera.transform.rotation = Quaternion.Euler(45f, 0f, 0f);
-            return GameObject.Find("Route").transform.GetChild(4).Find("Path to Next Clearing/River");
+            var river = GameObject.Find("Route").transform.GetChild(5).Find("Path to Next Clearing/River Crossing/River");
+            player.viewCamera.transform.rotation = Quaternion.Euler(45f, river.eulerAngles.y, 0f);
+            return river;
         }
 
         void RecordStep(StepNoise noise)

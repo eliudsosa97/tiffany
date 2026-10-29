@@ -99,7 +99,11 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(WitchForm.Grounded, witch.Decision.Form);
                 Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
                 Assert.AreEqual(2.5f, witch.Decision.Speed);
-                Assert.Less(Vector3.Distance(soul.transform.position, witch.Decision.MoveTarget), 0.1f);
+                Vector3 offset = witch.Decision.MoveTarget - soul.transform.position;
+                // El NavMesh sigue al terreno y la jugadora se apoya en el piso visible más el skin del CharacterController.
+                Assert.Less(Mathf.Abs(offset.y), 0.2f);
+                offset.y = 0f;
+                Assert.Less(offset.magnitude, 0.1f);
             }
             LogAssert.NoUnexpectedReceived();
         }
@@ -208,9 +212,17 @@ namespace TiffanyGame.Tests
             MovePlayer(route.GetChild(6).position - Vector3.forward * 4f);
             yield return null;
             yield return null;
-            Assert.AreEqual(2.5f, witch.Decision.Speed);
+            var chasePath = new NavMeshPath();
+            Assert.IsTrue(NavMesh.CalculatePath(witch.transform.position, witch.Decision.MoveTarget,
+                witch.GetComponent<NavMeshAgent>().areaMask, chasePath));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, chasePath.status);
             deadline = Time.realtimeSinceStartup + 8f;
-            while (witch.Decision.State != WitchState.WindUp && Time.realtimeSinceStartup < deadline) yield return null;
+            while (witch.Decision.State != WitchState.WindUp && Time.realtimeSinceStartup < deadline)
+            {
+                Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
+                Assert.AreEqual(2.5f, witch.Decision.Speed);
+                yield return null;
+            }
             Assert.AreEqual(WitchState.WindUp, witch.Decision.State);
             LogAssert.NoUnexpectedReceived();
         }

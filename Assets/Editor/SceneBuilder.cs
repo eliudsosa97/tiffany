@@ -286,6 +286,8 @@ namespace TiffanyGame.EditorTools
             var surface = zoneRoot.gameObject.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;
             surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            surface.overrideVoxelSize = true;
+            surface.voxelSize = 0.1f;
             surface.layerMask = ~LayerMask.GetMask(ForestLayout.CoverLayer, "Ignore Raycast");
             Physics.SyncTransforms();
             surface.BuildNavMesh();

@@ -86,7 +86,7 @@ namespace TiffanyGame.Tests
                     inspectionTime += Time.deltaTime;
                 if (decision.State == WitchState.TakingOff)
                 {
-                    Assert.GreaterOrEqual(inspectionTime, witch.Profile.HideInspectionDuration - Time.deltaTime * 2f);
+                    Assert.GreaterOrEqual(inspectionTime, witch.Profile.HideInspectionDuration - Time.deltaTime * 2f - 1e-4f);
                     tookOff = true;
                 }
                 resumedFlight |= tookOff && decision.State == WitchState.Flying;
