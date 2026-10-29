@@ -72,7 +72,7 @@ namespace TiffanyGame.EditorTools
                     if (IsReserved(surface, exclusions)) { reserved++; continue; }
                     if (IsSubmerged(surface, water)) { submerged++; continue; }
                     if (!candidate.IsPresent(ground)) { absent++; continue; }
-                    int variant = kind == LitterKind.Stone && ground == GroundType.Gravel ? 1 : candidate.Variant;
+                    int variant = kind == LitterKind.Stone && ground == GroundType.Gravel ? GroundLitter.GravelVariant(candidate.Position) : candidate.Variant;
                     var mesh = meshes[(int)kind][variant];
                     float scale = candidate.Scale;
                     if (kind == LitterKind.Stone)
@@ -150,22 +150,49 @@ namespace TiffanyGame.EditorTools
             return false;
         }
 
-        static Material[][] Materials() => new[]
+        static Material[][] Materials()
         {
-            new[] { Surface("LeavesRust", "D6A178", "dry_decay_leaves", true),
-                Surface("LeavesOchre", "DED093", "dry_decay_leaves", true), Surface("LeavesYellow", "E8D59A", "dry_decay_leaves", true) },
-            new[] { Surface("Twig", "D4C4AD", "pine_bark") },
-            new[] { Surface("PineCone", "B98D60") },
-            new[] { Surface("Stone", "CFD3D3", "rock_boulder_dry") },
-            new[] { Surface("Root", "C5AD90", "jolcham_oak_bark_01") }
-        };
+            var palette = LeafPalette();
+            return new[]
+            {
+                new[] { Surface("LeavesRust", "FFFFFF", "dry_decay_leaves", true, palette),
+                    Surface("LeavesOchre", "F2ECE0", "dry_decay_leaves", true, palette),
+                    Surface("LeavesYellow", "EEE6CE", "dry_decay_leaves", true, palette) },
+                new[] { Surface("Twig", "93806A", "pine_bark") },
+                new[] { Surface("PineCone", "B98D60") },
+                new[] { Surface("Stone", "918B7E", "rock_boulder_dry") },
+                new[] { Surface("Root", "C5AD90", "jolcham_oak_bark_01") }
+            };
+        }
 
-        static Material Surface(string name, string tint, string texture = null, bool doubleSided = false)
+        static Texture2D LeafPalette()
+        {
+            GeneratedMaterials.EnsureFolder(GeneratedMaterials.folder);
+            string path = GeneratedMaterials.folder + "/LitterLeafPalette.asset";
+            var palette = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            bool isNew = palette == null;
+            var shades = new[] { "9C603D", "7B583C", "A58243", "B0A05D", "C4B58E" };
+            if (isNew) palette = new Texture2D(shades.Length, 1, TextureFormat.RGBA32, false) { name = "LitterLeafPalette" };
+            palette.filterMode = FilterMode.Point;
+            palette.wrapMode = TextureWrapMode.Clamp;
+            for (int i = 0; i < shades.Length; i++)
+            {
+                ColorUtility.TryParseHtmlString("#" + shades[i], out var color);
+                palette.SetPixel(i, 0, color);
+            }
+            palette.Apply(false);
+            if (isNew) AssetDatabase.CreateAsset(palette, path);
+            else EditorUtility.SetDirty(palette);
+            AssetDatabase.SaveAssetIfDirty(palette);
+            return palette;
+        }
+
+        static Material Surface(string name, string tint, string texture = null, bool doubleSided = false, Texture2D palette = null)
         {
             ColorUtility.TryParseHtmlString("#" + tint, out var color);
             var material = texture == null ? GeneratedMaterials.Get("Litter" + name, color, instancing: true)
                 : GeneratedMaterials.GetTextured("Litter" + name, color, texture, 1f, instancing: true);
-            material.SetTexture("_BaseMap", null);
+            material.SetTexture("_BaseMap", palette);
             material.SetFloat("_BumpScale", 0.35f);
             material.SetFloat("_Cull", doubleSided ? 0f : 2f);
             material.SetShaderPassEnabled("ShadowCaster", false);

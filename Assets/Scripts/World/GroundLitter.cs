@@ -46,6 +46,12 @@ namespace TiffanyGame
         public static Vector2Int Chunk(Vector3 position) =>
             new Vector2Int(Mathf.FloorToInt(position.x / ChunkSize), Mathf.FloorToInt(position.z / ChunkSize));
 
+        public static int GravelVariant(Vector3 position)
+        {
+            var chunk = Chunk(position);
+            return 1 + (int)(Hash(LitterKind.Stone, chunk.x, chunk.y, 5) % 3u);
+        }
+
         public readonly struct Candidate
         {
             public readonly LitterKind Kind;
@@ -83,7 +89,7 @@ namespace TiffanyGame
                 LitterKind.Root => Mathf.Lerp(0.8f, 1.15f, Value(4)),
                 LitterKind.Twig => Mathf.Lerp(0.8f, 1.1f, Value(4)),
                 LitterKind.PineCone => Mathf.Lerp(0.97f, 1f, Value(4)),
-                _ => Mathf.Lerp(0.9f, 1.05f, Value(4))
+                _ => Mathf.Lerp(0.6f, 1.5f, Value(4))
             };
             return new Candidate(kind, position, Value(3) * 360f, scale, variant, Value(0));
         }

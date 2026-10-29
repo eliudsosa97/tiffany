@@ -89,6 +89,40 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(new Vector2Int(1, 0), GroundLitter.Chunk(new Vector3(GroundLitter.ChunkSize, -20f, 0f)));
         }
 
+        [Test]
+        public void LeafScaleSpansSmallAndLargePatches()
+        {
+            float minimum = float.PositiveInfinity, maximum = 0f;
+            for (int z = -19; z < 20; z++)
+            for (int x = -19; x < 20; x++)
+            {
+                float scale = GroundLitter.Sample(LitterKind.Leaves, x, z).Scale;
+                Assert.That(scale, Is.InRange(0.6f, 1.5f));
+                minimum = Mathf.Min(minimum, scale);
+                maximum = Mathf.Max(maximum, scale);
+            }
+            Assert.Less(minimum, 0.61f);
+            Assert.Greater(maximum, 1.49f);
+        }
+
+        [Test]
+        public void GravelVariesAcrossChunksWithoutAddingVariantsInsideAChunk()
+        {
+            var variants = new HashSet<int>();
+            for (int z = -3; z <= 3; z++)
+            for (int x = -3; x <= 3; x++)
+            {
+                var corner = new Vector3(x * GroundLitter.ChunkSize, 0f, z * GroundLitter.ChunkSize);
+                int variant = GroundLitter.GravelVariant(corner);
+                Assert.That(variant, Is.InRange(1, 3));
+                for (int i = 0; i < 4; i++)
+                    Assert.AreEqual(variant, GroundLitter.GravelVariant(corner
+                        + new Vector3(i % 2, 0f, i / 2) * (GroundLitter.ChunkSize - 0.001f)));
+                variants.Add(variant);
+            }
+            Assert.AreEqual(3, variants.Count);
+        }
+
         [TestCase(GroundType.Leaves)]
         [TestCase(GroundType.Branches)]
         [TestCase(GroundType.Gravel)]
@@ -309,7 +343,8 @@ namespace TiffanyGame.Tests
             Scatter();
             foreach (var spec in new[] { ("LitterLeaves0", 80), ("LitterLeaves1", 80), ("LitterLeaves2", 80),
                 ("LitterTwig0", 40), ("LitterTwig1", 40), ("LitterTwigPile", 96), ("LitterPineCone", 48),
-                ("LitterStone", 12), ("LitterGravel", 48), ("LitterRoot0", 48), ("LitterRoot1", 48), ("LitterRoot2", 48) })
+                ("LitterStone", 12), ("LitterGravel", 48), ("LitterGravel1", 48), ("LitterGravel2", 48),
+                ("LitterRoot0", 48), ("LitterRoot1", 48), ("LitterRoot2", 48) })
             {
                 var mesh = AssetDatabase.LoadAssetAtPath<Mesh>($"{Temp}/Forest/{spec.Item1}.asset");
                 Assert.IsNotNull(mesh);
@@ -327,13 +362,78 @@ namespace TiffanyGame.Tests
                 {
                     Assert.Greater(mesh.bounds.size.y, 0.08f);
                     Assert.That(mesh.GetIndexCount(0) / 6, Is.InRange(25u, 40u));
-                    Assert.That(Mathf.Max(mesh.bounds.size.x, mesh.bounds.size.z) * 0.9f, Is.GreaterThanOrEqualTo(0.8f));
-                    Assert.That(Mathf.Max(mesh.bounds.size.x, mesh.bounds.size.z) * 1.05f, Is.LessThanOrEqualTo(1.4f));
+                    Assert.That(mesh.bounds.size.x, Is.InRange(0.9f, 1.5f));
+                    Assert.Greater(mesh.bounds.size.x / mesh.bounds.size.z, 1.5f);
                 }
                 string before = File.ReadAllText(AssetDatabase.GetAssetPath(mesh));
                 Scatter();
                 Assert.AreEqual(before, File.ReadAllText(AssetDatabase.GetAssetPath(mesh)));
             }
+        }
+
+        [Test]
+        public void LeafPatchesMixEarthColorsWithOnlyAFewPaleLeaves()
+        {
+            Scatter();
+            var palette = AssetDatabase.LoadAssetAtPath<Texture2D>(Temp + "/Materials/LitterLeafPalette.asset");
+            Assert.IsNotNull(palette);
+            foreach (var shade in palette.GetPixels())
+            {
+                Assert.Greater(shade.r, shade.g);
+                Assert.Greater(shade.g, shade.b);
+                Assert.That(shade.grayscale, Is.InRange(0.3f, 0.75f));
+            }
+            foreach (string name in new[] { "Rust", "Ochre", "Yellow" })
+                Assert.AreSame(palette, AssetDatabase.LoadAssetAtPath<Material>($"{Temp}/Materials/LitterLeaves{name}.mat").mainTexture);
+            for (int variant = 0; variant < 3; variant++)
+            {
+                var mesh = AssetDatabase.LoadAssetAtPath<Mesh>($"{Temp}/Forest/LitterLeaves{variant}.asset");
+                var shades = new HashSet<int>();
+                int pale = 0;
+                foreach (var uv in mesh.uv)
+                {
+                    int shade = Mathf.FloorToInt(uv.x * palette.width);
+                    shades.Add(shade);
+                    if (palette.GetPixel(shade, 0).grayscale > 0.65f) pale++;
+                }
+                Assert.AreEqual(5, shades.Count);
+                Assert.That((float)pale / mesh.vertexCount, Is.InRange(0.03f, 0.12f));
+            }
+        }
+
+        [TestCase("LitterGravel")]
+        [TestCase("LitterGravel1")]
+        [TestCase("LitterGravel2")]
+        public void GravelHasUnevenStoneSizesAndFootprintsInsteadOfAGrid(string name)
+        {
+            Scatter();
+            var mesh = AssetDatabase.LoadAssetAtPath<Mesh>($"{Temp}/Forest/{name}.asset");
+            var stones = new Dictionary<Vector2, float>();
+            var xs = new HashSet<float>();
+            var zs = new HashSet<float>();
+            foreach (var vertex in mesh.vertices)
+                if (vertex.y == 0f) stones[new Vector2(vertex.x, vertex.z)] = 0f;
+            foreach (var vertex in mesh.vertices)
+            {
+                var point = new Vector2(vertex.x, vertex.z);
+                if (stones.TryGetValue(point, out float height)) stones[point] = Mathf.Max(height, vertex.y);
+            }
+            float smallest = float.PositiveInfinity, largest = 0f;
+            var largestPosition = Vector2.zero;
+            foreach (var stone in stones)
+            {
+                xs.Add(Mathf.Round(stone.Key.x * 1000f));
+                zs.Add(Mathf.Round(stone.Key.y * 1000f));
+                smallest = Mathf.Min(smallest, stone.Value);
+                if (stone.Value > largest) largestPosition = stone.Key;
+                largest = Mathf.Max(largest, stone.Value);
+            }
+            Assert.That(stones.Count, Is.InRange(3, 7));
+            Assert.GreaterOrEqual(xs.Count, 3);
+            Assert.GreaterOrEqual(zs.Count, 3);
+            Assert.Greater(largest / smallest, 1.5f);
+            foreach (var stone in stones)
+                if (stone.Key != largestPosition) Assert.Greater(Vector2.Distance(stone.Key, largestPosition), 0.3f);
         }
 
         [Test]
