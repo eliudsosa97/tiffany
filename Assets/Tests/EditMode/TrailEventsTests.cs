@@ -6,7 +6,8 @@ namespace TiffanyGame.Tests
         private TrailEvents rules;
         [SetUp] public void SetUp() => rules = new TrailEvents();
         private TrailEvent Tick(float dt, bool trail = true, bool chase = false, float distance = 100f,
-            bool tyler = true, bool flying = false) => rules.Tick(dt, trail, chase, distance, tyler, flying);
+            bool tyler = true, bool flying = false, bool inChallenge = false) =>
+            rules.Tick(dt, trail, chase, inChallenge, distance, tyler, flying);
         [Test]
         public void ClearingsStayQuietAndPauseTheTimer()
         {
@@ -42,6 +43,20 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(TrailEvent.None, Tick(4f));
             Assert.AreEqual(TrailEvent.None, Tick(4f));
             Assert.AreEqual(TrailEvent.PhantomSteps, Tick(4f));
+        }
+        [TestCase(0, TrailEvent.PhantomSteps)]
+        [TestCase(1, TrailEvent.BranchSnap)]
+        [TestCase(2, TrailEvent.SkyCrossing)]
+        [TestCase(3, TrailEvent.TylerGrowl)]
+        public void ChallengeBlocksEveryEventAndRestartsChaseCooldown(int precedingEvents, TrailEvent next)
+        {
+            for (int i = 0; i < precedingEvents; i++) Assert.AreNotEqual(TrailEvent.None, Tick(46f));
+            Assert.AreEqual(TrailEvent.None, Tick(60f, inChallenge: true));
+            Assert.AreEqual(TrailEvent.None, Tick(TrailEvents.ChaseCooldown, inChallenge: true));
+            Assert.AreEqual(TrailEvent.None, Tick(TrailEvents.ChaseCooldown / 3f));
+            Assert.AreEqual(TrailEvent.None, Tick(TrailEvents.ChaseCooldown / 3f));
+            Assert.AreEqual(TrailEvent.None, Tick(TrailEvents.ChaseCooldown / 3f - 0.5f));
+            Assert.AreEqual(next, Tick(0.5f));
         }
         [Test]
         public void NearWitchRetriesAfterFourSecondsWithoutAdvancingEitherCycle()

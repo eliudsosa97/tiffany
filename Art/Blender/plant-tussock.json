@@ -1,0 +1,31 @@
+{
+  "materials": [
+    {
+      "name": "PlantTussockLeaves",
+      "color": "#5B6F64",
+      "smoothness": 0.12
+    },
+    {
+      "name": "PlantTussockShade",
+      "color": "#3D5148",
+      "smoothness": 0.08
+    },
+    {
+      "name": "PlantTussockDryTips",
+      "color": "#989482",
+      "smoothness": 0.05
+    }
+  ],
+  "seed": 141,
+  "height": 0.74,
+  "radius": 0.46,
+  "leafWidth": 0.025,
+  "leaves": 42,
+  "burial": 0.03,
+  "pivot": [
+    0,
+    0,
+    0
+  ],
+  "shortLeaves": 12
+}

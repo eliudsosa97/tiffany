@@ -47,6 +47,17 @@ namespace TiffanyGame
         private Vector3 verticalTarget;
         private bool landingOnTarget;
         private Vector3 sprintEnd;
+        public WitchWatch Watch { get; private set; }
+
+        public void BeginWatch(Vector3 post, bool requiresVanish)
+        {
+            Watch = new WitchWatch(post, requiresVanish);
+            tactics.Forget();
+            hasTarget = chasing = warned = targetIsPlayer = roaming = false;
+            hasNoiseTarget = hasHideTarget = inspectingNoise = retreatingNoise = false;
+            timeWithoutPerception = 0f;
+            Enter(WitchState.Stalking, post);
+        }
 
         public bool Chasing => chasing;
 
@@ -79,13 +90,21 @@ namespace TiffanyGame
             bool noiseHeard = grounded && p.HeardNoise && !p.HearingMuted;
             bool noiseFromPlayer = noiseHeard && HorizontalDistance(p.NoisePosition, p.PlayerPosition) <= profile.PlayerNoiseMatch;
             if (p.PlayerVanished && noiseFromPlayer) noiseHeard = false;
-            if (tactics.Observe(dt, profile, in p, grounded, trackable, noiseHeard, noiseHeard && noiseFromPlayer,
+            if (Watch == null && tactics.Observe(dt, profile, in p, grounded, trackable, noiseHeard, noiseHeard && noiseFromPlayer,
                 trackable && p.PlayerHidden && sawHiding))
                 hasTarget = targetIsPlayer = chasing = warned = false;
-            bool detected = trackable && ((profile.GroundChase && !tactics.Investigating) || p.SeesPlayer || p.SmellsPlayer
-                || (noiseHeard && noiseFromPlayer && (chasing
-                    || HorizontalDistance(p.WitchPosition, p.NoisePosition) <= profile.ClearNoiseDistance))
-                || (p.PlayerHidden && sawHiding));
+            bool detected = trackable && (Watch != null
+                ? p.InWatchPassage && (!Watch.PassageClear(p.WitchPosition) || Watch.RequiresVanish)
+                : (profile.GroundChase && !tactics.Investigating) || p.SeesPlayer || p.SmellsPlayer
+                    || (noiseHeard && noiseFromPlayer && (chasing
+                        || HorizontalDistance(p.WitchPosition, p.NoisePosition) <= profile.ClearNoiseDistance))
+                    || (p.PlayerHidden && sawHiding));
+            if (Watch != null)
+            {
+                Watch.Tick(dt, p.WitchPosition);
+                if (noiseHeard && !noiseFromPlayer) Watch.Hear(p.NoisePosition);
+                if (!detected) noiseHeard = false;
+            }
             bool lostEdge = (p.PlayerVanished && !wasVanished) || (p.PlayerHidden && !wasHidden && !sawHiding);
             bool seesLight = SeesLight(in p);
             bool newLight = seesLight && !wasSeeingLight;
@@ -262,12 +281,12 @@ namespace TiffanyGame
                     break;
                 case WitchState.Stalking:
                     if (hasTarget && !WitchTargets.TryResolve(resolveGroundTarget, target, out target)) hasTarget = false;
-                    if (detected && ((chasing && warned) || !profile.CanSprint) && InCatchRange(in p))
+                    if (Watch == null && detected && ((chasing && warned) || !profile.CanSprint) && InCatchRange(in p))
                     {
                         Enter(WitchState.Caught, p.WitchPosition);
                         break;
                     }
-                    if (detected && profile.CanSprint && p.DistanceToPlayer < profile.SprintTriggerDistance)
+                    if (detected && (profile.CanSprint || Watch != null) && p.DistanceToPlayer < profile.SprintTriggerDistance)
                     {
                         Enter(WitchState.WindUp, p.WitchPosition);
                         break;
@@ -311,7 +330,8 @@ namespace TiffanyGame
                         hasTarget = hasNoiseTarget = hasHideTarget = retreatingNoise = false;
                         chasing = warned = false;
                     }
-                    if (timeWithoutPerception >= profile.LoseTrackTime && !p.Raining && !profile.GroundChase)
+                    if (Watch != null && !detected) hasTarget = chasing = false;
+                    if (Watch == null && timeWithoutPerception >= profile.LoseTrackTime && !p.Raining && !profile.GroundChase)
                     {
                         hasTarget = false;
                         Enter(WitchState.TakingOff, p.WitchPosition);
@@ -452,6 +472,11 @@ namespace TiffanyGame
                     decision.MoveTarget = hasTarget ? target : p.WitchPosition;
                     decision.Speed = hasTarget && !inspectingNoise
                         ? (chasing || profile.GroundChase ? profile.FollowSpeed : profile.StalkSpeed) : 0f;
+                    if (Watch != null)
+                    {
+                        decision.MoveTarget = hasTarget ? target : Watch.Target;
+                        decision.Speed = HorizontalDistance(p.WitchPosition, decision.MoveTarget) > 0.15f ? profile.FollowSpeed : 0f;
+                    }
                     decision.VoiceLure = profile.UsesVoiceLure && !profile.BarkLureEnabled && !chasing;
                     break;
                 case WitchState.WindUp:
@@ -489,7 +514,7 @@ namespace TiffanyGame
 
         private bool TryTactic(float dt, in WitchPerception p)
         {
-            if (state != WitchState.Flying && state != WitchState.Stalking) return false;
+            if (Watch != null || (state != WitchState.Flying && state != WitchState.Stalking)) return false;
             if (state == WitchState.Stalking && hasNoiseTarget && !p.PlayerAtFamilyCandle) return false;
             if (!tactics.TryDecide(dt, profile, in p, state, !hasTarget, chasing, out tacticDecision)) return false;
             if ((tacticDecision.State == WitchState.Landing || (tacticDecision.State == WitchState.Stalking && tacticDecision.Speed > 0f))

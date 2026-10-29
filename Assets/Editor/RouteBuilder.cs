@@ -58,11 +58,12 @@ namespace TiffanyGame.EditorTools
             }
 
             TerrainBuilder.Build(route, terrain, structure);
+            ChallengeBuilder.Build(tracker, player.GetComponent<PlayerSoul>(), storm);
             var spawn = Root("Spawn", route.GetChild(0), new Vector3(0f, 0f, -13f));
             spawn.rotation = Quaternion.LookRotation(memories[0].position - spawn.position);
             player.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
             foreach (var node in route.GetComponentsInChildren<Transform>(true))
-                GameObjectUtility.SetStaticEditorFlags(node.gameObject, StaticEditorFlags.BatchingStatic);
+                if (!ChallengeBuilder.IsMoving(node)) GameObjectUtility.SetStaticEditorFlags(node.gameObject, StaticEditorFlags.BatchingStatic);
             foreach (var renderer in route.GetComponentsInChildren<Renderer>(true))
             {
                 renderer.shadowCastingMode = ShadowCastingMode.Off;

@@ -97,7 +97,8 @@
     { "name": "Stunned", "frames": 60, "loop": true, "step": 1 },
     { "name": "Caught", "frames": 30, "loop": false, "step": 1 },
     { "name": "Landing", "frames": 45, "loop": false, "step": 1 },
-    { "name": "TakingOff", "frames": 45, "loop": false, "step": 1 }
+    { "name": "TakingOff", "frames": 45, "loop": false, "step": 1 },
+    { "name": "Suspicious", "frames": 90, "loop": true, "step": 1 }
   ],
   "rig": {
     "hair": { "bone": 0.28, "chains": { "L": -100, "R": 100, "B": 180 } },
@@ -145,7 +146,17 @@
     "Stunned": { "sway": 0.035, "tremorDeg": 2.5, "coverOffset": [0.1, 0.06, 0.17] },
     "Caught": { "reach": 1.35, "height": 1.05, "spread": 0.24, "clenchDeg": 100 },
     "Landing": { "impact": 0.07 },
-    "TakingOff": { "jumpHeight": 0.7, "tuck": 0.28 }
+    "TakingOff": { "jumpHeight": 0.7, "tuck": 0.28 },
+    "Suspicious": {
+      "hipDrop": 0.05, "bow": [2, 2, 3], "shoulderHitch": 3, "neckPitch": -5, "neckShare": 0.4,
+      "headRoll": -24, "headPitch": 18, "scanDeg": 35, "scan": [[0.0, -1], [0.1, -1], [0.5, 1], [0.6, 1]],
+      "sniffs": [0.04, 0.54], "sniffRiseSeconds": 0.15, "sniffReleaseSeconds": 0.18, "sniffDeg": 4, "sniffReach": 0.02,
+      "sniffSpring": [8, 0.8], "breathDeg": 0.4, "sniffChestDeg": 1.2, "jawDeg": 1, "sniffJawDeg": 2,
+      "handOffset": { "L": [0, 0, 0], "R": [0, -0.1, 0.02] }, "fingerCurl": 6,
+      "clench": [0.3, 0.65], "clenchRamps": [0.3, 0.25], "clenchDeg": 24, "clenchSpring": [2.2, 0.8],
+      "tremorCycles": { "neck": 17, "head": 19, "hand": 23, "fingers": 27 },
+      "tremorDeg": { "neck": 0.18, "head": 0.25, "hand": 0.45, "fingers": 0.65 }
+    }
   },
   "preview": { "crouchOffsetX": 1.4, "faceDistance": 1.1, "handDistance": 0.9, "handCamera": [0.35, 0.3, 1] }
 }

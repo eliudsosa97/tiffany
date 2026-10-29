@@ -54,6 +54,7 @@ namespace TiffanyGame.EditorTools
             float Range(float min, float max) => min + (float)random.NextDouble() * (max - min);
             bool Free(Vector2 point, float radius)
             {
+                if (ChallengeBuilder.Reserves(new Vector3(point.x, terrain.Height(point.x, point.y), point.y), radius)) return false;
                 foreach (var trunk in trunks)
                 {
                     Vector3 position = parent.parent.InverseTransformPoint(trunk.transform.position);

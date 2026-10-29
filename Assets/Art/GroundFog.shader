@@ -2,22 +2,21 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
 {
     Properties
     {
-        _BaseColor ("Color", Color) = (0.3811, 0.3959, 0.4100, 0.45)
-        _Density ("Density", Range(0, 1)) = 0.78
-        _NoiseScale ("Noise scale", Float) = 0.65
-        _NoiseStretch ("Noise stretch", Float) = 2.5
+        _BaseColor ("Color", Color) = (0.20598416, 0.23479508, 0.28277929, 0.5)
+        _Density ("Density", Range(0, 1)) = 0.6
+        _NoiseScale ("Noise scale", Float) = 0.45
+        _NoiseStretch ("Noise stretch", Float) = 1.25
         _WindSpeed ("Wind speed", Float) = 0.32
         _LightStrength ("Light strength", Float) = 0.35
         _HaloRadius ("Halo radius", Float) = 4.5
-        _MoonStrength ("Moon strength", Float) = 0.08
         _EdgeFade ("Edge fade", Range(0.01, 0.5)) = 0.2
         _HeightFadeStart ("Height fade start", Float) = 0.35
         _HeightFadeEnd ("Height fade end", Float) = 1.1
         _CameraFadeStart ("Camera fade start", Float) = 1
         _CameraFadeEnd ("Camera fade end", Float) = 4
-        _PathHalfWidth ("Path half width", Float) = 2.5
-        _PathSoftness ("Path softness", Float) = 3
-        _PathMultiplier ("Path multiplier", Range(0, 1)) = 0.85
+        _PathHalfWidth ("Path half width", Float) = 2
+        _PathSoftness ("Path softness", Float) = 7
+        _PathMultiplier ("Path multiplier", Range(0, 1)) = 0.4
         _PlayerFadeStart ("Player fade start", Float) = 0.5
         _PlayerFadeEnd ("Player fade end", Float) = 2
         [HideInInspector] _GroundHeight ("Ground height", Float) = 0
@@ -35,7 +34,7 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
         {
             Name "GroundFogForward"
             Tags { "LightMode" = "UniversalForward" }
-            Blend SrcAlpha OneMinusSrcAlpha
+            Blend One OneMinusSrcAlpha
             ZWrite Off
             Cull Off
 
@@ -58,7 +57,6 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
                 float _WindSpeed;
                 half _LightStrength;
                 float _HaloRadius;
-                half _MoonStrength;
                 float _EdgeFade;
                 float _HeightFadeStart;
                 float _HeightFadeEnd;
@@ -122,6 +120,15 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
                 return length(samplePosition - segmentStart - segment * along);
             }
 
+            float FogField(float2 noisePosition)
+            {
+                // La octava fina va girada y deforma la gruesa para deshilachar los bordes sin bandas
+                float2 finePosition = float2(noisePosition.x * 0.8 - noisePosition.y * 0.6, noisePosition.x * 0.6 + noisePosition.y * 0.8);
+                float fine = FogNoise(finePosition * 2.3 + float2(_Time.y * 0.05, -_Time.y * 0.04) + 17.43);
+                float coarse = FogNoise(noisePosition + (fine - 0.5) * 0.9);
+                return coarse * 0.7 + fine * 0.3;
+            }
+
             half3 FogLighting(uint lightIndex, float3 positionWS)
             {
                 Light light = GetAdditionalLight(lightIndex, positionWS);
@@ -135,7 +142,7 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
                 #else
                 float4 source = _AdditionalLightsPosition[index];
                 #endif
-                if (source.w == 0) return light.color * _MoonStrength;
+                if (source.w == 0) return 0;
                 float3 offset = source.xyz - positionWS;
                 float halo = 1 - smoothstep(0, _HaloRadius, length(offset.xz));
                 float3 glow = light.color * light.distanceAttenuation * _LightStrength;
@@ -163,21 +170,17 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
                 float playerDistance = distance(samplePosition, _GroundFogPlayer.xz);
                 float playerFade = lerp(0.3, 1, smoothstep(_PlayerFadeStart, _PlayerFadeEnd, playerDistance));
                 fade *= lerp(1, playerFade, _GroundFogPlayer.w);
-                fade *= lerp(1, _PathMultiplier, nearPath);
-                clip(fade - 0.002);
+                float local = saturate(_Density * lerp(1, _PathMultiplier, nearPath));
                 float2 wind = normalize(float2(0.94, 0.342));
                 float2 drifted = samplePosition - wind * (_Time.y * _WindSpeed);
                 float2 noisePosition = float2(dot(drifted, wind) / _NoiseStretch,
                     dot(drifted, float2(-wind.y, wind.x))) * _NoiseScale;
-                float coarse = FogNoise(noisePosition);
-                float fine = FogNoise(noisePosition * 2.7 + float2(_Time.y * 0.035, -_Time.y * 0.025) + 17.43);
-                float banks = smoothstep(lerp(0.22, 0.18, _WaterLayer), lerp(0.72, 0.68, _WaterLayer),
-                    coarse * 0.65 + fine * 0.35);
-                half alpha = saturate(banks * _Density * _BaseColor.a * fade);
+                float noise = FogField(noisePosition);
+                float low = lerp(0.62, 0.34, local);
+                float banks = smoothstep(low, low + 0.3, noise);
+                half alpha = saturate(banks * local * _BaseColor.a * fade);
                 clip(alpha - 0.002h);
-                Light moon = GetMainLight();
-                half3 color = _BaseColor.rgb + SampleSH(half3(0, 1, 0)) * 0.25h
-                    + moon.color * moon.distanceAttenuation * _MoonStrength;
+                half3 color = half3(0, 0, 0);
                 InputData inputData = (InputData)0;
                 inputData.positionWS = input.positionWS;
                 inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(input.positionCS);
@@ -194,7 +197,9 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
                     color += FogLighting(lightIndex, input.positionWS);
                 LIGHT_LOOP_END
                 #endif
-                return half4(MixFog(min(color, 0.9h), input.fogFactor), alpha);
+                half glow = banks * fade * (0.25 + 0.5 * local);
+                return half4(MixFog(_BaseColor.rgb, input.fogFactor) * alpha
+                    + MixFogColor(min(color, 0.9h) * glow, half3(0, 0, 0), input.fogFactor), alpha);
             }
             ENDHLSL
         }

@@ -28,6 +28,7 @@ namespace TiffanyGame.EditorTools
             float Range(float min, float max) => min + (float)random.NextDouble() * (max - min);
             bool Free(Vector3 position, float radius, bool ring)
             {
+                if (terrain != null && ChallengeBuilder.Reserves(clearing.localPosition + position, radius)) return false;
                 var p = new Vector2(position.x, position.z);
                 float edge = Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.y));
                 if (ring)

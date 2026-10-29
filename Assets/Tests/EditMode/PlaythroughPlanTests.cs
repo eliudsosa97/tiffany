@@ -31,11 +31,17 @@ namespace TiffanyGame.Tests
             var expected = new[]
             {
                 PlaythroughMilestone.Memory1, PlaythroughMilestone.Ball, PlaythroughMilestone.Light,
-                PlaythroughMilestone.Flash, PlaythroughMilestone.Kindle, PlaythroughMilestone.MoveObject,
+                PlaythroughMilestone.Flash,
                 PlaythroughMilestone.Hide, PlaythroughMilestone.LeaveHide,
-                PlaythroughMilestone.Memory2, PlaythroughMilestone.Recharge2,
-                PlaythroughMilestone.Memory3, PlaythroughMilestone.Recharge3,
-                PlaythroughMilestone.Memory4, PlaythroughMilestone.Recharge4, PlaythroughMilestone.Vanish,
+                PlaythroughMilestone.Memory2, PlaythroughMilestone.Challenge1Recharge,
+                PlaythroughMilestone.Challenge1Candle1, PlaythroughMilestone.Challenge1Candle2, PlaythroughMilestone.Challenge1Cross,
+                PlaythroughMilestone.Memory3, PlaythroughMilestone.Challenge2Recharge, PlaythroughMilestone.Challenge2Distract,
+                PlaythroughMilestone.Challenge2Wait, PlaythroughMilestone.Challenge2Cross,
+                PlaythroughMilestone.Memory4, PlaythroughMilestone.Challenge3Recharge, PlaythroughMilestone.Challenge3Entry,
+                PlaythroughMilestone.Challenge3Vanish, PlaythroughMilestone.Challenge3Cross,
+                PlaythroughMilestone.Challenge4Recharge, PlaythroughMilestone.Challenge4Candle1, PlaythroughMilestone.Challenge4Candle2,
+                PlaythroughMilestone.Challenge4Distract, PlaythroughMilestone.Challenge4Wait,
+                PlaythroughMilestone.Challenge4Vanish, PlaythroughMilestone.Challenge4Cross,
                 PlaythroughMilestone.Memory5, PlaythroughMilestone.Capture, PlaythroughMilestone.Respawn,
                 PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
             };
@@ -62,6 +68,42 @@ namespace TiffanyGame.Tests
             observation.MemoryFound = true;
             plan.Tick(0.1f, in observation);
             Assert.AreEqual(PlaythroughMilestone.Ball, plan.Current);
+        }
+
+        [Test]
+        public void DistractionWaitsForWitchToLeaveAndCrossingRequiresProof()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Challenge2Wait, PlaythroughMilestone.Challenge2Cross });
+            var observation = new PlaythroughObservation { AtTarget = true, ObjectMoved = true };
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(0, plan.CompletedCount);
+            observation.Distracted = true;
+            plan.Tick(0.1f, in observation);
+            plan.Tick(0.1f, in observation);
+            Assert.IsFalse(plan.Finished);
+            observation.ChallengeCompleted = true;
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(0, plan.ExitCode);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void CaptureOrLostDistractionReturnsToRecharge(bool caught)
+        {
+            var plan = new PlaythroughPlan(new[]
+            {
+                PlaythroughMilestone.Challenge2Recharge, PlaythroughMilestone.Challenge2Distract,
+                PlaythroughMilestone.Challenge2Wait, PlaythroughMilestone.Challenge2Cross
+            });
+            var observation = new PlaythroughObservation { AtTarget = true, CheckpointReached = true, Energy = 100f };
+            plan.Tick(0.1f, in observation);
+            observation.ObjectMoved = true;
+            plan.Tick(0.1f, in observation);
+            observation.Respawning = caught;
+            observation.RetryChallenge = !caught;
+            var command = plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.Challenge2Recharge, plan.Current);
+            Assert.IsFalse(command.Move || command.MoveObject);
         }
 
         [Test]
@@ -267,7 +309,7 @@ namespace TiffanyGame.Tests
             AtTarget = true, MemoryFound = true, BallCollected = true, LightOn = true, Flashing = true,
             Hidden = milestone == PlaythroughMilestone.Hide, CandleLit = true, ObjectMoved = true, Vanished = true,
             CheckpointReached = true, Energy = SoulEnergy.Max, Respawning = milestone == PlaythroughMilestone.Capture,
-            AtRespawn = true, Credits = true
+            AtRespawn = true, Credits = true, ChallengeCompleted = true, Distracted = true
         };
     }
 }

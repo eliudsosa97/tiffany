@@ -46,20 +46,28 @@ namespace TiffanyGame.Tests
         public void RegeneratingMaterialReplacesLegacyFadesAndDrawsFogAfterWater()
         {
             var material = GeneratedMaterials.GetGroundFog();
+            string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(material));
+            Assert.IsNotEmpty(guid);
             material.SetColor("_BaseColor", new Color(0.08f, 0.11f, 0.16f, 0.85f));
             material.SetFloat("_NoiseScale", 0.24f);
             material.SetFloat("_LightStrength", 1.5f);
+            material.SetFloat("_HaloRadius", 9f);
             material.SetFloat("_EdgeFade", 0.12f);
             material.SetFloat("_PlayerFadeEnd", 6f);
             material.SetFloat("_CameraFadeEnd", 12f);
             material.renderQueue = (int)RenderQueue.Transparent;
-            Assert.AreSame(material, GeneratedMaterials.GetGroundFog());
+            material = GeneratedMaterials.GetGroundFog();
+            Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(material)));
             Color color = material.GetColor("_BaseColor").linear;
             float luminance = color.r * 0.2126f + color.g * 0.7152f + color.b * 0.0722f;
-            Assert.That(luminance, Is.InRange(0.1f, 0.18f));
-            Assert.AreEqual(0.45f, color.a);
-            Assert.AreEqual(0.65f, material.GetFloat("_NoiseScale"));
-            Assert.AreEqual(2.5f, material.GetFloat("_NoiseStretch"));
+            Assert.That(luminance, Is.InRange(0.03f, 0.06f), "La neblina debe verse sobre el suelo nocturno sin parecer nieve.");
+            Assert.AreEqual(0.035f, color.r, 0.0001f);
+            Assert.AreEqual(0.045f, color.g, 0.0001f);
+            Assert.AreEqual(0.065f, color.b, 0.0001f);
+            Assert.Greater(color.b, color.r);
+            Assert.AreEqual(0.5f, color.a, 0.0001f);
+            Assert.AreEqual(0.45f, material.GetFloat("_NoiseScale"));
+            Assert.AreEqual(1.25f, material.GetFloat("_NoiseStretch"));
             Assert.AreEqual(0.35f, material.GetFloat("_LightStrength"));
             Assert.AreEqual(0.2f, material.GetFloat("_EdgeFade"));
             Assert.AreEqual(0.35f, material.GetFloat("_HeightFadeStart"));
@@ -69,6 +77,28 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(4.5f, material.GetFloat("_HaloRadius"));
             Assert.AreEqual((int)RenderQueue.Transparent + 10, material.renderQueue);
             Assert.Greater(material.renderQueue, GeneratedMaterials.GetWater().renderQueue);
+        }
+
+        [Test]
+        public void ShaderDefaultsMatchGeneratedMaterialColorAndHalo()
+        {
+            var material = GeneratedMaterials.GetGroundFog();
+            var defaults = new Material(material.shader);
+            try
+            {
+                Color expected = material.GetColor("_BaseColor");
+                Color actual = defaults.GetColor("_BaseColor");
+                Assert.AreEqual(expected.r, actual.r, 0.0001f);
+                Assert.AreEqual(expected.g, actual.g, 0.0001f);
+                Assert.AreEqual(expected.b, actual.b, 0.0001f);
+                Assert.AreEqual(expected.a, actual.a, 0.0001f);
+                foreach (string property in new[] { "_Density", "_NoiseScale", "_NoiseStretch", "_EdgeFade", "_LightStrength", "_HaloRadius" })
+                    Assert.AreEqual(material.GetFloat(property), defaults.GetFloat(property), 0.0001f, property);
+            }
+            finally
+            {
+                Object.DestroyImmediate(defaults);
+            }
         }
 
         [TestCase("Mobile")]
@@ -138,6 +168,8 @@ namespace TiffanyGame.Tests
         public void CardBudgetUsesSharedSavedMaterialTwoTrianglesAndNoCollidersOrShadows(int count)
         {
             var fog = FogBuilder.BuildLayers(world.transform, Clearings(count));
+            fog.gameObject.SetActive(false);
+            fog.gameObject.SetActive(true);
             var material = GeneratedMaterials.GetGroundFog();
             string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(material));
             Assert.IsTrue(AssetDatabase.Contains(material));
@@ -149,7 +181,7 @@ namespace TiffanyGame.Tests
             Assert.IsEmpty(fog.GetComponentsInChildren<Light>());
             foreach (var layer in fog.layers)
             {
-                Assert.AreSame(material, layer.renderer.sharedMaterial);
+                Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(layer.renderer.sharedMaterial)));
                 Assert.AreEqual(6, layer.renderer.GetComponent<MeshFilter>().sharedMesh.triangles.Length);
                 Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(layer.renderer.gameObject, StaticEditorFlags.BatchingStatic));
                 Assert.AreEqual(ShadowCastingMode.Off, layer.renderer.shadowCastingMode);
@@ -264,7 +296,7 @@ namespace TiffanyGame.Tests
             var bank = waterLayers[0];
             Assert.AreEqual(surface.bounds.max.y, bank.groundHeight, 0.001f);
             Assert.AreEqual(surface.bounds.max.y + FogBuilder.WaterHeight, bank.renderer.transform.position.y, 0.001f);
-            Assert.AreEqual(0.96f, bank.density, 0.0001f);
+            Assert.AreEqual(1f, bank.density, 0.0001f);
             Assert.AreEqual(6f, bank.waterFootprint.z, 0.001f);
             Assert.AreEqual(length * 0.5f, bank.waterFootprint.w, 0.001f);
             foreach (float x in new[] { -0.5f, 0.5f })

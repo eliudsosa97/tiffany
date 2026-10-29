@@ -22,6 +22,9 @@ namespace TiffanyGame
         readonly Transform[] clearings;
         readonly CandleSpot[] family = new CandleSpot[8];
         readonly MemorySpot[] memories = new MemorySpot[5];
+        readonly PowerChallenge[] challenges = new PowerChallenge[4];
+        PowerChallenge challenge;
+        float selectedAt;
         CandleSpot kindleTarget, checkpoint;
         MovableObject movable;
         HideVolume hideVolume;
@@ -33,7 +36,7 @@ namespace TiffanyGame
         public Vector3 Target { get; private set; }
         bool AtTarget => PlaythroughPlan.HorizontalDistance(Position, Target) <= arrivalRadius && Mathf.Abs(Position.y - Target.y) < 0.8f;
         public float CameraYaw => player.viewCamera != null ? player.viewCamera.transform.eulerAngles.y : 0f;
-        public Vector2 Aim => milestone == PlaythroughMilestone.MoveObject
+        public Vector2 Aim => (milestone == PlaythroughMilestone.MoveObject || PlaythroughPlan.Action(milestone) == ChallengeAction.Distract)
             ? PlaythroughNavigation.CameraInput((movable.transform.position - Position).normalized, CameraYaw)
             : Vector2.zero;
 
@@ -51,6 +54,7 @@ namespace TiffanyGame
             var tracker = Require(Object.FindAnyObjectByType<WitchChapterTracker>(), "WitchChapterTracker");
             route = tracker.transform;
             clearings = tracker.clearings;
+            foreach (var item in route.GetComponentsInChildren<PowerChallenge>()) challenges[(int)item.kind] = item;
             if (clearings.Length != 8) throw new InvalidOperationException("La ruta necesita ocho claros.");
             for (int i = 0; i < clearings.Length; i++)
             {
@@ -82,7 +86,7 @@ namespace TiffanyGame
             {
                 var objects = MovableObject.Active;
                 for (int i = 0; i < objects.Count; i++)
-                    if (!objects[i].Used) { movable = objects[i]; break; }
+                    if (!objects[i].Used && objects[i].transform.IsChildOf(clearings[0])) { movable = objects[i]; break; }
                 Require(movable, "objeto movible sin usar");
             }
             if (plan.Includes(PlaythroughMilestone.Hide))
@@ -121,8 +125,31 @@ namespace TiffanyGame
         public void Select(PlaythroughMilestone next)
         {
             milestone = next;
+            selectedAt = Time.time;
+            int challengeIndex = PlaythroughPlan.ChallengeIndex(next);
+            challenge = challengeIndex >= 0 ? Require(challenges[challengeIndex], "reto de poderes") : null;
             Target = Position;
             arrivalRadius = 0.4f;
+            if (challenge != null)
+            {
+                Target = challenge.Entry;
+                arrivalRadius = 0.1f;
+                switch (PlaythroughPlan.Action(next))
+                {
+                    case ChallengeAction.Recharge:
+                        checkpoint = challenge.checkpoint;
+                        Target = challenge.RechargePoint;
+                        break;
+                    case ChallengeAction.Candle1:
+                    case ChallengeAction.Candle2:
+                        kindleTarget = challenge.candles[PlaythroughPlan.Action(next) == ChallengeAction.Candle1 ? 0 : 1];
+                        Target = kindleTarget.transform.position + challenge.transform.right - challenge.transform.forward * 0.4f;
+                        break;
+                    case ChallengeAction.Distract: movable = challenge.lure; break;
+                    case ChallengeAction.Cross: Target = challenge.Exit; break;
+                }
+                return;
+            }
             int id = PlaythroughPlan.MemoryId(next);
             if (id > 0)
             {
@@ -187,7 +214,14 @@ namespace TiffanyGame
             Respawning = respawn.Active,
             AtRespawn = player.enabled && PlaythroughPlan.HorizontalDistance(Position, expectedRespawn) < 0.35f,
             Credits = ending.Rules.Stage == EndingStage.Credits,
-            Frozen = collector.gameInterface.IsFrozen
+            Frozen = collector.gameInterface.IsFrozen,
+            ChallengeCompleted = challenge != null && challenge.Rules.Completed,
+            Distracted = challenge != null && challenge.Distracted,
+            RetryChallenge = challenge != null && Time.time - selectedAt > 1f && !challenge.Rules.Completed
+                && ((PlaythroughPlan.Action(milestone) == ChallengeAction.Wait && !challenge.Witch.WatchInvestigating)
+                    || (PlaythroughPlan.Action(milestone) == ChallengeAction.Cross
+                        && ((challenge.Rules.NeedsVanish && !vanish.State.IsActive)
+                            || (challenge.Rules.NeedsDistraction && !challenge.Distracted))))
         };
 
         public void Apply(in PlaythroughCommand command)

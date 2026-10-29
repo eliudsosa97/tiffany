@@ -57,14 +57,7 @@ namespace TiffanyGame.EditorTools
             Part("Girl", PrimitiveType.Capsule, player.girl, new Vector3(0f, 0.6f, 0f), new Vector3(0.38f, 0.6f, 0.34f), palette.pale);
             Part("Facing", PrimitiveType.Sphere, player.girl, new Vector3(0f, 1f, 0.16f), Vector3.one * 0.1f, palette.stone);
             player.tyler = Root("Living Tyler", stage);
-            Part("Body", PrimitiveType.Sphere, player.tyler, new Vector3(0f, 0.2f, 0f), new Vector3(0.38f, 0.35f, 0.8f), palette.pale);
-            Part("Head", PrimitiveType.Sphere, player.tyler, new Vector3(0f, 0.36f, 0.4f), Vector3.one * 0.3f, palette.pale);
-            Part("Muzzle", PrimitiveType.Cube, player.tyler, new Vector3(0f, 0.32f, 0.57f), new Vector3(0.18f, 0.12f, 0.18f), palette.pale);
-            for (int i = -1; i <= 1; i += 2)
-            {
-                Part("Ear", PrimitiveType.Cube, player.tyler, new Vector3(i * 0.14f, 0.38f, 0.38f), new Vector3(0.08f, 0.24f, 0.16f), palette.pale);
-                Part("Paw", PrimitiveType.Cube, player.tyler, new Vector3(i * 0.14f, 0.07f, 0.24f), new Vector3(0.1f, 0.14f, 0.35f), palette.pale);
-            }
+            TylerBuilder.BuildFigure(player.tyler, out _);
             player.ApplyPose(player.girl, EchoEvaluator.Pose(data.girl, 0f));
             player.ApplyPose(player.tyler, EchoEvaluator.Pose(data.tyler, 0f));
             player.props = new Transform[data.props.Length];

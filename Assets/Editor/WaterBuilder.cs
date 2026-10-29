@@ -55,6 +55,7 @@ namespace TiffanyGame.EditorTools
                     GroundType.Gravel, stone, i);
             CrossingPiece("Log", river, Vector3.up * 0.03f, new Vector3(CrossingWidth, 0.3f, 1.1f), GroundType.Branches,
                 GroundMaterials.For(GroundType.Branches));
+            RiverBanks(river);
             Capture("Water 2 Crossing", river, stones[0] + Vector3.up * StoneTop, 330f,
                 new Vector3(-13f, 19f, 5.5f), new Vector3(0f, 0.4f, 0f));
         }
@@ -62,20 +63,43 @@ namespace TiffanyGame.EditorTools
         static void CrossingPiece(string name, Transform parent, Vector3 position, Vector3 size, GroundType ground, Material material,
             int index = 0)
         {
-            // Los colliders se conservan al sustituir el arte.
             var piece = Root(name, parent, position);
             var collider = piece.gameObject.AddComponent<BoxCollider>();
             collider.size = size;
             piece.gameObject.AddComponent<GroundSurface>().type = ground;
             bool log = ground == GroundType.Branches;
-            float height = 0.46f + index % 3 * 0.06f;
-            var visualSize = log ? new Vector3(size.y, size.x * 0.5f, size.y)
-                : new Vector3(size.x * (0.92f + index * 3 % 5 * 0.035f), height, size.z * (0.94f + index * 2 % 5 * 0.02f));
-            var visual = SceneBuilder.CreatePrimitive("Visual", log ? PrimitiveType.Cylinder : PrimitiveType.Sphere,
-                piece, log ? Vector3.zero : Vector3.up * ((size.y - height) * 0.5f), visualSize, material);
-            visual.transform.localRotation = log ? Quaternion.Euler(0f, 0f, 90f)
-                : Quaternion.Euler(0f, -23f + index * 37 % 53, 0f);
-            Object.DestroyImmediate(visual.GetComponent<Collider>());
+            var visual = Root("Visual", piece, Vector3.zero);
+            var model = log ? RiverPieces.Log(visual) : RiverPieces.Step(index % 2 + 1, visual);
+            if (log) model.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            var bounds = ModelLibrary.LocalBounds(visual);
+            model.transform.localPosition -= bounds.center;
+            visual.localScale = new Vector3(size.x / bounds.size.x, size.y / bounds.size.y, size.z / bounds.size.z);
+            foreach (var solid in model.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(solid);
+            foreach (var surface in model.GetComponentsInChildren<GroundSurface>(true)) Object.DestroyImmediate(surface);
+            foreach (var renderer in model.GetComponentsInChildren<Renderer>(true))
+            {
+                var materials = renderer.sharedMaterials;
+                for (int i = 0; i < materials.Length; i++) materials[i] = material;
+                renderer.sharedMaterials = materials;
+            }
+        }
+
+        static void RiverBanks(Transform river)
+        {
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var bank = RiverPieces.Bank(false, river, side < 0).transform;
+                bank.localPosition = new Vector3(-RiverPieces.BankLength * 0.5f, 0f, side * RiverWidth * 0.5f);
+                bank.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                for (int i = 0; i < 2; i++)
+                {
+                    var rock = RiverPieces.Rock((side < 0 ? 1 : 3) + i, river).transform;
+                    rock.localPosition = new Vector3(i == 0 ? -3.5f : 3.5f, 0f, side * (RiverWidth * 0.5f + 0.4f));
+                    rock.localRotation = Quaternion.Euler(0f, side * (25f + i * 47f), 0f);
+                }
+                var plant = RiverPieces.Plant(river).transform;
+                plant.localPosition = new Vector3(side * 4.3f, 0f, side * (RiverWidth * 0.5f + 1f));
+            }
         }
 
         static void Water(string name, Transform parent, Vector3 position, Vector2 size, string clip)

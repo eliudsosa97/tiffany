@@ -100,6 +100,11 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator FifthMemoryLocksReturnAcrossAllClearings()
         {
+            foreach (var challenge in collector.challenges)
+            {
+                challenge.Rules.Tick(-1f, true, 3, true, true);
+                challenge.Rules.Tick(ChallengeRules.PassageLength, true, 3, true, true);
+            }
             yield return MoveToClearing(5);
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo 5 encontrado");

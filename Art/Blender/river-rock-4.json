@@ -1,0 +1,32 @@
+{
+  "materials": [
+    {
+      "name": "RiverGraniteDry",
+      "color": "#A5A6A0",
+      "smoothness": 0.12
+    },
+    {
+      "name": "RiverGraniteWet",
+      "color": "#3B4745",
+      "smoothness": 0.5
+    }
+  ],
+  "seed": 104,
+  "size": [
+    1.06,
+    0.93,
+    0.78
+  ],
+  "sides": 12,
+  "lean": [
+    -0.22,
+    -0.13
+  ],
+  "rings": 12,
+  "burial": 0.03,
+  "pivot": [
+    0,
+    0,
+    0
+  ]
+}

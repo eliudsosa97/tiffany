@@ -9,14 +9,6 @@ namespace TiffanyGame.EditorTools
         public static void BuildPowers(PlayerLight playerLight, Transform zoneRoot, Storm storm)
         {
             var soul = playerLight.GetComponent<PlayerSoul>();
-            var powers = new[] { Power.Candles, Power.Poltergeist, Power.Vanish };
-            for (int i = 0; i < powers.Length; i++)
-            {
-                if (Array.IndexOf(soul.startingPowers, powers[i]) >= 0) continue;
-                int count = soul.startingPowers.Length;
-                Array.Resize(ref soul.startingPowers, count + 1);
-                soul.startingPowers[count] = powers[i];
-            }
             playerLight.gameObject.AddComponent<Poltergeist>().handLight = playerLight.spot;
             var vanish = playerLight.gameObject.AddComponent<VanishPower>();
             vanish.playerLight = playerLight;
@@ -43,7 +35,10 @@ namespace TiffanyGame.EditorTools
                 candles[i] = SceneBuilder.CreateCandle(zoneRoot, $"Kindled Candle {i + 1}", position,
                     CandleKind.Kindled, false, soul, storm);
             }
-            playerLight.gameObject.AddComponent<CandleKindler>().candles = candles;
+            var allCandles = new System.Collections.Generic.List<CandleSpot>(candles);
+            foreach (var challenge in zoneRoot.parent.GetComponentsInChildren<PowerChallenge>())
+                allCandles.AddRange(challenge.candles);
+            playerLight.gameObject.AddComponent<CandleKindler>().candles = allCandles.ToArray();
 
             Vector3 origin = playerLight.transform.position + Vector3.forward * 3.5f;
             BuildObject(zoneRoot, ThrowableKind.Bottle, origin + Vector3.left * 2.4f,
@@ -80,7 +75,7 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static void BuildObject(Transform parent, ThrowableKind kind, Vector3 position,
+        internal static MovableObject BuildObject(Transform parent, ThrowableKind kind, Vector3 position,
             float width, float height, float mass, Color color)
         {
             var clip = LoadClip(kind.ToString().ToLowerInvariant());
@@ -108,6 +103,7 @@ namespace TiffanyGame.EditorTools
             var movable = instance.AddComponent<MovableObject>();
             movable.kind = kind;
             movable.sound = sound;
+            return movable;
         }
 
         static AudioClip LoadClip(string name)
