@@ -5,21 +5,33 @@ namespace TiffanyGame
     public static class InterfaceTexts
     {
         public const string Title = "Tiffany";
-        public const string StartHint = "Clic, Espacio o Start para empezar";
+        public const string StartHint = "Clic, Espacio u Options para empezar";
         public const string Continue = "Continuar";
         public const string NewGame = "Nueva partida";
-        public const string Controls = "WASD  moverte\n"
-            + "Shift  correr · Ctrl  despacio\n"
-            + "Ratón  apuntar la luz\n"
-            + "F  prender la luz · Clic  destello\n"
-            + "Q E R  poderes\n"
-            + "Espacio  esconderte y recoger\n"
-            + "Tab  cuaderno · Esc o P  pausa";
+        public const string Controls = "WASD / stick izquierdo  moverte\n"
+            + "Shift / L3  correr · Ctrl / L2  despacio\n"
+            + "Ratón / stick derecho  apuntar la luz\n"
+            + "F o clic derecho / Triángulo  luz · Clic izquierdo / R2  destello\n"
+            + "Q / Cuadrado  veladora · E / Círculo  mover · R / R1  desvanecerte\n"
+            + "Espacio / Equis  esconderte y recoger\n"
+            + "Tab / Create  cuaderno · Esc o P / Options  pausa";
         public const string PauseTitle = "Pausa";
-        public const string PauseHint = "Esc o P para seguir";
+        public const string PauseHint = "Esc, P u Options para seguir";
         public const string NotebookEmpty = "Aún no recuerdas nada";
-        public const string NotebookHint = "A / D para pasar de página · Tab para cerrar";
-        public const float PowerNoticeSeconds = 3f;
+        public const string NotebookHint = "A / D o cruceta para pasar de página · Tab o Create para cerrar";
+        public const float PowerNoticeSeconds = 7f;
+        public const string SoulEnergy = "Energía del alma";
+        public const string WakeHint = "Sigue a los pájaros amarillos.";
+        public const string RouteReminder = "Los pájaros amarillos marcan el camino.";
+        public const string StoryHint = "Clic, Enter u Options para seguir";
+
+        public static string StoryLine(int index) => index switch
+        {
+            0 => "Hace tres meses, Tiffany siguió el ladrido de su perro hasta el bosque. Nunca volvió.",
+            1 => "Esta noche, Día de Muertos, su familia le encendió una veladora.",
+            2 => "Su alma despertó. La bruja también.",
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
 
         // Provisional: lo aprueba Eliud.
         public const string EndingStory = "Su familia la vio una última vez. Tiffany pudo descansar.";
@@ -29,11 +41,16 @@ namespace TiffanyGame
         {
             switch (power)
             {
-                case Power.Light: return "Tu luz te obedece · F prende y apaga, clic para el destello";
-                case Power.Candles: return "Puedes encender veladoras · Q";
-                case Power.Poltergeist: return "Puedes mover cosas · E";
-                case Power.Vanish: return "Puedes desvanecerte · R";
-                case Power.Manifest: return "Tu familia puede verte";
+                case Power.Light: return "F o clic derecho / Triángulo: prende o apaga tu luz.\n"
+                    + "Clic izquierdo / R2: destello para cegar a la bruja en el suelo y escapar.";
+                case Power.Candles: return "Q / Cuadrado: enciende una veladora apagada cercana.\n"
+                    + "Su luz te protege de la bruja por un tiempo.";
+                case Power.Poltergeist: return "E / Círculo: mueve un objeto iluminado a 12 m o menos.\n"
+                    + "El ruido distrae a la bruja cuando está en el suelo.";
+                case Power.Vanish: return "R / R1: desvanécete durante 3 segundos.\n"
+                    + "La bruja no te ve, oye ni huele y pierde tu rastro.";
+                case Power.Manifest: return "Espacio / Equis: manifiéstate ante tu familia en la capilla.\n"
+                    + "Solo puedes hacerlo ante los vivos, al final.";
                 default: throw new ArgumentOutOfRangeException(nameof(power));
             }
         }

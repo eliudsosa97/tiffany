@@ -170,6 +170,9 @@ namespace TiffanyGame
 
         public static bool PointerPressed => Mouse.current?.leftButton.wasPressedThisFrame == true;
 
+        public static bool StoryAdvancePressed => PointerPressed || KeyPressed(Key.Enter)
+            || Gamepad.current?.startButton.wasPressedThisFrame == true;
+
         public static bool TitlePreviousPressed => KeyPressed(Key.W) || KeyPressed(Key.UpArrow)
             || Gamepad.current?.dpad.up.wasPressedThisFrame == true
             || Gamepad.current?.leftStick.up.wasPressedThisFrame == true;

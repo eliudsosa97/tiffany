@@ -28,6 +28,7 @@ namespace TiffanyGame
         float previousWeight;
 
         public EchoPlayer ActiveEcho { get; private set; }
+        public bool IsEchoActive => echo.Active;
         public MemoryProgress Progress => progress;
         public event Action<int> Collected;
 

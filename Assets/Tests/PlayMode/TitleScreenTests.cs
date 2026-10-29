@@ -31,6 +31,8 @@ namespace TiffanyGame.Tests
             var light = Object.FindAnyObjectByType<PlayerLight>();
             Assert.That(ui.Screen, Is.EqualTo(InterfaceScreen.Title));
             Assert.That(ui.titlePanel.activeInHierarchy, Is.True);
+            Assert.That(ui.storyPanel.activeSelf, Is.False);
+            Assert.That(ui.soulPanel.activeSelf, Is.False);
             Assert.That(ui.endingPanel.gameObject.activeSelf, Is.False);
             Assert.That(ui.pausePanel.activeSelf, Is.False);
             Assert.That(ui.notebookPanel.activeSelf, Is.False);
@@ -54,6 +56,9 @@ namespace TiffanyGame.Tests
             yield return null;
 
             Assert.That(ui.Screen, Is.EqualTo(InterfaceScreen.Playing));
+            Assert.That(ui.storyPanel.activeSelf, Is.False);
+            Assert.That(ui.soulPanel.activeSelf, Is.False);
+            Assert.That(ui.noticeText.text, Is.EqualTo(InterfaceTexts.WakeHint));
             Assert.That(ui.titlePanel.activeSelf, Is.False);
             Assert.That(ui.endingPanel.gameObject.activeSelf, Is.False);
             Assert.That(ui.noticeText.gameObject.activeSelf, Is.True);

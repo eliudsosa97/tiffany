@@ -16,6 +16,13 @@ namespace TiffanyGame
         public Text startHint;
         public Text continueOption;
         public Text newGameOption;
+        public GameObject storyPanel;
+        public Text storyText;
+        public PlayerSoul soul;
+        public WitchChapterTracker route;
+        public MemoryCollector memories;
+        public GameObject soulPanel;
+        public Image soulFill;
         public GameObject pausePanel;
         public GameObject notebookPanel;
         public RawImage drawingImage;
@@ -45,6 +52,13 @@ namespace TiffanyGame
         int subtitleVersion = -1;
         int startFrame = -1;
         SaveGame saveGame;
+        StorySequence story;
+        SoulMeter soulMeter;
+        readonly RouteGuidance routeGuidance = new RouteGuidance();
+        RouteTerrain guidanceTerrain;
+        bool appliedReminder;
+        RectTransform soulFillRect;
+        bool skipStory;
 
         public InterfaceScreen Screen => flow.Screen;
         public bool IsFrozen => flow.IsFrozen || Time.frameCount == startFrame;
@@ -53,6 +67,17 @@ namespace TiffanyGame
         void Awake()
         {
             flow = new InterfaceFlow(!SkipTitle);
+            skipStory = StorySequence.ShouldSkip(Environment.GetCommandLineArgs(),
+                Application.isBatchMode || SaveGame.DisabledForTests);
+#if UNITY_WEBGL && !UNITY_EDITOR && TIFFANY_WEB_DEBUG
+            skipStory |= WebDebugQuery.Has(Application.absoluteURL, "playthrough");
+#endif
+            if (soul != null && soulFill != null)
+            {
+                soulMeter = new SoulMeter(soul.Energy);
+                soulFillRect = soulFill.rectTransform;
+            }
+            if (route != null) guidanceTerrain = new RouteTerrain();
             notice = new TimedLine();
             subtitle = new TimedLine();
             echoSubtitle = new TimedLine();
@@ -88,6 +113,7 @@ namespace TiffanyGame
             {
                 UpdateTitle();
             }
+            else if (Screen == InterfaceScreen.Story) UpdateStory();
             else if (Time.frameCount != startFrame)
             {
                 if (GameInput.PausePressed) flow.PressPause();
@@ -110,10 +136,68 @@ namespace TiffanyGame
                 }
             }
             RefreshLines();
+            RefreshSoul();
+        }
+
+        void LateUpdate()
+        {
+            if (guidanceTerrain == null || route.player == null) return;
+            var witch = route.witch;
+            bool chasing = witch != null && TensionMusicRules.IsChasing(witch.Decision, witch.Profile.FollowSpeed);
+            bool inChallenge = false;
+            if (memories != null)
+                for (int i = 0; i < memories.challenges.Length; i++)
+                    if (memories.challenges[i] != null && memories.challenges[i].Underway)
+                    {
+                        inChallenge = true;
+                        break;
+                    }
+            Vector3 position = route.player.position;
+            Vector3 local = route.transform.InverseTransformPoint(position);
+            Vector3 toNext = route.NextClearingPosition - position;
+            toNext.y = 0f;
+            bool canRemind = route.HasNextClearing && !IsFrozen && !notice.IsVisible
+                && RouteGuidance.CanRemind(Screen, showingEcho || (memories != null && memories.IsEchoActive),
+                    chasing, inChallenge);
+            routeGuidance.Tick(Time.deltaTime, guidanceTerrain.DistanceToRoute(local.x, local.z),
+                route.LastVisitedClearingIndex, toNext.magnitude, canRemind);
+            RefreshLines();
+        }
+
+        void UpdateStory()
+        {
+            if (GameInput.StoryAdvancePressed) story.Advance();
+            else story.Tick(Time.unscaledDeltaTime);
+            if (story.IsFinished)
+            {
+                flow.FinishStory();
+                startFrame = Time.frameCount;
+                notice.Enqueue(InterfaceTexts.WakeHint, InterfaceTexts.PowerNoticeSeconds);
+            }
+            else
+            {
+                storyText.text = InterfaceTexts.StoryLine(story.Index);
+                storyText.color = new Color(1f, 1f, 1f, story.Alpha);
+            }
+        }
+
+        void RefreshSoul()
+        {
+            if (soulMeter == null) return;
+            soulMeter.Tick(Time.deltaTime);
+            soulFillRect.anchorMax = new Vector2(soulMeter.Fraction, 1f);
+            soulFill.color = soulMeter.IsLow ? new Color(0.9f, 0.35f, 0.3f)
+                : soulMeter.Change > 0 ? new Color(0.65f, 1f, 0.75f)
+                : soulMeter.Change < 0 ? new Color(1f, 0.5f, 0.3f) : new Color(1f, 0.87f, 0.63f);
         }
 
         public bool MemoryFound(int memoryId, bool notify = true)
         {
+            if (memoryId >= 1 && memoryId <= 5)
+            {
+                soulMeter?.Unlock(PowerSet.ForMemory(memoryId));
+                ApplySoulVisibility();
+            }
             if (!catalog.TryGet(memoryId, out var memory) || !pages.Add(memory)) return false;
             if (notify && memoryId >= 1 && memoryId <= 5)
                 ShowPowerNotice(PowerSet.ForMemory(memoryId));
@@ -169,13 +253,16 @@ namespace TiffanyGame
         public void StartGame()
         {
             if (Screen != InterfaceScreen.Title) return;
+            bool continuing = flow.ContinueSelected;
             if (saveGame != null)
             {
                 if (flow.ContinueSelected) saveGame.Continue();
                 else saveGame.Delete();
             }
             startFrame = Time.frameCount;
-            flow.PressStart();
+            flow.PressStart(!skipStory);
+            if (Screen == InterfaceScreen.Story) story = new StorySequence();
+            else if (!continuing) notice.Enqueue(InterfaceTexts.WakeHint, InterfaceTexts.PowerNoticeSeconds);
             ApplyScreen();
         }
 
@@ -281,8 +368,10 @@ namespace TiffanyGame
                 AudioListener.pause = IsFrozen;
                 appliedFrozen = IsFrozen;
             }
+            ApplySoulVisibility();
             if (appliedScreen == Screen) return;
             if (titlePanel != null) titlePanel.SetActive(Screen == InterfaceScreen.Title);
+            if (storyPanel != null) storyPanel.SetActive(Screen == InterfaceScreen.Story);
             pausePanel.SetActive(Screen == InterfaceScreen.Paused);
             notebookPanel.SetActive(Screen == InterfaceScreen.Notebook);
             bool showLines = Screen == InterfaceScreen.Playing || Screen == InterfaceScreen.Paused;
@@ -291,6 +380,13 @@ namespace TiffanyGame
             appliedScreen = Screen;
             pageDirty = true;
             RefreshNotebook();
+        }
+
+        void ApplySoulVisibility()
+        {
+            bool visible = soulMeter != null && soulMeter.IsUnlocked
+                && (Screen == InterfaceScreen.Playing || Screen == InterfaceScreen.Paused);
+            if (soulPanel != null && soulPanel.activeSelf != visible) soulPanel.SetActive(visible);
         }
 
         void RefreshNotebook()
@@ -324,10 +420,12 @@ namespace TiffanyGame
 
         void RefreshLines()
         {
-            if (noticeVersion != notice.Version)
+            bool reminderVisible = routeGuidance.IsVisible && !notice.IsVisible;
+            if (noticeVersion != notice.Version || appliedReminder != reminderVisible)
             {
-                noticeText.text = notice.Text;
+                noticeText.text = reminderVisible ? InterfaceTexts.RouteReminder : notice.Text;
                 noticeVersion = notice.Version;
+                appliedReminder = reminderVisible;
             }
             var line = showingEcho ? echoSubtitle : subtitle;
             if (subtitleVersion != line.Version)
