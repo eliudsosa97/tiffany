@@ -4,6 +4,8 @@ namespace TiffanyGame
 {
     public static class PlayerFacing
     {
+        public const float SmoothTime = 0.08f;
+
         public static float SpeedFactor(Vector3 moveDirection, Vector3 facing, bool running, float backwardFactor)
         {
             moveDirection.y = 0f;
@@ -21,8 +23,24 @@ namespace TiffanyGame
 
         public struct TurnState
         {
+            public float AngularSpeed { get; private set; }
             bool wasRunning;
             bool returning;
+            float angularVelocity;
+
+            public float Advance(float yaw, float target, bool running, float turnSpeed, float returnTurnSpeed, float dt)
+            {
+                if (dt <= 0f) return yaw;
+                float limit = Speed(running, Mathf.Abs(Mathf.DeltaAngle(yaw, target)), turnSpeed, returnTurnSpeed);
+                if (Mathf.DeltaAngle(yaw, target) == 0f)
+                {
+                    angularVelocity = AngularSpeed = 0f;
+                    return yaw;
+                }
+                float next = Mathf.SmoothDampAngle(yaw, target, ref angularVelocity, SmoothTime, limit, dt);
+                AngularSpeed = Mathf.DeltaAngle(yaw, next) / dt;
+                return next;
+            }
 
             public float Speed(bool running, float remainingAngle, float turnSpeed, float returnTurnSpeed)
             {

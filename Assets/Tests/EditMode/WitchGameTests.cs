@@ -122,7 +122,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchState.Suspicious, decision.State);
             bool warned = false;
             bool inspected = false;
-            var cadence = new StepCadence();
+            var contacts = new FootContacts();
             const float dt = 1f / 30f;
             for (int frame = 1; frame <= WitchDemo.NothingDuration / dt; frame++)
             {
@@ -131,7 +131,7 @@ namespace TiffanyGame.Tests
                 {
                     Vector3 previous = input.PlayerPosition;
                     input.PlayerPosition = Vector3.MoveTowards(previous, Vector3.left * 8f, PlayerMotion.SlowSpeed * dt);
-                    if (cadence.Advance(Vector3.Distance(previous, input.PlayerPosition), Gait.Slow))
+                    if (input.PlayerPosition != previous && contacts.Advance(1, frame * dt / (40f / 60f), new Vector2(0f, 0.5f)) > 0)
                         senses.Hear(new StepNoise(input.PlayerPosition, NoiseModel.StepRadius(GroundType.Dirt, Gait.Slow, false)),
                             input.WitchPosition);
                 }

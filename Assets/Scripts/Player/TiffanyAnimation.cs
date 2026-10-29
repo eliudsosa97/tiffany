@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace TiffanyGame
 {
     public static class TiffanyAnimation
@@ -13,6 +15,7 @@ namespace TiffanyGame
         public const string CarryLight = "CarryLight";
         public const string Flash = "Flash";
         public const string SpeedParameter = "Speed";
+        public const string TurnRateParameter = "TurnRate";
         public const int BaseLayer = 0;
         public const int ArmsLayer = 1;
         public const float MoveSpeed = 0.1f;
@@ -27,6 +30,25 @@ namespace TiffanyGame
         public const float EmptyBlend = 0.2f;
         public const float CarryLightBlend = 0.2f;
         public const float FlashBlend = 0.1f;
+
+        public static float TurnRate(float angularSpeed, float authoredSpeed) => Mathf.Abs(angularSpeed) / authoredSpeed;
+
+        public struct ArmsState
+        {
+            public bool RestartFlash { get; private set; }
+            float previousFlash;
+            float remaining;
+
+            public string Advance(bool suppressed, bool lightOn, float flashRemaining, float flashDuration, float dt)
+            {
+                RestartFlash = !suppressed && flashRemaining > previousFlash;
+                previousFlash = flashRemaining;
+                remaining = suppressed ? 0f : RestartFlash ? flashDuration : Mathf.Max(0f, remaining - dt);
+                if (suppressed) return Empty;
+                if (remaining > 0f) return Flash;
+                return lightOn ? CarryLight : Empty;
+            }
+        }
 
         // angularSpeed en grados por segundo, positiva hacia la derecha como el yaw de Unity.
         public static string StateFor(bool caught, bool vanishing, bool hidden, float speed, float angularSpeed)

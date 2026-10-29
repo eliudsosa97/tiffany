@@ -29,22 +29,97 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(expected, PlayerMotion.GaitForSpeed(speed));
         }
 
-        [TestCase(Gait.Walk, 1.1f, 2.2f, Gait.Walk)]
-        [TestCase(Gait.Walk, 1.1f, 1.1f, Gait.Slow)]
-        [TestCase(Gait.Slow, 4f, 1f, Gait.Run)]
-        [TestCase(Gait.Slow, 2.2f, 0f, Gait.Walk)]
-        [TestCase(Gait.Run, 0f, 3.5f, Gait.Run)]
-        public void NoiseGaitPreservesLastGaitUntilSlowerTargetIsReached(Gait last, float targetSpeed, float currentSpeed, Gait expected)
+        [TestCase(0f, Gait.Slow)]
+        [TestCase(1f, Gait.Slow)]
+        [TestCase(PlayerMotion.SlowWalkThreshold, Gait.Walk)]
+        [TestCase(2.2f, Gait.Walk)]
+        [TestCase(3.5f, Gait.Run)]
+        public void NoiseGaitUsesMeasuredSpeedWhileAcceleratingAndBraking(float speed, Gait expected)
         {
-            Assert.AreEqual(expected, PlayerMotion.NoiseGait(last, targetSpeed, currentSpeed));
+            Assert.AreEqual(expected, PlayerMotion.NoiseGait(speed));
         }
 
-        [TestCase(Gait.Slow)]
-        [TestCase(Gait.Walk)]
-        [TestCase(Gait.Run)]
-        public void NoiseGaitAtRestPreservesLastGait(Gait last)
+        [TestCase(Gait.Walk, 0.5f, 2.2f)]
+        [TestCase(Gait.Run, 0.5f, 2.2f)]
+        [TestCase(Gait.Run, 1f, 4f)]
+        [TestCase(Gait.Walk, 1f, 2.2f)]
+        [TestCase(Gait.Slow, 1f, 1.1f)]
+        [TestCase(Gait.Walk, 0.25f, 1.1f)]
+        [TestCase(Gait.Run, 0f, 0f)]
+        public void AnalogSpeedWalksAtHalfStickAndRequiresRunForFullSpeed(Gait gait, float amount, float expected)
         {
-            Assert.AreEqual(last, PlayerMotion.NoiseGait(last, 0f, 0f));
+            Assert.AreEqual(expected, PlayerMotion.TargetSpeed(amount, gait), 1e-5f);
+        }
+
+        [Test]
+        public void ReleasingStopsBetween150And250MillisecondsWithoutRebound(
+            [Values(30, 60, 144)] int fps, [Values(Gait.Slow, Gait.Walk, Gait.Run)] Gait gait)
+        {
+            var state = new PlayerMotion.VelocityState();
+            float dt = 1f / fps;
+            for (int i = 0; i < fps; i++) state.Advance(Vector3.forward * PlayerMotion.Speed(gait), dt);
+            float stoppedAt = 0f;
+            float previous = state.Velocity.z;
+            for (int frame = 1; frame <= fps; frame++)
+            {
+                var velocity = state.Advance(Vector3.zero, dt);
+                Assert.That(velocity.z, Is.InRange(0f, previous));
+                previous = velocity.z;
+                if (velocity == Vector3.zero && stoppedAt == 0f) stoppedAt = frame * dt;
+            }
+            Assert.That(stoppedAt, Is.InRange(0.15f, 0.25f));
+        }
+
+        [Test]
+        public void StartAcceleratesGraduallyAndGaitChangesNeverOvershoot()
+        {
+            var state = new PlayerMotion.VelocityState();
+            const float dt = 1f / 60f;
+            float first = state.Advance(Vector3.forward * PlayerMotion.WalkSpeed, dt).z;
+            float second = state.Advance(Vector3.forward * PlayerMotion.WalkSpeed, dt).z - first;
+            Assert.That(first, Is.InRange(0.01f, 0.25f));
+            Assert.Greater(second, first);
+            foreach (float target in new[] { PlayerMotion.WalkSpeed, PlayerMotion.RunSpeed, PlayerMotion.SlowSpeed })
+            {
+                float from = state.Velocity.z;
+                for (int i = 0; i < 60; i++)
+                    Assert.That(state.Advance(Vector3.forward * target, dt).z,
+                        Is.InRange(Mathf.Min(from, target), Mathf.Max(from, target)));
+                Assert.AreEqual(target, state.Velocity.z, 0.001f);
+            }
+        }
+
+        [Test]
+        public void RiverWalkAndReversalStayWithinWalkingSpeed(
+            [Values(30, 60, 144, 1000, 5000)] int fps)
+        {
+            var state = new PlayerMotion.VelocityState();
+            float dt = 1f / fps;
+            foreach (int direction in new[] { 1, -1 })
+            {
+                for (int frame = 0; frame < Mathf.CeilToInt(0.15f * fps); frame++)
+                    state.Advance(Vector3.zero, dt);
+                var target = Vector3.forward * (PlayerMotion.WalkSpeed * direction);
+                float previous = state.Velocity.z * direction;
+                for (int frame = 0; frame < fps; frame++)
+                {
+                    var velocity = state.Advance(target, dt);
+                    Assert.That(velocity.magnitude, Is.LessThanOrEqualTo(PlayerMotion.WalkSpeed));
+                    Assert.That(velocity.z * direction, Is.GreaterThanOrEqualTo(previous));
+                    previous = velocity.z * direction;
+                }
+                Assert.AreEqual(PlayerMotion.WalkSpeed, previous, 0.001f);
+            }
+        }
+
+        [Test]
+        public void PausedMotionAndResetHaveNoResidualVelocity()
+        {
+            var state = new PlayerMotion.VelocityState();
+            var velocity = state.Advance(Vector3.forward, 0.1f);
+            Assert.AreEqual(velocity, state.Advance(Vector3.zero, 0f));
+            state = default;
+            Assert.AreEqual(Vector3.zero, state.Advance(Vector3.zero, 0.1f));
         }
 
         [TestCase(Gait.Slow)]
