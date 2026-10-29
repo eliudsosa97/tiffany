@@ -13,9 +13,12 @@ namespace TiffanyGame.EditorTools
             return figure;
         }
 
+        internal static Material FireMaterial() =>
+            GeneratedMaterials.Get("WitchFire", new Color(1f, 0.65f, 0.08f), true, 0.1f);
+
         public static Light BuildFireBall(Transform parent, out GameObject ball)
         {
-            var fire = GeneratedMaterials.Get("WitchFire", new Color(1f, 0.65f, 0.08f), true, 0.1f);
+            var fire = FireMaterial();
             ball = CreateRoot("WitchFireBall", parent, Vector3.zero);
             var sphere = CreatePart("FireSphere", PrimitiveType.Sphere, ball.transform, Vector3.zero,
                 Vector3.one * 0.9f, fire);

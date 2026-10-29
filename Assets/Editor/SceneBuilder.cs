@@ -85,6 +85,7 @@ namespace TiffanyGame.EditorTools
             caughtStop.AddComponent<CaughtCaptureStage>().spot = firstCandle;
             BuildWitchVoice(playerLight.witch, tyler);
             BuildWitchAudio(playerLight.witch, player.transform);
+            BuildTrailTension(route.GetComponent<WitchChapterTracker>(), playerLight.witch, tyler);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -433,6 +434,30 @@ namespace TiffanyGame.EditorTools
             (audio.owl, audio.barnOwl, audio.coyote) = (LoadClip("owl"), LoadClip("lechuza"), LoadClip("coyote"));
             audio.howls = new[] { LoadClip("distant_howl_1"), LoadClip("distant_howl_2"), LoadClip("distant_howl_3") };
             return audio;
+        }
+
+        static void BuildTrailTension(WitchChapterTracker tracker, WitchController witch, TylerController tyler)
+        {
+            var root = new GameObject("Trail Tension");
+            var tension = root.AddComponent<TrailTension>();
+            tension.clearingRadius = RouteBuilder.TrailRadius;
+            (tension.tracker, tension.witch, tension.tyler) = (tracker, witch, tyler);
+            tension.oneShot = root.AddComponent<AudioSource>();
+            (tension.oneShot.playOnAwake, tension.oneShot.spatialBlend) = (false, 0f);
+            tension.phantomSteps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
+            tension.branchSnaps = new[] { LoadClip("step_branches_1"), LoadClip("step_branches_2"), LoadClip("step_branches_3"), LoadClip("step_branches_4") };
+            tension.skyFire = LoadClip("fireball");
+            var decoy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            decoy.name = "Sky Decoy";
+            decoy.transform.SetParent(root.transform, false);
+            decoy.transform.localScale = Vector3.one * 0.9f;
+            UnityEngine.Object.DestroyImmediate(decoy.GetComponent<Collider>());
+            var renderer = decoy.GetComponent<Renderer>();
+            renderer.sharedMaterial = WitchBuilder.FireMaterial();
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            decoy.SetActive(false);
+            tension.skyDecoy = decoy.transform;
         }
 
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)

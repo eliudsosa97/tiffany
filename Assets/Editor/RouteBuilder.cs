@@ -11,7 +11,8 @@ namespace TiffanyGame.EditorTools
     public static class RouteBuilder
     {
         public const float SkyHeight = 7.9f;
-        const float ClearingSize = 36f;
+        public const float ClearingSize = 36f;
+        public const float TrailRadius = ClearingSize * 0.5f + 2f;
         const float Spacing = 56f;
         const float PathWidth = 5f;
         const string GraveyardFolder = "Assets/Art/Kenney/Graveyard/Models";

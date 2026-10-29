@@ -176,6 +176,17 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void ConsecutiveClearingsLeaveATrailBetweenThem()
+        {
+            for (int i = 1; i < skyRoute.Length; i++)
+            {
+                Vector3 gap = route.GetChild(i).position - route.GetChild(i - 1).position;
+                gap.y = 0f;
+                Assert.Greater(gap.magnitude, 2f * RouteBuilder.TrailRadius + 4f, route.GetChild(i).name);
+            }
+        }
+
+        [Test]
         public void FlightRouteVisitsEveryClearingAtCruiseHeightInOrder()
         {
             Assert.Greater(RouteBuilder.SkyHeight, 7f + 0.5f);
