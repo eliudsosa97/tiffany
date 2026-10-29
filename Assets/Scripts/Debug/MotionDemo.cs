@@ -23,8 +23,11 @@ namespace TiffanyGame
 
         void Awake() => startedAt = Time.time;
 
+        void Start() => GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerSoul>().Powers.Unlock(Power.Light);
+
         void Update()
         {
+            GameInput.LightToggleOverride = phase < 0;
             float elapsed = Time.time - startedAt;
             int nextPhase = elapsed < 1f ? 0 : elapsed < 3.5f ? 1 : elapsed < 7f ? 2 : elapsed < 8f ? 3 : elapsed < 10f ? 4
                 : elapsed < 12.5f ? 5 : elapsed < 14.5f ? 6 : 7;

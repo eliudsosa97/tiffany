@@ -83,7 +83,7 @@ namespace TiffanyGame
             string state = TiffanyAnimation.StateFor(caught, vanished, hidden, speed, angularSpeed, legs.Backward);
             ApplyState(state, TiffanyAnimation.BaseLayer, ref baseState);
             var light = playerLight != null ? playerLight.State : null;
-            string armState = arms.Advance(caught || vanished || hidden, light != null && light.IsOn,
+            string armState = arms.Advance(caught || vanished || hidden,
                 light != null ? light.FlashRemaining : 0f, flashDuration, Time.deltaTime);
             ApplyState(armState, TiffanyAnimation.ArmsLayer, ref armsState, arms.RestartFlash);
         }

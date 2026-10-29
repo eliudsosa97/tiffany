@@ -674,10 +674,10 @@ namespace TiffanyGame.EditorTools
 
             var body = ModelLibrary.Instantiate("tiffany-provisional", player.transform);
             body.transform.localPosition = controller.center - Vector3.up * (controller.height * 0.5f);
-            player.AddComponent<PlayerSoul>().startingPowers = new[] { Power.Light };
+            player.AddComponent<PlayerSoul>().startingPowers = Array.Empty<Power>();
             var spot = new GameObject("Soul Light").AddComponent<Light>();
             spot.transform.SetParent(player.transform, false);
-            spot.transform.localPosition = new Vector3(0f, 3.2f, -0.4f);
+            spot.transform.localPosition = new Vector3(0f, 0.85f, 0.12f);
             spot.type = LightType.Spot;
             spot.color = new Color(1f, 0.78f, 0.52f);
             spot.spotAngle = 84f;
@@ -686,18 +686,22 @@ namespace TiffanyGame.EditorTools
             spot.intensity = 45f;
             spot.shadows = LightShadows.Soft;
             spot.renderMode = LightRenderMode.ForcePixel;
-            var glow = CreatePrimitive("Hand Glow", PrimitiveType.Sphere, player.transform,
-                new Vector3(0f, 0.72f, 0.3f), Vector3.one * 0.16f,
-                GeneratedMaterials.Get("TiffanyHandGlow", new Color(1f, 0.9f, 0.65f), true));
-            UnityEngine.Object.DestroyImmediate(glow.GetComponent<SphereCollider>());
-            var glowRenderer = glow.GetComponent<Renderer>();
-            glowRenderer.shadowCastingMode = ShadowCastingMode.Off;
-            glowRenderer.receiveShadows = false;
+            var baseGlow = new GameObject("Soul Glow").AddComponent<Light>();
+            baseGlow.transform.SetParent(player.transform, false);
+            baseGlow.transform.localPosition = new Vector3(0f, 0.8f, 0f);
+            baseGlow.type = LightType.Point;
+            baseGlow.range = 2.5f;
+            baseGlow.color = new Color(0.75f, 0.85f, 1f);
+            baseGlow.intensity = 1.2f;
+            baseGlow.shadows = LightShadows.None;
+            baseGlow.renderMode = LightRenderMode.Auto;
             playerLight = player.AddComponent<PlayerLight>();
             playerLight.spot = spot;
-            playerLight.glow = glow.transform;
+            playerLight.baseGlow = baseGlow;
+            playerLight.bodyRenderers = body.GetComponentsInChildren<Renderer>(true);
+            playerLight.bodyGlowBoost = 1.2f;
             playerLight.startOn = false;
-            playerLight.pitch = 42f;
+            playerLight.pitch = 28f;
             var movement = player.AddComponent<PlayerController>();
             var animation = player.AddComponent<TiffanyAnimator>();
             animation.animator = body.GetComponent<Animator>();

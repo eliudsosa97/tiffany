@@ -6,7 +6,9 @@ namespace TiffanyGame
     public sealed class PlayerLight : MonoBehaviour
     {
         public Light spot;
-        public Transform glow;
+        public Light baseGlow;
+        public Renderer[] bodyRenderers = System.Array.Empty<Renderer>();
+        public float bodyGlowBoost;
         public WitchController witch;
         public bool startOn;
         public float visibility = 1f;
@@ -25,7 +27,10 @@ namespace TiffanyGame
         private float baseRange;
         private float baseAngle;
         private float baseInnerAngle;
-        private Vector3 baseGlowScale;
+        private static readonly int RimIntensity = Shader.PropertyToID("_RimIntensity");
+        private MaterialPropertyBlock bodyProperties;
+        private float[] baseBodyGlow, appliedBodyGlow;
+        private float bodyGlow = 1f, bodyGlowVelocity;
         private RaycastHit[] hits;
 
         private void Awake()
@@ -36,7 +41,15 @@ namespace TiffanyGame
             baseRange = spot.range;
             baseAngle = spot.spotAngle;
             baseInnerAngle = spot.innerSpotAngle;
-            baseGlowScale = glow.localScale;
+            bodyProperties = new MaterialPropertyBlock();
+            baseBodyGlow = new float[bodyRenderers.Length];
+            appliedBodyGlow = new float[bodyRenderers.Length];
+            for (int i = 0; i < bodyRenderers.Length; i++)
+            {
+                var material = bodyRenderers[i] != null ? bodyRenderers[i].sharedMaterial : null;
+                if (material != null && material.HasProperty(RimIntensity))
+                    baseBodyGlow[i] = appliedBodyGlow[i] = material.GetFloat(RimIntensity);
+            }
             hits = new RaycastHit[32];
         }
 
@@ -48,7 +61,8 @@ namespace TiffanyGame
 
         private void Update()
         {
-            State.SetHidden(hiding != null && hiding.Hidden);
+            bool hidden = hiding != null && hiding.Hidden;
+            State.SetHidden(hidden);
             State.Tick(Time.deltaTime);
             if (State.CanReadInput(Time.timeScale))
             {
@@ -67,6 +81,7 @@ namespace TiffanyGame
             bool visible = State.Visible;
             bool lightVisible = visible && visibility > 0f;
             spot.enabled = lightVisible;
+            if (baseGlow != null) baseGlow.enabled = !hidden && visibility > 0f;
             float size = SoulLight.Size(soul.Energy.Current);
             if (visible)
             {
@@ -77,13 +92,29 @@ namespace TiffanyGame
                 spot.intensity = baseIntensity * SoulLight.Flicker(soul.Energy.Current, Time.time)
                     * (State.IsFlashing ? flashBoost : 1f) * visibility * intensityScale;
             }
-            if (glow.gameObject.activeSelf != lightVisible) glow.gameObject.SetActive(lightVisible);
-            glow.localScale = baseGlowScale * size * visibility;
+            ApplyBodyGlow(SoulLight.BodyGlow(hidden, lightVisible, State.IsFlashing, size, bodyGlowBoost, flashBoost));
 
             if (witch != null)
             {
                 witch.playerLightOn = visible;
                 witch.playerLightPosition = LitPoint;
+            }
+        }
+
+        private void ApplyBodyGlow(float target)
+        {
+            bool immediate = target == 0f || bodyGlow == 0f;
+            if (immediate) { bodyGlow = target; bodyGlowVelocity = 0f; }
+            else if (Time.deltaTime > 0f) bodyGlow = Mathf.SmoothDamp(bodyGlow, target, ref bodyGlowVelocity, 0.15f);
+            for (int i = 0; i < bodyRenderers.Length; i++)
+            {
+                float value = baseBodyGlow[i] * bodyGlow;
+                if (bodyRenderers[i] == null || value == appliedBodyGlow[i]
+                    || (!immediate && Mathf.Abs(value - appliedBodyGlow[i]) <= 0.01f)) continue;
+                bodyRenderers[i].GetPropertyBlock(bodyProperties);
+                bodyProperties.SetFloat(RimIntensity, value);
+                bodyRenderers[i].SetPropertyBlock(bodyProperties);
+                appliedBodyGlow[i] = value;
             }
         }
 

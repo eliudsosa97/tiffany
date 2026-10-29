@@ -16,7 +16,6 @@ namespace TiffanyGame.Tests
         private PlayerSoul soul;
         private PlayerLight playerLight;
         private Light spot;
-        private Transform glow;
         private Renderer figure;
         private PlayerHiding hiding;
         private VanishPower vanish;
@@ -52,12 +51,8 @@ namespace TiffanyGame.Tests
             spot.innerSpotAngle = 40f;
             spot.range = 11f;
             spot.intensity = 18f;
-            glow = new GameObject("Hand Glow").transform;
-            glow.SetParent(player.transform, false);
-            glow.localScale = Vector3.one * 0.11f;
             playerLight = player.AddComponent<PlayerLight>();
             playerLight.spot = spot;
-            playerLight.glow = glow;
             playerLight.startOn = true;
             var body = new GameObject("Body");
             body.transform.SetParent(player.transform, false);
@@ -114,8 +109,6 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(0f, playerLight.visibility);
             Assert.IsFalse(spot.enabled);
             Assert.AreEqual(0f, spot.intensity);
-            Assert.IsFalse(glow.gameObject.activeSelf);
-            Assert.AreEqual(Vector3.zero, glow.localScale);
             Assert.IsTrue(witch.playerVanished);
             Assert.IsFalse(vanish.TryStart());
 
@@ -127,8 +120,6 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(1f, playerLight.visibility);
             Assert.IsTrue(spot.enabled);
             Assert.AreEqual(18f, spot.intensity);
-            Assert.IsTrue(glow.gameObject.activeSelf);
-            Assert.AreEqual(Vector3.one * 0.11f, glow.localScale);
         }
 
         [UnityTest]

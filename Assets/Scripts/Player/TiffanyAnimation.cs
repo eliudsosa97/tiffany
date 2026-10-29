@@ -40,14 +40,14 @@ namespace TiffanyGame
             float previousFlash;
             float remaining;
 
-            public string Advance(bool suppressed, bool lightOn, float flashRemaining, float flashDuration, float dt)
+            public string Advance(bool suppressed, float flashRemaining, float flashDuration, float dt)
             {
                 RestartFlash = !suppressed && flashRemaining > previousFlash;
                 previousFlash = flashRemaining;
                 remaining = suppressed ? 0f : RestartFlash ? flashDuration : Mathf.Max(0f, remaining - dt);
                 if (suppressed) return Empty;
                 if (remaining > 0f) return Flash;
-                return lightOn ? CarryLight : Empty;
+                return Empty;
             }
         }
 

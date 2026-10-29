@@ -1,11 +1,53 @@
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 
 namespace TiffanyGame.Tests
 {
     public class GameInputTests
     {
         const float Tolerance = 0.00001f;
+
+        [TestCase("left", true, false)]
+        [TestCase("f", false, true)]
+        [TestCase("right", false, false)]
+        [TestCase("north", true, false)]
+        [TestCase("r2", false, true)]
+        public void LightAndFlashUseSeparateKeyboardAndMouseInputs(string input, bool toggle, bool flash)
+        {
+            var devices = new DualSenseInputTests();
+            devices.SetUp();
+            var field = typeof(GameInput).GetField("focusClickFilter", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            var previousFilter = field.GetValue(null);
+            var consumed = typeof(GameInput).GetField("pointerConsumedThroughFrame", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            var previousConsumed = consumed.GetValue(null);
+            var pad = InputSystem.AddDevice<Gamepad>();
+            try
+            {
+                field.SetValue(null, new FocusClickFilter(true, float.NegativeInfinity, false));
+                consumed.SetValue(null, -1);
+                var keyboard = Keyboard.current;
+                var mouse = Mouse.current;
+                InputSystem.Update();
+                keyboard.MakeCurrent();
+                mouse.MakeCurrent();
+                if (input == "f") InputState.Change(keyboard.fKey, 1f);
+                else if (input == "north" || input == "r2") InputState.Change(input == "north" ? pad.buttonNorth : pad.rightTrigger, 1f);
+                else InputState.Change(input == "left" ? mouse.leftButton : mouse.rightButton, 1f);
+                Assert.AreEqual(toggle, GameInput.LightTogglePressed);
+                Assert.AreEqual(flash, GameInput.FlashPressed);
+                InputSystem.Update();
+                Assert.IsFalse(GameInput.LightTogglePressed || GameInput.FlashPressed);
+            }
+            finally
+            {
+                field.SetValue(null, previousFilter);
+                consumed.SetValue(null, previousConsumed);
+                InputSystem.RemoveDevice(pad);
+                devices.TearDown();
+            }
+        }
 
         [TestCase(false)]
         [TestCase(true)]
