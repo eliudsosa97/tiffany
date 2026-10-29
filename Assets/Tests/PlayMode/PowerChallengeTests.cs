@@ -75,6 +75,29 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator EnteringAnyUnresolvedChallengeStopsTrailEffectsBeforeWatchStarts()
+        {
+            var tension = Object.FindAnyObjectByType<TrailTension>();
+            Assert.IsNotNull(tension);
+            CollectionAssert.AreEquivalent(challenges, tension.challenges);
+            foreach (var challenge in challenges)
+            {
+                float progress = challenge.checkpoint.transform.localPosition.z - 4.9f;
+                Teleport(challenge.transform.TransformPoint(new Vector3(10.1f, 0f, progress)), challenge.transform.forward);
+                yield return null;
+                yield return null;
+                Assert.IsFalse(challenge.Underway, challenge.name);
+                tension.skyDecoy.gameObject.SetActive(true);
+                tension.oneShot.PlayOneShot(tension.skyFire);
+                Teleport(challenge.transform.TransformPoint(Vector3.forward * progress), challenge.transform.forward);
+                yield return null;
+                Assert.IsTrue(challenge.Underway, challenge.name);
+                Assert.IsFalse(tension.skyDecoy.gameObject.activeSelf, challenge.name);
+                Assert.IsFalse(tension.oneShot.isPlaying, challenge.name);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator DarknessBlocksWithoutCandlesAndCaptureRestoresARechargeableAttempt()
         {
             var challenge = challenges[0];
@@ -115,6 +138,42 @@ namespace TiffanyGame.Tests
             yield return Distract(challenge);
             yield return Cross(challenge);
             Assert.IsTrue(challenge.Rules.Completed);
+        }
+
+        [UnityTest]
+        public IEnumerator WatchSprintReachesStationaryPlayerThroughBuiltPassagesDespiteItsBody()
+        {
+            foreach (var challenge in new[] { challenges[1], challenges[3] })
+            {
+                yield return Prepare(challenge);
+                if (challenge.Rules.NeedsCandles)
+                {
+                    soul.Powers.Unlock(Power.Candles);
+                    yield return Kindle(challenge);
+                }
+                var witch = challenge.Witch;
+                Assert.IsTrue(witch.GetComponent<CapsuleCollider>().enabled);
+                Vector3 post = witch.transform.position;
+                Teleport(challenge.transform.TransformPoint(Vector3.forward * 0.2f), challenge.transform.forward);
+                bool warned = false, sprinted = false;
+                float deadline = Time.time + 3f;
+                while (!respawn.Active && Time.time < deadline)
+                {
+                    if (witch.Decision.State == WitchState.WindUp)
+                    {
+                        warned = true;
+                        Assert.Less(Horizontal(witch.transform.position, post), 0.01f);
+                    }
+                    if (witch.Decision.State == WitchState.Sprinting) sprinted = true;
+                    yield return null;
+                }
+                Assert.IsTrue(warned && sprinted, "La vigilancia debe avisar inmóvil y después embestir.");
+                Assert.IsTrue(respawn.Active, "La embestida debe alcanzar a Tiffany dentro del pasillo.");
+                Assert.Greater(Horizontal(witch.transform.position, post), 0.5f,
+                    "La bruja debe avanzar sin atascarse en su collider ni en las paredes.");
+                Assert.IsFalse(challenge.Rules.Completed);
+                yield return Respawn(challenge);
+            }
         }
 
         [UnityTest]
@@ -370,6 +429,7 @@ namespace TiffanyGame.Tests
             yield return null;
             yield return null;
             if (challenge.kind != ChallengeKind.Candles) Assert.AreSame(challenge.transform, challenge.Witch.WatchPassage);
+            Assert.IsTrue(challenge.Underway);
             Assert.AreEqual(challenge.checkpoint.transform.position, soul.Respawn.Position);
         }
 
@@ -426,9 +486,17 @@ namespace TiffanyGame.Tests
         IEnumerator WalkUntilCaught(PowerChallenge challenge)
         {
             Move(challenge);
+            bool warned = false, sprinted = false;
             float deadline = Time.time + 3f;
-            while (!respawn.Active && Time.time < deadline) yield return null;
+            while (!respawn.Active && Time.time < deadline)
+            {
+                warned |= challenge.Witch.Decision.State == WitchState.WindUp;
+                sprinted |= challenge.Witch.Decision.State == WitchState.Sprinting;
+                yield return null;
+            }
             GameInput.MoveOverride = Vector2.zero;
+            Assert.IsTrue(warned, "La bruja debe pasar por el aviso antes de atrapar a Tiffany.");
+            Assert.IsTrue(sprinted, "La vigilancia solo atrapa durante la embestida.");
             Assert.IsTrue(respawn.Active, "La bruja debe atrapar a Tiffany al intentar pasar visible por el puesto.");
             Assert.IsFalse(challenge.Rules.Completed);
         }
@@ -440,6 +508,7 @@ namespace TiffanyGame.Tests
             while (!challenge.Rules.Completed && !respawn.Active && Time.time < deadline) yield return null;
             GameInput.MoveOverride = Vector2.zero;
             Assert.IsFalse(respawn.Active);
+            Assert.IsFalse(challenge.Underway, "El reto deja de estar en curso en el cuadro en que se resuelve.");
         }
 
         void Move(PowerChallenge challenge)

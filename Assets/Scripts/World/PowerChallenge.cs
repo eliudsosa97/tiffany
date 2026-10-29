@@ -14,6 +14,7 @@ namespace TiffanyGame
         public MovableObject lure;
         public Transform post;
         public ChallengeRules Rules { get; private set; }
+        public bool Underway { get; private set; }
         public WitchController Witch => tracker.witch;
         public Vector3 Entry => transform.TransformPoint(new Vector3(0f, 0f, -0.3f));
         public Vector3 Exit => transform.TransformPoint(Vector3.forward * (ChallengeRules.PassageLength + 0.3f));
@@ -45,6 +46,7 @@ namespace TiffanyGame
         {
             if (Time.timeScale == 0f || soul == null || (respawn != null && respawn.Active)) return;
             Vector3 local = transform.InverseTransformPoint(soul.transform.position);
+            Underway = !Rules.Completed && !ChallengeRules.HasLeftArea(local.x, local.z, checkpoint.transform.localPosition.z);
             if (Rules.Completed) return;
             if (!active && Mathf.Abs(local.x) < 8f
                 && local.z >= checkpoint.transform.localPosition.z - 3f && local.z < 0f)
@@ -68,6 +70,7 @@ namespace TiffanyGame
             ApplyGates();
             if (Rules.Completed)
             {
+                Underway = false;
                 if (Witch != null && Witch.WatchPassage == transform) Witch.EndWatch();
                 Debug.Log($"{GameInfo.LogPrefix} Reto resuelto: {kind}");
             }

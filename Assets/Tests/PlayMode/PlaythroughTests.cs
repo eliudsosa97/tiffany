@@ -114,8 +114,14 @@ namespace TiffanyGame.Tests
             var plan = new PlaythroughPlan();
             runner = new GameObject("Full Challenge Playthrough Test").AddComponent<Playthrough>();
             runner.Configure(plan);
+            var respawn = Object.FindAnyObjectByType<PlayerRespawn>();
             float deadline = Time.realtimeSinceStartup + 600f;
-            while (!plan.Finished && Time.realtimeSinceStartup < deadline) yield return null;
+            while (!plan.Finished && Time.realtimeSinceStartup < deadline)
+            {
+                if (PlaythroughPlan.ChallengeIndex(plan.Current) >= 0)
+                    Assert.IsFalse(respawn.Active, "La partida automática debe resolver los retos sin capturas.");
+                yield return null;
+            }
             Assert.IsTrue(plan.Finished, PlaythroughPlan.Label(plan.Current));
             Assert.AreEqual(0, plan.ExitCode, plan.FailureReason);
             Assert.IsEmpty(plan.MissingContent);

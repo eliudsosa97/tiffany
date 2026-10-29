@@ -278,12 +278,12 @@ namespace TiffanyGame
                     break;
                 case WitchState.Stalking:
                     if (hasTarget && !WitchTargets.TryResolve(resolveGroundTarget, target, out target)) hasTarget = false;
-                    if (detected && ((chasing && warned) || !profile.CanSprint || Watch != null) && p.DistanceToPlayer < profile.CatchDistance)
+                    if (Watch == null && detected && ((chasing && warned) || !profile.CanSprint) && p.DistanceToPlayer < profile.CatchDistance)
                     {
                         Enter(WitchState.Caught, p.WitchPosition);
                         break;
                     }
-                    if (detected && profile.CanSprint && Watch == null && p.DistanceToPlayer < profile.SprintTriggerDistance)
+                    if (detected && (profile.CanSprint || Watch != null) && p.DistanceToPlayer < profile.SprintTriggerDistance)
                     {
                         Enter(WitchState.WindUp, p.WitchPosition);
                         break;

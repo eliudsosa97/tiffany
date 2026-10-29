@@ -442,6 +442,7 @@ namespace TiffanyGame.EditorTools
             var tension = root.AddComponent<TrailTension>();
             tension.clearingRadius = RouteBuilder.TrailRadius;
             (tension.tracker, tension.witch, tension.tyler) = (tracker, witch, tyler);
+            tension.challenges = tracker.GetComponentsInChildren<PowerChallenge>(true);
             tension.oneShot = root.AddComponent<AudioSource>();
             (tension.oneShot.playOnAwake, tension.oneShot.spatialBlend) = (false, 0f);
             tension.phantomSteps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };

@@ -55,7 +55,8 @@ namespace TiffanyGame.Tests
         [Test]
         public void ThunderDoesNotConsumeTheWatchAndSafeZonesStillProtectPlayer()
         {
-            var brain = new WitchBrain(new WitchProfile(), null);
+            var profile = new WitchProfile();
+            var brain = new WitchBrain(profile, null);
             brain.BeginWatch(Vector3.zero, true);
             var p = new WitchPerception
             {
@@ -68,7 +69,94 @@ namespace TiffanyGame.Tests
             brain.Tick(0.1f, in p);
             Assert.IsTrue(brain.Watch.Investigating);
             p.PlayerInSafeZone = false;
+            Assert.AreEqual(WitchState.WindUp, brain.Tick(0.1f, in p).State);
+            Assert.AreEqual(WitchState.Sprinting, brain.Tick(profile.WindUpDuration, in p).State);
             Assert.AreEqual(WitchState.Caught, brain.Tick(0.1f, in p).State);
+        }
+
+        [TestCase(Chapter.WaterPlant)]
+        [TestCase(Chapter.TrainTracks)]
+        public void WatchWarnsBeforeSprintingAndCatchingEvenWhenChapterCannotSprint(Chapter chapter)
+        {
+            var profile = WitchProfiles.For(chapter);
+            Assert.IsFalse(profile.CanSprint);
+            var brain = new WitchBrain(profile, null);
+            brain.BeginWatch(Vector3.zero, false);
+            var p = new WitchPerception
+            {
+                PlayerPosition = Vector3.forward * 0.5f, DistanceToPlayer = 0.5f, InWatchPassage = true
+            };
+            var decision = brain.Tick(0.1f, in p);
+            Assert.AreEqual(WitchState.WindUp, decision.State);
+            Assert.AreEqual(0f, decision.Speed);
+            Assert.AreEqual(WitchState.WindUp, brain.Tick(profile.WindUpDuration - 0.01f, in p).State);
+            decision = brain.Tick(0.02f, in p);
+            Assert.AreEqual(WitchState.Sprinting, decision.State);
+            Assert.AreEqual(profile.SprintSpeed, decision.Speed);
+            Assert.AreEqual(WitchState.Caught, brain.Tick(0.1f, in p).State);
+        }
+
+        [TestCase(true, false, false)]
+        [TestCase(false, true, false)]
+        [TestCase(false, false, true)]
+        public void LosingTrackDuringWatchWarningCancelsSprint(bool vanished, bool safe, bool hidden)
+        {
+            var profile = new WitchProfile { CanSprint = false };
+            var brain = new WitchBrain(profile, null);
+            brain.BeginWatch(Vector3.zero, true);
+            var p = new WitchPerception
+            {
+                PlayerPosition = Vector3.forward * 0.5f, DistanceToPlayer = 0.5f, InWatchPassage = true
+            };
+            Assert.AreEqual(WitchState.WindUp, brain.Tick(0.1f, in p).State);
+            p.PlayerVanished = vanished;
+            p.PlayerInSafeZone = safe;
+            p.PlayerHidden = hidden;
+            Assert.AreEqual(WitchState.Stalking, brain.Tick(profile.WindUpDuration, in p).State);
+            var decision = brain.Tick(profile.SprintDuration, in p);
+            Assert.AreEqual(WitchState.Stalking, decision.State);
+            Assert.AreEqual(brain.Watch.Target, decision.MoveTarget);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void WatchWarnsAgainAfterRecoveringInsteadOfCatchingByContact(bool canSprint)
+        {
+            var profile = new WitchProfile { CanSprint = canSprint };
+            var brain = new WitchBrain(profile, null);
+            brain.BeginWatch(Vector3.zero, false);
+            var p = new WitchPerception
+            {
+                PlayerPosition = Vector3.forward * 0.5f, DistanceToPlayer = 0.5f, InWatchPassage = true
+            };
+            Assert.AreEqual(WitchState.WindUp, brain.Tick(0.1f, in p).State);
+            Assert.AreEqual(WitchState.Sprinting, brain.Tick(profile.WindUpDuration, in p).State);
+            p.WitchPosition = Vector3.forward * (profile.CatchDistance + 1f);
+            p.DistanceToPlayer = Vector3.Distance(p.WitchPosition, p.PlayerPosition);
+            Assert.AreEqual(WitchState.Recovering, brain.Tick(profile.SprintDuration, in p).State);
+            p.PlayerPosition = p.WitchPosition + Vector3.forward * 0.5f;
+            p.DistanceToPlayer = 0.5f;
+            Assert.AreEqual(WitchState.Stalking, brain.Tick(profile.RecoverDuration, in p).State);
+            Assert.AreEqual(WitchState.WindUp, brain.Tick(0.1f, in p).State);
+        }
+
+        [Test]
+        public void WatchReturnsToPostAfterMissedSprintWhenPlayerLeavesPassage()
+        {
+            var profile = new WitchProfile { CanSprint = false };
+            var brain = new WitchBrain(profile, null);
+            brain.BeginWatch(Vector3.zero, false);
+            var p = new WitchPerception { PlayerPosition = Vector3.forward * 4f, DistanceToPlayer = 4f, InWatchPassage = true };
+            Assert.AreEqual(WitchState.WindUp, brain.Tick(0.1f, in p).State);
+            Assert.AreEqual(WitchState.Sprinting, brain.Tick(profile.WindUpDuration, in p).State);
+            p.InWatchPassage = false;
+            p.WitchPosition = Vector3.forward * 8f;
+            Assert.AreEqual(WitchState.Recovering, brain.Tick(profile.SprintDuration, in p).State);
+            Assert.AreEqual(WitchState.Stalking, brain.Tick(profile.RecoverDuration, in p).State);
+            var decision = brain.Tick(0.1f, in p);
+            Assert.AreEqual(WitchState.Stalking, decision.State);
+            Assert.AreEqual(brain.Watch.Post, decision.MoveTarget);
+            Assert.AreEqual(profile.FollowSpeed, decision.Speed);
         }
 
         [Test]
