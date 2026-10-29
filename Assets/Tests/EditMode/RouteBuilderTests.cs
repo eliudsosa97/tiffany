@@ -941,7 +941,7 @@ namespace TiffanyGame.Tests
             crossing.SetPositionAndRotation(new Vector3(-30f, 3f, -20f), Quaternion.Euler(0f, yaw, 0f));
             RouteLayout.RiverSpan(out var start, out var end);
             WaterBuilder.BuildRiver(crossing, RouteLayout.PathWidth, Vector3.Distance(start, end),
-                GroundMaterials.For(GroundType.Dirt));
+                GroundMaterials.For(GroundType.Dirt), GroundMaterials.For(GroundType.Gravel));
             Physics.SyncTransforms();
             var river = crossing.Find("River");
             for (int i = 0; i < 6; i++)
@@ -956,8 +956,6 @@ namespace TiffanyGame.Tests
                 string model = i < 5 ? $"river-step-{i % 2 + 1}" : "river-log";
                 foreach (var filter in piece.GetComponentsInChildren<MeshFilter>())
                     Assert.AreEqual($"{ModelLibrary.ModelFolder}/{model}.fbx", AssetDatabase.GetAssetPath(filter.sharedMesh));
-                foreach (var renderer in piece.GetComponentsInChildren<Renderer>())
-                    StringAssert.StartsWith(ModelLibrary.materialFolder + "/", AssetDatabase.GetAssetPath(renderer.sharedMaterial));
                 Assert.IsTrue(collider.Raycast(new Ray(piece.position + Vector3.up, Vector3.down), out _, 2f));
             }
             int rocks = 0, banks = 0, plants = 0;

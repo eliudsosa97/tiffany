@@ -36,7 +36,7 @@ namespace TiffanyGame.EditorTools
                 new Vector3(-40f, 38f, 12f), new Vector3(-40f, 0.4f, -12f));
         }
 
-        public static void BuildRiver(Transform path, float pathWidth, float pathLength, Material floor)
+        public static void BuildRiver(Transform path, float pathWidth, float pathLength, Material floor, Material stone)
         {
             float bankLength = (pathLength - RiverWidth) * 0.5f;
             for (int side = -1; side <= 1; side += 2)
@@ -52,14 +52,16 @@ namespace TiffanyGame.EditorTools
             var stones = CrossingLayout.Create(Vector3.back * RiverWidth * 0.5f, Vector3.forward * RiverWidth * 0.5f, 5);
             for (int i = 0; i < stones.Length; i++)
                 CrossingPiece($"Stone {i + 1}", river, stones[i], new Vector3(CrossingWidth, StoneTop * 2f, StoneLength),
-                    GroundType.Gravel, i);
-            CrossingPiece("Log", river, Vector3.up * 0.03f, new Vector3(CrossingWidth, 0.3f, 1.1f), GroundType.Branches);
+                    GroundType.Gravel, stone, i);
+            CrossingPiece("Log", river, Vector3.up * 0.03f, new Vector3(CrossingWidth, 0.3f, 1.1f), GroundType.Branches,
+                GroundMaterials.For(GroundType.Branches));
             RiverBanks(river);
             Capture("Water 2 Crossing", river, stones[0] + Vector3.up * StoneTop, 330f,
                 new Vector3(-13f, 19f, 5.5f), new Vector3(0f, 0.4f, 0f));
         }
 
-        static void CrossingPiece(string name, Transform parent, Vector3 position, Vector3 size, GroundType ground, int index = 0)
+        static void CrossingPiece(string name, Transform parent, Vector3 position, Vector3 size, GroundType ground, Material material,
+            int index = 0)
         {
             var piece = Root(name, parent, position);
             var collider = piece.gameObject.AddComponent<BoxCollider>();
@@ -74,6 +76,12 @@ namespace TiffanyGame.EditorTools
             visual.localScale = new Vector3(size.x / bounds.size.x, size.y / bounds.size.y, size.z / bounds.size.z);
             foreach (var solid in model.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(solid);
             foreach (var surface in model.GetComponentsInChildren<GroundSurface>(true)) Object.DestroyImmediate(surface);
+            foreach (var renderer in model.GetComponentsInChildren<Renderer>(true))
+            {
+                var materials = renderer.sharedMaterials;
+                for (int i = 0; i < materials.Length; i++) materials[i] = material;
+                renderer.sharedMaterials = materials;
+            }
         }
 
         static void RiverBanks(Transform river)
