@@ -217,7 +217,8 @@ class Motion:
         return ball + q @ FOOT_FROM_BALL, q
 
     @staticmethod
-    def clear(ankle, q):
+    def clear(ankle, q, clearance=0.0):
+        ankle = ankle + UP * clearance
         low = min((q @ v).z for v in SOLE) + ankle.z
         return ankle + UP * max(0.0, -low)
 
@@ -282,6 +283,8 @@ class Gait(Motion):
         self.contact = {"L": self.clip["contacts"]["left"], "R": self.clip["contacts"]["right"]}
         self.stride = self.speed * self.period * g["duty"]
         self.swing_pitch = keyed([(0.0, g["heelOff"]), (0.2, g["toeOff"]), (0.72, g["land"]), (1.0, 0.0)], loop=False)
+        q = foot_q(g["heelOff"], 0.0)
+        self.heel_clearance = max(0.0, -min((q @ (FOOT_FROM_BALL + v)).z for v in SOLE))
 
     def stance(self, side, s):
         g, sign = self.g, -1 if side == "L" else 1
@@ -292,9 +295,11 @@ class Gait(Motion):
         g = self.g
         duty, yaw = g["duty"], (1 if side == "L" else -1) * g["toeOut"]
         phase = (u - self.contact[side]) % 1.0
+        clearance = self.heel_clearance * smooth(g["heelStart"] * duty, duty, phase)
+        clearance *= 1 - smooth(duty, duty + 0.2 * (1 - duty), phase)
         if phase < duty:
             ankle, q = self.stance(side, phase / duty)
-            return ankle, q, yaw
+            return self.clear(ankle, q, clearance), q, yaw
         s, e, T = (phase - duty) / (1 - duty), 1e-3, self.period
         p0 = self.stance(side, 1.0)[0]
         v0 = (p0 - self.stance(side, 1 - e)[0]) / (e * duty * T)
@@ -304,7 +309,7 @@ class Gait(Motion):
         # El pie se queda atrás a medio vuelo.
         tuck = 28.9 * s ** 3 * (1 - s) ** 2 * g["tuck"]
         ankle = hermite(p0, v0, p1, v1 * 0.5, s, (1 - duty) * T) + UP * (g["lift"] * bump(s, g["liftPeak"])) - FWD * tuck
-        return self.clear(ankle, q), q, yaw
+        return self.clear(ankle, q, clearance), q, yaw
 
     def body(self, u):
         g, p = self.g, self.pose()
@@ -818,8 +823,25 @@ class Secondary:
                     p.orient(bone, (parent @ rig.dir[bone]).rotation_difference(x[i + 1] - x[i]) @ parent)
 
 
+def validate_feet(motion):
+    samples = 4096
+    for side, _ in SIDES:
+        previous = motion.foot(side, 0.0)[0].z
+        for sample in range(samples + 1):
+            ankle, q, _ = motion.foot(side, sample / samples)
+            jump = abs(ankle.z - previous)
+            if jump > 0.003:
+                raise ValueError(f"{LOG_PREFIX} {motion.name} Foot.{side}: salto de {jump * 1000:.3f} mm en la muestra {sample}/{samples}")
+            low = ankle.z + min((q @ v).z for v in SOLE)
+            if low < -1e-6:
+                raise ValueError(f"{LOG_PREFIX} {motion.name} Foot.{side}: suela bajo el suelo ({low * 1000:.3f} mm) en la muestra {sample}/{samples}")
+            previous = ankle.z
+
+
 def bake(rig, name):
     motion = create_motion(rig, name)
+    if isinstance(motion, (Gait, Turn)):
+        validate_feet(motion)
     steps = motion.clip["frames"] * SUB
     poses = [motion.body(j / steps) for j in range(steps + 1)]
     if not motion.clip.get("armsOnly"):

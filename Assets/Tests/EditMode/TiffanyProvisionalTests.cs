@@ -616,9 +616,12 @@ namespace TiffanyGame.Tests
                     lowest = Mathf.Min(lowest, Local(root, "Foot." + side).y);
                 }
                 clip.SampleAnimation(root, clip.length * phase);
-                Assert.AreEqual(lowest, Local(root, "Foot." + side).y, 0.01f, name + " " + side);
-                clip.SampleAnimation(root, clip.length * Mathf.Repeat(phase - 0.2f, 1f));
-                Assert.Greater(Local(root, "Foot." + side).y, lowest + 0.01f, name + " " + side + " pisa sin haber levantado el pie");
+                float contactHeight = Local(root, "Foot." + side).y;
+                Assert.AreEqual(lowest, contactHeight, 0.001f, name + " " + side);
+                clip.SampleAnimation(root, clip.length * Mathf.Repeat(phase - 0.04f, 1f));
+                Assert.Greater(Local(root, "Foot." + side).y, contactHeight + 0.001f, name + " " + side + " pisa sin haber levantado el pie");
+                clip.SampleAnimation(root, clip.length * Mathf.Repeat(phase + 0.04f, 1f));
+                Assert.AreEqual(contactHeight, Local(root, "Foot." + side).y, 0.001f, name + " " + side + " no empieza el apoyo en el contacto");
             }
         }
 

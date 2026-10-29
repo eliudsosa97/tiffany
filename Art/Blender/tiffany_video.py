@@ -106,6 +106,7 @@ class Stage:
         half = 1.0 * tan(radians(13))
         self.label.location = (-half * VIEW[0] / VIEW[1] + 0.03, half - 0.07, -1.0)
         self.tracks = list(arm.animation_data.nla_tracks)
+        self.actions = {track.name: track.strips[0].action for track in self.tracks}
 
     def play(self, name):
         animation = self.arm.animation_data
@@ -113,7 +114,7 @@ class Stage:
             track.mute = True
         self.temp = []
         for clip in ([BASE[name]] if name in BASE else []) + [name]:
-            action = bpy.data.actions[clip]
+            action = self.actions[clip]
             frames = CLIPS[clip]["frames"]
             track = animation.nla_tracks.new()
             strip = track.strips.new(clip, 1, action)
