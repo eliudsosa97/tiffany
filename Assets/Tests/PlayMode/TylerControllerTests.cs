@@ -37,6 +37,46 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator SceneTylerUsesOneAnimatorWithItsControllerAndSpiritMaterials()
+        {
+            Assert.IsNotNull(tyler.figure);
+            Assert.AreSame(tyler.transform, tyler.figure.transform.parent);
+            Assert.AreEqual(Vector3.zero, tyler.figure.transform.localPosition);
+            Assert.AreEqual(Quaternion.identity, tyler.figure.transform.localRotation);
+            Assert.AreEqual(Vector3.one, tyler.figure.transform.localScale);
+            var animators = tyler.GetComponentsInChildren<Animator>(true);
+            Assert.AreEqual(1, animators.Length);
+            Assert.AreSame(animators[0], tyler.animator);
+            Assert.AreSame(tyler.figure, tyler.animator.gameObject);
+            Assert.IsNotNull(tyler.animator.runtimeAnimatorController);
+            Assert.AreEqual("Tyler", tyler.animator.runtimeAnimatorController.name);
+#if UNITY_EDITOR
+            Assert.AreSame(UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Art/Models/Tyler.controller"),
+                tyler.animator.runtimeAnimatorController);
+#endif
+            Assert.IsFalse(tyler.animator.applyRootMotion);
+            Assert.AreEqual(AnimatorCullingMode.CullUpdateTransforms, tyler.animator.cullingMode);
+            Assert.IsNotNull(tyler.head);
+            Assert.AreEqual("Head", tyler.head.name);
+            var renderers = tyler.figure.GetComponentsInChildren<Renderer>(true);
+            Assert.IsNotEmpty(renderers);
+            foreach (var renderer in renderers)
+            {
+                Assert.IsInstanceOf<SkinnedMeshRenderer>(renderer);
+                CollectionAssert.Contains(((SkinnedMeshRenderer)renderer).bones, tyler.head);
+                Assert.IsTrue(renderer.enabled);
+                Assert.IsNotEmpty(renderer.sharedMaterials);
+                foreach (var material in renderer.sharedMaterials)
+                {
+                    Assert.IsNotNull(material);
+                    Assert.AreEqual("TiffanyGame/Spirit", material.shader.name);
+                }
+            }
+            Assert.IsEmpty(tyler.GetComponentsInChildren<Collider>(true));
+            yield break;
+        }
+
+        [UnityTest]
         public IEnumerator FollowsPlayerOnNavMeshWithoutColliders()
         {
             Assert.IsNotNull(tyler.nextMemory);
@@ -52,13 +92,18 @@ namespace TiffanyGame.Tests
             Physics.SyncTransforms();
             Assert.IsFalse(tyler.NearPlayer);
             bool moved = false;
+            bool animatedWalk = false;
             float deadline = Time.time + 6f;
             while (Time.time < deadline && HorizontalDistance() > 3f)
             {
                 yield return null;
                 moved |= tyler.Speed > 0f;
+                animatedWalk |= tyler.animator.GetFloat(TylerAnimation.SpeedParameter) > TylerMotion.StillSpeed
+                    && (tyler.animator.GetCurrentAnimatorStateInfo(0).IsName(TylerAnimation.Walk)
+                        || tyler.animator.GetNextAnimatorStateInfo(0).IsName(TylerAnimation.Walk));
             }
             Assert.IsTrue(moved);
+            Assert.IsTrue(animatedWalk);
             Assert.LessOrEqual(HorizontalDistance(), 3f);
             Assert.IsTrue(tyler.GetComponent<NavMeshAgent>().isOnNavMesh);
             Assert.IsEmpty(tyler.GetComponentsInChildren<Collider>(true));
@@ -81,6 +126,19 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator ReappearingRestoresTheSameReactionAnimation()
+        {
+            Vector3 target = tyler.transform.position + Vector3.forward * 10f;
+            tyler.ShowReaction(TylerReaction.Growl, target);
+            AssertAnimation(TylerAnimation.Growl);
+            tyler.gameObject.SetActive(false);
+            tyler.Appear(tyler.player.position);
+            tyler.ShowReaction(TylerReaction.Growl, target);
+            AssertAnimation(TylerAnimation.Growl);
+            yield break;
+        }
+
+        [UnityTest]
         public IEnumerator CaptureStagesRestoreControllerAndNavigation()
         {
             var stages = Object.FindObjectsByType<TylerCaptureStage>(FindObjectsSortMode.None);
@@ -95,8 +153,10 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(stage.shareLight, tyler.enabled);
                 Assert.IsFalse(tyler.GetComponent<NavMeshAgent>().enabled);
                 Assert.AreEqual(stage.reaction, tyler.Reaction);
-                Assert.AreEqual(stage.reaction == TylerReaction.Growl, tyler.crouchBody.activeSelf);
-                Assert.AreEqual(stage.reaction != TylerReaction.Growl, tyler.standBody.activeSelf);
+                Assert.IsTrue(tyler.figure.activeInHierarchy);
+                string animation = stage.reaction == TylerReaction.Growl ? TylerAnimation.Growl
+                    : stage.reaction == TylerReaction.Whine ? TylerAnimation.Whine : TylerAnimation.Idle;
+                AssertAnimation(animation);
                 if (stage.shareLight)
                 {
                     Assert.IsFalse(stage.lightTyler);
@@ -111,6 +171,13 @@ namespace TiffanyGame.Tests
                 yield return null;
                 Assert.IsTrue(tyler.enabled && tyler.GetComponent<NavMeshAgent>().isOnNavMesh);
             }
+        }
+
+        private void AssertAnimation(string state)
+        {
+            for (int i = 0; i < 10; i++) tyler.animator.Update(0.1f);
+            Assert.IsFalse(tyler.animator.IsInTransition(0));
+            Assert.IsTrue(tyler.animator.GetCurrentAnimatorStateInfo(0).IsName(state), state);
         }
 
         private float HorizontalDistance() =>

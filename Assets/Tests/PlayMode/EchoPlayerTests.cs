@@ -150,6 +150,58 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(height + offset, position.y, 0.001f, target.name);
         }
 
+#if UNITY_EDITOR
+        [UnityTest] public IEnumerator FirstEchoAnimatesTylerWhileMovingAndResetsSpeedOnReplay()
+        {
+            root.SetActive(false);
+            player.enabled = false;
+            var echo = Child("First Echo", root.transform).AddComponent<EchoPlayer>();
+            echo.gameInterface = ui;
+            echo.blackout = player.blackout;
+            echo.stageRoot = Child("First Stage", echo.transform);
+            echo.girl = Child("Girl", echo.stageRoot.transform).transform;
+            echo.tyler = Child("Tyler", echo.stageRoot.transform).transform;
+            echo.echoAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Data/Echoes/echo-1.json");
+            Assert.IsTrue(EchoData.TryLoad(echo.echoAsset.text, out var data, out string error), error);
+            echo.props = new Transform[data.props.Length];
+            for (int i = 0; i < data.props.Length; i++)
+            {
+                var prop = data.props[i];
+                var parent = prop.parent == "girl" ? echo.girl : prop.parent == "tyler" ? echo.tyler : echo.stageRoot.transform;
+                echo.props[i] = Child(prop.type, parent).transform;
+            }
+            echo.clips = new AudioClip[data.sounds.Length];
+            for (int i = 0; i < data.sounds.Length; i++)
+                echo.clips[i] = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"Assets/Audio/Sfx/{data.sounds[i].clip}.wav");
+            var source = Child("Voice", echo.stageRoot.transform).AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            echo.sources = new[] { source };
+            var model = Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Models/tyler.fbx"), echo.tyler, false);
+            var animator = model.GetComponent<Animator>() ?? model.AddComponent<Animator>();
+            animator.runtimeAnimatorController = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Art/Models/Tyler.controller");
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            root.SetActive(true);
+            ui.StartGame();
+            yield return null;
+            Assert.IsTrue(echo.Play());
+            Time.timeScale = 4f;
+            bool animatedWalk = false;
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (echo.Elapsed < 7.2f && Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+                if (echo.Elapsed <= 4.4f || echo.Elapsed >= 7.2f) continue;
+                animatedWalk |= animator.GetFloat(TylerAnimation.SpeedParameter) > TylerMotion.StillSpeed
+                    && (animator.GetCurrentAnimatorStateInfo(0).IsName(TylerAnimation.Walk)
+                        || animator.GetNextAnimatorStateInfo(0).IsName(TylerAnimation.Walk));
+            }
+            Assert.IsTrue(animatedWalk, "Tyler debe caminar mientras el eco 1 lo desplaza entre 4.4 y 7.2 s");
+            Assert.IsTrue(echo.Play());
+            Assert.AreEqual(0f, animator.GetFloat(TylerAnimation.SpeedParameter));
+        }
+#endif
+
         static GameObject Child(string name, Transform parent, params Type[] components)
         {
             var child = new GameObject(name, components);

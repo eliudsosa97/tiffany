@@ -567,10 +567,9 @@ namespace TiffanyGame.EditorTools
             controller.shareLight = TylerBuilder.BuildShareLight(tyler.transform);
             controller.witch = zoneRoot.GetComponentInChildren<WitchController>();
             controller.nextMemory = nextMemory;
-            controller.figure = TylerBuilder.BuildFigure(tyler.transform, out var head, out var stand, out var crouch);
+            controller.figure = TylerBuilder.BuildFigure(tyler.transform, out var head);
             controller.head = head;
-            controller.standBody = stand;
-            controller.crouchBody = crouch;
+            controller.animator = controller.figure.GetComponent<Animator>();
             controller.voice = tyler.AddComponent<AudioSource>();
             controller.voice.spatialBlend = 0f;
             controller.voice.playOnAwake = false;

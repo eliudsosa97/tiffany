@@ -163,14 +163,16 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void StandsOnThePivotFacingForward()
+        public void BuiltFigureStandsOnThePivotFacingForward()
         {
-            var root = ModelLibrary.Instantiate(Id, parent.transform);
+            var root = TylerBuilder.BuildFigure(parent.transform, out var head);
             Assert.AreEqual(Id, root.name);
             Assert.AreSame(parent.transform, root.transform.parent);
             ModelLibraryTests.AssertNeutral(root.transform);
             var animator = root.GetComponent<Animator>();
             Assert.IsNotNull(animator);
+            Assert.AreEqual(1, root.GetComponentsInChildren<Animator>(true).Length);
+            Assert.AreSame(Bone(root, "Head"), head);
             Assert.AreEqual(ModelLibrary.LoadSpec(Id).controllerPath, AssetDatabase.GetAssetPath(animator.runtimeAnimatorController));
             Assert.IsFalse(animator.applyRootMotion);
             Assert.AreEqual(AnimatorCullingMode.CullUpdateTransforms, animator.cullingMode);
@@ -179,6 +181,7 @@ namespace TiffanyGame.Tests
             var bounds = Skin(AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath)).localBounds;
             for (int axis = 0; axis < 3; axis++) Assert.Greater(skin.localBounds.size[axis], bounds.size[axis]);
             var bones = new HashSet<Transform>(skin.bones);
+            Assert.IsTrue(bones.Contains(head));
             // Los huesos guardan su orientación de reposo. Todo lo demás sale neutro.
             foreach (var t in root.GetComponentsInChildren<Transform>(true))
                 if (!bones.Contains(t)) ModelLibraryTests.AssertNeutral(t);
@@ -216,9 +219,9 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void UsesSyncedOpaqueMaterialsAndNoColliders()
+        public void BuiltFigureUsesSyncedOpaqueMaterialsAndNoColliders()
         {
-            var root = ModelLibrary.Instantiate(Id, parent.transform);
+            var root = TylerBuilder.BuildFigure(parent.transform, out _);
             ModelLibraryTests.AssertSyncedMaterials(root, Id, 1, "TiffanyGame/Spirit");
             var used = new HashSet<string>();
             foreach (var material in Skin(root).sharedMaterials) used.Add(material.name);
