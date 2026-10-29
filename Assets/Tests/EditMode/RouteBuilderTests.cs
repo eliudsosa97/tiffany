@@ -841,14 +841,17 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, RouteDetails("Casa -> spawn", last, start.position, path));
             float length = 0f;
             var corners = path.corners;
+            var barriers = route.Find("Landscape/Fence").GetComponentsInChildren<Collider>();
             for (int i = 1; i < corners.Length; i++)
             {
                 Vector3 delta = corners[i] - corners[i - 1];
                 length += delta.magnitude;
-                Assert.IsFalse(gate.GetComponent<Collider>().Raycast(new Ray(corners[i - 1] + Vector3.up * 0.6f, delta.normalized),
-                    out _, delta.magnitude), $"Esquina {i}: atraviesa la puerta. {RouteDetails("Casa -> spawn", last, start.position, path)}");
+                foreach (var barrier in barriers)
+                    Assert.IsFalse(barrier.Raycast(new Ray(corners[i - 1] + Vector3.up * 0.6f, delta.normalized),
+                        out _, delta.magnitude), $"Esquina {i}: atraviesa {barrier.name}. {RouteDetails("Casa -> spawn", last, start.position, path)}");
             }
-            Assert.Greater(length, Vector3.Distance(last, start.position) * 2f,
+            Assert.Greater(corners.Length, 2, "El regreso debe rodear la cerca acortada.");
+            Assert.Greater(length, Vector3.Distance(last, start.position),
                 $"El regreso de {length:F3} m debe rodear la cerca. {RouteDetails("Casa -> spawn", last, start.position, path)}");
             var terrain = new RouteTerrain();
             int forest = NavMesh.GetAreaFromName(RouteTerrain.ForestArea);

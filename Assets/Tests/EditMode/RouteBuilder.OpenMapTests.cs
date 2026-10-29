@@ -49,19 +49,57 @@ namespace TiffanyGame.Tests
             var fence = route.Find("Landscape/Fence/Town Boundary").GetComponentsInChildren<Collider>();
             Assert.IsNotEmpty(fence);
             foreach (float x in new[] { town.xMin, town.xMax })
-            for (float z = 170f; z < town.yMax; z += 2f)
+            for (float z = town.yMin + 6f; z < town.yMax; z += 2f)
                 Check(new Vector3(x - 1f, 1f, z), Vector3.right, true);
             for (float x = town.xMin + 2f; x < town.xMax; x += 2f)
                 Check(new Vector3(x, 1f, town.yMax - 1f), Vector3.forward, true);
-            Check(new Vector3(0f, 1f, town.yMin - 1f), Vector3.forward, true);
+            Check(new Vector3(town.xMin + 4f, 1f, town.yMin + 5f), Vector3.forward, true);
             Check(new Vector3(120f, 1f, town.yMin - 1f), Vector3.forward, false);
             Check(new Vector3(100f, 1f, 160f), Vector3.right, false);
+            Check(new Vector3(101f, 1f, 176f), Vector3.right, true);
+            Check(new Vector3(137f, 1f, 176f), Vector3.right, true);
+            Check(new Vector3(120f, 1f, 187f), Vector3.forward, true);
+            var trail = RouteLayout.Path(6);
+            for (int i = 1; i < trail.Length; i++)
+            {
+                Vector3 delta = trail[i] - trail[i - 1];
+                var ray = new Ray(route.TransformPoint(trail[i - 1] + Vector3.up), delta.normalized);
+                Assert.IsFalse(System.Array.Exists(fence, wall => wall.Raycast(ray, out _, delta.magnitude)), $"Sendero 6→7, tramo {i}");
+            }
             void Check(Vector3 point, Vector3 direction, bool blocked)
             {
                 point.y = terrain.GroundHeight(point.x + direction.x, point.z + direction.z) + 1f;
                 var ray = new Ray(route.TransformPoint(point), direction);
                 Assert.AreEqual(blocked, System.Array.Exists(fence, wall => wall.Raycast(ray, out _, 3f)), point.ToString());
             }
+        }
+
+        [Test]
+        public void FormerTownStripReceivesForestFloorsAndFillTrees()
+        {
+            var terrain = new RouteTerrain();
+            bool FormerTown(Vector3 point) => point.x >= -73f && point.x < terrain.Town.xMin
+                && point.z > 174f && point.z < 242f;
+            int floors = 0, trees = 0;
+            foreach (var floor in route.Find("Landscape/Terrain").GetComponentsInChildren<MeshCollider>())
+            {
+                if (!floor.name.EndsWith(" Wild")) continue;
+                var mesh = floor.sharedMesh;
+                var vertices = mesh.vertices;
+                var indices = mesh.triangles;
+                for (int i = 0; i < indices.Length; i += 3)
+                {
+                    var point = (vertices[indices[i]] + vertices[indices[i + 1]] + vertices[indices[i + 2]]) / 3f;
+                    if (!FormerTown(point)) continue;
+                    Assert.AreEqual(terrain.ForestGround(point.x, point.z), floor.GetComponent<GroundSurface>().type);
+                    Assert.AreEqual(NavMesh.GetAreaFromName(RouteTerrain.ForestArea), floor.GetComponent<NavMeshModifier>().area);
+                    floors++;
+                }
+            }
+            foreach (var trunk in route.Find("Landscape/Forest Fill").GetComponentsInChildren<CapsuleCollider>())
+                if (FormerTown(route.InverseTransformPoint(trunk.transform.TransformPoint(trunk.center)))) trees++;
+            Assert.Greater(floors, 0);
+            Assert.Greater(trees, 0);
         }
 
         [Test]
