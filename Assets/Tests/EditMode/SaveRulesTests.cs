@@ -196,6 +196,7 @@ namespace TiffanyGame.Tests
 
         [TestCase("-playthrough", true)]
         [TestCase("-autocapture", true)]
+        [TestCase("-nightpreview", true)]
         [TestCase("-echodemo", true)]
         [TestCase("-screen-width", false)]
         public void AutomaticRunsDisablePlayerPersistence(string argument, bool disabled) =>

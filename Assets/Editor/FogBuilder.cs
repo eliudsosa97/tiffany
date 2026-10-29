@@ -32,6 +32,14 @@ namespace TiffanyGame.EditorTools
             CapturePair(captures, fog, FindCapture(tracker.clearings, tracker.clearings[0].name), "Fog 1 Cemetery");
             CapturePair(captures, fog, FindCapture(tracker.clearings, "Water 2 Crossing"), "Fog 2 River");
             CapturePair(captures, fog, FindCapture(tracker.clearings, "Water 1 Lake"), "Fog 3 Lake");
+            var path = RouteLayout.Path(0);
+            Vector3 point = tracker.transform.TransformPoint((path[2] + path[3]) * 0.5f);
+            point.y = GroundHeight(world, point) + 0.03f;
+            var trail = new GameObject(NightPreview.TrailStopName);
+            trail.transform.SetParent(captures, false);
+            trail.transform.SetPositionAndRotation(point, Quaternion.LookRotation(path[3] - path[2]));
+            trail.AddComponent<CaptureStop>();
+            trail.AddComponent<LightCaptureStage>();
             return fog;
         }
 

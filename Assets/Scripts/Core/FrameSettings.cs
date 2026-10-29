@@ -10,7 +10,8 @@ namespace TiffanyGame
         {
             if (args == null) return false;
             foreach (string arg in args)
-                if (arg == "-autocapture" || arg == "-capturevideo" || arg == "-playthrough") return true;
+                if (arg == "-autocapture" || arg == "-capturevideo" || arg == "-playthrough"
+                    || arg == "-nightpreview") return true;
             return false;
         }
     }

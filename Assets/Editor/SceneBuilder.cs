@@ -15,9 +15,9 @@ namespace TiffanyGame.EditorTools
     {
         public const string ScenePath = "Assets/Scenes/Main.unity";
         public const float FireBallHeight = 1.5f;
-        public const float NightFogStartDistance = 40f;
-        public const float NightFogEndDistance = 76f;
-        public static readonly Color NightFogColor = new Color(0.018f, 0.028f, 0.052f);
+        public const float NightFogStartDistance = NightLook.FogStartDistance;
+        public const float NightFogEndDistance = NightLook.FogEndDistance;
+        public static readonly Color NightFogColor = NightLook.Default.FogColor;
         const float SlopeAngle = 8f;
         const float PatchHeight = 0.1f;
         const float PatchElevation = 0.03f;
@@ -124,7 +124,7 @@ namespace TiffanyGame.EditorTools
         {
             RenderSettings.skybox = null;
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.025f, 0.035f, 0.065f);
+            RenderSettings.ambientLight = NightLook.Default.AmbientColor;
             RenderSettings.reflectionIntensity = 0f;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
@@ -138,7 +138,7 @@ namespace TiffanyGame.EditorTools
             var moon = new GameObject("Moon").AddComponent<Light>();
             moon.type = LightType.Directional;
             moon.color = new Color(0.7f, 0.8f, 1f);
-            moon.intensity = 0.32f;
+            moon.intensity = NightLook.Default.MoonIntensity;
             moon.shadows = LightShadows.Soft;
             moon.transform.rotation = Quaternion.Euler(35f, -30f, 0f);
             RenderSettings.sun = moon;
@@ -729,6 +729,7 @@ namespace TiffanyGame.EditorTools
             cameraObject.AddComponent<AudioListener>();
             var follow = cameraObject.AddComponent<FollowCamera>();
             follow.target = player.transform;
+            follow.lookAhead = 0f;
             camera.fieldOfView = follow.fieldOfView;
             follow.Snap();
             player.viewCamera = camera;
