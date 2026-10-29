@@ -7,19 +7,20 @@ namespace TiffanyGame
     {
         public Camera viewCamera;
         public bool raining;
-        public float acceleration = 25f;
         public float turnSpeed = 720f;
         public float returnTurnSpeed = 300f;
         public float backwardSpeedFactor = 0.7f;
         public float gravity = 20f;
 
         public Gait CurrentGait { get; private set; }
+        public float HorizontalSpeed { get; private set; }
+        public float AngularSpeed => isActiveAndEnabled ? facingTurn.AngularSpeed : 0f;
+        public bool Grounded => controller.enabled && controller.isGrounded;
         public event System.Action<GroundType, Gait> Stepped;
 
         CharacterController controller;
-        StepCadence cadence;
         RaycastHit[] groundHits;
-        Vector3 horizontalVelocity;
+        PlayerMotion.VelocityState motion;
         float verticalVelocity;
         Collider lastGroundCollider;
         GroundType lastGroundType = GroundType.Dirt;
@@ -31,7 +32,6 @@ namespace TiffanyGame
             controller = GetComponent<CharacterController>();
             // A muchos cuadros por segundo cada Move mide menos que el mínimo por defecto (0.001 m).
             controller.minMoveDistance = 0f;
-            cadence = new StepCadence();
             groundHits = new RaycastHit[4];
         }
 
@@ -42,22 +42,26 @@ namespace TiffanyGame
 
         void OnEnable()
         {
-            horizontalVelocity = Vector3.zero;
+            motion = default;
+            HorizontalSpeed = 0f;
+            CurrentGait = Gait.Slow;
             verticalVelocity = 0f;
             facingTurn = default;
         }
+
+        void OnDisable() => HorizontalSpeed = 0f;
 
         void Update()
         {
             var inputGait = PlayerMotion.ResolveGait(GameInput.Slow, GameInput.Run);
             float dt = Time.deltaTime;
+            if (dt <= 0f || !controller.enabled) return;
             float yaw = viewCamera != null ? viewCamera.transform.eulerAngles.y : 0f;
             var direction = PlayerMotion.CameraRelative(GameInput.Move, yaw);
             float speedFactor = PlayerFacing.SpeedFactor(direction, transform.forward,
                 PlayerFacing.FacesMovement(inputGait, direction), backwardSpeedFactor);
-            var targetVelocity = direction * (PlayerMotion.Speed(inputGait) * speedFactor);
-            horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, acceleration * dt);
-            CurrentGait = PlayerMotion.NoiseGait(CurrentGait, targetVelocity.magnitude, horizontalVelocity.magnitude);
+            var targetVelocity = direction.normalized * (PlayerMotion.TargetSpeed(direction.magnitude, inputGait) * speedFactor);
+            var horizontalVelocity = motion.Advance(targetVelocity, dt);
 
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
             else verticalVelocity -= gravity * dt;
@@ -66,14 +70,18 @@ namespace TiffanyGame
             controller.Move((horizontalVelocity + Vector3.up * verticalVelocity) * dt);
             var displacement = transform.position - previousPosition;
             displacement.y = 0f;
-            if (cadence.Advance(displacement.magnitude, CurrentGait))
-            {
-                var ground = FindGround();
-                NoiseBus.Publish(new StepNoise(transform.position, NoiseModel.StepRadius(ground, CurrentGait, raining)));
-                Stepped?.Invoke(ground, CurrentGait);
-            }
+            HorizontalSpeed = displacement.magnitude / dt;
+            CurrentGait = PlayerMotion.NoiseGait(HorizontalSpeed);
 
             TurnTowardsAim(inputGait, direction, yaw, dt);
+        }
+
+        public void PublishFootstep()
+        {
+            if (!isActiveAndEnabled || !Grounded || Time.deltaTime <= 0f) return;
+            var ground = FindGround();
+            NoiseBus.Publish(new StepNoise(transform.position, NoiseModel.StepRadius(ground, CurrentGait, raining)));
+            Stepped?.Invoke(ground, CurrentGait);
         }
 
         GroundType FindGround()
@@ -117,10 +125,10 @@ namespace TiffanyGame
             var direction = moveDirection;
             bool hasDirection = running || PlayerAim.TryDirection(aimSource, moveDirection, stickDirection,
                 pointerOffset, out direction);
-            var rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
-            var target = hasDirection ? Quaternion.LookRotation(direction) : rotation;
-            float speed = facingTurn.Speed(running, Quaternion.Angle(rotation, target), turnSpeed, returnTurnSpeed);
-            if (hasDirection) transform.rotation = Quaternion.RotateTowards(rotation, target, speed * dt);
+            float currentYaw = transform.eulerAngles.y;
+            float targetYaw = hasDirection ? Quaternion.LookRotation(direction).eulerAngles.y : currentYaw;
+            float nextYaw = facingTurn.Advance(currentYaw, targetYaw, running, turnSpeed, returnTurnSpeed, dt);
+            transform.rotation = Quaternion.Euler(0f, nextYaw, 0f);
         }
     }
 }

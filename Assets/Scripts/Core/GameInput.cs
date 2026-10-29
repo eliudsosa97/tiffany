@@ -110,7 +110,7 @@ namespace TiffanyGame
                 }
 
                 var gamepad = Gamepad.current;
-                var stick = gamepad != null ? ShapeStick(gamepad.leftStick.ReadUnprocessedValue()) : Vector2.zero;
+                var stick = gamepad != null ? StickResponse.Shape(gamepad.leftStick.ReadUnprocessedValue()) : Vector2.zero;
                 return CombineMove(keys, stick);
             }
         }

@@ -192,7 +192,6 @@ namespace TiffanyGame.Tests
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Escondida");
             hiding.Hide(volume);
             GameInput.MoveOverride = Vector2.zero;
-            movement.acceleration = 0f;
             movement.gravity = 0f;
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Fuera del escondite");
             hiding.Leave();

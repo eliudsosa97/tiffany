@@ -50,14 +50,18 @@ namespace TiffanyGame.EditorTools
             var assets = AssetDatabase.LoadAllAssetsAtPath(path);
             var owned = new HashSet<Object> { controller };
             string speed = spec.controller.speedParameter;
+            bool turns = Array.Exists(spec.clips, clip => clip.turnSpeed > 0f);
             var parameters = controller.parameters;
-            if (parameters.Length != 1 || parameters[0].name != speed ||
-                parameters[0].type != AnimatorControllerParameterType.Float || parameters[0].defaultFloat != 0f)
+            if (parameters.Length != (turns ? 2 : 1) || parameters[0].name != speed ||
+                parameters[0].type != AnimatorControllerParameterType.Float || parameters[0].defaultFloat != 0f ||
+                (turns && (parameters[1].name != TiffanyAnimation.TurnRateParameter ||
+                    parameters[1].type != AnimatorControllerParameterType.Float || parameters[1].defaultFloat != 1f)))
             {
-                controller.parameters = new[]
-                {
-                    new AnimatorControllerParameter { name = speed, type = AnimatorControllerParameterType.Float }
-                };
+                var nextParameters = new AnimatorControllerParameter[turns ? 2 : 1];
+                nextParameters[0] = new AnimatorControllerParameter { name = speed, type = AnimatorControllerParameterType.Float };
+                if (turns) nextParameters[1] = new AnimatorControllerParameter
+                    { name = TiffanyAnimation.TurnRateParameter, type = AnimatorControllerParameterType.Float, defaultFloat = 1f };
+                controller.parameters = nextParameters;
                 EditorUtility.SetDirty(controller);
             }
             var previousLayers = controller.layers;
@@ -96,7 +100,8 @@ namespace TiffanyGame.EditorTools
                     SetArray(state, state.transitions, Array.Empty<AnimatorStateTransition>(), v => state.transitions = v);
                     SetArray(state, state.behaviours, Array.Empty<StateMachineBehaviour>(), v => state.behaviours = v);
                     bool blend = entry.blendTree?.children != null;
-                    Set(state, state.speedParameterActive, blend && entry.blendTree.normalizeSpeed, v => state.speedParameterActive = v);
+                    bool turn = Array.Exists(spec.clips, clip => clip.name == entry.clip && clip.turnSpeed > 0f);
+                    Set(state, state.speedParameterActive, turn || (blend && entry.blendTree.normalizeSpeed), v => state.speedParameterActive = v);
                     if (blend)
                     {
                         var tree = Reuse(state.motion as BlendTree, entry.blendTree.name, controller, assets, owned);
@@ -124,7 +129,11 @@ namespace TiffanyGame.EditorTools
                         Set<Motion>(state, state.motion, tree, v => state.motion = v);
                         Set(state, state.speedParameter, speed, v => state.speedParameter = v);
                     }
-                    else Set<Motion>(state, state.motion, string.IsNullOrEmpty(entry.clip) ? null : clips[entry.clip], v => state.motion = v);
+                    else
+                    {
+                        Set<Motion>(state, state.motion, string.IsNullOrEmpty(entry.clip) ? null : clips[entry.clip], v => state.motion = v);
+                        Set(state, state.speedParameter, turn ? TiffanyAnimation.TurnRateParameter : string.Empty, v => state.speedParameter = v);
+                    }
                     if (entry.name == layer.defaultState) Set(machine, machine.defaultState, state, v => machine.defaultState = v);
                 }
                 SetArray(machine, machine.states, states, v => machine.states = v);

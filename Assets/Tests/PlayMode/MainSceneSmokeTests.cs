@@ -49,6 +49,18 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(player);
             Assert.IsNotNull(player.GetComponent<PlayerController>());
             Assert.IsNotNull(player.GetComponent<CharacterController>());
+            var animation = player.GetComponent<TiffanyAnimator>();
+            Assert.IsNotNull(animation);
+            Assert.IsNotNull(animation.animator);
+            Assert.AreEqual("tiffany-provisional", animation.animator.name);
+            Assert.IsNotNull(animation.animator.runtimeAnimatorController);
+            Assert.IsFalse(animation.animator.applyRootMotion);
+            Assert.IsNull(player.transform.Find("Body"));
+            Assert.IsNull(player.transform.Find("Facing"));
+            var skin = animation.animator.GetComponentInChildren<SkinnedMeshRenderer>();
+            Assert.IsNotNull(skin);
+            CollectionAssert.Contains(player.GetComponent<PlayerHiding>().body, skin);
+            CollectionAssert.Contains(player.GetComponent<VanishPower>().figure, skin);
             var footsteps = player.GetComponent<PlayerFootsteps>();
             Assert.IsNotNull(footsteps);
             Assert.IsNotNull(footsteps.source);
@@ -176,6 +188,53 @@ namespace TiffanyGame.Tests
             LogAssert.Expect(LogType.Log, new Regex(@"Poltergeist: \w+ suena a"));
             Assert.IsTrue(poltergeist.TryMove());
             Assert.AreEqual(expectedEnergy, soul.Energy.Current, 0.5f);
+        }
+
+        [UnityTest]
+        public IEnumerator TiffanyAnimationFollowsLightHidingVanishAndCapture()
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            var animator = player.GetComponent<TiffanyAnimator>().animator;
+            var light = player.GetComponent<PlayerLight>();
+            light.Toggle();
+            yield return new WaitForSeconds(0.3f);
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.CarryLight"));
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello");
+            Assert.IsTrue(light.TryFlash());
+            yield return new WaitForSeconds(0.15f);
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Flash"));
+            yield return new WaitForSeconds(0.7f);
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.CarryLight"));
+
+            var hiding = player.GetComponent<PlayerHiding>();
+            var hide = GameObject.Find("Test Zone").transform.Find("Hide Test").GetComponent<HideVolume>();
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Escondida");
+            hiding.Hide(hide);
+            yield return new WaitForSeconds(0.35f);
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Hide"));
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Empty"));
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Fuera del escondite");
+            hiding.Leave();
+
+            var soul = player.GetComponent<PlayerSoul>();
+            soul.Powers.Unlock(Power.Vanish);
+            var vanish = player.GetComponent<VanishPower>();
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Tiffany se desvanece");
+            Assert.IsTrue(vanish.TryStart());
+            GameInput.MoveOverride = Vector2.up;
+            int before = steps.Count;
+            yield return new WaitForSeconds(0.5f);
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Vanish"));
+            Assert.AreEqual(before, steps.Count);
+            vanish.Cancel();
+            GameInput.MoveOverride = Vector2.zero;
+
+            player.GetComponent<PlayerRespawn>().Trigger();
+            yield return new WaitForSeconds(0.15f);
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Caught"));
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Empty"));
+            Assert.IsFalse(player.GetComponent<PlayerController>().enabled);
+            Assert.AreEqual(before, steps.Count);
         }
 
         [UnityTest]
@@ -371,11 +430,13 @@ namespace TiffanyGame.Tests
                 {
                     yield return null;
                     Assert.GreaterOrEqual(player.transform.position.y, minimumHeight, "Tiffany cayó por debajo del cruce.");
-                    Assert.AreEqual(Gait.Walk, player.CurrentGait);
+                    Assert.That(player.HorizontalSpeed, Is.InRange(0f, PlayerMotion.WalkSpeed + 0.05f));
+                    Assert.AreEqual(PlayerMotion.GaitForSpeed(player.HorizontalSpeed), player.CurrentGait);
                 }
                 GameInput.MoveOverride = Vector2.zero;
                 Assert.GreaterOrEqual(river.InverseTransformPoint(player.transform.position).z * direction, 3f,
                     "Tiffany no llegó a la otra orilla caminando.");
+                Assert.AreEqual(Gait.Walk, player.CurrentGait);
                 bool gravel = false;
                 bool branches = false;
                 foreach (var step in steps)
