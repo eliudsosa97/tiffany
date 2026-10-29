@@ -354,7 +354,7 @@ namespace TiffanyGame.Tests
                 Assert.IsFalse(terrain.IsWalkable(house.localPosition.x, house.localPosition.z));
                 Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(house.gameObject, StaticEditorFlags.BatchingStatic));
                 Assert.AreEqual(NavMesh.GetAreaFromName("Not Walkable"), house.GetComponent<NavMeshModifier>().area);
-                Assert.AreEqual("RouteStructure", house.GetComponent<Renderer>().sharedMaterial.name);
+                Assert.AreEqual("RouteBuilding", house.GetComponent<Renderer>().sharedMaterial.name);
             }
             Assert.IsNotNull(route.GetChild(7).Find("House/Window"));
             Assert.IsNotNull(route.GetChild(7).Find("Window Candle"));

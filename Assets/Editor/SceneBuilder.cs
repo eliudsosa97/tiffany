@@ -96,6 +96,10 @@ namespace TiffanyGame.EditorTools
             save.initialCandle = route.GetChild(0).GetComponentInChildren<CandleSpot>();
             BuildTrailTension(route.GetComponent<WitchChapterTracker>(), playerLight.witch, tyler);
             GroundLitterBuilder.Scatter(world);
+            CharacterSilhouetteBuilder.Add(player.transform);
+            CharacterSilhouetteBuilder.Add(tyler.figure.transform);
+            OcclusionCaptureBuilder.Build(world);
+            OcclusionSceneAudit.Log(world, player.transform, tyler.figure.transform);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();

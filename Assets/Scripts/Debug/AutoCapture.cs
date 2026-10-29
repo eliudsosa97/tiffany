@@ -48,7 +48,6 @@ namespace TiffanyGame
             var stops = FindObjectsByType<CaptureStop>(FindObjectsSortMode.None);
             System.Array.Sort(stops, CompareStops);
             var player = GameObject.FindGameObjectWithTag("Player");
-            var controller = player != null ? player.GetComponent<CharacterController>() : null;
 
             for (int i = 0; i < stops.Length; i++)
             {
@@ -66,26 +65,19 @@ namespace TiffanyGame
                     }
                     continue;
                 }
-                if (player != null)
+                var occlusionStage = stop.GetComponent<OcclusionCaptureStage>();
+                if (occlusionStage != null && player != null)
                 {
-                    bool controllerWasEnabled = controller != null && controller.enabled;
-                    if (controller != null) controller.enabled = false;
-                    player.transform.SetPositionAndRotation(stop.transform.position, stop.transform.rotation);
-                    if (controller != null) controller.enabled = controllerWasEnabled;
-                    Physics.SyncTransforms();
+                    try
+                    {
+                        yield return occlusionStage.Prepare(player.transform, followCamera);
+                        yield return new WaitForSecondsRealtime(stop.wait);
+                        yield return Capture($"{i + 1:00}_{stop.name}");
+                    }
+                    finally { occlusionStage.Clear(); }
+                    continue;
                 }
-
-                if (stop.overrideCamera)
-                {
-                    if (followCamera != null) followCamera.enabled = false;
-                    var camera = Camera.main;
-                    if (camera != null) camera.transform.SetPositionAndRotation(stop.cameraPosition, stop.cameraRotation);
-                }
-                else if (followCamera != null)
-                {
-                    followCamera.enabled = true;
-                    followCamera.Snap();
-                }
+                stop.ApplyPose(player != null ? player.transform : null, followCamera);
 
                 var awayStage = stop.GetComponent<WitchAwayStage>();
                 if (awayStage != null) awayStage.Apply();
@@ -166,11 +158,15 @@ namespace TiffanyGame
             yield return null;
         }
 
-        static int CompareStops(CaptureStop a, CaptureStop b)
+        public static int CompareStops(CaptureStop a, CaptureStop b)
         {
             var left = a.GetComponent<ChallengeCaptureStage>();
             var right = b.GetComponent<ChallengeCaptureStage>();
             if (left != null && right != null && left.challenge == right.challenge) return left.after.CompareTo(right.after);
+            var leftCover = a.GetComponent<OcclusionCaptureStage>();
+            var rightCover = b.GetComponent<OcclusionCaptureStage>();
+            if (leftCover != null && rightCover != null && a.transform.parent == b.transform.parent)
+                return leftCover.after.CompareTo(rightCover.after);
             return string.CompareOrdinal(a.name, b.name);
         }
     }

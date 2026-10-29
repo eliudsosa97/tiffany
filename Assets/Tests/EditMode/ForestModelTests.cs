@@ -94,15 +94,15 @@ namespace TiffanyGame.Tests
             AssertMaterials(root, id);
         }
 
-        [TestCase("tree_pineTallA_detailed")]
-        [TestCase("tree_pineTallC_detailed")]
-        [TestCase("tree_pineRoundC")]
-        [TestCase("rock_largeA")]
-        [TestCase("stone_tallA")]
-        [TestCase("rock_smallC")]
-        [TestCase("log")]
-        [TestCase("stump_oldTall")]
-        public void KenneyFitsHeightBaseAndFootprintWithSavedOpaqueMaterials(string id)
+        [TestCase("tree_pineTallA_detailed", true)]
+        [TestCase("tree_pineTallC_detailed", true)]
+        [TestCase("tree_pineRoundC", true)]
+        [TestCase("rock_largeA", true)]
+        [TestCase("stone_tallA", true)]
+        [TestCase("rock_smallC", false)]
+        [TestCase("log", false)]
+        [TestCase("stump_oldTall", false)]
+        public void KenneyFitsHeightBaseAndFootprintWithSavedOpaqueMaterials(string id, bool occluder)
         {
             var placement = new ForestLayout.Placement();
             foreach (var candidate in ForestLayout.Placements)
@@ -137,12 +137,13 @@ namespace TiffanyGame.Tests
                 {
                     string path = $"{ModelLibrary.kenneyMaterialRoot}/Nature/Materials/{material.name}.mat";
                     Assert.AreEqual(path, AssetDatabase.GetAssetPath(material));
-                    Assert.AreEqual("Universal Render Pipeline/Lit", material.shader.name);
+                    Assert.AreEqual(occluder ? GeneratedMaterials.OcclusionShader : "Universal Render Pipeline/Lit", material.shader.name);
                     Assert.AreEqual(0f, material.GetFloat("_Surface"));
                     Assert.AreEqual(0f, material.GetFloat("_AlphaClip"));
                     Assert.IsEmpty(material.shaderKeywords);
                     foreach (string property in material.GetTexturePropertyNames()) Assert.IsNull(material.GetTexture(property));
-                    var entry = System.Array.Find(palette.materials, candidate => "KenneyNature" + candidate.name == material.name);
+                    var entry = System.Array.Find(palette.materials,
+                        candidate => "KenneyNature" + candidate.name + (occluder ? "" : "Lit") == material.name);
                     Assert.IsNotNull(entry, material.name);
                     Assert.IsTrue(ColorUtility.TryParseHtmlString(entry.color, out var expected));
                     for (int channel = 0; channel < 4; channel++)
@@ -158,6 +159,41 @@ namespace TiffanyGame.Tests
             var secondRenderers = second.GetComponentsInChildren<Renderer>();
             for (int i = 0; i < renderers.Length; i++)
                 CollectionAssert.AreEqual(renderers[i].sharedMaterials, secondRenderers[i].sharedMaterials);
+        }
+
+        [Test]
+        public void LargeAndSmallRocksKeepSeparateShadersWhenRebuilt()
+        {
+            var large = ModelLibrary.InstantiateKenney("Nature/rock_largeA", parent.transform, 0.6f);
+            var small = ModelLibrary.InstantiateKenney("Nature/rock_smallC", parent.transform, 0.5f);
+            var snapshots = new Dictionary<string, MaterialAssetSnapshot>();
+            foreach (string path in Directory.GetFiles(TempFolder + "/Nature/Materials", "*.mat"))
+                snapshots[path] = new MaterialAssetSnapshot(AssetDatabase.LoadAssetAtPath<Material>(path));
+            try
+            {
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    foreach (string path in snapshots.Keys)
+                    {
+                        Resources.UnloadAsset(AssetDatabase.LoadAssetAtPath<Material>(path));
+                        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                    }
+                    large = ModelLibrary.InstantiateKenney("Nature/rock_largeA", parent.transform, 0.6f);
+                    small = ModelLibrary.InstantiateKenney("Nature/rock_smallC", parent.transform, 0.5f);
+                    foreach (var pair in snapshots)
+                        pair.Value.AssertUnchanged(AssetDatabase.LoadAssetAtPath<Material>(pair.Key));
+                }
+            }
+            finally
+            {
+                foreach (var snapshot in snapshots.Values) snapshot.Dispose();
+            }
+            foreach (var renderer in large.GetComponentsInChildren<Renderer>())
+                foreach (var material in renderer.sharedMaterials)
+                    Assert.AreEqual(GeneratedMaterials.OcclusionShader, material.shader.name);
+            foreach (var renderer in small.GetComponentsInChildren<Renderer>())
+                foreach (var material in renderer.sharedMaterials)
+                    Assert.AreEqual("Universal Render Pipeline/Lit", material.shader.name);
         }
 
         static void AssertMaterials(GameObject root, string id)
@@ -180,7 +216,7 @@ namespace TiffanyGame.Tests
                     for (int channel = 0; channel < 4; channel++)
                         Assert.AreEqual(expected[channel], actual[channel], 1e-4f, material.name);
                     Assert.AreEqual(entry.smoothness, material.GetFloat("_Smoothness"), 1e-4f);
-                    Assert.AreEqual("Universal Render Pipeline/Lit", material.shader.name);
+                    Assert.AreEqual(GeneratedMaterials.OcclusionShader, material.shader.name);
                     Assert.AreEqual(0f, material.GetFloat("_Surface"));
                     Assert.IsNull(material.GetTexture("_BaseMap"));
                 }

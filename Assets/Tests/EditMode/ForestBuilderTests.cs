@@ -154,6 +154,13 @@ namespace TiffanyGame.Tests
             foreach (var batch in Understory.data.batches)
             {
                 Assert.IsTrue(batch.material.enableInstancing);
+                string shader = batch.mesh.name switch
+                {
+                    "OakLitter0" or "ForestFloorPatch" or "PineNeedlePatch" => "Universal Render Pipeline/Tiffany Forest Ground",
+                    "GraniteStone0" => "Universal Render Pipeline/Lit",
+                    _ => GeneratedMaterials.OcclusionShader
+                };
+                Assert.AreEqual(shader, batch.material.shader.name, batch.mesh.name);
                 Assert.IsTrue(AssetDatabase.Contains(batch.material));
                 Assert.IsNotEmpty(batch.matrices);
                 var bounds = batch.bounds;
@@ -233,6 +240,7 @@ namespace TiffanyGame.Tests
             Assert.That(triangles, Is.InRange(1L, 110000L));
             foreach (var renderer in forest.GetComponentsInChildren<Renderer>())
             {
+                Assert.AreEqual(GeneratedMaterials.OcclusionShader, renderer.sharedMaterial.shader.name);
                 Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic));
                 Assert.AreEqual(ShadowCastingMode.Off, renderer.shadowCastingMode);
             }

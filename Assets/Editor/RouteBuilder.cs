@@ -27,8 +27,8 @@ namespace TiffanyGame.EditorTools
             var names = new[] { "Cemetery", "Water Plant", "Train Tracks", "Stable", "Witch Hut", "Lake", "Road", "Tiffany House" };
             var pathFloor = GroundMaterials.For(GroundType.Dirt);
             var structure = GeneratedMaterials.Get("RouteStructure", new Color(0.4f, 0.4f, 0.4f));
-            var dark = GeneratedMaterials.Get("RouteForest", new Color(0.09f, 0.09f, 0.09f));
-            var bush = GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f));
+            var dark = GeneratedMaterials.Get("RouteForest", new Color(0.09f, 0.09f, 0.09f), occluder: true);
+            var bush = GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f), occluder: true);
             var terrain = new RouteTerrain();
             memories = new Transform[5];
             var tracker = route.gameObject.AddComponent<WitchChapterTracker>();
@@ -155,6 +155,7 @@ namespace TiffanyGame.EditorTools
 
         static Vector3 BuildLandmark(int index, Transform clearing, Material structure, Material dark, Material bush)
         {
+            var building = GeneratedMaterials.Get("RouteBuilding", new Color(0.4f, 0.4f, 0.4f), occluder: true);
             switch (index)
             {
                 case 0:
@@ -184,11 +185,11 @@ namespace TiffanyGame.EditorTools
                     HidingBuilder.BuildHideSpot(clearing, "Hide Tracks Bush", new Vector3(6f, 0f, -4f), bush);
                     return new Vector3(0f, 0f, -3f);
                 case 3:
-                    BuildShelter("Barn", clearing, 14f, 10f, 5f, structure);
+                    BuildShelter("Barn", clearing, 14f, 10f, 5f, building);
                     HidingBuilder.BuildHideSpot(clearing, "Hide Stable Crate", new Vector3(-4.5f, 0f, 7f), structure, PrimitiveType.Cube);
                     return new Vector3(0f, 0f, 3f);
                 case 4:
-                    BuildShelter("Hut", clearing, 8f, 8f, 3.5f, structure);
+                    BuildShelter("Hut", clearing, 8f, 8f, 3.5f, building);
                     HidingBuilder.BuildHideSpot(clearing, "Hide Hut Bush", new Vector3(-6f, 0f, 3f), bush);
                     return new Vector3(0f, 0f, 3f);
                 case 6:
@@ -202,9 +203,9 @@ namespace TiffanyGame.EditorTools
                     }
                     break;
                 case 7:
-                    var house = BuildShelter("House", clearing, 12f, 10f, 4f, structure);
+                    var house = BuildShelter("House", clearing, 12f, 10f, 4f, building);
                     Part("Window", house, new Vector3(-4f, 1.8f, -5.26f), new Vector3(2.5f, 1.8f, 0.1f), dark);
-                    Part("Window Sill", house, new Vector3(-4f, 1f, -5.6f), new Vector3(2.7f, 0.2f, 0.8f), structure);
+                    Part("Window Sill", house, new Vector3(-4f, 1f, -5.6f), new Vector3(2.7f, 0.2f, 0.8f), building);
                     break;
             }
             return Vector3.zero;

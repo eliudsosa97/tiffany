@@ -18,6 +18,13 @@ namespace TiffanyGame.EditorTools
         public static string materialFolder = MaterialFolder;
         public static string kenneyMaterialRoot = KenneyFolder;
 
+        static readonly HashSet<string> Occluders = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "oak", "bougainvillea",
+            "Nature/tree_pineTallA_detailed", "Nature/tree_pineTallC_detailed", "Nature/tree_pineRoundC",
+            "Nature/rock_largeA", "Nature/stone_tallA"
+        };
+
         // Un modelo con tomas en su json lleva el controller que arma este registro.
         static readonly Dictionary<string, Func<RuntimeAnimatorController>> Controllers = new Dictionary<string, Func<RuntimeAnimatorController>>
         {
@@ -187,7 +194,8 @@ namespace TiffanyGame.EditorTools
                 {
                     if (!ColorUtility.TryParseHtmlString(entry.color, out var color))
                         throw new InvalidDataException($"{GameInfo.LogPrefix} Color inválido '{entry.color}' en {entry.name}.");
-                    var material = GeneratedMaterials.Get(entry.name, color, entry.unlit, entry.smoothness);
+                    var material = GeneratedMaterials.Get(entry.name, color, entry.unlit, entry.smoothness,
+                        occluder: Occluders.Contains(id));
                     material.SetFloat("_Metallic", entry.metallic);
                     bool transparent = entry.surface == "transparent";
                     if (transparent || material.GetFloat("_Surface") != 0f)
@@ -206,6 +214,8 @@ namespace TiffanyGame.EditorTools
                             throw new InvalidDataException($"{GameInfo.LogPrefix} Color inválido '{entry.rimColor}' en {entry.name}.");
                         material.shader = shader;
                         material.shaderKeywords = Array.Empty<string>();
+                        material.SetFloat("_TiffanyStencil", 0f);
+                        material.renderQueue = -1;
                         material.SetColor("_RimColor", rimColor);
                         material.SetFloat("_RimPower", entry.rimPower);
                         material.SetFloat("_RimIntensity", entry.rimIntensity);
@@ -245,7 +255,8 @@ namespace TiffanyGame.EditorTools
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
                 {
                     var slots = renderer.sharedMaterials;
-                    for (int i = 0; i < slots.Length; i++) slots[i] = KenneyMaterial(kit, slots[i], palette);
+                    for (int i = 0; i < slots.Length; i++)
+                        slots[i] = KenneyMaterial(kit, slots[i], palette, Occluders.Contains(kitAndModel));
                     renderer.sharedMaterials = slots;
                     renderer.shadowCastingMode = ShadowCastingMode.On;
                     renderer.receiveShadows = true;
@@ -270,7 +281,7 @@ namespace TiffanyGame.EditorTools
             return root;
         }
 
-        static Material KenneyMaterial(string kit, Material source, ModelSpec palette)
+        static Material KenneyMaterial(string kit, Material source, ModelSpec palette, bool occluder)
         {
             string name = source != null ? source.name : "default";
             var color = source != null && source.HasProperty("_BaseColor") ? source.GetColor("_BaseColor")
@@ -280,13 +291,13 @@ namespace TiffanyGame.EditorTools
                 throw new InvalidDataException($"{GameInfo.LogPrefix} Color inválido '{entry.color}' en {name}.");
             foreach (char c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
             name = name.Replace('/', '_').Replace('\\', '_');
-            var material = GeneratedMaterials.Get("Kenney" + kit + name, color);
+            var material = GeneratedMaterials.Get("Kenney" + kit + name + (occluder ? "" : "Lit"), color, occluder: occluder);
             material.SetFloat("_Surface", 0f);
             material.SetFloat("_AlphaClip", 0f);
             material.SetFloat("_SrcBlend", (float)BlendMode.One);
             material.SetFloat("_DstBlend", (float)BlendMode.Zero);
             material.SetFloat("_ZWrite", 1f);
-            material.SetOverrideTag("RenderType", "Opaque");
+            material.SetOverrideTag("RenderType", occluder ? "" : "Opaque");
             material.renderQueue = -1;
             material.shaderKeywords = Array.Empty<string>();
             foreach (string property in material.GetTexturePropertyNames()) material.SetTexture(property, null);

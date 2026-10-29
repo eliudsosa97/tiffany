@@ -18,12 +18,15 @@ namespace TiffanyGame.Tests
         Vector3[] skyRoute;
         NavMeshData navMeshData;
         string previousMaterialFolder;
+        string previousModelMaterialFolder;
 
         [SetUp]
         public void SetUp()
         {
             previousMaterialFolder = GeneratedMaterials.folder;
             GeneratedMaterials.folder = TempFolder + "/Materials";
+            previousModelMaterialFolder = ModelLibrary.materialFolder;
+            ModelLibrary.materialFolder = TempFolder + "/ModelMaterials";
             root = new GameObject(nameof(RouteBuilderTests));
             var girl = new GameObject("Player");
             girl.transform.SetParent(root.transform, false);
@@ -47,6 +50,44 @@ namespace TiffanyGame.Tests
             if (navMeshData != null) Object.DestroyImmediate(navMeshData);
             AssetDatabase.DeleteAsset(TempFolder);
             GeneratedMaterials.folder = previousMaterialFolder;
+            ModelLibrary.materialFolder = previousModelMaterialFolder;
+        }
+
+        [Test]
+        public void EchoTylerMaterialsStayInsideTheTestFolder()
+        {
+            var echoes = root.GetComponentsInChildren<EchoPlayer>(true);
+            Assert.AreEqual(5, echoes.Length);
+            foreach (var echo in echoes)
+            {
+                var renderers = echo.tyler.GetComponentsInChildren<Renderer>(true);
+                Assert.IsNotEmpty(renderers);
+                foreach (var renderer in renderers)
+                    foreach (var material in renderer.sharedMaterials)
+                        Assert.AreEqual($"{TempFolder}/ModelMaterials/{material.name}.mat", AssetDatabase.GetAssetPath(material));
+            }
+        }
+
+        [Test]
+        public void BuildingsAndForestUseOcclusionWhileGroundKeepsItsShader()
+        {
+            foreach (var clearing in new[] { route.GetChild(3), route.GetChild(4), route.GetChild(7) })
+            {
+                string building = clearing == route.GetChild(3) ? "Barn" : clearing == route.GetChild(4) ? "Hut" : "House";
+                foreach (var renderer in clearing.Find(building).GetComponentsInChildren<Renderer>(true))
+                    Assert.AreEqual(GeneratedMaterials.OcclusionShader, renderer.sharedMaterial.shader.name, renderer.name);
+                foreach (var renderer in clearing.Find("Forest").GetComponentsInChildren<Renderer>(true))
+                    Assert.AreEqual(GeneratedMaterials.OcclusionShader, renderer.sharedMaterial.shader.name, renderer.name);
+                Assert.AreEqual("Universal Render Pipeline/Tiffany Forest Ground",
+                    clearing.Find("Ground").GetComponent<Renderer>().sharedMaterial.shader.name);
+            }
+            Assert.AreEqual("Universal Render Pipeline/Lit", route.GetChild(0).Find("Ball").GetComponent<Renderer>().sharedMaterial.shader.name);
+            foreach (var movable in route.GetComponentsInChildren<MovableObject>(true))
+                Assert.AreNotEqual(GeneratedMaterials.OcclusionShader, movable.GetComponent<Renderer>().sharedMaterial.shader.name);
+            foreach (var candle in route.GetComponentsInChildren<CandleSpot>(true))
+                foreach (var renderer in candle.GetComponentsInChildren<Renderer>(true))
+                    foreach (var material in renderer.sharedMaterials)
+                        Assert.AreNotEqual(GeneratedMaterials.OcclusionShader, material.shader.name, renderer.name);
         }
 
         [Test]
