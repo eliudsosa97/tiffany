@@ -29,6 +29,7 @@ namespace TiffanyGame
         public bool hearingMuted;
 
         public WitchDecision Decision { get; private set; }
+        public float EffectiveSpeed => Decision.Speed * jerk.SpeedFactor;
         public WitchPerception Perception { get; private set; }
         public Vector3? NextClearingOverride { get; set; }
         public WitchProfile Profile => profile;
@@ -58,6 +59,11 @@ namespace TiffanyGame
         private Animator animator;
         private WitchState lastAnimationState;
         private bool hasAnimationState;
+        private readonly WitchJerk jerk = new WitchJerk(Environment.TickCount);
+        private Vector3 figurePosition;
+        private Quaternion figureRotation = Quaternion.identity;
+        private bool trembling;
+        private const float TrembleOffset = 0.05f, TrembleAngle = 5f;
         private static readonly int SpeedHash = Animator.StringToHash("Speed");
         private static readonly int IdleHash = Animator.StringToHash("Idle");
         private static readonly int StalkingHash = Animator.StringToHash(nameof(WitchState.Stalking));
@@ -74,14 +80,24 @@ namespace TiffanyGame
             agent = GetComponent<NavMeshAgent>();
             hits = new RaycastHit[32];
             noiseHandler = Hear;
-            if (figure != null) animator = figure.GetComponent<Animator>();
+            if (figure != null)
+            {
+                animator = figure.GetComponent<Animator>();
+                figure.transform.GetLocalPositionAndRotation(out figurePosition, out figureRotation);
+            }
             if (fireLight != null) baseFireIntensity = fireLight.intensity;
             InitializeBrain();
         }
 
         private void OnEnable() => NoiseBus.Published += noiseHandler;
 
-        private void OnDisable() => NoiseBus.Published -= noiseHandler;
+        private void OnDisable()
+        {
+            NoiseBus.Published -= noiseHandler;
+            if (animator != null) animator.speed = 1f;
+            if (figure != null) figure.transform.SetLocalPositionAndRotation(figurePosition, figureRotation);
+            trembling = false;
+        }
 
         private void Start()
         {
@@ -238,6 +254,7 @@ namespace TiffanyGame
             }
             if (Decision.InspectingHide && !wasInspectingHide)
                 Debug.Log($"{GameInfo.LogPrefix} Bruja: revisa escondite en {Decision.MoveTarget}");
+            jerk.Tick(dt, Decision);
             if (Decision.Intent != previousIntent)
                 Debug.Log($"{GameInfo.LogPrefix} Bruja: {IntentDescription(Decision.Intent)}");
             ApplyMovement(dt);
@@ -351,9 +368,11 @@ namespace TiffanyGame
         private void Stalk()
         {
             if (!EnableAgent()) return;
-            agent.isStopped = Decision.Speed <= 0f;
-            if (agent.isStopped) return;
-            agent.speed = Decision.Speed;
+            float speed = EffectiveSpeed;
+            if (speed <= 0f && !agent.isStopped) agent.velocity = Vector3.zero;
+            agent.isStopped = speed <= 0f;
+            if (Decision.Speed <= 0f) return;
+            if (!agent.isStopped) agent.speed = speed;
             Vector3 destination = Decision.MoveTarget;
             if (!hasDestination || WitchMotion.ShouldRepath(lastDestination, destination, repathThreshold))
             {
@@ -361,6 +380,10 @@ namespace TiffanyGame
                 lastDestination = destination;
                 hasDestination = true;
             }
+            if (agent.isStopped || !jerk.PhaseStarted) return;
+            Vector3 direction = (agent.hasPath ? agent.steeringTarget : destination) - transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.0001f) agent.velocity = direction.normalized * speed;
         }
 
         private void Sprint(float dt)
@@ -412,9 +435,24 @@ namespace TiffanyGame
             Vector3 velocity = agent.enabled && agent.isOnNavMesh ? agent.velocity
                 : Decision.State == WitchState.Sprinting && dt > 0f ? (transform.position - previousPosition) / dt : Vector3.zero;
             velocity.y = 0f;
-            ApplyAnimation(Decision.State, velocity.magnitude);
+            bool frozen = Decision.State == WitchState.Stalking
+                && (jerk.Phase == WitchJerkPhase.Still || jerk.Phase == WitchJerkPhase.Tremble);
+            ApplyAnimation(Decision.State, frozen ? Decision.Speed : velocity.magnitude);
+            ApplyTremble();
             if (fireLight != null && fireLight.enabled)
                 fireLight.intensity = WitchPoses.FireIntensity(baseFireIntensity, FireHeightAboveGround(), fireFullHeight);
+        }
+
+        private void ApplyTremble()
+        {
+            float amount = jerk.Tremble;
+            if (figure == null || (amount <= 0f && !trembling)) return;
+            trembling = amount > 0f;
+            float t = Time.time;
+            Vector3 offset = new Vector3(Mathf.Sin(t * 83f), 0f, Mathf.Sin(t * 71f + 1.7f)) * (amount * TrembleOffset);
+            Quaternion shake = Quaternion.Euler(Mathf.Sin(t * 97f + 0.5f) * amount * TrembleAngle,
+                Mathf.Sin(t * 61f) * amount * TrembleAngle * 1.5f, Mathf.Sin(t * 89f + 2.3f) * amount * TrembleAngle);
+            figure.transform.SetLocalPositionAndRotation(figurePosition + offset, figureRotation * shake);
         }
 
         public void ShowPose(WitchState state, bool fireLit)
@@ -454,6 +492,7 @@ namespace TiffanyGame
                 hasAnimationState = false;
                 return;
             }
+            animator.speed = immediate ? 1f : jerk.AnimatorSpeed;
             animator.SetFloat(SpeedHash, speed);
             if (!immediate && hasAnimationState && lastAnimationState == state) return;
             int hash = state switch
