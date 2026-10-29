@@ -221,6 +221,31 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void LakeReturnRepathsOnceAfterEachRespawnEvenIfTheGameIsFrozen()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.LakeCandle });
+            var observation = new PlaythroughObservation();
+            plan.Tick(0f, in observation);
+            for (int capture = 0; capture < 2; capture++)
+            {
+                observation.Respawning = true;
+                Assert.IsFalse(plan.Tick(0.1f, in observation).Repath);
+                observation.Position += Vector3.back * 10f;
+                Assert.IsFalse(plan.Tick(0.1f, in observation).Repath);
+                observation.Respawning = false;
+                observation.Frozen = true;
+                Assert.IsFalse(plan.Tick(0.1f, in observation).Repath);
+                observation.Frozen = false;
+                var command = plan.Tick(0.1f, in observation);
+                Assert.IsTrue(command.Move);
+                Assert.IsTrue(command.Repath);
+                Assert.IsFalse(plan.Tick(0.1f, in observation).Repath);
+                Assert.AreEqual(PlaythroughMilestone.LakeCandle, plan.Current);
+                Assert.IsFalse(plan.Finished);
+            }
+        }
+
+        [Test]
         public void ReachingTheRespawnPointWithoutCaptureDoesNotRestartTheDeadline()
         {
             var plan = new PlaythroughPlan(timeout: 2f);

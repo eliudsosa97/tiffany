@@ -522,6 +522,12 @@ namespace TiffanyGame.Tests
         {
             GameInput.MoveOverride = Vector2.zero;
             character.enabled = false;
+            float ground = float.NegativeInfinity;
+            foreach (var hit in Physics.RaycastAll(position + Vector3.up * 3f, Vector3.down, 6f,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                if (hit.collider.TryGetComponent<GroundSurface>(out _)) ground = Mathf.Max(ground, hit.point.y);
+            Assert.IsFalse(float.IsNegativeInfinity(ground), "El destino del test debe tener suelo.");
+            position.y = ground + 0.02f;
             player.transform.SetPositionAndRotation(position, Quaternion.LookRotation(Vector3.ProjectOnPlane(forward, Vector3.up)));
             character.enabled = true;
             Physics.SyncTransforms();

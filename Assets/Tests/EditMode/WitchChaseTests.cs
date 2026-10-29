@@ -131,6 +131,28 @@ namespace TiffanyGame.Tests
             Assert.Less(p.DistanceToPlayer, 1.2f);
         }
 
+        [TestCase(0f, true)]
+        [TestCase(1.4f, true)]
+        [TestCase(3.5f, false)]
+        [TestCase(-3.5f, false)]
+        public void StalkingCatchNeedsTheSameFloor(float playerHeight, bool caught)
+        {
+            profile.CanSprint = false;
+            p.PlayerPosition = p.WitchPosition + Vector3.up * playerHeight;
+            Assert.AreEqual(caught ? WitchState.Caught : WitchState.Stalking, WitchSim.Step(brain, ref p, 0f).State);
+            Assert.AreEqual(0f, p.DistanceToPlayer, 1e-4f);
+        }
+
+        [TestCase(0f, true)]
+        [TestCase(3.5f, false)]
+        public void SprintCatchNeedsTheSameFloor(float playerHeight, bool caught)
+        {
+            Sprint();
+            p.SmellsPlayer = false;
+            p.WitchPosition = new Vector3(p.PlayerPosition.x, p.PlayerPosition.y - playerHeight, p.PlayerPosition.z);
+            Assert.AreEqual(caught ? WitchState.Caught : WitchState.Sprinting, WitchSim.Step(brain, ref p, 0f).State);
+        }
+
         [Test]
         public void FlashInterruptsWarningRestartsStunAndIsIgnoredInFlight()
         {

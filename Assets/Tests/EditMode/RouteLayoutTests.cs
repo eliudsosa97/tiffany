@@ -9,6 +9,13 @@ namespace TiffanyGame.Tests
         const float Tolerance = 0.0001f;
 
         [Test]
+        public void OnlyTheWitchHutClearingShrinksToTwentyFourMeters()
+        {
+            for (int i = 0; i < RouteLayout.Count; i++)
+                Assert.AreEqual(i == 4 ? 24f : 36f, RouteLayout.ClearingSizeOf(i), $"Claro {i}");
+        }
+
+        [Test]
         public void MapKeepsCemeteryNortheastPlantEastTracksSouthAndLakeWest()
         {
             Assert.AreEqual(8, RouteLayout.Count);
@@ -70,8 +77,9 @@ namespace TiffanyGame.Tests
                 for (int j = i + 1; j < RouteLayout.Count; j++)
                 {
                     Vector3 delta = RouteLayout.Clearing(j) - RouteLayout.Clearing(i);
-                    float x = Mathf.Max(0f, Mathf.Abs(delta.x) - RouteLayout.ClearingSize);
-                    float z = Mathf.Max(0f, Mathf.Abs(delta.z) - RouteLayout.ClearingSize);
+                    float spacing = (RouteLayout.ClearingSizeOf(i) + RouteLayout.ClearingSizeOf(j)) * 0.5f;
+                    float x = Mathf.Max(0f, Mathf.Abs(delta.x) - spacing);
+                    float z = Mathf.Max(0f, Mathf.Abs(delta.z) - spacing);
                     Assert.Greater(Mathf.Sqrt(x * x + z * z), 0f, $"Claros {i} y {j}");
                     if (j != i + 1)
                         Assert.GreaterOrEqual(Xz(delta).magnitude, 52f, $"Claros {i} y {j}");
@@ -81,10 +89,10 @@ namespace TiffanyGame.Tests
         [Test]
         public void ClearingsAndPathWidthsFitInsideTheRouteFootprint()
         {
-            var size = new Vector3(RouteLayout.ClearingSize, 0f, RouteLayout.ClearingSize);
-            var bounds = new Bounds(RouteLayout.Clearing(0), size);
+            Vector3 Size(int i) => new Vector3(RouteLayout.ClearingSizeOf(i), 0f, RouteLayout.ClearingSizeOf(i));
+            var bounds = new Bounds(RouteLayout.Clearing(0), Size(0));
             for (int i = 1; i < RouteLayout.Count; i++)
-                bounds.Encapsulate(new Bounds(RouteLayout.Clearing(i), size));
+                bounds.Encapsulate(new Bounds(RouteLayout.Clearing(i), Size(i)));
             for (int from = 0; from < RouteLayout.Count - 1; from++)
                 foreach (Vector3 point in RouteLayout.Path(from))
                     bounds.Encapsulate(new Bounds(point, new Vector3(RouteLayout.PathWidth, 0f, RouteLayout.PathWidth)));
@@ -106,8 +114,8 @@ namespace TiffanyGame.Tests
         {
             var path = RouteLayout.Path(from);
             Assert.GreaterOrEqual(path.Length, 3);
-            AssertOnEdge(path[0], RouteLayout.Clearing(from));
-            AssertOnEdge(path[path.Length - 1], RouteLayout.Clearing(from + 1));
+            AssertOnEdge(path[0], from);
+            AssertOnEdge(path[path.Length - 1], from + 1);
             AssertPerpendicular(path[0], path[1], RouteLayout.Clearing(from));
             AssertPerpendicular(path[path.Length - 1], path[path.Length - 2], RouteLayout.Clearing(from + 1));
             float length = 0f;
@@ -159,7 +167,6 @@ namespace TiffanyGame.Tests
         [Test]
         public void PathCorridorsDoNotCrossEachOtherOrUnrelatedClearings()
         {
-            float half = (RouteLayout.ClearingSize + RouteLayout.PathWidth) * 0.5f + 4f;
             for (int from = 0; from < RouteLayout.Count - 1; from++)
             {
                 var path = RouteLayout.Path(from);
@@ -168,7 +175,8 @@ namespace TiffanyGame.Tests
                     Vector2 a = Xz(path[i - 1]), b = Xz(path[i]);
                     for (int clearing = 0; clearing < RouteLayout.Count; clearing++)
                         if (clearing != from && clearing != from + 1)
-                            Assert.IsFalse(IntersectsSquare(a, b, Xz(RouteLayout.Clearing(clearing)), half),
+                            Assert.IsFalse(IntersectsSquare(a, b, Xz(RouteLayout.Clearing(clearing)),
+                                (RouteLayout.ClearingSizeOf(clearing) + RouteLayout.PathWidth) * 0.5f + 4f),
                                 $"Sendero {from}, tramo {i}, claro {clearing}");
                     for (int other = from; other < RouteLayout.Count - 1; other++)
                     {
@@ -232,8 +240,11 @@ namespace TiffanyGame.Tests
 
         [TestCase(-1)]
         [TestCase(8)]
-        public void InvalidClearingIndicesAreRejected(int index) =>
+        public void InvalidClearingIndicesAreRejected(int index)
+        {
             Assert.Throws<ArgumentOutOfRangeException>(() => RouteLayout.Clearing(index));
+            Assert.Throws<ArgumentOutOfRangeException>(() => RouteLayout.ClearingSizeOf(index));
+        }
 
         [TestCase(-1)]
         [TestCase(7)]
@@ -255,11 +266,13 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(expected, RouteLayout.Slope(end, start), Tolerance);
         }
 
-        static void AssertOnEdge(Vector3 point, Vector3 center)
+        static void AssertOnEdge(Vector3 point, int index)
         {
+            Vector3 center = RouteLayout.Clearing(index);
+            float size = RouteLayout.ClearingSizeOf(index);
             Vector3 delta = point - center;
-            Assert.AreEqual(RouteLayout.ClearingSize * 0.5f, Mathf.Max(Mathf.Abs(delta.x), Mathf.Abs(delta.z)), Tolerance);
-            Assert.LessOrEqual(Mathf.Min(Mathf.Abs(delta.x), Mathf.Abs(delta.z)), (RouteLayout.ClearingSize - RouteLayout.PathWidth) * 0.5f);
+            Assert.AreEqual(size * 0.5f, Mathf.Max(Mathf.Abs(delta.x), Mathf.Abs(delta.z)), Tolerance);
+            Assert.LessOrEqual(Mathf.Min(Mathf.Abs(delta.x), Mathf.Abs(delta.z)), (size - RouteLayout.PathWidth) * 0.5f);
             Assert.AreEqual(center.y, point.y, Tolerance);
         }
 

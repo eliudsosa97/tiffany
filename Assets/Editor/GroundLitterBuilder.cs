@@ -11,6 +11,7 @@ namespace TiffanyGame.EditorTools
     public static class GroundLitterBuilder
     {
         public const float InteractionClearance = 1.2f;
+        public const long AreaTriangleBudget = 60000;
         const float MinimumFloorWidth = 2.5f;
         const string WaterShader = "Universal Render Pipeline/Tiffany Water";
 
@@ -45,7 +46,9 @@ namespace TiffanyGame.EditorTools
             var trianglesByGround = new long[Enum.GetValues(typeof(GroundType)).Length];
             var physics = root.gameObject.scene.GetPhysicsScene();
             var toLocal = root.worldToLocalMatrix;
-            int noGround = 0, blocked = 0, steep = 0, reserved = 0, submerged = 0, absent = 0;
+            var tracker = root.GetComponentInChildren<WitchChapterTracker>();
+            var terrain = tracker != null ? new RouteTerrain() : null;
+            int noGround = 0, blocked = 0, steep = 0, reserved = 0, submerged = 0, absent = 0, distant = 0;
             var blockers = new Dictionary<string, int>();
             foreach (LitterKind kind in Enum.GetValues(typeof(LitterKind)))
             {
@@ -55,6 +58,12 @@ namespace TiffanyGame.EditorTools
                 for (int x = Mathf.FloorToInt(minimum.x / size); x < Mathf.CeilToInt(maximum.x / size); x++)
                 {
                     var candidate = GroundLitter.Sample(kind, x, z);
+                    if (terrain != null)
+                    {
+                        Vector3 point = tracker.transform.InverseTransformPoint(candidate.Position);
+                        if (terrain.Bounds.Contains(new Vector2(point.x, point.z)) && !terrain.InClearingSquare(point.x, point.z)
+                            && terrain.DistanceToRoute(point.x, point.z) > 0f) { distant++; continue; }
+                    }
                     var origin = new Vector3(candidate.Position.x, top + 1f, candidate.Position.z);
                     if (!physics.Raycast(origin, Vector3.down, out var hit, top - minimum.y + 2f,
                         groundMask, QueryTriggerInteraction.Ignore)) { noGround++; continue; }
@@ -128,7 +137,7 @@ namespace TiffanyGame.EditorTools
                 breakdown += $" {ground}: {trianglesByGround[(int)ground]}.";
             Debug.Log($"{GameInfo.LogPrefix} Suelo: {instances} instancias, {triangles} triángulos, {batches.Count} lotes. Triángulos por suelo:{breakdown} "
                 + $"Descartes: sin suelo: {noGround}, tapado por otro collider: {blocked} ({TopBlockers(blockers)}), "
-                + $"pendiente: {steep}, reservado: {reserved}, bajo agua: {submerged}, ausente por densidad: {absent}.");
+                + $"pendiente: {steep}, reservado: {reserved}, bajo agua: {submerged}, ausente por densidad: {absent}, fuera de la ruta: {distant}.");
         }
 
         static string TopBlockers(Dictionary<string, int> blockers)

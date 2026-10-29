@@ -14,6 +14,9 @@ namespace TiffanyGame.EditorTools
         public const float MinHeight = 0.45f;
         public const float MaxHeight = 0.6f;
         public const float WaterHeight = 0.55f;
+        public const float PathCardLength = 12f;
+        public const float WaterCardSize = 32f;
+        public const int HauntedCards = 8;
         const float ClearingLength = 40f;
         const float SideOffset = 10f;
         const float WaterDistance = 6f;
@@ -23,7 +26,7 @@ namespace TiffanyGame.EditorTools
         {
             bool closedLoop = tracker.clearings.Length > 1
                 && tracker.clearings[tracker.clearings.Length - 1].Find("Path to Next Clearing") != null;
-            var fog = BuildLayers(world, tracker.clearings, tracker.player, closedLoop);
+            var fog = BuildLayers(world, tracker.clearings, tracker.player, closedLoop, tracker.transform);
             var captures = new GameObject("Fog Captures").transform;
             captures.SetParent(world, false);
             CapturePair(captures, fog, FindCapture(tracker.clearings, tracker.clearings[0].name), "Fog 1 Cemetery");
@@ -32,7 +35,8 @@ namespace TiffanyGame.EditorTools
             return fog;
         }
 
-        public static GroundFog BuildLayers(Transform world, Transform[] clearings, Transform player = null, bool closedLoop = false)
+        public static GroundFog BuildLayers(Transform world, Transform[] clearings, Transform player = null,
+            bool closedLoop = false, Transform route = null)
         {
             closedLoop &= clearings.Length > 1;
             Physics.SyncTransforms();
@@ -40,23 +44,22 @@ namespace TiffanyGame.EditorTools
             var waterSurfaces = new List<Renderer>();
             var trees = new List<Bounds>();
             foreach (var clearing in clearings)
-            {
                 if (clearing == null) throw new ArgumentException($"{GameInfo.LogPrefix} Falta un claro para generar la neblina.");
-                foreach (var renderer in clearing.GetComponentsInChildren<Renderer>(true))
+            var scenery = route != null ? route : world;
+            foreach (var renderer in scenery.GetComponentsInChildren<Renderer>(true))
+            {
+                var material = renderer.sharedMaterial;
+                if (renderer.name == "Water" || (material != null && material.shader != null
+                    && material.shader.name == "Universal Render Pipeline/Tiffany Water"))
                 {
-                    var material = renderer.sharedMaterial;
-                    if (renderer.name == "Water" || (material != null && material.shader != null
-                        && material.shader.name == "Universal Render Pipeline/Tiffany Water"))
-                    {
-                        water.Add(renderer.bounds);
-                        waterSurfaces.Add(renderer);
-                    }
-                    for (var node = renderer.transform; node != clearing; node = node.parent)
-                    {
-                        if (!TreeName(node.name)) continue;
-                        trees.Add(renderer.bounds);
-                        break;
-                    }
+                    water.Add(renderer.bounds);
+                    waterSurfaces.Add(renderer);
+                }
+                for (var node = renderer.transform; node != scenery; node = node.parent)
+                {
+                    if (!TreeName(node.name)) continue;
+                    trees.Add(renderer.bounds);
+                    break;
                 }
             }
 
@@ -68,9 +71,16 @@ namespace TiffanyGame.EditorTools
             var materialAsset = GeneratedMaterials.GetGroundFog();
             for (int i = 0; i < clearings.Length; i++)
             {
+                float scale = route != null ? RouteLayout.ClearingSizeOf(i) / RouteLayout.ClearingSize : 1f;
                 Vector3 center = clearings[i].position;
                 Vector3 previous = clearings[i > 0 ? i - 1 : closedLoop ? clearings.Length - 1 : 0].position;
                 Vector3 next = clearings[i + 1 < clearings.Length ? i + 1 : closedLoop ? 0 : i].position;
+                if (route != null)
+                {
+                    var openings = RouteLayout.Openings(i);
+                    previous = i > 0 ? route.TransformPoint(openings[0]) : center;
+                    next = i + 1 < clearings.Length ? route.TransformPoint(openings[openings.Length - 1]) : center;
+                }
                 Vector3 direction = Vector3.ProjectOnPlane(i + 1 < clearings.Length || closedLoop ? next - center : center - previous, Vector3.up).normalized;
                 if (direction.sqrMagnitude < 0.001f) direction = clearings[i].forward;
                 Vector3 side = Vector3.Cross(Vector3.up, direction).normalized;
@@ -78,26 +88,60 @@ namespace TiffanyGame.EditorTools
                 if (i == clearings.Length - 1 && !closedLoop) next = center + direction * ClearingLength * 0.5f;
                 for (int card = 0; card < CardsPerClearing; card++)
                 {
-                    float offset = (card * 2f - 1f) * SideOffset;
+                    float offset = (card * 2f - 1f) * SideOffset * scale;
                     AddLayer($"Clearing {i + 1} Fog {card + 1}", center + side * offset, direction,
-                        new Vector2(24f, ClearingLength), Mathf.Lerp(MinHeight, MaxHeight, card),
+                        new Vector2(24f, ClearingLength) * scale, Mathf.Lerp(MinHeight, MaxHeight, card),
                         previous, center, next);
                 }
                 if (i + 1 >= clearings.Length && !closedLoop) continue;
+                if (route != null)
+                {
+                    var points = RouteLayout.Path(i);
+                    for (int segment = 1; segment < points.Length; segment++)
+                    {
+                        Vector3 start = route.TransformPoint(points[segment - 1]);
+                        Vector3 corner = route.TransformPoint(points[segment]);
+                        Vector3 end = route.TransformPoint(points[Mathf.Min(segment + 1, points.Length - 1)]);
+                        float distance = Vector3.ProjectOnPlane(corner - start, Vector3.up).magnitude;
+                        int cards = Mathf.CeilToInt(distance / PathCardLength);
+                        for (int card = 0; card < cards; card++)
+                            AddLayer($"Segment {i + 1} Fog {segment}-{card + 1}",
+                                Vector3.Lerp(start, corner, (card + 0.5f) / cards), corner - start,
+                                new Vector2(12f, distance / cards + 4f), 0.5f, start, corner, end);
+                    }
+                    continue;
+                }
                 float length = Vector3.Distance(center, next);
                 for (int card = 0; card < CardsPerSegment; card++)
                     AddLayer($"Segment {i + 1} Fog {card + 1}", Vector3.Lerp(center, next, (card + 1f) / (CardsPerSegment + 1f)),
                         direction, new Vector2(12f, Mathf.Max(4f, length - ClearingLength + 8f)), 0.5f,
                         center, (center + next) * 0.5f, next);
             }
+            if (route != null)
+                for (int i = 0; i < HauntedCards; i++)
+                {
+                    Vector3 direction = Quaternion.Euler(0f, i * 360f / HauntedCards, 0f) * Vector3.forward;
+                    Vector3 center = clearings[4].position;
+                    AddLayer($"Haunted Forest Fog {i + 1}", center + direction * 32f, direction,
+                        new Vector2(28f, 32f), 0.5f, center, center, center);
+                }
             for (int i = 0; i < waterSurfaces.Count; i++)
             {
                 var surface = waterSurfaces[i];
                 WaterFootprint(surface, out var footprint, out var axis);
                 Vector3 forward = new Vector3(-axis.y, 0f, axis.x);
+                Vector3 right = new Vector3(axis.x, 0f, axis.y);
                 Vector3 center = surface.bounds.center;
-                AddLayer($"Water Fog {i + 1}", center, forward, new Vector2(footprint.z * 2f + 4f, footprint.w * 2f + 4f),
-                    WaterHeight, center - forward * footprint.w, center, center + forward * footprint.w, surface);
+                int columns = Mathf.Max(1, Mathf.CeilToInt(footprint.z * 2f / WaterCardSize));
+                int rows = Mathf.Max(1, Mathf.CeilToInt(footprint.w * 2f / WaterCardSize));
+                float width = footprint.z * 2f / columns, length = footprint.w * 2f / rows;
+                for (int row = 0; row < rows; row++)
+                for (int column = 0; column < columns; column++)
+                    AddLayer($"Water Fog {i + 1} {column + 1}-{row + 1}",
+                        center + right * ((column + 0.5f) * width - footprint.z)
+                            + forward * ((row + 0.5f) * length - footprint.w),
+                        forward, new Vector2(width + 4f, length + 4f), WaterHeight,
+                        center - forward * footprint.w, center, center + forward * footprint.w, surface);
             }
             fog.layers = layers.ToArray();
             fog.ApplyProperties();
@@ -133,12 +177,14 @@ namespace TiffanyGame.EditorTools
                 renderer.receiveShadows = false;
                 renderer.lightProbeUsage = LightProbeUsage.Off;
                 renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+                float density = FogDensity.Ambient(Near(renderer.bounds, water, WaterDistance), Near(renderer.bounds, trees, TreeDistance));
+                if (route != null && Vector3.ProjectOnPlane(position - clearings[4].position, Vector3.up).magnitude <= 45f)
+                    density = Mathf.Clamp01(Mathf.Max(density, FogDensity.Ambient(false, true)) + FogDensity.TreeBoost);
                 layers.Add(new GroundFog.Layer
                 {
                     renderer = renderer,
                     groundHeight = groundHeight,
-                    density = onWater ? FogDensity.Ambient(true, false)
-                        : FogDensity.Ambient(Near(renderer.bounds, water, WaterDistance), Near(renderer.bounds, trees, TreeDistance)),
+                    density = onWater ? FogDensity.Ambient(true, false) : density,
                     water = onWater,
                     waterFootprint = footprint,
                     waterAxis = axis,

@@ -64,6 +64,8 @@ namespace TiffanyGame
         private Animator animator;
         private WitchState lastAnimationState;
         private bool hasAnimationState;
+        private NavMeshPath chasePath;
+        private readonly GroundChasePlacement.Candidate[] chaseCandidates = new GroundChasePlacement.Candidate[8];
         private readonly WitchJerk jerk = new WitchJerk(Environment.TickCount);
         private Vector3 figurePosition;
         private Quaternion figureRotation = Quaternion.identity;
@@ -215,25 +217,32 @@ namespace TiffanyGame
 
         private void PlaceForGroundChase()
         {
-            if (player == null || TryPlaceForGroundChase(profile.ReturnPlacementDistance)) return;
-            TryPlaceForGroundChase(12f);
+            if (player == null || !NavMeshPlacement.TrySample(player.position, 6f, agent.areaMask, out var target)
+                || TryPlaceForGroundChase(profile.ReturnPlacementDistance, target.position)) return;
+            TryPlaceForGroundChase(12f, target.position);
         }
 
-        private bool TryPlaceForGroundChase(float distance)
+        private bool TryPlaceForGroundChase(float distance, Vector3 target)
         {
-            for (int i = 0; i < 8; i++)
+            chasePath ??= new NavMeshPath();
+            int count = 0;
+            for (int i = 0; i < chaseCandidates.Length; i++)
             {
                 Vector3 offset = Quaternion.AngleAxis(i * 45f, Vector3.up) * -player.forward * distance;
                 if (!SafeZones.TryPushOut(player.position + offset, landingMargin, out var entry)
                     || !NavMeshPlacement.TrySample(entry, 6f, agent.areaMask, out var hit)
                     || SafeZones.Contains(hit.position)) continue;
-                Vector3 separation = hit.position - player.position;
-                separation.y = 0f;
-                if (separation.sqrMagnitude < profile.SprintTriggerDistance * profile.SprintTriggerDistance) continue;
-                transform.position = hit.position;
-                return true;
+                var status = NavMesh.CalculatePath(hit.position, target, agent.areaMask, chasePath)
+                    ? chasePath.status : NavMeshPathStatus.PathInvalid;
+                float length = 0f;
+                var corners = chasePath.corners;
+                for (int corner = 1; corner < corners.Length; corner++) length += Vector3.Distance(corners[corner - 1], corners[corner]);
+                chaseCandidates[count++] = new GroundChasePlacement.Candidate { Position = hit.position, Status = status, PathLength = length };
             }
-            return false;
+            int chosen = GroundChasePlacement.Choose(chaseCandidates, count, player.position, profile.SprintTriggerDistance);
+            if (chosen < 0) return false;
+            transform.position = chaseCandidates[chosen].Position;
+            return true;
         }
 
         private void CatchUp(Vector3 playerPosition)

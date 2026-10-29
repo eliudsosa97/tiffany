@@ -564,6 +564,14 @@ namespace TiffanyGame.Tests
             int renderers = root.GetComponentsInChildren<Renderer>(true).Length;
             Scatter();
             Assert.AreEqual(renderers, root.GetComponentsInChildren<Renderer>(true).Length);
+            var terrain = new RouteTerrain();
+            foreach (var batch in Litter.data.batches)
+            foreach (var matrix in batch.matrices)
+            {
+                Vector3 point = route.InverseTransformPoint(Litter.transform.TransformPoint(matrix.MultiplyPoint3x4(Vector3.zero)));
+                Assert.IsTrue(terrain.InClearingSquare(point.x, point.z) || terrain.DistanceToRoute(point.x, point.z) <= 0f,
+                    $"Objetos del suelo fuera de claros y senderos: {point}");
+            }
             int worstDraws = 0;
             long worstTriangles = 0;
             foreach (var clearing in route.GetComponent<WitchChapterTracker>().clearings)
@@ -586,6 +594,27 @@ namespace TiffanyGame.Tests
                 worstTriangles = Math.Max(worstTriangles, triangles);
                 Assert.That(draws, Is.InRange(1, 40), clearing.name);
                 Assert.That(triangles, Is.InRange(1L, 60000L), clearing.name);
+            }
+            var cells = route.Find("Landscape/Forest Fill").GetComponentsInChildren<ForestInstances>();
+            for (int i = 0; i < RouteLayout.Count; i++)
+            {
+                Rect view = ForestBuilder.ViewSquare(i);
+                long forest = ForestBuilder.TriangleCount(route.GetChild(i).Find("Forest")), litter = 0;
+                foreach (var cell in cells)
+                {
+                    Vector3 position = cell.transform.localPosition;
+                    var key = new Vector2Int(Mathf.RoundToInt(position.x / ForestBuilder.CellSize), Mathf.RoundToInt(position.z / ForestBuilder.CellSize));
+                    if (view.Overlaps(ForestBuilder.CellBounds(key))) forest += ForestBuilder.TriangleCount(cell.transform);
+                }
+                foreach (var batch in Litter.data.batches)
+                {
+                    var bounds = ForestInstances.TransformBounds(batch.bounds, route.worldToLocalMatrix * Litter.transform.localToWorldMatrix);
+                    if (view.Overlaps(Rect.MinMaxRect(bounds.min.x, bounds.min.z, bounds.max.x, bounds.max.z)))
+                        litter += (long)batch.mesh.GetIndexCount(0) / 3 * batch.matrices.Length;
+                }
+                Assert.LessOrEqual(litter, GroundLitterBuilder.AreaTriangleBudget, $"Objetos del suelo, claro {i}");
+                Assert.LessOrEqual(forest + litter, ForestBuilder.AreaTriangleBudget, $"Bosque y suelo, claro {i}: {forest} + {litter}");
+                TestContext.WriteLine($"Claro {i}, 80 x 80 m: bosque {forest}, suelo {litter}, total {forest + litter}.");
             }
             TestContext.WriteLine($"Suelo, máximos por claro: {worstDraws} llamadas, {worstTriangles} triángulos.");
         }

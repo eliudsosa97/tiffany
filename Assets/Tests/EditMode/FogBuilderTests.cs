@@ -234,6 +234,30 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void LongWaterOutsideClearingsHasOverlappingCardsAcrossItsWholeSurface()
+        {
+            var clearings = Clearings(1);
+            var landscape = new GameObject("Landscape").transform;
+            landscape.SetParent(world.transform, false);
+            var water = Feature("Water", landscape, new Vector3(80f, -0.15f, 30f), new Vector3(4f, 0.1f, 120f));
+            water.transform.localRotation = Quaternion.Euler(0f, 57f, 0f);
+            var fog = FogBuilder.BuildLayers(world.transform, clearings);
+            var layers = System.Array.FindAll(fog.layers, layer => layer.water);
+            Assert.AreEqual(4, layers.Length);
+            Assert.AreEqual(6, fog.layers.Length);
+            for (int sample = 0; sample <= 60; sample++)
+            {
+                Vector3 point = water.transform.TransformPoint(new Vector3(0f, 0f, sample / 60f - 0.5f));
+                Assert.IsTrue(System.Array.Exists(layers, layer =>
+                {
+                    point.y = layer.renderer.transform.position.y;
+                    Vector3 local = layer.renderer.transform.InverseTransformPoint(point);
+                    return Mathf.Abs(local.x) < 0.5f && Mathf.Abs(local.y) < 0.5f;
+                }), point.ToString());
+            }
+        }
+
+        [Test]
         public void LayersUseGroundSurfaceHeightInsteadOfTheWorldOrigin()
         {
             var clearings = Clearings(1);
