@@ -71,6 +71,7 @@ namespace TiffanyGame.EditorTools
             var materialAsset = GeneratedMaterials.GetGroundFog();
             for (int i = 0; i < clearings.Length; i++)
             {
+                float scale = route != null ? RouteLayout.ClearingSizeOf(i) / RouteLayout.ClearingSize : 1f;
                 Vector3 center = clearings[i].position;
                 Vector3 previous = clearings[i > 0 ? i - 1 : closedLoop ? clearings.Length - 1 : 0].position;
                 Vector3 next = clearings[i + 1 < clearings.Length ? i + 1 : closedLoop ? 0 : i].position;
@@ -87,9 +88,9 @@ namespace TiffanyGame.EditorTools
                 if (i == clearings.Length - 1 && !closedLoop) next = center + direction * ClearingLength * 0.5f;
                 for (int card = 0; card < CardsPerClearing; card++)
                 {
-                    float offset = (card * 2f - 1f) * SideOffset;
+                    float offset = (card * 2f - 1f) * SideOffset * scale;
                     AddLayer($"Clearing {i + 1} Fog {card + 1}", center + side * offset, direction,
-                        new Vector2(24f, ClearingLength), Mathf.Lerp(MinHeight, MaxHeight, card),
+                        new Vector2(24f, ClearingLength) * scale, Mathf.Lerp(MinHeight, MaxHeight, card),
                         previous, center, next);
                 }
                 if (i + 1 >= clearings.Length && !closedLoop) continue;

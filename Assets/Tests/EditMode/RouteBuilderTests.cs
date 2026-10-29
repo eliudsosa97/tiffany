@@ -75,8 +75,10 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(Quaternion.identity, clearing.localRotation);
                 var ground = clearing.GetComponentInChildren<GroundSurface>();
                 Assert.AreEqual(groundTypes[i], ground.type);
-                Assert.AreEqual(36f, ground.GetComponent<Collider>().bounds.size.z);
-                Assert.GreaterOrEqual(clearing.position.x - 18f, 90f);
+                float size = RouteLayout.ClearingSizeOf(i);
+                Assert.AreEqual(size, ground.GetComponent<Collider>().bounds.size.x);
+                Assert.AreEqual(size, ground.GetComponent<Collider>().bounds.size.z);
+                Assert.GreaterOrEqual(clearing.position.x - size * 0.5f, 90f);
                 var candles = clearing.GetComponentsInChildren<CandleSpot>();
                 Assert.AreEqual(1, candles.Length);
                 Assert.AreEqual(CandleKind.Family, candles[0].kind);
@@ -352,7 +354,7 @@ namespace TiffanyGame.Tests
                 var hide = hides[0];
                 Assert.IsTrue(hide.GetComponent<Collider>().isTrigger, hide.name);
                 Assert.AreEqual(LayerMask.NameToLayer("Ignore Raycast"), hide.gameObject.layer);
-                Assert.IsTrue(NavMesh.SamplePosition(clearing.TransformPoint(new Vector3(0f, 0f, -13f)),
+                Assert.IsTrue(NavMesh.SamplePosition(ClearingEntry(i),
                     out var start, 0.5f, NavMesh.AllAreas), clearing.name);
                 foreach (var entry in new[] { hide.HidePoint, hide.HidePoint + Vector3.left * 1.2f })
                 {
@@ -421,8 +423,15 @@ namespace TiffanyGame.Tests
             var pathCards = new[] { 5, 19, 5, 5, 7, 8, 5, 0 };
             for (int i = 1; i <= 8; i++)
             {
-                Assert.AreEqual(2, System.Array.FindAll(fog.layers,
-                    layer => layer.renderer.name.StartsWith($"Clearing {i} Fog ")).Length);
+                var cards = System.Array.FindAll(fog.layers, layer => layer.renderer.name.StartsWith($"Clearing {i} Fog "));
+                Assert.AreEqual(2, cards.Length);
+                foreach (var card in cards)
+                {
+                    float scale = RouteLayout.ClearingSizeOf(i - 1) / RouteLayout.ClearingSize;
+                    Assert.AreEqual(new Vector3(24f * scale, 40f * scale, 1f), card.renderer.transform.localScale);
+                    Assert.AreEqual(10f * scale, Vector3.ProjectOnPlane(card.renderer.transform.position
+                        - route.GetChild(i - 1).position, Vector3.up).magnitude, 0.001f);
+                }
                 Assert.AreEqual(pathCards[i - 1], System.Array.FindAll(fog.layers,
                     layer => layer.renderer.name.StartsWith($"Segment {i} Fog ")).Length);
             }
@@ -554,10 +563,11 @@ namespace TiffanyGame.Tests
                     if (child.TryGetComponent<GroundSurface>(out var surface))
                     {
                         var bounds = surface.GetComponent<Collider>().bounds;
-                        Assert.LessOrEqual(bounds.max.x - clearing.position.x, 18f + 0.001f);
-                        Assert.GreaterOrEqual(bounds.min.x - clearing.position.x, -18f - 0.001f);
-                        Assert.LessOrEqual(bounds.max.z - clearing.position.z, 18f + 0.001f);
-                        Assert.GreaterOrEqual(bounds.min.z - clearing.position.z, -18f - 0.001f);
+                        float half = RouteLayout.ClearingSizeOf(i) * 0.5f;
+                        Assert.LessOrEqual(bounds.max.x - clearing.position.x, half + 0.001f);
+                        Assert.GreaterOrEqual(bounds.min.x - clearing.position.x, -half - 0.001f);
+                        Assert.LessOrEqual(bounds.max.z - clearing.position.z, half + 0.001f);
+                        Assert.GreaterOrEqual(bounds.min.z - clearing.position.z, -half - 0.001f);
                     }
                 Assert.AreEqual(i < RouteLayout.Count - 1, clearing.Find("Path to Next Clearing") != null);
                 Assert.IsFalse(clearing.Find("Ground").GetComponent<Renderer>().enabled);
@@ -647,7 +657,7 @@ namespace TiffanyGame.Tests
             Vector3 last = start.position;
             for (int i = 1; i < RouteLayout.Count; i++)
             {
-                Assert.IsTrue(NavMesh.SamplePosition(route.GetChild(i).TransformPoint(Vector3.back * 13f), out var end, 0.5f, NavMesh.AllAreas));
+                Assert.IsTrue(NavMesh.SamplePosition(ClearingEntry(i), out var end, 0.5f, NavMesh.AllAreas));
                 Assert.IsTrue(NavMesh.CalculatePath(last, end.position, NavMesh.AllAreas, path), $"Claro {i}");
                 Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, $"Claro {i}");
                 last = end.position;
@@ -694,15 +704,29 @@ namespace TiffanyGame.Tests
             var navigation = new PlaythroughNavigation();
             for (int i = 0; i < RouteLayout.Count - 1; i++)
             {
-                Vector3 origin = route.GetChild(i).TransformPoint(Vector3.back * 13f);
-                Vector3 target = route.GetChild(i + 1).TransformPoint(Vector3.back * 13f);
+                Vector3 origin = ClearingEntry(i);
+                Vector3 target = ClearingEntry(i + 1);
                 Assert.IsTrue(NavMesh.SamplePosition(origin, out var from, 0.5f, walkable));
                 Assert.IsTrue(NavMesh.SamplePosition(target, out var to, 0.5f, walkable));
                 Assert.IsTrue(NavMesh.CalculatePath(from.position, to.position, walkable, path));
                 Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, $"Senderos {i}");
                 Assert.IsTrue(navigation.Calculate(origin, target), $"Partida automática {i}");
             }
+            var hut = route.GetChild(4);
+            var memory = hut.GetComponentInChildren<MemorySpot>();
+            Assert.AreEqual(5, memory.memoryId);
+            Vector3 previousStop = ClearingEntry(3);
+            foreach (var target in new[] { hut.Find("Family Candle").position + Vector3.back * 1.5f,
+                memory.transform.position, hut.GetComponentInChildren<HideVolume>().HidePoint,
+                route.GetChild(5).Find("Family Candle").position + Vector3.back * 1.5f })
+            {
+                Assert.IsTrue(navigation.Calculate(previousStop, target), "Recorrido por recuerdo 5, escondite y lago.");
+                previousStop = target;
+            }
         }
+
+        Vector3 ClearingEntry(int index) => route.GetChild(index).TransformPoint(
+            Vector3.back * (13f * RouteLayout.ClearingSizeOf(index) / RouteLayout.ClearingSize));
 
         [Test]
         public void LakeHasNoWalkableWaterAndItsBanksBlockEntry()

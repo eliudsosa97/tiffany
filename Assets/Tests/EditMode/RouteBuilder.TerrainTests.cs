@@ -11,6 +11,74 @@ namespace TiffanyGame.Tests
     public sealed partial class RouteBuilderTests
     {
         [Test]
+        public void HutLandmarksKeepTheirPositionsAndFitInsideTwentyFourMeters()
+        {
+            var hut = route.GetChild(4);
+            foreach (var (name, position) in new[] { ("Hut", new Vector3(0f, 0f, 5f)),
+                ("Hide Hut Bush", new Vector3(-6f, 0f, 3f)), ("Memory Point", new Vector3(0f, 0f, 3f)),
+                ("Family Candle", new Vector3(-6f, 0f, -8f)),
+                ("Route 5 Witch Hut", new Vector3(0f, 0f, -8f)) })
+            {
+                var item = hut.Find(name);
+                Assert.IsNotNull(item, name);
+                Assert.AreEqual(position, item.localPosition, name);
+                Check(item.position, name);
+                foreach (var renderer in item.GetComponentsInChildren<Renderer>(true))
+                { Check(renderer.bounds.min, name); Check(renderer.bounds.max, name); }
+                foreach (var collider in item.GetComponentsInChildren<Collider>(true))
+                { Check(collider.bounds.min, name); Check(collider.bounds.max, name); }
+            }
+            void Check(Vector3 world, string name)
+            {
+                Vector3 local = hut.InverseTransformPoint(world);
+                Assert.LessOrEqual(Mathf.Max(Mathf.Abs(local.x), Mathf.Abs(local.z)), 12f, name);
+            }
+        }
+
+        [Test]
+        public void FillTreesReachTheSixMeterBandExcludedByTheOldHutSquare()
+        {
+            var hut = route.GetChild(4);
+            int trees = 0;
+            foreach (var trunk in route.Find("Landscape/Forest Fill").GetComponentsInChildren<CapsuleCollider>())
+            {
+                Vector3 point = hut.InverseTransformPoint(trunk.transform.TransformPoint(trunk.center));
+                float distance = RouteTerrain.RectangleDistance(new Vector2(point.x, point.z), new Rect(-12f, -12f, 24f, 24f));
+                if (distance > 0f && distance < 6f && Mathf.Max(Mathf.Abs(point.x), Mathf.Abs(point.z)) < 18f) trees++;
+            }
+            Assert.Greater(trees, 0, "El cuadrado anterior de 36 m excluía todo el relleno de esta franja.");
+        }
+
+        [Test]
+        public void HutForestFramesTheCaptureAndKeepsItsViewPointsVisible()
+        {
+            var hut = route.GetChild(4);
+            var camera = new GameObject("Hut Camera").AddComponent<FollowCamera>();
+            camera.transform.SetParent(root.transform, false);
+            camera.target = player.transform;
+            camera.GetComponent<Camera>().aspect = 16f / 9f;
+            var canopies = route.GetComponentsInChildren<BoxCollider>();
+            foreach (var point in ForestBuilder.RouteViewPoints(4))
+            for (int yaw = 0; yaw < 360; yaw += 90)
+            {
+                player.transform.SetPositionAndRotation(hut.TransformPoint(new Vector3(point.x, 0f, point.y)), Quaternion.Euler(0f, yaw, 0f));
+                camera.Snap();
+                Vector3 direction = player.transform.position + Vector3.up * 0.6f - camera.transform.position;
+                var ray = new Ray(camera.transform.position, direction);
+                foreach (var canopy in canopies)
+                    if (canopy.gameObject.layer == LayerMask.NameToLayer(ForestLayout.CoverLayer))
+                        Assert.IsFalse(canopy.Raycast(ray, out _, direction.magnitude), $"Copa ante {point}, yaw {yaw}.");
+            }
+            player.transform.SetPositionAndRotation(hut.Find("Route 5 Witch Hut").position, Quaternion.identity);
+            camera.Snap();
+            var planes = GeometryUtility.CalculateFrustumPlanes(camera.GetComponent<Camera>());
+            int visible = 0;
+            foreach (var trunk in hut.Find("Forest").GetComponentsInChildren<CapsuleCollider>())
+                if (GeometryUtility.TestPlanesAABB(planes, trunk.GetComponent<Renderer>().bounds)) visible++;
+            Assert.GreaterOrEqual(visible, 3, "Árboles en el encuadre de la parada de la choza.");
+        }
+
+        [Test]
         public void TerrainTilesHavePersistentMeshesCollidersAndNoDuplicateNavigationFloors()
         {
             var terrain = new RouteTerrain();

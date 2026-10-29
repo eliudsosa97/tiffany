@@ -14,14 +14,15 @@ namespace TiffanyGame.Tests
             for (int i = 0; i < RouteLayout.Count; i++)
             {
                 var center = RouteLayout.Clearing(i);
-                float smallest = 18f, largest = 0f;
+                float scale = RouteLayout.ClearingSizeOf(i) / RouteLayout.ClearingSize;
+                float smallest = RouteLayout.ClearingSizeOf(i) * 0.5f, largest = 0f;
                 for (int degrees = 0; degrees < 360; degrees++)
                 {
                     float angle = degrees * Mathf.Deg2Rad;
                     float radius = terrain.ClearingRadius(i, angle);
                     smallest = Mathf.Min(smallest, radius);
                     largest = Mathf.Max(largest, radius);
-                    Assert.That(radius, Is.InRange(13f, 17.5f));
+                    Assert.That(radius, Is.InRange(13f * scale, 17.5f * scale));
                     for (float r = 0f; r < radius; r += 0.5f)
                     {
                         float x = center.x + Mathf.Cos(angle) * r, z = center.z + Mathf.Sin(angle) * r;
@@ -29,10 +30,34 @@ namespace TiffanyGame.Tests
                         Assert.AreEqual(center.y, terrain.Height(x, z), 0.0001f);
                     }
                 }
-                Assert.Greater(largest - smallest, 0.2f);
-                foreach (var local in new[] { new Vector2(0f, -13f), new Vector2(-6f, -8f), new Vector2(0f, 10f) })
+                Assert.Greater(largest - smallest, 0.2f * scale);
+                foreach (var local in new[] { new Vector2(0f, -13f * scale), new Vector2(-6f, -8f), new Vector2(0f, 10f * scale) })
                     Assert.IsTrue(terrain.IsWalkable(center.x + local.x, center.z + local.y));
             }
+        }
+
+        [TestCase(3)]
+        [TestCase(4)]
+        public void HutPathsMeetTheNewEdgeAcrossTheirWidthWithoutSteps(int from)
+        {
+            var path = RouteLayout.Path(from);
+            Vector3 edge = from == 3 ? path[path.Length - 1] : path[0];
+            Vector3 outward = from == 3 ? Vector3.back : Vector3.left;
+            Vector3 side = Vector3.Cross(Vector3.up, outward);
+            Vector3 local = edge - RouteLayout.Clearing(4);
+            Assert.AreEqual(12f, Mathf.Max(Mathf.Abs(local.x), Mathf.Abs(local.z)));
+            for (int lane = -1; lane <= 1; lane++)
+            for (float offset = -1f; offset <= 1f; offset += 0.125f)
+            {
+                Vector3 point = edge + side * (lane * 2f) + outward * offset;
+                Vector3 next = point + outward * 0.125f;
+                Assert.IsTrue(terrain.IsWalkable(point.x, point.z));
+                Assert.LessOrEqual(Mathf.Abs(terrain.Height(point.x, point.z) - terrain.Height(next.x, next.z)),
+                    Mathf.Tan(RouteLayout.CliffPathMaxSlopeDegrees * Mathf.Deg2Rad) * 0.125f + 0.0001f);
+                if (offset == 0f) Assert.AreEqual(6f, terrain.Height(point.x, point.z), 0.0001f);
+            }
+            Assert.IsFalse(terrain.InClearingSquare(117f, 60f));
+            Assert.IsTrue(terrain.IsHauntedForest(117f, 60f));
         }
 
         [Test]

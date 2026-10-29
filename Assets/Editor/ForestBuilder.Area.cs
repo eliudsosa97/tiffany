@@ -47,17 +47,27 @@ namespace TiffanyGame.EditorTools
             var viewDirection = parent.InverseTransformDirection(
                 Quaternion.Euler(FollowCamera.DefaultPitch, FollowCamera.DefaultYaw, 0f) * Vector3.forward);
             var used = new long[RouteLayout.Count];
+            var trunks = parent.parent.GetComponentsInChildren<CapsuleCollider>();
             for (int i = 0; i < used.Length; i++) used[i] = TriangleCount(parent.parent.GetChild(i).Find("Forest"));
             var cells = new SortedDictionary<Vector2Int, FillCell>(Comparer<Vector2Int>.Create((a, b) =>
                 a.y == b.y ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y)));
             float Range(float min, float max) => min + (float)random.NextDouble() * (max - min);
-            bool Free(Vector2 point, float radius) => terrain.Bounds.Contains(point)
-                && terrain.DistanceToRoute(point.x, point.y) > radius + 0.5f
-                && !terrain.InClearingSquare(point.x, point.y, radius)
-                && RouteTerrain.RectangleDistance(point, terrain.Town) > radius
-                && terrain.LakeDistance(point.x, point.y) > radius + 1f
-                && terrain.RiverDistance(point.x, point.y) > RouteTerrain.RiverWidth * 0.5f + radius
-                && terrain.TrainDistance(point.x, point.y) > RouteLayout.TrainWidth * 0.5f + radius + 0.5f;
+            bool Free(Vector2 point, float radius)
+            {
+                foreach (var trunk in trunks)
+                {
+                    Vector3 position = parent.parent.InverseTransformPoint(trunk.transform.position);
+                    if (Vector2.Distance(point, new Vector2(position.x, position.z))
+                        < trunk.radius * trunk.transform.lossyScale.x + 0.9f) return false;
+                }
+                return terrain.Bounds.Contains(point)
+                    && terrain.DistanceToRoute(point.x, point.y) > radius + 0.5f
+                    && !terrain.InClearingSquare(point.x, point.y, radius)
+                    && RouteTerrain.RectangleDistance(point, terrain.Town) > radius
+                    && terrain.LakeDistance(point.x, point.y) > radius + 1f
+                    && terrain.RiverDistance(point.x, point.y) > RouteTerrain.RiverWidth * 0.5f + radius
+                    && terrain.TrainDistance(point.x, point.y) > RouteLayout.TrainWidth * 0.5f + radius + 0.5f;
+            }
             var candidates = new List<(Vector2 point, float distance, double roll, int pick, float height, float yaw)>();
             for (float z = terrain.Bounds.yMin + 3f; z < terrain.Bounds.yMax - 3f; z += FillTreeSpacing)
             for (float x = terrain.Bounds.xMin + 3f; x < terrain.Bounds.xMax - 3f; x += FillTreeSpacing)

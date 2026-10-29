@@ -19,6 +19,10 @@ namespace TiffanyGame.EditorTools
                     Vector3 point = local * ((float)i / steps);
                     Add(point.x, point.z, RouteLayout.PathWidth * 0.5f + 0.5f);
                 }
+                Vector3 normal = Mathf.Abs(local.x) > Mathf.Abs(local.z)
+                    ? Vector3.right * Mathf.Sign(local.x) : Vector3.forward * Mathf.Sign(local.z);
+                for (int i = 1; i <= 10; i++)
+                    Add(local.x + normal.x * i, local.z + normal.z * i, RouteLayout.PathWidth * 0.5f + 0.5f);
             }
             Add(-6f, -8f, 3.5f);
             Add(0f, index == 0 ? -3.2f : index == 1 ? -1f : index == 2 ? -3f : 3f, 2f);
@@ -69,6 +73,7 @@ namespace TiffanyGame.EditorTools
                 points.Add(hides[index]);
                 points.Add(hides[index] + Vector2.left * 1.2f);
             }
+            if (index == 4) points.Add(new Vector2(0f, -8f));
             return points.ToArray();
         }
 

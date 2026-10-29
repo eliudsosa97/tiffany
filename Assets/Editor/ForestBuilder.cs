@@ -11,7 +11,7 @@ namespace TiffanyGame.EditorTools
     public static partial class ForestBuilder
     {
         public static void Populate(Transform clearing, int seed, float size, float pathWidth,
-            (Vector2 center, float radius)[] exclusions, Vector2[] viewPoints = null, int ringPines = 0)
+            (Vector2 center, float radius)[] exclusions, Vector2[] viewPoints = null, int ringPines = 0, RouteTerrain terrain = null)
         {
             int cover = LayerMask.NameToLayer(ForestLayout.CoverLayer);
             if (cover < 0) throw new InvalidOperationException($"{GameInfo.LogPrefix} Falta la capa Cover.");
@@ -26,22 +26,33 @@ namespace TiffanyGame.EditorTools
             var localViewDirection = clearing.InverseTransformDirection(
                 Quaternion.Euler(FollowCamera.DefaultPitch, FollowCamera.DefaultYaw, 0f) * Vector3.forward);
             float Range(float min, float max) => min + (float)random.NextDouble() * (max - min);
-            bool Free(Vector3 position, float radius)
+            bool Free(Vector3 position, float radius, bool ring)
             {
                 var p = new Vector2(position.x, position.z);
-                if (Mathf.Abs(p.x) < pathWidth * 0.5f + radius + 0.5f
-                    || Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.y)) + radius > size * 0.5f - 0.5f) return false;
+                float edge = Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.y));
+                if (ring)
+                {
+                    if (edge < size * 0.5f + 0.5f || edge + radius > size * 0.5f + 6f) return false;
+                }
+                else if (Mathf.Abs(p.x) < pathWidth * 0.5f + radius + 0.5f
+                    || edge + radius > size * 0.5f - 0.5f) return false;
                 foreach (var zone in blocked)
                     if ((p - zone.center).sqrMagnitude < (radius + zone.radius) * (radius + zone.radius)) return false;
                 return true;
             }
-            bool TryPosition(float radius, float height, out Vector3 position, float minDistance = 0f)
+            bool TryPosition(float radius, float height, out Vector3 position, bool ring = false)
             {
+                float half = size * 0.5f + (ring ? 6f : 0f);
                 for (int attempt = 0; attempt < 2048; attempt++)
                 {
-                    position = new Vector3(Range(-size * 0.5f, size * 0.5f), 0f, Range(-size * 0.5f, size * 0.5f));
-                    if (new Vector2(position.x, position.z).magnitude >= minDistance && Free(position, radius)
-                        && KeepsView(position, radius, height, viewPoints, localViewDirection)) return true;
+                    position = new Vector3(Range(-half, half), 0f, Range(-half, half));
+                    if (!Free(position, radius, ring)) continue;
+                    if (ring && terrain != null)
+                    {
+                        Vector3 point = clearing.localPosition + clearing.localRotation * position;
+                        position.y = terrain.GroundHeight(point.x, point.z) - clearing.localPosition.y;
+                    }
+                    if (KeepsView(position, radius, height + position.y, viewPoints, localViewDirection)) return true;
                 }
                 position = default;
                 return false;
@@ -62,7 +73,7 @@ namespace TiffanyGame.EditorTools
                 var scale = pine ? Vector3.one * (height * 0.44f) : new Vector3(height * 0.7f, height, height * 0.7f);
                 var bounds = trunk.bounds;
                 bounds.Encapsulate(crown.bounds);
-                if (!TryPosition(Radius(bounds) * scale.x, bounds.max.y * scale.y, out var position, ring ? RingStart : 0f)) continue;
+                if (!TryPosition(Radius(bounds) * scale.x, bounds.max.y * scale.y, out var position, ring)) continue;
                 var tree = Place(pine ? "Pine" : "Oak", forest, trunk, pine ? pineBark : oakBark);
                 tree.transform.localPosition = position;
                 tree.transform.localRotation = Quaternion.Euler(0f, Range(0f, 360f), 0f);
@@ -125,8 +136,6 @@ namespace TiffanyGame.EditorTools
                 GameObjectUtility.SetStaticEditorFlags(node.gameObject, StaticEditorFlags.BatchingStatic);
             Debug.Log($"{GameInfo.LogPrefix} {clearing.name}: bosque con {trees * 2} renderers, {triangles} triángulos y hasta {trees * 2 + batches.Count} draws de color.");
         }
-
-        const float RingStart = 12f;
 
         static float Radius(Bounds bounds) => new Vector2(Mathf.Abs(bounds.center.x) + bounds.extents.x,
             Mathf.Abs(bounds.center.z) + bounds.extents.z).magnitude;

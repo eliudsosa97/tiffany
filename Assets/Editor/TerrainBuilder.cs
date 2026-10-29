@@ -102,7 +102,7 @@ namespace TiffanyGame.EditorTools
             for (int i = 0; i < RouteLayout.Count; i++)
             {
                 var center = RouteLayout.Clearing(i);
-                if (Mathf.Max(Mathf.Abs(x - center.x), Mathf.Abs(z - center.z)) <= RouteLayout.ClearingSize * 0.5f)
+                if (Mathf.Max(Mathf.Abs(x - center.x), Mathf.Abs(z - center.z)) <= RouteLayout.ClearingSizeOf(i) * 0.5f)
                     return RouteBuilder.ClearingGrounds[i];
             }
             return GroundType.Dirt;
