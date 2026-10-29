@@ -1,0 +1,157 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d60d67974c54497688347f4fe12f6e28, type: 3}
+  m_Name: Fill 1 -3
+  m_EditorClassIdentifier: TiffanyGame::TiffanyGame.ForestInstanceData
+  batches:
+  - mesh: {fileID: 4300000, guid: b7f6788c4af01459286b94747eb72156, type: 2}
+    material: {fileID: 2100000, guid: 6a7b2534971464130bc0591e9af499f6, type: 2}
+    matrices:
+    - e00: -0.5302215
+      e01: 0
+      e02: -0.55981874
+      e03: 25.566204
+      e10: 0
+      e11: 1.1015127
+      e12: 0
+      e13: 2.7274232
+      e20: 0.55981874
+      e21: 0
+      e22: -0.5302215
+      e23: 13.380455
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    - e00: -0.040043112
+      e01: 0
+      e02: -0.8301314
+      e03: 16.463745
+      e10: 0
+      e11: 1.1872809
+      e12: 0
+      e13: 2.6698768
+      e20: 0.8301314
+      e21: 0
+      e22: -0.040043112
+      e23: 12.409561
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    bounds:
+      m_Center: {x: 20.880297, y: 5.634111, z: 13.355747}
+      m_Extent: {x: 7.3250628, y: 3.2231975, z: 3.024745}
+  - mesh: {fileID: 4300000, guid: c77e3dca0ac3c4ecfa8dee9b1d69b4d7, type: 2}
+    material: {fileID: 2100000, guid: 098258d305d944927a6b940165b371c3, type: 2}
+    matrices:
+    - e00: -0.5302215
+      e01: 0
+      e02: -0.55981874
+      e03: 25.566204
+      e10: 0
+      e11: 1.1015127
+      e12: 0
+      e13: 2.7274232
+      e20: 0.55981874
+      e21: 0
+      e22: -0.5302215
+      e23: 13.380455
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    - e00: -0.040043112
+      e01: 0
+      e02: -0.8301314
+      e03: 16.463745
+      e10: 0
+      e11: 1.1872809
+      e12: 0
+      e13: 2.6698768
+      e20: 0.8301314
+      e21: 0
+      e22: -0.040043112
+      e23: 12.409561
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    bounds:
+      m_Center: {x: 20.88397, y: 7.232116, z: 13.269308}
+      m_Extent: {x: 7.6508875, y: 1.7268604, z: 3.3848085}
+  - mesh: {fileID: 4300000, guid: 14a6b2aae10e44a60a57a20ebc843ec2, type: 2}
+    material: {fileID: 2100000, guid: e74d656c2b4f64ec8a898ca2a3cd14fc, type: 2}
+    matrices:
+    - e00: -0.4683606
+      e01: 0
+      e02: -0.009374079
+      e03: 21.935719
+      e10: 0
+      e11: 0.46845442
+      e12: 0
+      e13: 2.7279832
+      e20: 0.009374079
+      e21: 0
+      e22: -0.4683606
+      e23: 13.927345
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    bounds:
+      m_Center: {x: 21.935719, y: 5.94825, z: 13.927345}
+      m_Extent: {x: 0.28924835, y: 3.3430958, z: 0.30328643}
+  - mesh: {fileID: 4300000, guid: bd5f87b8aa1904dd18c4c560ffa1c119, type: 2}
+    material: {fileID: 2100000, guid: dc2473da0fe5a4d559a7fce42e9edbe8, type: 2}
+    matrices:
+    - e00: -0.4683606
+      e01: 0
+      e02: -0.009374079
+      e03: 21.935719
+      e10: 0
+      e11: 0.46845442
+      e12: 0
+      e13: 2.7279832
+      e20: 0.009374079
+      e21: 0
+      e22: -0.4683606
+      e23: 13.927345
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    bounds:
+      m_Center: {x: 21.935719, y: 11.194828, z: 13.927345}
+      m_Extent: {x: 1.5968426, y: 1.9134835, z: 1.6754655}
+  - mesh: {fileID: 4300000, guid: b3ae15d7283494f6a8a5224167d14fab, type: 2}
+    material: {fileID: 2100000, guid: 4787f4f3f57c043539d2a8d7af194a65, type: 2}
+    matrices:
+    - e00: -0.17111276
+      e01: 0
+      e02: -1.128686
+      e03: 19.190205
+      e10: 0
+      e11: 1.141583
+      e12: 0
+      e13: 2.6432276
+      e20: 1.128686
+      e21: 0
+      e22: -0.17111276
+      e23: 12.115074
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    bounds:
+      m_Center: {x: 19.215008, y: 2.731763, z: 12.190013}
+      m_Extent: {x: 0.59080017, y: 0.064473994, z: 0.7568587}
