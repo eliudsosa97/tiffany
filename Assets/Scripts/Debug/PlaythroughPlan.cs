@@ -21,10 +21,11 @@ namespace TiffanyGame
 
     public struct PlaythroughObservation
     {
-        public Vector3 Position;
+        public Vector3 Position, Target;
         public bool AtTarget, MemoryFound, BallCollected, LightOn, Flashing, Hidden;
         public bool CandleLit, ObjectMoved, Vanished, CheckpointReached, Respawning, AtRespawn, Credits, Frozen;
-        public float Energy;
+        public float Energy, RespawnGraceRemaining;
+        public bool InSafeZone;
         public string MissingContent;
         public bool ChallengeCompleted, Distracted, RetryChallenge;
         public WitchState WitchState;
@@ -33,7 +34,7 @@ namespace TiffanyGame
 
     public struct PlaythroughCommand
     {
-        public bool Move, Repath, Interact, ToggleLight, Flash, Kindle, MoveObject, Vanish, ForceRespawn;
+        public bool Move, Run, Repath, Interact, ToggleLight, Flash, Kindle, MoveObject, Vanish, ForceRespawn;
     }
 
     public sealed class PlaythroughPlan
@@ -42,6 +43,7 @@ namespace TiffanyGame
         public const float CaptureTimeout = 40f;
         public const float StuckSeconds = 3f;
         public const float ProgressDistance = 1f;
+        public const float ReturnDepartureClearance = 12f;
         const float PressInterval = 0.3f;
         readonly PlaythroughMilestone[] milestones;
         readonly List<string> missingContent = new List<string>();
@@ -153,7 +155,12 @@ namespace TiffanyGame
             var command = new PlaythroughCommand();
             ChallengeAction action = Action(Current);
             if (observation.Frozen || observation.Respawning) return command;
-            command.Move = NeedsNavigation(Current) && !observation.AtTarget;
+            bool returning = Current == PlaythroughMilestone.Respawn || Current == PlaythroughMilestone.RampCandle
+                || Current == PlaythroughMilestone.LakeCandle || Current == PlaythroughMilestone.Road;
+            bool waiting = returning && observation.InSafeZone && observation.RespawnGraceRemaining > 0f
+                && HorizontalDistance(observation.WitchPosition, observation.Target) < ReturnDepartureClearance;
+            command.Run = returning && !waiting;
+            command.Move = NeedsNavigation(Current) && !observation.AtTarget && !waiting;
             command.Repath = (command.Move && repathAfterRespawn) || CheckStuck(dt, observation.Position, command.Move);
             if (command.Repath) repathAfterRespawn = false;
             bool press = pressCooldown <= 0f;
