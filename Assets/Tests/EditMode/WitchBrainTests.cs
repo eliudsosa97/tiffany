@@ -276,7 +276,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void ProfileChangeKeepsLandingTimerAndEnablesVoice()
+        public void ProfileChangeKeepsLandingTimerAndEnablesForestLure()
         {
             profile = WitchProfiles.For(Chapter.WaterPlant);
             brain = new WitchBrain(profile, route);
@@ -332,7 +332,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(state, decision.State);
             Assert.AreEqual(state == WitchState.Stalking ? WitchForm.Grounded : WitchForm.Flying, decision.Form);
             Assert.AreEqual(state == WitchState.Flying || state == WitchState.TakingOff, decision.FireLit);
-            Assert.AreEqual(state == WitchState.Stalking && profile.UsesVoiceLure, decision.VoiceLure);
+            Assert.AreEqual(state == WitchState.Stalking && profile.UsesVoiceLure && !profile.BarkLureEnabled,
+                decision.VoiceLure, "Con el ladrido del bosque habilitado, aterrizar ya no enciende la voz continua.");
             Assert.AreEqual(speed, decision.Speed, 1e-4f);
             Assert.AreEqual(0f, Vector3.Distance(target, decision.MoveTarget), 1e-4f);
         }

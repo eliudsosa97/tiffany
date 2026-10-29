@@ -21,5 +21,12 @@ namespace TiffanyGame
         public bool Flashed;
         public bool Raining;
         public bool HearingMuted;
+        public Vector3 PlayerForward;
+        public bool HasNextClearing;
+        public Vector3 NextClearingPosition;
+        public bool HasFamilyCandle;
+        public Vector3 FamilyCandlePosition;
+        public float FamilyCandleRadius;
+        public bool PlayerAtFamilyCandle;
     }
 }

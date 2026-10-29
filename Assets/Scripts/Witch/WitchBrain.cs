@@ -10,6 +10,9 @@ namespace TiffanyGame
         private readonly Vector3[] route;
         private readonly System.Random random;
         private readonly Func<Vector3, Vector3> resolveGroundTarget;
+        private readonly WitchTactics tactics;
+        private WitchDecision tacticDecision;
+        private bool hasTacticDecision;
         private WitchState state = WitchState.Flying;
         private int routeIndex;
         private float stateTime;
@@ -39,6 +42,7 @@ namespace TiffanyGame
         private Vector3 roamTarget;
         private Vector3 target;
         private Vector3 verticalTarget;
+        private bool landingOnTarget;
         private Vector3 sprintEnd;
 
         public bool Chasing => chasing;
@@ -49,6 +53,7 @@ namespace TiffanyGame
             this.profile = profile ?? throw new ArgumentNullException(nameof(profile));
             this.random = random ?? new System.Random();
             this.resolveGroundTarget = resolveGroundTarget;
+            tactics = new WitchTactics(this.random, resolveGroundTarget);
             roamDelay = NextRoamDelay();
             if (profile.GroundChase) state = WitchState.Stalking;
             route = new Vector3[skyRoute?.Count ?? 0];
@@ -60,6 +65,8 @@ namespace TiffanyGame
 
         public WitchDecision Tick(float dt, in WitchPerception p)
         {
+            hasTacticDecision = false;
+            dt = dt < 0f || float.IsNaN(dt) || float.IsInfinity(dt) ? 0f : dt;
             sawHiding = p.PlayerHidden && (wasHidden ? sawHiding : sawPlayer);
             if (p.PlayerVanished && !wasVanished) sawHiding = false;
             bool trackable = !p.PlayerVanished && !p.PlayerInSafeZone && (!p.PlayerHidden || sawHiding);
@@ -69,7 +76,10 @@ namespace TiffanyGame
             bool noiseHeard = grounded && p.HeardNoise && !p.HearingMuted;
             bool noiseFromPlayer = noiseHeard && HorizontalDistance(p.NoisePosition, p.PlayerPosition) <= profile.PlayerNoiseMatch;
             if (p.PlayerVanished && noiseFromPlayer) noiseHeard = false;
-            bool detected = trackable && (profile.GroundChase || p.SeesPlayer || p.SmellsPlayer
+            if (tactics.Observe(dt, profile, in p, grounded, trackable, noiseHeard, noiseHeard && noiseFromPlayer,
+                trackable && p.PlayerHidden && sawHiding))
+                hasTarget = targetIsPlayer = chasing = warned = false;
+            bool detected = trackable && ((profile.GroundChase && !tactics.Investigating) || p.SeesPlayer || p.SmellsPlayer
                 || (noiseHeard && noiseFromPlayer && (chasing
                     || HorizontalDistance(p.WitchPosition, p.NoisePosition) <= profile.ClearNoiseDistance))
                 || (p.PlayerHidden && sawHiding));
@@ -82,7 +92,6 @@ namespace TiffanyGame
             sawPlayer = p.SeesPlayer && !p.PlayerHidden && !p.PlayerVanished && !p.PlayerInSafeZone;
             if (state == WitchState.Caught) return Decide(in p);
 
-            dt = dt < 0f || float.IsNaN(dt) || float.IsInfinity(dt) ? 0f : dt;
             stateTime += dt;
             UpdateRoamingTimer(dt, in p);
             if (grounded)
@@ -107,7 +116,7 @@ namespace TiffanyGame
             }
             if (grounded)
             {
-                if (state == WitchState.Stalking && !chasing && noiseHeard && !detected)
+                if (state == WitchState.Stalking && !chasing && noiseHeard && !detected && !profile.GroundChase)
                 {
                     TargetNoise(in p);
                     Suspect(WitchState.Stalking, p.NoisePosition, p.WitchPosition);
@@ -222,20 +231,34 @@ namespace TiffanyGame
 
         private void Advance(float dt, in WitchPerception p, bool trackable, bool detected, bool newLight)
         {
+            if (TryTactic(dt, in p)) return;
             switch (state)
             {
                 case WitchState.Flying:
                     AdvanceFlying(in p, newLight);
                     break;
                 case WitchState.Landing:
+                    if (landingOnTarget && SafeZones.Contains(verticalTarget))
+                    {
+                        if (!WitchTargets.TryResolve(resolveGroundTarget, verticalTarget, out var safeTarget)
+                            || SafeZones.Contains(safeTarget))
+                        {
+                            hasTarget = false;
+                            Enter(WitchState.TakingOff, p.WitchPosition);
+                            break;
+                        }
+                        verticalTarget = safeTarget;
+                        stateTime = 0f;
+                    }
                     if (stateTime >= profile.LandingDuration)
                     {
                         timeWithoutPerception = 0f;
                         Enter(WitchState.Stalking, p.WitchPosition);
+                        TryTactic(0f, in p);
                     }
                     break;
                 case WitchState.Stalking:
-                    if (hasTarget && resolveGroundTarget != null) target = resolveGroundTarget(target);
+                    if (hasTarget && !WitchTargets.TryResolve(resolveGroundTarget, target, out target)) hasTarget = false;
                     if (detected && ((chasing && warned) || !profile.CanSprint) && p.DistanceToPlayer < profile.CatchDistance)
                     {
                         Enter(WitchState.Caught, p.WitchPosition);
@@ -274,11 +297,11 @@ namespace TiffanyGame
                             retreat.y = 0f;
                             if (retreat.sqrMagnitude < 1e-6f) retreat = Vector3.forward;
                             target = p.WitchPosition + retreat.normalized * profile.HideRetreatDistance;
-                            if (resolveGroundTarget != null) target = resolveGroundTarget(target);
-                            hasTarget = hasNoiseTarget = retreatingNoise = true;
+                            hasTarget = hasNoiseTarget = retreatingNoise = WitchTargets.TryResolve(resolveGroundTarget, target, out target);
                             hideProgress = p.WitchPosition;
                             hideStallTime = 0f;
                         }
+                        if (TryTactic(0f, in p)) break;
                     }
                     if (!detected && hasTarget && HorizontalDistance(p.WitchPosition, target) <= profile.ArriveDistance)
                     {
@@ -339,6 +362,7 @@ namespace TiffanyGame
                             }
                         }
                         hasTarget = false;
+                        tactics.Cancel();
                         Enter(WitchState.Flying, p.WitchPosition);
                     }
                     break;
@@ -397,10 +421,12 @@ namespace TiffanyGame
 
         private WitchDecision Decide(in WitchPerception p)
         {
+            if (hasTacticDecision) return tacticDecision;
             bool flyingSuspicion = state == WitchState.Suspicious && suspicionReturnState == WitchState.Flying;
             var decision = new WitchDecision
             {
                 State = state,
+                Intent = tactics.Intent,
                 Form = state == WitchState.Flying || state == WitchState.Landing || state == WitchState.TakingOff || flyingSuspicion
                     ? WitchForm.Flying : WitchForm.Grounded,
                 MoveTarget = p.WitchPosition,
@@ -423,7 +449,7 @@ namespace TiffanyGame
                     decision.MoveTarget = hasTarget ? target : p.WitchPosition;
                     decision.Speed = hasTarget && !inspectingNoise
                         ? (chasing || profile.GroundChase ? profile.FollowSpeed : profile.StalkSpeed) : 0f;
-                    decision.VoiceLure = profile.UsesVoiceLure && !chasing;
+                    decision.VoiceLure = profile.UsesVoiceLure && !profile.BarkLureEnabled && !chasing;
                     break;
                 case WitchState.WindUp:
                     decision.MoveTarget = target;
@@ -446,11 +472,41 @@ namespace TiffanyGame
             state = next;
             stateTime = 0f;
             verticalTarget = position;
-            if (next == WitchState.Stalking && hasTarget && resolveGroundTarget != null) target = resolveGroundTarget(target);
+            landingOnTarget = false;
+            if (next == WitchState.Stalking && hasTarget
+                && !WitchTargets.TryResolve(resolveGroundTarget, target, out target)) hasTarget = false;
             if (next == WitchState.WindUp) chasing = warned = true;
             if (next == WitchState.Stunned || next == WitchState.TakingOff || next == WitchState.Landing) chasing = warned = false;
             if (next == WitchState.TakingOff || next == WitchState.Landing)
                 roaming = hasNoiseTarget = hasHideTarget = inspectingNoise = retreatingNoise = false;
+        }
+
+        private bool TryTactic(float dt, in WitchPerception p)
+        {
+            if (state != WitchState.Flying && state != WitchState.Stalking) return false;
+            if (state == WitchState.Stalking && hasNoiseTarget && !p.PlayerAtFamilyCandle) return false;
+            if (!tactics.TryDecide(dt, profile, in p, state, !hasTarget, chasing, out tacticDecision)) return false;
+            if ((tacticDecision.State == WitchState.Landing || (tacticDecision.State == WitchState.Stalking && tacticDecision.Speed > 0f))
+                && !WitchTargets.TryResolve(resolveGroundTarget, tacticDecision.MoveTarget, out tacticDecision.MoveTarget))
+            {
+                tactics.Forget();
+                hasTarget = false;
+                return false;
+            }
+            if (tacticDecision.State != state) Enter(tacticDecision.State, p.WitchPosition);
+            if (state == WitchState.Landing)
+            {
+                verticalTarget = tacticDecision.MoveTarget;
+                landingOnTarget = true;
+            }
+            if (state == WitchState.Flying)
+                tacticDecision.MoveTarget.y = WitchMotion.CruiseHeight(route, tacticDecision.MoveTarget, p.WitchPosition.y)
+                    + (route.Length > 0 ? profile.FlightHeightOffset : 0f);
+            hasTarget = targetIsPlayer = chasing = warned = false;
+            hasNoiseTarget = hasHideTarget = inspectingNoise = retreatingNoise = false;
+            timeWithoutPerception = 0f;
+            hasTacticDecision = true;
+            return true;
         }
 
         private Vector3 FlightPoint(int index) => route[index] + Vector3.up * profile.FlightHeightOffset;
