@@ -192,9 +192,17 @@ namespace TiffanyGame.Tests
             MovePlayer(route.GetChild(6).position - Vector3.forward * 4f);
             yield return null;
             yield return null;
-            Assert.AreEqual(2.5f, witch.Decision.Speed);
+            var chasePath = new NavMeshPath();
+            Assert.IsTrue(NavMesh.CalculatePath(witch.transform.position, witch.Decision.MoveTarget,
+                witch.GetComponent<NavMeshAgent>().areaMask, chasePath));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, chasePath.status);
             deadline = Time.realtimeSinceStartup + 8f;
-            while (witch.Decision.State != WitchState.WindUp && Time.realtimeSinceStartup < deadline) yield return null;
+            while (witch.Decision.State != WitchState.WindUp && Time.realtimeSinceStartup < deadline)
+            {
+                Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
+                Assert.AreEqual(2.5f, witch.Decision.Speed);
+                yield return null;
+            }
             Assert.AreEqual(WitchState.WindUp, witch.Decision.State);
             LogAssert.NoUnexpectedReceived();
         }

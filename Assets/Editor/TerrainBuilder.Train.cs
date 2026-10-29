@@ -20,8 +20,8 @@ namespace TiffanyGame.EditorTools
                 float bottom = terrain.GroundHeight(tracks.x, z);
                 float top = terrain.TrainHeight(z) - 0.2f;
                 if (top <= bottom) continue;
-                SceneBuilder.CreatePrimitive("Pier", PrimitiveType.Cube, parent,
-                    new Vector3(tracks.x, (bottom + top) * 0.5f, z), new Vector3(0.6f, top - bottom, 0.6f), structure);
+                BlockNavigation(SceneBuilder.CreatePrimitive("Pier", PrimitiveType.Cube, parent,
+                    new Vector3(tracks.x, (bottom + top) * 0.5f, z), new Vector3(0.6f, top - bottom, 0.6f), structure));
             }
             void Deck(string name, float start, float end)
             {

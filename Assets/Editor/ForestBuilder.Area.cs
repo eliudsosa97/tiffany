@@ -148,6 +148,7 @@ namespace TiffanyGame.EditorTools
                     if (matrices.Count == 0) continue;
                     var bounds = ForestInstances.TransformBounds(meshes[i].bounds, matrices[0]);
                     foreach (var matrix in matrices) bounds.Encapsulate(ForestInstances.TransformBounds(meshes[i].bounds, matrix));
+                    bounds.Expand(0.01f);
                     batches.Add(new ForestInstanceData.Batch { mesh = meshes[i], material = materials[i],
                         matrices = matrices.ToArray(), bounds = bounds });
                 }

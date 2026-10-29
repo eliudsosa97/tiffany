@@ -145,7 +145,9 @@ namespace TiffanyGame
 
         private void PlaceForGroundChase()
         {
-            if (player == null) return;
+            if (player == null || !NavMeshPlacement.TrySample(player.position, 6f, agent.areaMask, out var target)) return;
+            var path = new NavMeshPath();
+            float shortest = float.PositiveInfinity;
             for (int i = 0; i < 8; i++)
             {
                 Vector3 offset = Quaternion.AngleAxis(i * 45f, Vector3.up) * -player.forward * 12f;
@@ -155,8 +157,14 @@ namespace TiffanyGame
                 Vector3 separation = hit.position - player.position;
                 separation.y = 0f;
                 if (separation.sqrMagnitude < profile.SprintTriggerDistance * profile.SprintTriggerDistance) continue;
+                if (!NavMesh.CalculatePath(hit.position, target.position, agent.areaMask, path)
+                    || path.status != NavMeshPathStatus.PathComplete) continue;
+                float length = 0f;
+                var corners = path.corners;
+                for (int corner = 1; corner < corners.Length; corner++) length += Vector3.Distance(corners[corner - 1], corners[corner]);
+                if (length >= shortest) continue;
+                shortest = length;
                 transform.position = hit.position;
-                return;
             }
         }
 

@@ -106,6 +106,9 @@ namespace TiffanyGame.EditorTools
         public static void PathFloor(Transform parent, string name, Vector3 a, Vector3 b, Vector3 origin,
             RouteTerrain terrain, Material material)
         {
+            var overlap = Vector3.ProjectOnPlane(b - a, Vector3.up).normalized * 0.05f;
+            a -= overlap;
+            b += overlap;
             int steps = Mathf.CeilToInt(Vector3.Distance(a, b) / GridSize);
             var side = Vector3.Cross(Vector3.up, b - a).normalized * (RouteLayout.PathWidth * 0.5f);
             var vertices = new Vector3[(steps + 1) * 3];
@@ -148,8 +151,16 @@ namespace TiffanyGame.EditorTools
         {
             Vector3 start = new Vector3(a.x, terrain.Height(a.x, a.y), a.y);
             Vector3 end = new Vector3(b.x, terrain.Height(b.x, b.y), b.y);
-            float low = Mathf.Min(start.y, end.y) - 0.4f;
-            float height = Mathf.Abs(start.y - end.y) + wallHeight + 0.4f;
+            float low = float.PositiveInfinity, high = float.NegativeInfinity;
+            int samples = Mathf.CeilToInt(Vector2.Distance(a, b) / 0.5f);
+            for (int i = 0; i <= samples; i++)
+            {
+                Vector2 point = Vector2.Lerp(a, b, (float)i / samples);
+                float ground = terrain.GroundHeight(point.x, point.y);
+                low = Mathf.Min(low, ground - 0.4f);
+                high = Mathf.Max(high, ground + wallHeight);
+            }
+            float height = high - low;
             var middle = (start + end) * 0.5f;
             middle.y = low + height * 0.5f;
             SceneBuilder.CreateBorder(name, parent, parent.TransformPoint(middle),

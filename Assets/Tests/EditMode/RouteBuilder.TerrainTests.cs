@@ -124,8 +124,8 @@ namespace TiffanyGame.Tests
                 var collider = house.GetComponent<BoxCollider>();
                 Assert.IsNotNull(collider);
                 Assert.IsFalse(collider.isTrigger);
-                Assert.That(collider.bounds.size.x, Is.InRange(6f, 10f));
-                Assert.That(collider.bounds.size.y, Is.InRange(4f, 7f));
+                Assert.That(collider.bounds.size.x, Is.InRange(6f - 0.001f, 10f + 0.001f));
+                Assert.That(collider.bounds.size.y, Is.InRange(4f - 0.001f, 7f + 0.001f));
                 Assert.IsTrue(terrain.Town.Contains(new Vector2(house.localPosition.x, house.localPosition.z)));
                 Assert.IsFalse(terrain.IsWalkable(house.localPosition.x, house.localPosition.z));
                 Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(house.gameObject, StaticEditorFlags.BatchingStatic));

@@ -86,6 +86,14 @@ namespace TiffanyGame.Tests
                 point.y = terrain.Height(point.x, point.z);
                 Assert.AreEqual(GroundType.Dirt, Read(point), $"Sendero {i}");
             }
+            var river = route.GetChild(5).Find("Path to Next Clearing/River Crossing/River");
+            foreach (string name in new[] { "Stone 1", "Stone 2", "Stone 4", "Stone 5", "Log" })
+            {
+                var surface = river.Find(name).GetComponent<GroundSurface>();
+                Vector3 point = surface.GetComponent<Collider>().bounds.center;
+                point.y = surface.GetComponent<Collider>().bounds.max.y;
+                Assert.AreEqual(surface.type, Read(route.InverseTransformPoint(point)), name);
+            }
             var found = new System.Collections.Generic.HashSet<GroundType>();
             foreach (var collider in route.Find("Landscape/Terrain").GetComponentsInChildren<MeshCollider>())
             {
