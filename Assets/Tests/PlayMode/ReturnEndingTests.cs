@@ -85,7 +85,7 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(witch.fireLight.enabled);
             Assert.IsTrue(witch.GetComponent<NavMeshAgent>().isOnNavMesh);
             Assert.IsFalse(SafeZones.Contains(witch.transform.position));
-            Assert.Less(Vector3.Distance(soul.transform.position, witch.transform.position), 18f);
+            Assert.LessOrEqual(Vector3.Distance(soul.transform.position, witch.transform.position), witch.Profile.ReturnPlacementDistance + 1f, "El regreso la coloca a ReturnPlacementDistance de la niña.");
             for (int clearing = 5; clearing < 8; clearing++)
             {
                 MovePlayer(route.GetChild(clearing).position - Vector3.forward * 12f);
@@ -119,7 +119,7 @@ namespace TiffanyGame.Tests
             yield return null;
             yield return null;
             Assert.AreEqual(WitchForm.Grounded, witch.Decision.Form);
-            Assert.Less(Vector3.Distance(soul.transform.position, witch.transform.position), 18f);
+            Assert.LessOrEqual(Vector3.Distance(soul.transform.position, witch.transform.position), witch.Profile.ReturnPlacementDistance + 1f, "El regreso la coloca a ReturnPlacementDistance de la niña.");
             Assert.IsTrue(witch.GetComponent<NavMeshAgent>().isOnNavMesh);
             LogAssert.NoUnexpectedReceived();
         }
