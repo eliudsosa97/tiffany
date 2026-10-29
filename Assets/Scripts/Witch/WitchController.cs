@@ -72,6 +72,7 @@ namespace TiffanyGame
         private static readonly int SpeedHash = Animator.StringToHash("Speed");
         private static readonly int IdleHash = Animator.StringToHash("Idle");
         private static readonly int StalkingHash = Animator.StringToHash(nameof(WitchState.Stalking));
+        private static readonly int SuspiciousHash = Animator.StringToHash(nameof(WitchState.Suspicious));
         private static readonly int WindUpHash = Animator.StringToHash(nameof(WitchState.WindUp));
         private static readonly int SprintingHash = Animator.StringToHash(nameof(WitchState.Sprinting));
         private static readonly int RecoveringHash = Animator.StringToHash(nameof(WitchState.Recovering));
@@ -531,8 +532,7 @@ namespace TiffanyGame
             int hash = state switch
             {
                 WitchState.Stalking => StalkingHash,
-                // Provisional hasta que E haga el clip de sospecha: Stalking con Speed 0 usa Idle.
-                WitchState.Suspicious => StalkingHash,
+                WitchState.Suspicious => SuspiciousHash,
                 WitchState.WindUp => WindUpHash,
                 WitchState.Sprinting => SprintingHash,
                 WitchState.Recovering => RecoveringHash,

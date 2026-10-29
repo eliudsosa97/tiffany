@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: TiffanyArms
+  m_Mask: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  m_Elements:
+  - m_Path: 
+    m_Weight: 0
+  - m_Path: TiffanyProvisional
+    m_Weight: 0
+  - m_Path: TiffanyRig
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Skirt.B
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Skirt.F
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Skirt.L
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Skirt.R
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Spine
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Neck
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Neck/Head
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Neck/Head/Braid.L.1
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Neck/Head/Braid.L.1/Braid.L.2
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Neck/Head/Braid.L.1/Braid.L.2/Braid.L.3
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Neck/Head/Braid.R.1
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Neck/Head/Braid.R.1/Braid.R.2
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Neck/Head/Braid.R.1/Braid.R.2/Braid.R.3
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Shoulder.L
+    m_Weight: 1
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Shoulder.L/UpperArm.L
+    m_Weight: 1
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Shoulder.L/UpperArm.L/LowerArm.L
+    m_Weight: 1
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Shoulder.L/UpperArm.L/LowerArm.L/Hand.L
+    m_Weight: 1
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Shoulder.R
+    m_Weight: 1
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Shoulder.R/UpperArm.R
+    m_Weight: 1
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Shoulder.R/UpperArm.R/LowerArm.R
+    m_Weight: 1
+  - m_Path: TiffanyRig/Root/Hips/Spine/Chest/Shoulder.R/UpperArm.R/LowerArm.R/Hand.R
+    m_Weight: 1
+  - m_Path: TiffanyRig/Root/Hips/UpperLeg.L
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/UpperLeg.L/LowerLeg.L
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/UpperLeg.L/LowerLeg.L/Foot.L
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/UpperLeg.R
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/UpperLeg.R/LowerLeg.R
+    m_Weight: 0
+  - m_Path: TiffanyRig/Root/Hips/UpperLeg.R/LowerLeg.R/Foot.R
+    m_Weight: 0

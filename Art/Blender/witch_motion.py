@@ -261,6 +261,44 @@ class Idle(Motion):
         return p
 
 
+class Suspicious(Motion):
+    def __init__(self, rig, ctx, cfg, frames):
+        super().__init__(rig, ctx, cfg, frames, 0.0)
+        c, T = cfg, self.period
+        self.scan = loop_curve([tuple(k) for k in c["scan"]])
+        rise, release = c["sniffRiseSeconds"] / T, c["sniffReleaseSeconds"] / T
+        self.sniff = spring(self.grid(lambda u: sum(window(u, at, at + rise, rise, release) for at in c["sniffs"])), T, *c["sniffSpring"])
+        self.clench = spring(self.grid(lambda u: window(u, *c["clench"], *c["clenchRamps"])), T, *c["clenchSpring"])
+        self.knees = {s: self.rest_pole("Thigh." + s, "Shin." + s) for s in "LR"}
+        self.poles = {s: self.rest_pole("UpperArm." + s, "Forearm." + s) for s in "LR"}
+
+    def body(self, u):
+        c, rig = self.cfg, self.rig
+        p = Poser(rig)
+        sniff = self.sniff(u)
+        scan = c["scanDeg"] * (2 * smooth(-1, 1, self.scan(u)) - 1)
+        breath = c["breathDeg"] * math.sin(2 * math.pi * u) + c["sniffChestDeg"] * sniff
+        tremor = self.ctx["motions"]["Idle"].tremor
+        cycles, amp = c["tremorCycles"], c["tremorDeg"]
+        p.root("Hips", rig.head["Hips"] - UP * c["hipDrop"] + FWD * (c["sniffReach"] * sniff), bow(c["bow"][0]))
+        p.rel("Spine", bow(c["bow"][1]))
+        p.rel("Chest", bow(c["bow"][2] - breath))
+        p.rel("Clavicle.R", lean(-c["shoulderHitch"]))
+        p.rel("Clavicle.L", Quaternion())
+        p.rel("Neck", rot(pitch=c["neckPitch"] + tremor(u, cycles["neck"], amp["neck"]), yaw=scan * c["neckShare"]))
+        self.head_to(p, rot(pitch=c["headPitch"] - c["sniffDeg"] * sniff,
+                            roll=c["headRoll"] + tremor(u, cycles["head"], amp["head"]), yaw=scan))
+        p.rel("Jaw", bow(c["jawDeg"] + c["sniffJawDeg"] * sniff))
+        for s in "LR":
+            self.leg(p, s, rig.head["Foot." + s], Quaternion(), self.knees[s])
+            wrist = p.point("Chest", rig.tail["Forearm." + s]) + V(*c["handOffset"][s])
+            self.miss("Arm." + s, p.ik("UpperArm." + s, "Forearm." + s, wrist, p.delta("Chest").to_3x3() @ self.poles[s]))
+            p.rel("Hand." + s, bow(tremor(u, cycles["hand"], amp["hand"])))
+            curl = c["fingerCurl"] + c["clenchDeg"] * self.clench(u) if s == "R" else 0.0
+            p.rel("Fingers." + s, self.curl("Fingers." + s, curl + tremor(u, cycles["fingers"], amp["fingers"])))
+        return p
+
+
 class Stalking(Motion):
     def __init__(self, rig, ctx, cfg, frames):
         super().__init__(rig, ctx, cfg, frames, cfg["speed"])
@@ -642,7 +680,7 @@ class TakingOff(Gesture):
 
 
 CLIPS = {"Idle": Idle, "Stalking": Stalking, "Sprinting": Sprinting, "WindUp": WindUp, "Recovering": Recovering,
-         "Stunned": Stunned, "Caught": Caught, "Landing": Landing, "TakingOff": TakingOff}
+         "Stunned": Stunned, "Caught": Caught, "Landing": Landing, "TakingOff": TakingOff, "Suspicious": Suspicious}
 
 
 def create_motions(rig, ctx, spec):
