@@ -10,6 +10,7 @@ namespace TiffanyGame
     {
         PlaythroughScene scene;
         PlaythroughNavigation navigation;
+        PlaythroughDodge dodge;
         WitchController witch;
         WitchTally witchTally;
         bool quitOnFinish, reported;
@@ -99,6 +100,8 @@ namespace TiffanyGame
                 scene = new PlaythroughScene();
                 scene.Prepare(Plan, LogMilestone);
                 navigation = new PlaythroughNavigation();
+                dodge = new PlaythroughDodge((from, direction) =>
+                    PlaythroughNavigation.CanMove(from, direction, PlayerMotion.RunSpeed * PlaythroughDodge.Duration));
                 CacheClearings();
                 witch = FindAnyObjectByType<WitchController>();
                 witchTally = new WitchTally(clearingNames.Length);
@@ -148,7 +151,16 @@ namespace TiffanyGame
             }
             if (Plan.Finished) { Report(); return; }
             if (command.Repath && !CalculatePath()) return;
-            if (command.Move)
+            bool dodging = dodge.Tick(Time.deltaTime, scene.Position, scene.Forward,
+                observation.WitchState, observation.WitchPosition, command.Move);
+            if (dodge.Started) LogMilestone("esquiva la embestida");
+            if (dodge.Repath && !CalculatePath()) return;
+            if (dodging)
+            {
+                GameInput.MoveOverride = PlaythroughNavigation.CameraInput(dodge.Direction, scene.CameraYaw);
+                GameInput.RunOverride = true;
+            }
+            else if (command.Move)
             {
                 GameInput.MoveOverride = navigation.Move(scene.Position, scene.CameraYaw, Time.deltaTime, out bool run);
                 GameInput.RunOverride = run;

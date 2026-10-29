@@ -26,6 +26,8 @@ namespace TiffanyGame
         public float Energy;
         public string MissingContent;
         public bool ChallengeCompleted, Distracted, RetryChallenge;
+        public WitchState WitchState;
+        public Vector3 WitchPosition;
     }
 
     public struct PlaythroughCommand
