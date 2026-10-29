@@ -301,7 +301,7 @@ class Gait(Motion):
         p1 = self.stance(side, 0.0)[0]
         v1 = (self.stance(side, e)[0] - p1) / (e * duty * T)
         q = foot_q(self.swing_pitch(s), yaw)
-        # El pie se queda atrás a medio vuelo para que la rodilla se doble hacia atrás y no empuje la falda.
+        # El pie se queda atrás a medio vuelo.
         tuck = 28.9 * s ** 3 * (1 - s) ** 2 * g["tuck"]
         ankle = hermite(p0, v0, p1, v1 * 0.5, s, (1 - duty) * T) + UP * (g["lift"] * bump(s, g["liftPeak"])) - FWD * tuck
         return self.clear(ankle, q), q, yaw
@@ -685,7 +685,7 @@ class Secondary:
                 if panel.weight(atan2(point.x, point.y - 0.02)) >= 0.3 and v.dot(panel.o) > 0 and rho > 0.15:
                     angle = atan2(v.dot(panel.o), -v.z) + asin(min(1.0, (radius + SIM["skirtMargin"]) / rho)) - panel.alpha0
                     line[i] = angle if line[i] is None else max(line[i], angle)
-        # Al frente, la recta del paño queda dentro de la tela: su ángulo basta y frena al modelo lineal en giros grandes.
+        # Al frente, la recta del paño queda dentro de la tela.
         need = [n if l is None or n < SIM["skirtLine"] else max(SIM["skirtLine"], min(n, l)) for n, l in zip(need, line)]
         hips = p.matrix("Hips")
         result = []
