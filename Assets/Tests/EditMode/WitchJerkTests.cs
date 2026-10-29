@@ -83,6 +83,26 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchJerkPhase.Lunge, jerk.Phase);
         }
 
+        [Test]
+        public void SuspicionSuppressesAnActiveTrembleAndKeepsAnimatorAtNormalSpeed()
+        {
+            var jerk = new WitchJerk(5);
+            var stalking = Ground(WitchState.Stalking, 0f);
+            jerk.Tick(Dt, stalking);
+            jerk.Tick(jerk.Duration, stalking);
+            jerk.Tick(jerk.Duration * 0.5f, stalking);
+            Assert.AreEqual(WitchJerkPhase.Tremble, jerk.Phase);
+            Assert.Greater(jerk.Tremble, 0f);
+
+            var suspicious = Ground(WitchState.Suspicious, 0f);
+            for (int i = 0; i < 180; i++)
+            {
+                jerk.Tick(Dt, suspicious);
+                Assert.AreEqual(0f, jerk.Tremble);
+                Assert.AreEqual(1f, jerk.AnimatorSpeed);
+            }
+        }
+
         [TestCase(0f)] [TestCase(-1f)] [TestCase(float.NaN)] [TestCase(float.PositiveInfinity)]
         public void InvalidTimeDoesNotAdvance(float dt)
         {
