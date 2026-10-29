@@ -11,13 +11,14 @@ namespace TiffanyGame.EditorTools
     public static partial class ForestBuilder
     {
         public static void Populate(Transform clearing, int seed, float size, float pathWidth,
-            (Vector2 center, float radius)[] exclusions, Vector2[] viewPoints = null)
+            (Vector2 center, float radius)[] exclusions, Vector2[] viewPoints = null, int ringPines = 0)
         {
             int cover = LayerMask.NameToLayer(ForestLayout.CoverLayer);
             if (cover < 0) throw new InvalidOperationException($"{GameInfo.LogPrefix} Falta la capa Cover.");
             var previous = clearing.Find("Forest");
             if (previous != null) Object.DestroyImmediate(previous.gameObject);
             int treeLimit = Mathf.Min(12, (200 - clearing.GetComponentsInChildren<Renderer>(true).Length) / 2);
+            int ringLimit = Mathf.Max(0, Mathf.Min(ringPines, (200 - clearing.GetComponentsInChildren<Renderer>(true).Length) / 2 - treeLimit));
             var forest = new GameObject("Forest").transform;
             forest.SetParent(clearing, false);
             var random = new System.Random(seed);
@@ -34,12 +35,13 @@ namespace TiffanyGame.EditorTools
                     if ((p - zone.center).sqrMagnitude < (radius + zone.radius) * (radius + zone.radius)) return false;
                 return true;
             }
-            bool TryPosition(float radius, float height, out Vector3 position)
+            bool TryPosition(float radius, float height, out Vector3 position, float minDistance = 0f)
             {
                 for (int attempt = 0; attempt < 2048; attempt++)
                 {
                     position = new Vector3(Range(-size * 0.5f, size * 0.5f), 0f, Range(-size * 0.5f, size * 0.5f));
-                    if (Free(position, radius) && KeepsView(position, radius, height, viewPoints, localViewDirection)) return true;
+                    if (new Vector2(position.x, position.z).magnitude >= minDistance && Free(position, radius)
+                        && KeepsView(position, radius, height, viewPoints, localViewDirection)) return true;
                 }
                 position = default;
                 return false;
@@ -50,16 +52,17 @@ namespace TiffanyGame.EditorTools
             var needles = Surface("PineNeedles", new Color(0.26f, 0.34f, 0.23f), "dry_decay_leaves", true);
             int trees = 0;
             long triangles = 0;
-            for (int i = 0; i < treeLimit; i++)
+            for (int i = 0; i < treeLimit + ringLimit; i++)
             {
-                bool pine = i % 3 == 2;
+                bool ring = i >= treeLimit;
+                bool pine = ring || i % 3 == 2;
                 var trunk = LoadMesh(pine ? "Ocote0" : "BugambiliasOak" + i % 3);
                 var crown = LoadMesh(pine ? "OcoteCanopy0" : "BugambiliasLeaves" + i % 3);
                 float height = Range(1.05f, 1.2f);
                 var scale = pine ? Vector3.one * (height * 0.44f) : new Vector3(height * 0.7f, height, height * 0.7f);
                 var bounds = trunk.bounds;
                 bounds.Encapsulate(crown.bounds);
-                if (!TryPosition(Radius(bounds) * scale.x, bounds.max.y * scale.y, out var position)) continue;
+                if (!TryPosition(Radius(bounds) * scale.x, bounds.max.y * scale.y, out var position, ring ? RingStart : 0f)) continue;
                 var tree = Place(pine ? "Pine" : "Oak", forest, trunk, pine ? pineBark : oakBark);
                 tree.transform.localPosition = position;
                 tree.transform.localRotation = Quaternion.Euler(0f, Range(0f, 360f), 0f);
@@ -122,6 +125,8 @@ namespace TiffanyGame.EditorTools
                 GameObjectUtility.SetStaticEditorFlags(node.gameObject, StaticEditorFlags.BatchingStatic);
             Debug.Log($"{GameInfo.LogPrefix} {clearing.name}: bosque con {trees * 2} renderers, {triangles} triángulos y hasta {trees * 2 + batches.Count} draws de color.");
         }
+
+        const float RingStart = 12f;
 
         static float Radius(Bounds bounds) => new Vector2(Mathf.Abs(bounds.center.x) + bounds.extents.x,
             Mathf.Abs(bounds.center.z) + bounds.extents.z).magnitude;

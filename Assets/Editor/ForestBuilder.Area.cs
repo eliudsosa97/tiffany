@@ -58,14 +58,26 @@ namespace TiffanyGame.EditorTools
                 && terrain.LakeDistance(point.x, point.y) > radius + 1f
                 && terrain.RiverDistance(point.x, point.y) > RouteTerrain.RiverWidth * 0.5f + radius
                 && terrain.TrainDistance(point.x, point.y) > RouteLayout.TrainWidth * 0.5f + radius + 0.5f;
+            var candidates = new List<(Vector2 point, float distance, double roll, int pick, float height, float yaw)>();
             for (float z = terrain.Bounds.yMin + 3f; z < terrain.Bounds.yMax - 3f; z += FillTreeSpacing)
             for (float x = terrain.Bounds.xMin + 3f; x < terrain.Bounds.xMax - 3f; x += FillTreeSpacing)
             {
                 var point = new Vector2(x + Range(-1f, 1f), z + Range(-1f, 1f));
-                if (random.NextDouble() >= terrain.ForestDensity(point.x, point.y)) continue;
+                candidates.Add((point, terrain.DistanceToRoute(point.x, point.y), random.NextDouble(), random.Next(12),
+                    (float)random.NextDouble(), Range(0f, 360f)));
+            }
+            // El presupuesto de triángulos se gasta primero junto a lo caminable.
+            var order = new int[candidates.Count];
+            for (int i = 0; i < order.Length; i++) order[i] = i;
+            Array.Sort(order, (a, b) => candidates[a].distance != candidates[b].distance
+                ? candidates[a].distance.CompareTo(candidates[b].distance) : a.CompareTo(b));
+            foreach (int index in order)
+            {
+                var (point, _, roll, pick, heightRoll, yaw) = candidates[index];
+                if (roll >= terrain.ForestDensity(point.x, point.y)) continue;
                 bool haunted = terrain.IsHauntedForest(point.x, point.y);
-                int model = haunted ? (random.Next(4) == 0 ? 2 : 4) : random.Next(3) * 2;
-                float height = haunted ? Range(1.25f, 1.4f) : Range(1.05f, 1.2f);
+                int model = haunted ? (pick % 4 == 0 ? 2 : 4) : pick % 3 * 2;
+                float height = haunted ? Mathf.Lerp(1.25f, 1.4f, heightRoll) : Mathf.Lerp(1.05f, 1.2f, heightRoll);
                 float width = height * (haunted ? 0.85f : 0.7f);
                 var scale = model == 4 ? Vector3.one * (height * 0.44f) : new Vector3(width, height, width);
                 var bounds = meshes[model].bounds;
@@ -81,7 +93,7 @@ namespace TiffanyGame.EditorTools
                 var cell = Reserve(point, Triangles(meshes[model]) + Triangles(meshes[model + 1]));
                 if (cell == null) continue;
                 Vector3 position = new Vector3(point.x, ground, point.y) - cell.root.localPosition;
-                var matrix = Matrix4x4.TRS(position, Quaternion.Euler(0f, Range(0f, 360f), 0f), scale);
+                var matrix = Matrix4x4.TRS(position, Quaternion.Euler(0f, yaw, 0f), scale);
                 cell.groups[model].Add(matrix);
                 cell.groups[model + 1].Add(matrix);
                 var trunk = cell.root.gameObject.AddComponent<CapsuleCollider>();

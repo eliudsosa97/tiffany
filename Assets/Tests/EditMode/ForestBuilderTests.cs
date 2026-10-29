@@ -72,6 +72,25 @@ namespace TiffanyGame.Tests
             }
         }
         [Test]
+        public void RingPinesStandAtTheClearingEdgeAndKeepReservedZonesClear()
+        {
+            var zones = new List<(Vector2 center, float radius)>(ForestBuilder.RouteExclusions(4));
+            ForestBuilder.Populate(root.transform, 17393, 36f, 5f, zones.ToArray(), ForestBuilder.RouteViewPoints(4), 16);
+            int ring = 0, pines = 0;
+            foreach (Transform tree in root.transform.Find("Forest"))
+            {
+                if (tree.name != "Pine") continue;
+                pines++;
+                if (new Vector2(tree.localPosition.x, tree.localPosition.z).magnitude >= 12f) ring++;
+                var filter = tree.GetComponent<MeshFilter>();
+                CheckFootprint(filter.sharedMesh, root.transform.worldToLocalMatrix * filter.transform.localToWorldMatrix, zones);
+            }
+            Assert.GreaterOrEqual(ring, 12);
+            Assert.Greater(pines, 16);
+            Assert.LessOrEqual(root.GetComponentsInChildren<Renderer>(true).Length, 200);
+        }
+
+        [Test]
         public void CanopiesProvideCoverAbovePlayerAndTrunksRemainSolid()
         {
             Populate();

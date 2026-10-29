@@ -177,6 +177,23 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void ForestDensityBuildsAWallBesideTheRouteAndThinsTheFarForest()
+        {
+            float near = 0f, far = 0f;
+            int nearSamples = 0, farSamples = 0;
+            for (float z = terrain.Bounds.yMin + 1f; z < terrain.Bounds.yMax; z += 3f)
+            for (float x = terrain.Bounds.xMin + 1f; x < terrain.Bounds.xMax; x += 3f)
+            {
+                if (terrain.IsHauntedForest(x, z)) continue;
+                float distance = terrain.DistanceToRoute(x, z);
+                if (distance > 1f && distance < 6f) { near += terrain.ForestDensity(x, z); nearSamples++; }
+                else if (distance > RouteTerrain.WallDistance) { far += terrain.ForestDensity(x, z); farSamples++; }
+            }
+            Assert.Greater(near / nearSamples, 0.5f);
+            Assert.Less(far / farSamples, 0.12f);
+        }
+
+        [Test]
         public void ForestDensityIsDeterministicDenserAroundTheHutAndHasSixMeterHolesInsidePatches()
         {
             var repeat = new RouteTerrain();

@@ -72,6 +72,9 @@ namespace TiffanyGame
             return distance > RouteLayout.ClearingSize * 0.5f && distance <= 45f;
         }
 
+        public const float WallDistance = 25f;
+        const float WallFullDistance = 6f;
+
         public float ForestDensity(float x, float z)
         {
             uint hole = unchecked((uint)(Mathf.FloorToInt(x / 6f) * 73856093)
@@ -81,7 +84,9 @@ namespace TiffanyGame
             float patch = 0.5f + 0.25f * Mathf.Sin(x * 0.23f + Mathf.Sin(z * 0.07f))
                 + 0.25f * Mathf.Cos(z * 0.22f - x * 0.05f);
             bool haunted = IsHauntedForest(x, z);
-            return Smooth((patch - (haunted ? 0.58f : 0.64f)) / 0.2f) * (haunted ? 0.95f : 0.35f);
+            float clusters = Smooth((patch - (haunted ? 0.58f : 0.64f)) / 0.2f) * (haunted ? 0.95f : 0.35f);
+            float wall = 1f - Smooth((DistanceToRoute(x, z) - WallFullDistance) / (WallDistance - WallFullDistance));
+            return Mathf.Max(clusters * (haunted ? 1f : Mathf.Lerp(0.5f, 1f, wall)), wall * (haunted ? 0.95f : 0.7f));
         }
 
         public float TrainDistance(float x, float z) => SegmentDistance(new Vector2(x, z),

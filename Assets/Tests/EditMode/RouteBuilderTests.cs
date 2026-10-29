@@ -93,15 +93,24 @@ namespace TiffanyGame.Tests
         {
             var types = new[] { GroundType.Grass, GroundType.Slab, GroundType.Gravel, GroundType.Branches,
                 GroundType.Leaves, GroundType.Grass, GroundType.Slab, GroundType.Dirt };
-            for (int i = 0; i < route.childCount; i++)
+            CollectionAssert.AreEqual(types, RouteBuilder.ClearingGrounds);
+            for (int i = 0; i < RouteLayout.Count; i++)
             {
                 var clearing = route.GetChild(i);
-                var floors = i == 5 ? new[] { "West Bank", "East Bank", "South Bank", "North Bank" } : new[] { "Ground" };
-                foreach (string name in floors) AssertGround(clearing.Find(name), types[i]);
+                AssertGround(clearing.Find("Ground"), types[i]);
                 if (i == 7) continue;
                 var path = clearing.Find("Path to Next Clearing");
-                foreach (string name in i == 4 ? new[] { "South Bank", "North Bank" } : new[] { "Ground" })
-                    AssertGround(path.Find(name), GroundType.Dirt);
+                int floors = 0;
+                foreach (Transform piece in path)
+                {
+                    if (!piece.name.StartsWith("Ground ")) continue;
+                    AssertGround(piece, GroundType.Dirt);
+                    floors++;
+                }
+                Assert.Greater(floors, 0, clearing.name);
+                if (i == 5)
+                    foreach (string name in new[] { "South Bank", "North Bank" })
+                        AssertGround(path.Find("River Crossing/" + name), GroundType.Dirt);
             }
         }
 
@@ -167,8 +176,9 @@ namespace TiffanyGame.Tests
         [Test]
         public void ClearingsFitGeometryBudgetIncludingInstancedFloorCover()
         {
-            foreach (Transform clearing in route)
+            for (int i = 0; i < RouteLayout.Count; i++)
             {
+                var clearing = route.GetChild(i);
                 var renderers = clearing.GetComponentsInChildren<Renderer>(true);
                 Assert.LessOrEqual(renderers.Length, 200, clearing.name);
                 long triangles = 0;

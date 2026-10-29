@@ -161,6 +161,33 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void FillTreesCrowdTheRouteMoreThanTheFarForest()
+        {
+            var terrain = new RouteTerrain();
+            int nearTrees = 0, farTrees = 0, nearArea = 0, farArea = 0;
+            foreach (var cell in route.Find("Landscape/Forest Fill").GetComponentsInChildren<ForestInstances>())
+            foreach (var batch in cell.data.batches)
+            {
+                if (batch.mesh.name != "Ocote0" && !batch.mesh.name.StartsWith("BugambiliasOak")) continue;
+                foreach (var matrix in batch.matrices)
+                {
+                    Vector3 point = cell.transform.localPosition + matrix.MultiplyPoint3x4(Vector3.zero);
+                    if (terrain.DistanceToRoute(point.x, point.z) <= RouteTerrain.WallDistance) nearTrees++;
+                    else farTrees++;
+                }
+            }
+            for (float z = terrain.Bounds.yMin + 2f; z < terrain.Bounds.yMax; z += 4f)
+            for (float x = terrain.Bounds.xMin + 2f; x < terrain.Bounds.xMax; x += 4f)
+            {
+                float distance = terrain.DistanceToRoute(x, z);
+                if (distance <= 2f || terrain.InClearingSquare(x, z)) continue;
+                if (distance <= RouteTerrain.WallDistance) nearArea++;
+                else farArea++;
+            }
+            Assert.Greater((float)nearTrees / nearArea, (float)farTrees / farArea * 3f);
+        }
+
+        [Test]
         public void FillClustersLeaveSixMeterGapsAndTheHauntedRingHasMoreLargeTreesPerArea()
         {
             var terrain = new RouteTerrain();

@@ -15,27 +15,27 @@ namespace TiffanyGame.EditorTools
         public const float FloorOffset = 0.06f;
         public static string Folder => Path.GetDirectoryName(GeneratedMaterials.folder) + "/Terrain";
 
-        public static Transform Build(Transform route, RouteTerrain terrain, Material ground, Material structure, Material dark)
+        public static Transform Build(Transform route, RouteTerrain terrain, Material structure)
         {
             var landscape = Root("Landscape", route);
             var tiles = Root("Terrain", landscape);
             for (float z = terrain.Bounds.yMin; z < terrain.Bounds.yMax; z += TileSize)
             for (float x = terrain.Bounds.xMin; x < terrain.Bounds.xMax; x += TileSize)
                 BuildTile(tiles, terrain, Rect.MinMaxRect(x, z, Mathf.Min(x + TileSize, terrain.Bounds.xMax),
-                    Mathf.Min(z + TileSize, terrain.Bounds.yMax)), ground);
+                    Mathf.Min(z + TileSize, terrain.Bounds.yMax)));
             BuildBoundary(Root("Map Boundary", landscape), terrain, structure);
             BuildRiver(Root("River", landscape), terrain);
             BuildLakeBanks(Root("Lake Banks", landscape), terrain);
-            BuildRoad(Root("Road", landscape), terrain, dark, structure);
+            BuildRoad(Root("Road", landscape), terrain, GroundMaterials.For(GroundType.Slab), structure);
             BuildTown(Root("Town", landscape), terrain, structure);
             BuildFence(Root("Fence", landscape), terrain, structure);
             BuildRocks(Root("Cliff Rocks", landscape), terrain, structure);
-            BuildTrainBridge(Root("Train Bridge", landscape), terrain, structure, dark);
+            BuildTrainBridge(Root("Train Bridge", landscape), terrain, structure, GroundMaterials.For(GroundType.Gravel));
             ForestBuilder.FillArea(landscape, terrain);
             return landscape;
         }
 
-        static void BuildTile(Transform parent, RouteTerrain terrain, Rect rectangle, Material material)
+        static void BuildTile(Transform parent, RouteTerrain terrain, Rect rectangle)
         {
             var xs = Grid(rectangle.xMin, rectangle.xMax, 75.5f, 76f);
             var zs = Grid(rectangle.yMin, rectangle.yMax, terrain.Crossing.z - 2f, terrain.Crossing.z + 2f);
@@ -51,7 +51,7 @@ namespace TiffanyGame.EditorTools
                 normals[index] = new Vector3(terrain.GroundHeight(xs[x] - 0.1f, zs[z]) - terrain.GroundHeight(xs[x] + 0.1f, zs[z]),
                     0.2f, terrain.GroundHeight(xs[x], zs[z] - 0.1f) - terrain.GroundHeight(xs[x], zs[z] + 0.1f)).normalized;
             }
-            var walkable = new List<int>();
+            var floors = new Dictionary<GroundType, List<int>>();
             var wild = new List<int>();
             var bed = new List<int>();
             for (int z = 0; z < zs.Count - 1; z++)
@@ -66,21 +66,26 @@ namespace TiffanyGame.EditorTools
                 Vector3 center = (vertices[a] + vertices[b] + vertices[c]) / 3f;
                 var indices = terrain.IsWater(center.x, center.z) ? bed
                     : terrain.WalkableDistance(center.x, center.z) < 0.5f || terrain.InClearingSquare(center.x, center.z)
-                        || terrain.Town.Contains(new Vector2(center.x, center.z)) ? walkable : wild;
+                        || terrain.Town.Contains(new Vector2(center.x, center.z)) ? Floor(FloorType(center.x, center.z)) : wild;
                 indices.Add(a); indices.Add(b); indices.Add(c);
             }
+            List<int> Floor(GroundType type)
+            {
+                if (!floors.TryGetValue(type, out var indices)) floors.Add(type, indices = new List<int>());
+                return indices;
+            }
             string name = $"Tile {rectangle.xMin} {rectangle.yMin}";
-            Make("Ground", walkable, false);
-            Make("Wild", wild, true);
-            Make("Bed", bed, false);
-            void Make(string suffix, List<int> indices, bool forest)
+            foreach (var floor in floors)
+                Make(floor.Key == GroundType.Dirt ? "Ground" : $"Ground {floor.Key}", floor.Value, floor.Key);
+            Make("Wild", wild, terrain.ForestGround(rectangle.center.x, rectangle.center.y), true);
+            Make("Bed", bed, GroundType.Dirt);
+            void Make(string suffix, List<int> indices, GroundType type, bool forest = false)
             {
                 if (indices.Count == 0) return;
                 var mesh = SaveMesh(name + " " + suffix, vertices, indices.ToArray(), uv, normals);
-                var piece = MeshObject(name + " " + suffix, parent, mesh, material);
+                var piece = MeshObject(name + " " + suffix, parent, mesh, GroundMaterials.For(type));
                 piece.AddComponent<MeshCollider>().sharedMesh = mesh;
-                piece.AddComponent<GroundSurface>().type = forest
-                    ? terrain.ForestGround(rectangle.center.x, rectangle.center.y) : GroundType.Dirt;
+                piece.AddComponent<GroundSurface>().type = type;
                 if (forest)
                 {
                     var modifier = piece.AddComponent<NavMeshModifier>();
@@ -90,6 +95,17 @@ namespace TiffanyGame.EditorTools
                 }
                 if (suffix == "Bed") piece.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
             }
+        }
+
+        static GroundType FloorType(float x, float z)
+        {
+            for (int i = 0; i < RouteLayout.Count; i++)
+            {
+                var center = RouteLayout.Clearing(i);
+                if (Mathf.Max(Mathf.Abs(x - center.x), Mathf.Abs(z - center.z)) <= RouteLayout.ClearingSize * 0.5f)
+                    return RouteBuilder.ClearingGrounds[i];
+            }
+            return GroundType.Dirt;
         }
 
         static List<float> Grid(float min, float max, params float[] extra)

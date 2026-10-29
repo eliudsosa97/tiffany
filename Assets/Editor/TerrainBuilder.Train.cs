@@ -7,7 +7,7 @@ namespace TiffanyGame.EditorTools
 {
     public static partial class TerrainBuilder
     {
-        static void BuildTrainBridge(Transform parent, RouteTerrain terrain, Material structure, Material rail)
+        static void BuildTrainBridge(Transform parent, RouteTerrain terrain, Material structure, Material gravel)
         {
             Vector3 tracks = RouteLayout.Clearing(2);
             float south = tracks.z + RouteLayout.TrainSouthRampLength;
@@ -52,7 +52,7 @@ namespace TiffanyGame.EditorTools
                     for (int side = -1; side <= 1; side += 2)
                     {
                         var track = Part("Rail", middle + new Vector3(side * 0.9f, 0.04f, 0f),
-                            new Vector3(0.12f, 0.08f, length + 0.02f), rail);
+                            new Vector3(0.12f, 0.08f, length + 0.02f), gravel);
                         track.AddComponent<GroundSurface>().type = GroundType.Gravel;
                         track.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
                         var guard = Part("Guardrail", middle + new Vector3(side * (RouteLayout.TrainWidth * 0.5f + 0.1f), 0.6f, 0f),
@@ -67,7 +67,7 @@ namespace TiffanyGame.EditorTools
                     }
                 }
                 var mesh = SaveMesh("Train " + name, vertices, triangles.ToArray());
-                var floor = MeshObject("Ground", section, mesh, structure);
+                var floor = MeshObject("Ground", section, mesh, gravel);
                 floor.AddComponent<MeshCollider>().sharedMesh = mesh;
                 floor.AddComponent<GroundSurface>().type = GroundType.Gravel;
             }

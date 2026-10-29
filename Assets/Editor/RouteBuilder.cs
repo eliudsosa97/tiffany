@@ -16,15 +16,15 @@ namespace TiffanyGame.EditorTools
         public const float TrailRadius = ClearingSize * 0.5f + 2f;
         const float PathWidth = RouteLayout.PathWidth;
         const string GraveyardFolder = "Assets/Art/Kenney/Graveyard/Models";
+        const int HauntedRingPines = 16;
+        public static readonly GroundType[] ClearingGrounds = { GroundType.Grass, GroundType.Slab, GroundType.Gravel,
+            GroundType.Branches, GroundType.Leaves, GroundType.Grass, GroundType.Slab, GroundType.Dirt };
 
         public static Transform BuildRoute(Transform parent, PlayerController player, Storm storm,
             out Transform[] memories, out Vector3[] skyRoute)
         {
             var route = Root("Route", parent, new Vector3(160f, 0f, 0f));
             var names = new[] { "Cemetery", "Water Plant", "Train Tracks", "Stable", "Witch Hut", "Lake", "Road", "Tiffany House" };
-            var grounds = new[] { GroundType.Grass, GroundType.Slab, GroundType.Gravel, GroundType.Branches,
-                GroundType.Leaves, GroundType.Grass, GroundType.Slab, GroundType.Dirt };
-            var terrainFloor = GeneratedMaterials.Get("RouteGround", new Color(0.25f, 0.25f, 0.25f));
             var pathFloor = GroundMaterials.For(GroundType.Dirt);
             var structure = GeneratedMaterials.Get("RouteStructure", new Color(0.4f, 0.4f, 0.4f));
             var dark = GeneratedMaterials.Get("RouteForest", new Color(0.09f, 0.09f, 0.09f));
@@ -38,9 +38,9 @@ namespace TiffanyGame.EditorTools
             {
                 var clearing = Root($"Route {i + 1} {names[i]}", route, RouteLayout.Clearing(i));
                 tracker.clearings[i] = clearing;
-                var floor = GroundMaterials.For(grounds[i]);
+                var floor = GroundMaterials.For(ClearingGrounds[i]);
                 if (i == 5) WaterBuilder.BuildLake(clearing, floor);
-                else Ground("Ground", clearing, Vector3.zero, new Vector2(ClearingSize, ClearingSize), grounds[i], floor);
+                else Ground("Ground", clearing, Vector3.zero, new Vector2(ClearingSize, ClearingSize), ClearingGrounds[i], floor);
                 BuildEdges(clearing, i);
                 if (i < names.Length - 1) BuildPath(clearing, i, pathFloor, GroundMaterials.For(GroundType.Gravel), terrain);
                 Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush);
@@ -56,7 +56,7 @@ namespace TiffanyGame.EditorTools
                     clearing.TransformPoint(candlePosition), CandleKind.Family, true, player.GetComponent<PlayerSoul>(), storm);
             }
 
-            TerrainBuilder.Build(route, terrain, terrainFloor, structure, dark);
+            TerrainBuilder.Build(route, terrain, structure);
             var spawn = Root("Spawn", route.GetChild(0), new Vector3(0f, 0f, -13f));
             spawn.rotation = Quaternion.LookRotation(memories[0].position - spawn.position);
             player.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
@@ -86,7 +86,7 @@ namespace TiffanyGame.EditorTools
         static void BuildEdges(Transform clearing, int index)
         {
             ForestBuilder.Populate(clearing, 17389 + index, ClearingSize, PathWidth,
-                ForestBuilder.RouteExclusions(index), ForestBuilder.RouteViewPoints(index));
+                ForestBuilder.RouteExclusions(index), ForestBuilder.RouteViewPoints(index), index == 4 ? HauntedRingPines : 0);
         }
 
         static void BuildPath(Transform clearing, int index, Material floor, Material stone, RouteTerrain terrain)

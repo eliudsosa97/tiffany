@@ -27,9 +27,11 @@ namespace TiffanyGame.Tests
                 Assert.LessOrEqual(mesh.bounds.size.x, 64.001f);
                 Assert.LessOrEqual(mesh.bounds.size.z, 64.001f);
                 bool forest = tile.name.EndsWith(" Wild");
-                Assert.AreEqual(forest ? terrain.ForestGround(mesh.bounds.center.x, mesh.bounds.center.z) : GroundType.Dirt,
-                    tile.GetComponent<GroundSurface>().type);
-                Assert.AreEqual("RouteGround", tile.GetComponent<Renderer>().sharedMaterial.name);
+                string suffix = tile.name.Substring(tile.name.LastIndexOf(' ') + 1);
+                var type = forest ? terrain.ForestGround(mesh.bounds.center.x, mesh.bounds.center.z)
+                    : System.Enum.TryParse(suffix, out GroundType clearingType) ? clearingType : GroundType.Dirt;
+                Assert.AreEqual(type, tile.GetComponent<GroundSurface>().type);
+                Assert.AreSame(GroundMaterials.For(type), tile.GetComponent<Renderer>().sharedMaterial);
                 if (tile.name.EndsWith(" Wild")) Assert.AreEqual(NavMesh.GetAreaFromName(RouteTerrain.ForestArea), tile.GetComponent<NavMeshModifier>().area);
                 else if (tile.name.EndsWith(" Bed")) Assert.IsTrue(tile.GetComponent<NavMeshModifier>().ignoreFromBuild);
                 else Assert.IsNull(tile.GetComponent<NavMeshModifier>());
@@ -71,9 +73,7 @@ namespace TiffanyGame.Tests
                     Assert.IsTrue(surface.GetComponent<Collider>().enabled);
                     var renderer = surface.GetComponent<Renderer>();
                     Assert.IsTrue(renderer.enabled);
-                    Assert.AreEqual("RoutePathDirt", renderer.sharedMaterial.name);
-                    Color dirt = new Color(0.36f, 0.27f, 0.18f), baseColor = renderer.sharedMaterial.GetColor("_BaseColor");
-                    for (int channel = 0; channel < 4; channel++) Assert.AreEqual(dirt[channel], baseColor[channel], 1e-4f);
+                    Assert.AreSame(GroundMaterials.For(GroundType.Dirt), renderer.sharedMaterial);
                     Assert.IsTrue(AssetDatabase.Contains(renderer.sharedMaterial));
                     if (!surface.TryGetComponent<MeshCollider>(out var floor)) continue;
                     foreach (var vertex in floor.sharedMesh.vertices)
