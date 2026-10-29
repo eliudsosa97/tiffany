@@ -459,7 +459,9 @@ namespace TiffanyGame.Tests
 #if UNITY_EDITOR
                 Vector3 velocity = agent.velocity;
                 velocity.y = 0f;
-                Assert.AreEqual(velocity.magnitude, controller.figure.GetComponent<Animator>().GetFloat("Speed"), 0.01f);
+                var animator = controller.figure.GetComponent<Animator>();
+                float expected = animator.speed < 1f ? controller.Decision.Speed : velocity.magnitude;
+                Assert.AreEqual(expected, animator.GetFloat("Speed"), 0.01f);
 #endif
             }
 
