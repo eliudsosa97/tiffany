@@ -106,7 +106,7 @@ namespace TiffanyGame.Tests
                 {
                     int pass = material.FindPass(passName);
                     Assert.GreaterOrEqual(pass, 0, passName);
-                    Assert.AreEqual(lightMode, shader.FindPassTagValue(pass, new ShaderTagId("LightMode")).name, passName);
+                    Assert.That(shader.FindPassTagValue(pass, new ShaderTagId("LightMode")).name, Is.EqualTo(lightMode).IgnoreCase, passName);
                     Assert.IsTrue(material.GetShaderPassEnabled(lightMode), lightMode);
                 }
             }

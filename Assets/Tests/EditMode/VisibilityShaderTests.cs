@@ -29,7 +29,9 @@ namespace TiffanyGame.Tests
                     "_TIFFANY_CHARACTER " + MacLighting,
                     "_TIFFANY_CHARACTER _TIFFANY_UNLIT " + WebLighting,
                     "_NORMALMAP _ALPHATEST_ON _GBUFFER_NORMALS_OCT INSTANCING_ON " + WebLighting,
-                    "_EMISSION _METALLICSPECGLOSSMAP _OCCLUSIONMAP " + MacLighting
+                    "_ALPHATEST_ON _CASTING_PUNCTUAL_LIGHT_SHADOW INSTANCING_ON",
+                    "_EMISSION _METALLICSPECGLOSSMAP _OCCLUSIONMAP " + MacLighting,
+                    "EDITOR_VISUALIZATION _EMISSION _METALLICSPECGLOSSMAP"
                 },
                 [Silhouette] = new[] { "", "INSTANCING_ON" },
                 [Spirit] = new[]
