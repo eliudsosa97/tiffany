@@ -9,6 +9,8 @@ namespace TiffanyGame
         public Vector3 PlayerLightPosition;
         public bool HeardNoise;
         public Vector3 NoisePosition;
+        public bool HasNoiseHide;
+        public Vector3 NoiseHidePosition;
         public bool SmellsPlayer;
         public bool SeesPlayer;
         public Vector3 PlayerPosition;
