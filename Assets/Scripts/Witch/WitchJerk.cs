@@ -48,6 +48,7 @@ namespace TiffanyGame
                 }
             }
             Output();
+            if (decision.State == WitchState.Suspicious) AnimatorSpeed = 1f;
         }
 
         private WitchJerkPhase Next() => Phase switch

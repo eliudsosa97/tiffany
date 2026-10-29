@@ -69,6 +69,7 @@ namespace TiffanyGame.Tests
             for (int i = 0; i < 1200; i++)
             {
                 jerk.Tick(Dt, Ground(state, speed));
+                if (state == WitchState.Suspicious) Assert.AreEqual(1f, jerk.AnimatorSpeed);
                 if (jerk.Phase == WitchJerkPhase.Tremble)
                 {
                     Assert.AreEqual(0f, jerk.SpeedFactor);

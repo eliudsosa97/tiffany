@@ -111,9 +111,12 @@ namespace TiffanyGame.Tests
             var animator = controller.figure.GetComponent<Animator>();
             animator.Update(0f);
 
-            string expectedState = state == WitchState.Suspicious ? nameof(WitchState.Stalking) : state.ToString();
-            Assert.AreEqual(Animator.StringToHash(expectedState), animator.GetCurrentAnimatorStateInfo(0).shortNameHash);
-            if (state == WitchState.Suspicious) Assert.AreEqual(0f, animator.GetFloat("Speed"));
+            Assert.AreEqual(Animator.StringToHash(state.ToString()), animator.GetCurrentAnimatorStateInfo(0).shortNameHash);
+            if (state == WitchState.Suspicious)
+            {
+                Assert.AreEqual(0f, animator.GetFloat("Speed"));
+                Assert.AreEqual(1f, animator.speed);
+            }
             Assert.IsTrue(controller.figure.activeSelf);
             Assert.AreEqual(Vector3.zero, controller.figure.transform.localPosition);
             Assert.AreEqual(Quaternion.identity, controller.figure.transform.localRotation);
@@ -498,6 +501,10 @@ namespace TiffanyGame.Tests
             NoiseBus.Publish(new StepNoise(origin, 20f));
             yield return WaitForState(WitchState.Suspicious, 1f);
             Vector3 anchor = witch.transform.position;
+#if UNITY_EDITOR
+            var animator = controller.figure.GetComponent<Animator>();
+            float blendEnd = Time.time + 0.3f;
+#endif
             float deadline = Time.time + controller.Profile.SuspicionDuration - 0.2f;
             while (Time.time < deadline)
             {
@@ -505,6 +512,15 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(anchor, witch.transform.position);
                 Assert.IsFalse(agent.enabled);
                 Assert.Less(Vector3.Angle(Vector3.right, witch.transform.forward), 0.1f);
+#if UNITY_EDITOR
+                Assert.AreEqual(1f, animator.speed);
+                if (Time.time >= blendEnd)
+                {
+                    Assert.IsFalse(animator.IsInTransition(0));
+                    Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Suspicious"));
+                    Assert.Greater(animator.GetCurrentAnimatorStateInfo(0).normalizedTime, 0f);
+                }
+#endif
                 yield return null;
             }
             yield return WaitForState(WitchState.Stalking, 1f);
