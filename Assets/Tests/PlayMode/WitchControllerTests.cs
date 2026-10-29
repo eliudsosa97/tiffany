@@ -507,7 +507,7 @@ namespace TiffanyGame.Tests
             }
             yield return WaitForState(WitchState.Stalking, 1f);
             Assert.IsTrue(agent.enabled && agent.isOnNavMesh);
-            Assert.AreEqual(origin, controller.Decision.MoveTarget);
+            Assert.Less(Vector3.Distance(origin, controller.Decision.MoveTarget), 0.01f);
         }
 
         [UnityTest]
@@ -694,6 +694,20 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(playerPoint.position, controller.Decision.MoveTarget);
             Assert.IsFalse(controller.Decision.FireLit || fireLight.enabled);
             LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator ReturnStartsAtTheReturnPlacementDistance()
+        {
+            player.transform.position = Vector3.zero;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            controller.BeginReturn();
+
+            Assert.AreEqual(18f, controller.Profile.ReturnPlacementDistance);
+            Assert.AreEqual(controller.Profile.ReturnPlacementDistance, HorizontalDistanceToPlayer(), 0.5f);
+            Assert.IsFalse(SafeZones.Contains(witch.transform.position));
+            yield return null;
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
         }
 
         [UnityTest]

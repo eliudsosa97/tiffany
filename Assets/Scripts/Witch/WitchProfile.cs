@@ -64,6 +64,7 @@ namespace TiffanyGame
         public float FarDistance = 25f;
         public float RoamMinDistance = 8f;
         public float RoamMaxDistance = 12f;
+        public float ReturnPlacementDistance = 18f;
 
         public WitchProfile Copy() => (WitchProfile)MemberwiseClone();
     }

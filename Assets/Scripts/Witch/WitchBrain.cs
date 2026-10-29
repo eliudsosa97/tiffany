@@ -116,7 +116,7 @@ namespace TiffanyGame
             }
             if (grounded)
             {
-                if (state == WitchState.Stalking && !chasing && noiseHeard && !detected)
+                if (state == WitchState.Stalking && !chasing && noiseHeard && !detected && !profile.GroundChase)
                 {
                     TargetNoise(in p);
                     Suspect(WitchState.Stalking, p.NoisePosition, p.WitchPosition);

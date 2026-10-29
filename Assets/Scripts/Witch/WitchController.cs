@@ -160,10 +160,15 @@ namespace TiffanyGame
 
         private void PlaceForGroundChase()
         {
-            if (player == null) return;
+            if (player == null || TryPlaceForGroundChase(profile.ReturnPlacementDistance)) return;
+            TryPlaceForGroundChase(12f);
+        }
+
+        private bool TryPlaceForGroundChase(float distance)
+        {
             for (int i = 0; i < 8; i++)
             {
-                Vector3 offset = Quaternion.AngleAxis(i * 45f, Vector3.up) * -player.forward * 12f;
+                Vector3 offset = Quaternion.AngleAxis(i * 45f, Vector3.up) * -player.forward * distance;
                 if (!SafeZones.TryPushOut(player.position + offset, landingMargin, out var entry)
                     || !NavMeshPlacement.TrySample(entry, 6f, agent.areaMask, out var hit)
                     || SafeZones.Contains(hit.position)) continue;
@@ -171,8 +176,9 @@ namespace TiffanyGame
                 separation.y = 0f;
                 if (separation.sqrMagnitude < profile.SprintTriggerDistance * profile.SprintTriggerDistance) continue;
                 transform.position = hit.position;
-                return;
+                return true;
             }
+            return false;
         }
 
         private void Hear(StepNoise noise) => witchSenses.Hear(in noise, transform.position);

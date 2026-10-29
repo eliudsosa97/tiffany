@@ -608,6 +608,25 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(profile.FollowSpeed, Step(0f).Speed);
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public void ReturnHuntsANoiseDirectlyWithoutSuspicion(bool inSafeZone)
+        {
+            profile = WitchProfiles.For(Chapter.Return);
+            brain = new WitchBrain(profile, null);
+            p.PlayerInSafeZone = inSafeZone;
+            p.PlayerHidden = !inSafeZone;
+            p.HeardNoise = true;
+            p.NoisePosition = Vector3.left * 8f;
+            for (int i = 0; i < 3; i++)
+            {
+                WitchDecision decision = Step(0.5f);
+                Assert.AreEqual(WitchState.Stalking, decision.State, "En el regreso el ruido la pone a cazar, sin sospecha.");
+                Assert.AreEqual(p.NoisePosition, decision.MoveTarget);
+                Assert.AreEqual(profile.FollowSpeed, decision.Speed);
+            }
+        }
+
         [Test]
         public void FlashOrVanishingDoesNotScheduleLastSeenFromTheLossOfVisibility()
         {

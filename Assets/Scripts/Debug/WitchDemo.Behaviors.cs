@@ -95,7 +95,13 @@ namespace TiffanyGame
             witch.playerLightOn = witch.playerHidden = witch.playerVanished = witch.hearingMuted = false;
             witch.raining = !airborne;
             if (mode == "ambush") witch.NextClearingOverride = witchPoint.position + Vector3.right * profile.AmbushEdgeOffset;
-            if (mode == "bark") witch.NextClearingOverride = playerPoint.position + Vector3.forward * 10f;
+            if (mode == "bark")
+            {
+                // La bruja queda detrás de la niña: ningún lado del ladrido la hace pasar junto a ella.
+                Vector3 ahead = playerPoint.position - witchPoint.position;
+                ahead.y = 0f;
+                witch.NextClearingOverride = playerPoint.position + ahead.normalized * 10f;
+            }
             FrameBehavior(playerPoint.position, witchPoint.position, candle);
             Physics.SyncTransforms();
             Debug.Log($"{GameInfo.LogPrefix} WitchDemo {mode}: encuentro preparado con perfil de demostración.");
