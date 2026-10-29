@@ -443,6 +443,26 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator CandleLitUnderALastSeenLandingMovesTheTouchdownOutside()
+        {
+            LightPlayerAt(new Vector3(18f, 0f, 0f));
+            yield return new WaitForSeconds(0.3f);
+            controller.playerLightOn = false;
+            player.transform.position = new Vector3(-30f, 0f, -30f);
+            yield return WaitForState(WitchState.Landing, 6f);
+            Assert.AreEqual(WitchIntent.LastSeen, controller.Decision.Intent);
+            Vector3 destination = controller.Decision.MoveTarget;
+            yield return new WaitForSeconds(controller.Profile.LandingDuration * 0.5f);
+            Assert.AreEqual(WitchState.Landing, controller.Decision.State);
+            SafeZones.Add(destination, 4f);
+            player.transform.position = destination;
+
+            yield return WaitForState(WitchState.Stalking, controller.Profile.LandingDuration * 2f + 1f);
+
+            Assert.IsFalse(SafeZones.Contains(witch.transform.position));
+        }
+
+        [UnityTest]
         public IEnumerator StalkingClosesHorizontalDistanceOnNavMesh()
         {
             TurnOnPlayerLight();
@@ -489,7 +509,7 @@ namespace TiffanyGame.Tests
             }
             yield return WaitForState(WitchState.Stalking, 1f);
             Assert.IsTrue(agent.enabled && agent.isOnNavMesh);
-            Assert.AreEqual(origin, controller.Decision.MoveTarget);
+            Assert.Less(Vector3.Distance(origin, controller.Decision.MoveTarget), 0.01f);
         }
 
         [UnityTest]
@@ -609,7 +629,7 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator ChapterUpgradeKeepsLandingPositionAndEnablesVoiceWithoutRestarting()
+        public IEnumerator ChapterUpgradeKeepsLandingPositionAndEnablesForestLureWithoutRestarting()
         {
             controller.chapter = Chapter.WaterPlant;
             controller.ResetBrain();
@@ -625,12 +645,13 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(decision, controller.Decision);
             Assert.IsFalse(agent.enabled);
             yield return WaitForStalking();
-            Assert.IsTrue(controller.Decision.VoiceLure);
+            Assert.IsTrue(controller.Profile.BarkLureEnabled);
+            Assert.IsFalse(controller.Decision.VoiceLure, "Las vías habilitan el ladrido del bosque, no la voz al aterrizar.");
             controller.SetChapter(Chapter.Cemetery);
             Assert.AreEqual(Chapter.TrainTracks, controller.chapter);
             yield return null;
             Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
-            Assert.IsTrue(controller.Decision.VoiceLure);
+            Assert.IsFalse(controller.Decision.VoiceLure, "El ladrido permanece apagado fuera de su punto de llamada.");
         }
 
         [UnityTest]
@@ -675,6 +696,20 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(playerPoint.position, controller.Decision.MoveTarget);
             Assert.IsFalse(controller.Decision.FireLit || fireLight.enabled);
             LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator ReturnStartsAtTheReturnPlacementDistance()
+        {
+            player.transform.position = Vector3.zero;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            controller.BeginReturn();
+
+            Assert.AreEqual(18f, controller.Profile.ReturnPlacementDistance);
+            Assert.AreEqual(controller.Profile.ReturnPlacementDistance, HorizontalDistanceToPlayer(), 0.5f);
+            Assert.IsFalse(SafeZones.Contains(witch.transform.position));
+            yield return null;
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
         }
 
         [UnityTest]

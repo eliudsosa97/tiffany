@@ -5,11 +5,12 @@ using UnityEngine.AI;
 namespace TiffanyGame
 {
     [DefaultExecutionOrder(-900)]
-    public sealed class WitchDemo : MonoBehaviour
+    public sealed partial class WitchDemo : MonoBehaviour
     {
         public const float NothingDuration = 24f;
         public bool chase;
         public bool stalk;
+        public string mode;
         FollowCamera follow;
         Camera view;
         Storm storm;
@@ -26,15 +27,15 @@ namespace TiffanyGame
             var args = System.Environment.GetCommandLineArgs();
             int index = System.Array.IndexOf(args, "-witchdemo");
             if (index < 0) return;
-            string mode = index + 1 < args.Length ? args[index + 1] : null;
-            if (mode != "chase" && mode != "nothing" && mode != "stalk")
+            if (index + 1 >= args.Length || (!IsMode(args[index + 1]) && args[index + 1] != "stalk"))
             {
-                Debug.LogError($"{GameInfo.LogPrefix} -witchdemo requiere chase, nothing o stalk.");
+                Debug.LogError($"{GameInfo.LogPrefix} -witchdemo requiere chase, nothing, stalk, search, ambush, candle, bark o lightsoff.");
                 return;
             }
             var demo = new GameObject("WitchDemo").AddComponent<WitchDemo>();
-            demo.chase = mode == "chase";
-            demo.stalk = mode == "stalk";
+            demo.chase = args[index + 1] == "chase";
+            demo.stalk = args[index + 1] == "stalk";
+            if (!demo.chase && !demo.stalk && args[index + 1] != "nothing") demo.mode = args[index + 1];
 #endif
         }
 
@@ -55,6 +56,11 @@ namespace TiffanyGame
             if (player == null || witch == null || stop == null || view == null)
             {
                 Debug.LogError($"{GameInfo.LogPrefix} WitchDemo necesita la escena generada completa.");
+                yield break;
+            }
+            if (!string.IsNullOrEmpty(mode))
+            {
+                yield return RunBehavior(player, witch, stop.transform.position);
                 yield break;
             }
             Vector3 origin = stop.transform.position + Vector3.back * 12f;
@@ -78,6 +84,10 @@ namespace TiffanyGame
             character.enabled = true;
             witch.chapter = Chapter.Stable;
             witch.ResetBrain();
+            var legacy = witch.Profile.Copy();
+            legacy.SearchEnabled = legacy.LastSeenEnabled = legacy.AmbushEnabled = false;
+            legacy.CandleWatchEnabled = legacy.BarkLureEnabled = false;
+            witch.SetProfile(legacy);
             witch.transform.SetPositionAndRotation(witchPoint.position, Quaternion.LookRotation(Vector3.left));
             witch.playerLightOn = witch.playerHidden = witch.playerVanished = witch.hearingMuted = false;
             witch.raining = true;
@@ -149,11 +159,15 @@ namespace TiffanyGame
         void OnDisable()
         {
             StopAllCoroutines();
+            RestoreBehavior();
             GameInput.ClearOverrides();
             if (fill != null) Destroy(fill.gameObject);
             if (storm != null) storm.enabled = stormWasEnabled;
             if (view != null && previousFieldOfView > 0f) view.fieldOfView = previousFieldOfView;
             if (follow != null) follow.enabled = followWasEnabled;
         }
+
+        public static bool IsMode(string value) => value == "chase" || value == "nothing" || value == "search"
+            || value == "ambush" || value == "candle" || value == "bark" || value == "lightsoff";
     }
 }

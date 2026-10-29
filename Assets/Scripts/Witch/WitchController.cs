@@ -30,13 +30,18 @@ namespace TiffanyGame
 
         public WitchDecision Decision { get; private set; }
         public float EffectiveSpeed => Decision.Speed * jerk.SpeedFactor;
+        public WitchPerception Perception { get; private set; }
+        public Vector3? NextClearingOverride { get; set; }
         public WitchProfile Profile => profile;
+        public bool Chasing => brain != null && brain.Chasing;
         public event Action Caught;
 
         private NavMeshAgent agent;
         private WitchProfile profile;
         private WitchSenses witchSenses;
         private WitchBrain brain;
+        private WitchChapterTracker chapterTracker;
+        private RespawnPoint respawn;
         private Vector3[] hidePoints;
         private RaycastHit[] hits;
         private Action<StepNoise> noiseHandler;
@@ -44,6 +49,7 @@ namespace TiffanyGame
         private float stateTime;
         private Vector3 entryPosition;
         private Vector3 verticalTarget;
+        private bool landingOnTarget;
         private Vector3 lastDestination;
         private bool hasDestination;
         private float baseFireIntensity;
@@ -99,9 +105,13 @@ namespace TiffanyGame
             hidePoints = new Vector3[volumes.Length];
             for (int i = 0; i < volumes.Length; i++) hidePoints[i] = volumes[i].HidePoint;
             witchSenses = new WitchSenses(senses, hidePoints);
-            if (player != null) return;
-            var found = GameObject.FindGameObjectWithTag("Player");
-            if (found != null) player = found.transform;
+            if (player == null)
+            {
+                var found = GameObject.FindGameObjectWithTag("Player");
+                if (found != null) player = found.transform;
+            }
+            chapterTracker = FindAnyObjectByType<WitchChapterTracker>();
+            if (player != null && player.TryGetComponent<PlayerSoul>(out var soul)) respawn = soul.Respawn;
         }
 
         public void Flash() => flashed = true;
@@ -138,9 +148,14 @@ namespace TiffanyGame
                 BeginReturn();
                 return;
             }
-            profile = WitchProfiles.For(next);
-            brain.SetProfile(profile);
+            SetProfile(WitchProfiles.For(next));
             chapter = next;
+        }
+
+        public void SetProfile(WitchProfile next)
+        {
+            profile = next ?? throw new ArgumentNullException(nameof(next));
+            brain.SetProfile(profile);
         }
 
         private void InitializeBrain()
@@ -161,10 +176,15 @@ namespace TiffanyGame
 
         private void PlaceForGroundChase()
         {
-            if (player == null) return;
+            if (player == null || TryPlaceForGroundChase(profile.ReturnPlacementDistance)) return;
+            TryPlaceForGroundChase(12f);
+        }
+
+        private bool TryPlaceForGroundChase(float distance)
+        {
             for (int i = 0; i < 8; i++)
             {
-                Vector3 offset = Quaternion.AngleAxis(i * 45f, Vector3.up) * -player.forward * 12f;
+                Vector3 offset = Quaternion.AngleAxis(i * 45f, Vector3.up) * -player.forward * distance;
                 if (!SafeZones.TryPushOut(player.position + offset, landingMargin, out var entry)
                     || !NavMeshPlacement.TrySample(entry, 6f, agent.areaMask, out var hit)
                     || SafeZones.Contains(hit.position)) continue;
@@ -172,8 +192,9 @@ namespace TiffanyGame
                 separation.y = 0f;
                 if (separation.sqrMagnitude < profile.SprintTriggerDistance * profile.SprintTriggerDistance) continue;
                 transform.position = hit.position;
-                return;
+                return true;
             }
+            return false;
         }
 
         private void Hear(StepNoise noise) => witchSenses.Hear(in noise, transform.position);
@@ -210,21 +231,32 @@ namespace TiffanyGame
                 PlayerVanished = playerVanished,
                 Flashed = flashThisFrame,
                 Raining = raining,
-                HearingMuted = hearingMuted
+                HearingMuted = hearingMuted,
+                PlayerForward = player.forward,
+                HasNextClearing = NextClearingOverride.HasValue || (chapterTracker != null && chapterTracker.HasNextClearing),
+                NextClearingPosition = NextClearingOverride ?? (chapterTracker != null ? chapterTracker.NextClearingPosition : Vector3.zero),
+                HasFamilyCandle = respawn != null && respawn.HasFamilyCandle,
+                FamilyCandlePosition = respawn != null ? respawn.Position : Vector3.zero,
+                FamilyCandleRadius = respawn != null ? respawn.FamilyCandleRadius : 0f
             };
             float dt = Time.deltaTime;
             WitchState previousState = Decision.State;
+            WitchIntent previousIntent = Decision.Intent;
             bool wasInspectingHide = Decision.InspectingHide;
-            Decision = brain.Tick(dt, witchSenses.Sense(in inputs));
+            Perception = witchSenses.Sense(in inputs);
+            Decision = brain.Tick(dt, Perception);
             stateTime += dt;
             if (Decision.State != previousState)
             {
-                if (previousState == WitchState.Landing) transform.position = verticalTarget;
+                if (previousState == WitchState.Landing && Decision.State == WitchState.Stalking)
+                    transform.position = verticalTarget;
                 EnterState();
             }
             if (Decision.InspectingHide && !wasInspectingHide)
                 Debug.Log($"{GameInfo.LogPrefix} Bruja: revisa escondite en {Decision.MoveTarget}");
             jerk.Tick(dt, Decision);
+            if (Decision.Intent != previousIntent)
+                Debug.Log($"{GameInfo.LogPrefix} Bruja: {IntentDescription(Decision.Intent)}");
             ApplyMovement(dt);
             ApplyView(position, dt);
         }
@@ -233,11 +265,18 @@ namespace TiffanyGame
         {
             entryPosition = transform.position;
             stateTime = 0f;
+            landingOnTarget = Decision.State == WitchState.Landing
+                && (Decision.Intent == WitchIntent.Ambush || Decision.Intent == WitchIntent.LastSeen);
             if (Decision.State == WitchState.Landing)
             {
-                verticalTarget = GroundPosition(SafeZones.PushOut(entryPosition, landingMargin));
-                if (NavMeshPlacement.TrySample(verticalTarget, 6f, agent.areaMask, out var hit))
-                    verticalTarget = hit.position;
+                if (landingOnTarget)
+                    verticalTarget = Decision.MoveTarget;
+                else
+                {
+                    verticalTarget = GroundPosition(SafeZones.PushOut(entryPosition, landingMargin));
+                    if (NavMeshPlacement.TrySample(verticalTarget, 6f, agent.areaMask, out var hit)
+                        && !SafeZones.Contains(hit.position)) verticalTarget = hit.position;
+                }
             }
             else if (Decision.State == WitchState.TakingOff)
             {
@@ -262,6 +301,12 @@ namespace TiffanyGame
                     break;
                 case WitchState.Landing:
                     agent.enabled = false;
+                    if (landingOnTarget && Decision.MoveTarget != verticalTarget)
+                    {
+                        entryPosition = transform.position;
+                        verticalTarget = Decision.MoveTarget;
+                        stateTime = 0f;
+                    }
                     transform.position = WitchMotion.Vertical(entryPosition, verticalTarget, stateTime, profile.LandingDuration);
                     break;
                 case WitchState.TakingOff:
@@ -304,7 +349,20 @@ namespace TiffanyGame
             if (SafeZones.TryPushOut(position, landingMargin, out var destination)
                 && NavMeshPlacement.TrySample(destination, 6f, agent.areaMask, out var hit)
                 && !SafeZones.Contains(hit.position)) return hit.position;
-            return transform.position;
+            return Vector3.positiveInfinity;
+        }
+
+        private static string IntentDescription(WitchIntent intent)
+        {
+            return intent switch
+            {
+                WitchIntent.Search => "busca en espiral",
+                WitchIntent.Ambush => "se adelanta al siguiente claro",
+                WitchIntent.CandleWatch => "ronda la veladora",
+                WitchIntent.BarkLure => "prepara el ladrido desde el bosque",
+                WitchIntent.LastSeen => "va al último punto visto",
+                _ => "retoma su conducta habitual"
+            };
         }
 
         private void Stalk()
