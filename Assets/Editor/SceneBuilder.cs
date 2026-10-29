@@ -15,8 +15,8 @@ namespace TiffanyGame.EditorTools
     {
         public const string ScenePath = "Assets/Scenes/Main.unity";
         public const float FireBallHeight = 1.5f;
-        public const float NightFogStartDistance = NightLook.FogStartDistance;
-        public const float NightFogEndDistance = NightLook.FogEndDistance;
+        public const float NightFogStartDistance = NightView.FogStartDistance;
+        public const float NightFogEndDistance = NightView.FogEndDistance;
         public static readonly Color NightFogColor = NightLook.Default.FogColor;
         const float SlopeAngle = 8f;
         const float PatchHeight = 0.1f;
@@ -725,10 +725,11 @@ namespace TiffanyGame.EditorTools
             cameraObject.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = false;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = RenderSettings.fogColor;
-            camera.farClipPlane = 80f;
+            camera.farClipPlane = NightView.FarClipPlane;
             cameraObject.AddComponent<AudioListener>();
             var follow = cameraObject.AddComponent<FollowCamera>();
             follow.target = player.transform;
+            follow.distance = NightView.CameraDistance;
             follow.lookAhead = 0f;
             camera.fieldOfView = follow.fieldOfView;
             follow.Snap();

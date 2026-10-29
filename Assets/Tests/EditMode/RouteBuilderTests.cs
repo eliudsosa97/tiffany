@@ -605,14 +605,6 @@ namespace TiffanyGame.Tests
             }
             var stages = root.GetComponentsInChildren<FogCaptureStage>();
             Assert.AreEqual(6, stages.Length, "Cementerio, río y lago, cada uno con y sin neblina.");
-            var trail = root.transform.Find("Fog Captures/" + NightPreview.TrailStopName);
-            Assert.IsNotNull(trail);
-            Assert.IsFalse(trail.GetComponent<CaptureStop>().overrideCamera);
-            Assert.IsTrue(trail.GetComponent<LightCaptureStage>().hideWitch);
-            Vector3 trailPoint = route.InverseTransformPoint(trail.position);
-            var previewPath = RouteLayout.Path(0);
-            Assert.Less(FogDensity.DistanceToSegment(trailPoint, previewPath[2], previewPath[3]), 0.001f);
-            Assert.IsFalse(trail.IsChildOf(route));
             var names = new[] { "Fog 1 Cemetery", "Fog 2 River", "Fog 3 Lake" };
             var sources = new[] { route.GetChild(0).Find("Route 1 Cemetery"),
                 route.GetChild(5).Find("Path to Next Clearing/River Crossing/River/Water 2 Crossing"), route.GetChild(5).Find("Water 1 Lake") };

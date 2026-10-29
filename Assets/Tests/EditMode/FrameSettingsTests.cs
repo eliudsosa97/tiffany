@@ -14,7 +14,6 @@ namespace TiffanyGame.Tests
         [TestCase("-autocapture")]
         [TestCase("-capturevideo")]
         [TestCase("-playthrough")]
-        [TestCase("-nightpreview")]
         public void AutomationRunsInBackground(string argument)
         {
             Assert.That(FrameSettings.RunInBackground(new[] { argument }), Is.True);
@@ -24,7 +23,7 @@ namespace TiffanyGame.Tests
         [Test]
         public void CombinedAutomationRunsInBackground()
         {
-            Assert.That(FrameSettings.RunInBackground(new[] { "-autocapture", "-capturevideo", "-playthrough", "-nightpreview" }), Is.True);
+            Assert.That(FrameSettings.RunInBackground(new[] { "-autocapture", "-capturevideo", "-playthrough" }), Is.True);
         }
 
         [Test]
@@ -34,7 +33,6 @@ namespace TiffanyGame.Tests
             Assert.That(FrameSettings.RunInBackground(System.Array.Empty<string>()), Is.False);
             Assert.That(FrameSettings.RunInBackground(new[] { "Tiffany", "-screen-width", "1600" }), Is.False);
             Assert.That(FrameSettings.RunInBackground(new[] { "-autocapturex" }), Is.False);
-            Assert.That(FrameSettings.RunInBackground(new[] { "-nightpreviewx" }), Is.False);
         }
     }
 }

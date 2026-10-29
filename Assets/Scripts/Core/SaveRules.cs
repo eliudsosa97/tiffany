@@ -82,8 +82,7 @@ namespace TiffanyGame
         }
 
         public static bool IsAutomaticRun(string[] args) => Array.IndexOf(args, "-playthrough") >= 0
-            || Array.IndexOf(args, "-autocapture") >= 0 || Array.IndexOf(args, "-echodemo") >= 0
-            || Array.IndexOf(args, "-nightpreview") >= 0;
+            || Array.IndexOf(args, "-autocapture") >= 0 || Array.IndexOf(args, "-echodemo") >= 0;
 
         static bool Contains<T>(IReadOnlyList<T> values, T value)
         {

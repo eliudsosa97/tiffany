@@ -46,7 +46,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void BuiltCameraStaysCenteredWhenTargetTurnsAndPreservesCurrentLens()
+        public void BuiltCameraStaysCenteredWhenTargetTurnsAndUsesGameNightView()
         {
             Object.DestroyImmediate(cameraObject);
             var player = target.AddComponent<PlayerController>();
@@ -55,10 +55,12 @@ namespace TiffanyGame.Tests
             cameraObject = camera.gameObject;
             followCamera = camera.GetComponent<FollowCamera>();
             Assert.AreEqual(0f, followCamera.lookAhead);
-            Assert.AreEqual(36f, followCamera.distance);
+            Assert.AreEqual(NightView.CameraDistance, followCamera.distance);
             Assert.AreEqual(42f, followCamera.pitch);
             Assert.AreEqual(24f, camera.fieldOfView);
-            Assert.AreEqual(80f, camera.farClipPlane);
+            Assert.AreEqual(NightView.FarClipPlane, camera.farClipPlane);
+            Assert.AreEqual(CameraClearFlags.SolidColor, camera.clearFlags);
+            Assert.AreEqual(RenderSettings.fogColor, camera.backgroundColor);
             var position = camera.transform.position;
             var rotation = camera.transform.rotation;
             foreach (float yaw in new[] { 90f, 180f, 270f, 0f })
