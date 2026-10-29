@@ -85,6 +85,41 @@ namespace TiffanyGame.EditorTools
             return material;
         }
 
+        public static Material GetGroundFog()
+        {
+            EnsureFolder(folder);
+            var shader = Shader.Find("Universal Render Pipeline/Tiffany Ground Fog");
+            if (shader == null)
+                throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el shader de neblina.");
+            string path = $"{folder}/GroundFog.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool isNew = material == null;
+            if (isNew) material = new Material(shader) { name = "GroundFog" };
+            else material.shader = shader;
+            material.SetColor("_BaseColor", new Color(0.12f, 0.13f, 0.14f, 0.45f).gamma);
+            material.SetFloat("_Density", FogDensity.BaseDensity);
+            material.SetFloat("_NoiseScale", 0.65f);
+            material.SetFloat("_NoiseStretch", 2.5f);
+            material.SetFloat("_WindSpeed", GroundFog.WindSpeed);
+            material.SetFloat("_LightStrength", 0.35f);
+            material.SetFloat("_HaloRadius", 4.5f);
+            material.SetFloat("_MoonStrength", 0.08f);
+            material.SetFloat("_EdgeFade", 0.2f);
+            material.SetFloat("_HeightFadeStart", 0.35f);
+            material.SetFloat("_HeightFadeEnd", 1.1f);
+            material.SetFloat("_CameraFadeStart", 1f);
+            material.SetFloat("_CameraFadeEnd", 4f);
+            material.SetFloat("_PlayerFadeStart", 0.5f);
+            material.SetFloat("_PlayerFadeEnd", 2f);
+            material.SetFloat("_PathHalfWidth", FogDensity.PathHalfWidth);
+            material.SetFloat("_PathSoftness", FogDensity.PathSoftness);
+            material.SetFloat("_PathMultiplier", FogDensity.PathMultiplier);
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 10;
+            if (isNew) AssetDatabase.CreateAsset(material, path);
+            else EditorUtility.SetDirty(material);
+            return material;
+        }
+
         public static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path)) return;

@@ -97,6 +97,9 @@ namespace TiffanyGame
                 if (stormStage != null) stormStage.Apply();
                 var lightStage = stop.GetComponent<LightCaptureStage>();
                 if (lightStage != null && player != null) lightStage.Apply(player.transform);
+                var fogStage = stop.GetComponent<FogCaptureStage>();
+                if (fogStage != null && !fogStage.Apply())
+                    Debug.LogError($"{GameInfo.LogPrefix} No se pudo preparar {stop.name}.");
                 var hideStage = stop.GetComponent<HideCaptureStage>();
                 if (hideStage != null) hideStage.Apply();
                 var powerStage = stop.GetComponent<PowerCaptureStage>();
@@ -115,6 +118,7 @@ namespace TiffanyGame
                 if (tylerStage != null) tylerStage.Clear();
                 if (stormStage != null) stormStage.Clear();
                 if (lightStage != null) lightStage.Clear();
+                if (fogStage != null) fogStage.Clear();
                 if (hideStage != null) hideStage.Clear();
                 if (powerStage != null) powerStage.Clear();
                 if (memoryStage != null) memoryStage.Clear();
