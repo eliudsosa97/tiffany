@@ -14,6 +14,7 @@ namespace TiffanyGame
         public AudioClip[] phantomSteps, branchSnaps;
         public AudioClip skyFire;
         public Transform skyDecoy;
+        public float LastEventTime { get; private set; } = float.NegativeInfinity;
         private readonly TrailEvents rules = new TrailEvents();
         private static readonly WaitForSeconds StepPause = new WaitForSeconds(0.45f);
         private Camera view;
@@ -52,6 +53,7 @@ namespace TiffanyGame
             TrailEvent result = rules.Tick(Time.deltaTime, onTrail, chase, inChallenge, distance, tyler != null && tyler.NearPlayer,
                 witch != null && witch.Decision.Form == WitchForm.Flying && distance < TrailEvents.WitchFlyingNear);
             if (result == TrailEvent.None) return;
+            LastEventTime = Time.time;
             Debug.Log($"{GameInfo.LogPrefix} Sendero: {result}");
             switch (result)
             {
