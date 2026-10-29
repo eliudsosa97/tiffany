@@ -20,7 +20,7 @@ namespace TiffanyGame.EditorTools
                 Object.DestroyImmediate(water.GetComponent<Collider>());
                 for (int sign = -1; sign <= 1; sign += 2)
                 {
-                    Vector2 first = BankPoint(i - 1, sign), last = BankPoint(i, sign);
+                    Vector2 first = terrain.RiverBankPoint(i - 1, sign), last = terrain.RiverBankPoint(i, sign);
                     if (Mathf.Abs(a.y - terrain.Crossing.z) < 0.001f && Mathf.Abs(b.y - terrain.Crossing.z) < 0.001f
                         && terrain.Crossing.x < a.x && terrain.Crossing.x > b.x)
                     {
@@ -32,18 +32,9 @@ namespace TiffanyGame.EditorTools
                     else Bank($"Bank {i} {sign}", first, last);
                 }
             }
-            Bank("River End", BankPoint(0, -1), BankPoint(0, 1));
+            Bank("River End", terrain.RiverBankPoint(0, -1), terrain.RiverBankPoint(0, 1));
+            RiverPieces.LayBanks(Root("Banks", parent), terrain);
             void Bank(string name, Vector2 a, Vector2 b) => Border(name, parent, terrain, a, b, 1.5f);
-            Vector2 BankPoint(int index, int sign)
-            {
-                var point = terrain.RiverPoint(index);
-                var before = index == 0 ? terrain.RiverPoint(1) - point : point - terrain.RiverPoint(index - 1);
-                var after = index == terrain.RiverPointCount - 1 ? before : terrain.RiverPoint(index + 1) - point;
-                before = new Vector2(before.y, -before.x).normalized;
-                after = new Vector2(after.y, -after.x).normalized;
-                Vector2 normal = (before + after).normalized;
-                return point + normal * (sign * RouteTerrain.RiverWidth * 0.5f / Vector2.Dot(normal, before));
-            }
         }
 
         static void BuildLakeBanks(Transform parent, RouteTerrain terrain)
