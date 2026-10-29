@@ -60,13 +60,8 @@ namespace TiffanyGame
             }
             if (sequence.RespawnDue)
             {
-                Vector3 position = respawn.Respawn(soul.Energy) + Vector3.back * sideOffset;
-                if (character != null) character.enabled = false;
-                if (Physics.Raycast(position + Vector3.up * 3f, Vector3.down, out var hit,
-                    Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore)) position.y = hit.point.y;
-                transform.position = position;
-                Physics.SyncTransforms();
-                if (character != null) character.enabled = true;
+                respawn.Respawn(soul.Energy);
+                PlaceAtCheckpoint();
                 if (witch != null) witch.ResetBrain(afterCapture: true);
                 Respawned?.Invoke();
                 if (playerLight != null && playerLight.State != null && playerLight.State.IsOn) playerLight.Toggle();
@@ -77,6 +72,18 @@ namespace TiffanyGame
                 if (movement != null) movement.enabled = true;
                 if (hiding != null) hiding.enabled = true;
             }
+        }
+
+        public void PlaceAtCheckpoint()
+        {
+            Vector3 position = respawn.Position + Vector3.back * sideOffset;
+            bool wasEnabled = character != null && character.enabled;
+            if (character != null) character.enabled = false;
+            if (Physics.Raycast(position + Vector3.up * 3f, Vector3.down, out var hit,
+                Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore)) position.y = hit.point.y;
+            transform.position = position;
+            Physics.SyncTransforms();
+            if (character != null) character.enabled = wasEnabled;
         }
     }
 }

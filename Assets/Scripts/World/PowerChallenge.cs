@@ -81,6 +81,14 @@ namespace TiffanyGame
                 lure.Restore();
         }
 
+        public void ApplyRestoredState()
+        {
+            if (!Rules.Completed) return;
+            active = Underway = false;
+            if (Witch != null && Witch.WatchPassage == transform) Witch.EndWatch();
+            ApplyGates();
+        }
+
         public void ResetAttempt()
         {
             if (Rules.Completed) return;

@@ -85,6 +85,15 @@ namespace TiffanyGame.EditorTools
             caughtStop.AddComponent<CaughtCaptureStage>().spot = firstCandle;
             BuildWitchVoice(playerLight.witch, tyler);
             BuildWitchAudio(playerLight.witch, player.transform);
+            var save = player.gameObject.AddComponent<SaveGame>();
+            save.soul = player.GetComponent<PlayerSoul>();
+            save.memories = player.GetComponent<MemoryCollector>();
+            save.witch = playerLight.witch;
+            save.route = route.GetComponent<WitchChapterTracker>();
+            save.gameInterface = gameInterface;
+            save.ending = route.GetChild(7).GetComponentInChildren<EndingController>();
+            save.candles = Array.FindAll(world.GetComponentsInChildren<CandleSpot>(true), candle => candle.kind == CandleKind.Family);
+            save.initialCandle = route.GetChild(0).GetComponentInChildren<CandleSpot>();
             BuildTrailTension(route.GetComponent<WitchChapterTracker>(), playerLight.witch, tyler);
             GroundLitterBuilder.Scatter(world);
             SaveScene();
@@ -507,6 +516,7 @@ namespace TiffanyGame.EditorTools
             var obstacle = root.AddComponent<NavMeshObstacle>();
             var spot = root.AddComponent<CandleSpot>();
             spot.kind = kind;
+            if (kind == CandleKind.Family) spot.saveId = parent.name + "/" + name;
             spot.startLit = startLit;
             spot.player = soul;
             spot.storm = storm;
@@ -759,8 +769,14 @@ namespace TiffanyGame.EditorTools
             var title = InterfaceText("Title", ui.titlePanel.transform, font, InterfaceTexts.Title, 108,
                 new Vector2(0.1f, 0.59f), new Vector2(0.9f, 0.79f));
             title.color = new Color(1f, 0.87f, 0.63f);
-            InterfaceText("Start Hint", ui.titlePanel.transform, font, InterfaceTexts.StartHint, 32,
+            ui.startHint = InterfaceText("Start Hint", ui.titlePanel.transform, font, InterfaceTexts.StartHint, 32,
                 new Vector2(0.1f, 0.48f), new Vector2(0.9f, 0.57f));
+            ui.continueOption = InterfaceText("Continue", ui.titlePanel.transform, font, InterfaceTexts.Continue, 32,
+                new Vector2(0.3f, 0.49f), new Vector2(0.7f, 0.57f));
+            ui.newGameOption = InterfaceText("New Game", ui.titlePanel.transform, font, InterfaceTexts.NewGame, 32,
+                new Vector2(0.3f, 0.40f), new Vector2(0.7f, 0.48f));
+            ui.continueOption.gameObject.SetActive(false);
+            ui.newGameOption.gameObject.SetActive(false);
             var controls = InterfaceText("Controls", ui.titlePanel.transform, font, InterfaceTexts.Controls, 28,
                 new Vector2(0.1f, 0.08f), new Vector2(0.9f, 0.39f));
             controls.lineSpacing = 1.25f;

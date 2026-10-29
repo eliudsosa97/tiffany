@@ -99,6 +99,7 @@ namespace TiffanyGame.EditorTools
         {
             public string name;
             public string clip;
+            public float blend;
             public BlendTreeSpec blendTree;
         }
 
@@ -124,6 +125,14 @@ namespace TiffanyGame.EditorTools
             public int frames;
             public bool loop;
             public float speed;
+            public ContactSpec contacts;
+        }
+
+        [Serializable]
+        public class ContactSpec
+        {
+            public float left = -1f;
+            public float right = -1f;
         }
 
         [Serializable]

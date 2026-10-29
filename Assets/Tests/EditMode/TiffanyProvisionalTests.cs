@@ -18,6 +18,14 @@ namespace TiffanyGame.Tests
         const string MaskPath = TempFolder + "/TiffanyArms.mask";
         static readonly string[] ArmBones = { "Shoulder.L", "UpperArm.L", "LowerArm.L", "Hand.L",
             "Shoulder.R", "UpperArm.R", "LowerArm.R", "Hand.R" };
+        static readonly string[] ClipNames = { "Idle", "Slow", "Walk", "Run", "TurnLeft", "TurnRight", "Hide",
+            "CarryLight", "Flash", "Caught", "Vanish" };
+        static readonly string[][] StateNames =
+        {
+            new[] { TiffanyAnimation.Idle, TiffanyAnimation.Walk, TiffanyAnimation.TurnLeft, TiffanyAnimation.TurnRight,
+                TiffanyAnimation.Hide, TiffanyAnimation.Caught, TiffanyAnimation.Vanish },
+            new[] { TiffanyAnimation.Empty, TiffanyAnimation.CarryLight, TiffanyAnimation.Flash }
+        };
         ModelLibrary.ModelSpec spec;
         GameObject parent;
 
@@ -241,8 +249,14 @@ namespace TiffanyGame.Tests
             var importer = (ModelImporter)AssetImporter.GetAtPath(spec.modelPath);
             Assert.AreEqual(ModelImporterAnimationCompression.Off, importer.animationCompression);
             var clips = Clips();
-            CollectionAssert.AreEquivalent(new[] { "Idle", "Slow", "Walk", "Run", "Hide", "CarryLight" }, clips.Keys);
+            CollectionAssert.AreEquivalent(ClipNames, clips.Keys);
             Assert.AreEqual(spec.clips.Length, clips.Count);
+            foreach (string once in new[] { "Caught", "Flash" })
+                Assert.IsFalse(AnimationUtility.GetAnimationClipSettings(clips[once]).loopTime, once);
+            Assert.That(clips["Idle"].length, Is.InRange(6f, 8f));
+            Assert.That(clips["Flash"].length, Is.InRange(0.6f, 0.8f));
+            Assert.That(clips["Caught"].length, Is.InRange(1.2f, 1.6f));
+            Assert.AreEqual(3f, clips["Vanish"].length, 0.5f / spec.fps);
             Assert.AreEqual(PlayerMotion.SlowSpeed, Array.Find(spec.clips, c => c.name == "Slow").speed);
             Assert.AreEqual(PlayerMotion.WalkSpeed, Array.Find(spec.clips, c => c.name == "Walk").speed);
             Assert.AreEqual(PlayerMotion.RunSpeed, Array.Find(spec.clips, c => c.name == "Run").speed);
@@ -369,7 +383,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(AnimatorControllerParameterType.Float, controller.parameters[0].type);
             Assert.AreEqual(0f, controller.parameters[0].defaultFloat);
             Assert.AreEqual(2, controller.layers.Length);
-            var names = new[] { new[] { "Idle", "Walk", "Hide" }, new[] { "Empty", "CarryLight" } };
+            var names = StateNames;
             for (int i = 0; i < names.Length; i++)
             {
                 var layer = controller.layers[i];
@@ -387,7 +401,11 @@ namespace TiffanyGame.Tests
             Assert.IsNull(State(controller, 1, "Empty").motion);
             Assert.IsTrue(State(controller, 1, "Empty").writeDefaultValues);
             Assert.IsTrue(State(controller, 1, "CarryLight").writeDefaultValues);
-            Assert.AreEqual(Clips()["CarryLight"], State(controller, 1, "CarryLight").motion);
+            var clips = Clips();
+            for (int i = 0; i < names.Length; i++)
+                foreach (string name in names[i])
+                    if (name != TiffanyAnimation.Walk && name != TiffanyAnimation.Empty)
+                        Assert.AreEqual(clips[name], State(controller, i, name).motion, name);
             Assert.IsNull(controller.layers[0].avatarMask);
             AssertMask(controller.layers[1].avatarMask);
         }
@@ -550,7 +568,7 @@ namespace TiffanyGame.Tests
             AssetDatabase.SaveAssets();
             controller = Controller();
             Assert.AreEqual(1f, controller.layers[1].defaultWeight);
-            Assert.AreEqual(2, controller.layers[1].stateMachine.states.Length);
+            Assert.AreEqual(3, controller.layers[1].stateMachine.states.Length);
             Assert.IsEmpty(controller.layers[1].stateMachine.anyStateTransitions);
             Assert.AreEqual(PlayerMotion.SlowSpeed, ((BlendTree)State(controller, 0, "Walk").motion).children[0].threshold);
             Assert.AreEqual(count, AssetDatabase.LoadAllAssetsAtPath(ControllerPath).Length);
@@ -560,6 +578,116 @@ namespace TiffanyGame.Tests
             {
                 Assert.AreEqual(guids[i], AssetDatabase.AssetPathToGUID(paths[i]));
                 CollectionAssert.AreEquivalent(ids[i], SubassetIds(paths[i]), paths[i]);
+            }
+        }
+
+        [Test]
+        public void SpecStatesUseTheNamesAndBlendTimesOfTiffanyAnimation()
+        {
+            var layers = spec.controller.layers;
+            Assert.AreEqual(TiffanyAnimation.SpeedParameter, spec.controller.speedParameter);
+            Assert.AreEqual("Arms", layers[TiffanyAnimation.ArmsLayer].name);
+            for (int i = 0; i < StateNames.Length; i++)
+            {
+                CollectionAssert.AreEqual(StateNames[i], Array.ConvertAll(layers[i].states, s => s.name));
+                foreach (var state in layers[i].states)
+                    Assert.AreEqual(TiffanyAnimation.BlendFor(state.name), state.blend, state.name);
+            }
+        }
+
+        [TestCase("Slow")]
+        [TestCase("Walk")]
+        [TestCase("Run")]
+        [TestCase("TurnLeft")]
+        [TestCase("TurnRight")]
+        public void FeetAreLowestAtTheirDeclaredContacts(string name)
+        {
+            var entry = Array.Find(spec.clips, c => c.name == name);
+            Assert.IsNotNull(entry.contacts, name);
+            var root = Instance();
+            var clip = Clips()[name];
+            foreach (var (side, phase) in new[] { ("L", entry.contacts.left), ("R", entry.contacts.right) })
+            {
+                Assert.That(phase, Is.InRange(0f, 0.999f), name + " " + side);
+                float lowest = float.MaxValue;
+                for (int i = 0; i < 96; i++)
+                {
+                    clip.SampleAnimation(root, clip.length * i / 96f);
+                    lowest = Mathf.Min(lowest, Local(root, "Foot." + side).y);
+                }
+                clip.SampleAnimation(root, clip.length * phase);
+                float contactHeight = Local(root, "Foot." + side).y;
+                Assert.AreEqual(lowest, contactHeight, 0.001f, name + " " + side);
+                clip.SampleAnimation(root, clip.length * Mathf.Repeat(phase - 0.04f, 1f));
+                Assert.Greater(Local(root, "Foot." + side).y, contactHeight + 0.001f, name + " " + side + " pisa sin haber levantado el pie");
+                clip.SampleAnimation(root, clip.length * Mathf.Repeat(phase + 0.04f, 1f));
+                Assert.AreEqual(contactHeight, Local(root, "Foot." + side).y, 0.001f, name + " " + side + " no empieza el apoyo en el contacto");
+            }
+        }
+
+        [Test]
+        public void CaughtEndsKneelingAndStill()
+        {
+            var root = Instance();
+            var clips = Clips();
+            clips["Idle"].SampleAnimation(root, 0f);
+            float standing = Local(root, "Hips").y;
+            var clip = clips["Caught"];
+            var body = Array.FindAll(spec.skeleton, b => !b.name.StartsWith("Braid", StringComparison.Ordinal) &&
+                                                         !b.name.StartsWith("Skirt", StringComparison.Ordinal));
+            clip.SampleAnimation(root, clip.length - 0.1f);
+            var positions = Array.ConvertAll(body, b => Local(root, b.name));
+            var rotations = Array.ConvertAll(body, b => Bone(root, b.name).rotation);
+            clip.SampleAnimation(root, clip.length);
+            for (int i = 0; i < body.Length; i++)
+            {
+                Assert.Less(Vector3.Distance(positions[i], Local(root, body[i].name)), 0.001f, body[i].name);
+                Assert.Less(Quaternion.Angle(rotations[i], Bone(root, body[i].name).rotation), 0.5f, body[i].name);
+            }
+            Assert.Less(Local(root, "Hips").y, standing - 0.25f);
+            foreach (string side in new[] { "L", "R" })
+                Assert.Less(Local(root, "LowerLeg." + side).y, 0.08f, side);
+        }
+
+        [TestCase("CarryLight")]
+        [TestCase("Flash")]
+        public void ArmLayerClipsOnlyAnimateArmBones(string name)
+        {
+            var bindings = AnimationUtility.GetCurveBindings(Clips()[name]);
+            Assert.IsNotEmpty(bindings);
+            var clip = Clips()[name];
+            Assert.IsTrue(Array.Exists(bindings, b => Array.IndexOf(ArmBones, b.path.Substring(b.path.LastIndexOf('/') + 1)) >= 0));
+            foreach (var binding in bindings)
+            {
+                if (Array.IndexOf(ArmBones, binding.path.Substring(binding.path.LastIndexOf('/') + 1)) >= 0) continue;
+                var keys = AnimationUtility.GetEditorCurve(clip, binding).keys;
+                foreach (var key in keys)
+                    Assert.AreEqual(keys[0].value, key.value, 1e-4f, binding.path + " " + binding.propertyName);
+            }
+        }
+
+        [Test]
+        public void FlashPushesTheHandsOutAndReturnsToTheCarryPose()
+        {
+            var clips = Clips();
+            var carry = Instance();
+            var flash = Instance();
+            clips["CarryLight"].SampleAnimation(carry, 0f);
+            float reach = 0f, spread = 0f;
+            for (int i = 0; i <= 28; i++)
+            {
+                clips["Flash"].SampleAnimation(flash, clips["Flash"].length * i / 28f);
+                Vector3 left = Local(flash, "Hand.L"), right = Local(flash, "Hand.R");
+                reach = Mathf.Max(reach, Mathf.Min(left.z, right.z) - Local(flash, "Chest").z);
+                spread = Mathf.Max(spread, Vector3.Distance(left, right));
+            }
+            Assert.Greater(reach, 0.28f);
+            Assert.Greater(spread, 0.12f);
+            foreach (float time in new[] { 0f, clips["Flash"].length })
+            {
+                clips["Flash"].SampleAnimation(flash, time);
+                foreach (string bone in ArmBones)
+                    Assert.Less(Quaternion.Angle(Bone(carry, bone).localRotation, Bone(flash, bone).localRotation), 1f, time + " " + bone);
             }
         }
 

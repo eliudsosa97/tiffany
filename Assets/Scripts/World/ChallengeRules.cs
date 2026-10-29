@@ -16,6 +16,8 @@ namespace TiffanyGame
 
         public ChallengeRules(ChallengeKind kind) => Kind = kind;
 
+        public void MarkCompleted() => Completed = true;
+
         public bool GateOpen(int index) => Completed || (LitMask & (1 << index)) != 0;
 
         public bool Ready(bool distracted, bool vanished) => (!NeedsCandles || LitMask == 3)

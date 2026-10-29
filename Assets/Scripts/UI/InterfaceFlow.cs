@@ -4,6 +4,16 @@ namespace TiffanyGame
     {
         public InterfaceScreen Screen { get; private set; }
         public bool IsFrozen => Screen != InterfaceScreen.Playing;
+        public bool HasContinue { get; private set; }
+        public bool ContinueSelected { get; private set; }
+
+        public void ConfigureTitle(bool hasValidSave)
+        {
+            HasContinue = hasValidSave;
+            ContinueSelected = hasValidSave;
+        }
+
+        public void SelectTitleOption(bool continueGame) => ContinueSelected = HasContinue && continueGame;
 
         public InterfaceFlow(bool startOnTitle = false)
         {
