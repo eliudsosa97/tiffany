@@ -23,6 +23,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(20f, profile.CatchUpDistance);
             Assert.AreEqual(6f, profile.CatchUpDelay);
             Assert.AreEqual(14f, profile.CatchUpReappearDistance);
+            Assert.AreEqual(18f, profile.CatchUpReappearMaxDistance);
+            Assert.Less(profile.CatchUpReappearMaxDistance, profile.CatchUpDistance);
             Assert.Greater(profile.CatchUpReappearDistance, profile.SprintTriggerDistance);
         }
 
@@ -145,6 +147,79 @@ namespace TiffanyGame.Tests
             p.PlayerPosition = p.WitchPosition + Vector3.back * 0.5f;
             Assert.AreEqual(WitchState.WindUp, Step(profile.WindUpDuration - 0.01f).State, "Sin aviso completo no embiste ni atrapa.");
             Assert.AreEqual(WitchState.Sprinting, Step(0.02f).State);
+        }
+
+        [Test]
+        public void WhileHuntingAfterReappearingAHeardStepDoesNotTurnIntoASearchAndTheWarningFires()
+        {
+            Assert.IsTrue(Step(6f).CatchUp);
+            brain.CatchUpPlaced(p.PlayerPosition);
+            p.WitchPosition = p.PlayerPosition + Vector3.forward * profile.CatchUpReappearDistance;
+            p.HeardNoise = true;
+            p.NoisePosition = p.PlayerPosition;
+            Step(0.1f);
+            p.HeardNoise = false;
+            for (int i = 0; i < 5; i++)
+            {
+                WitchDecision hunt = Step(0.1f);
+                Assert.AreEqual(WitchIntent.None, hunt.Intent, "Tras reaparecer caza en vez de buscar.");
+                Assert.AreEqual(WitchState.Stalking, hunt.State);
+                Assert.AreEqual(p.PlayerPosition, hunt.MoveTarget);
+                Assert.AreEqual(profile.FollowSpeed, hunt.Speed);
+            }
+            p.PlayerPosition = p.WitchPosition + Vector3.back * 8f;
+            Assert.AreEqual(WitchState.WindUp, Step(0f).State);
+            Assert.AreEqual(WitchState.Sprinting, Step(profile.WindUpDuration).State);
+        }
+
+        [TestCase(WitchState.WindUp, "")]
+        [TestCase(WitchState.Stunned, "")]
+        [TestCase(WitchState.Caught, "")]
+        [TestCase(WitchState.Stalking, "safe")]
+        [TestCase(WitchState.Stalking, "hidden")]
+        [TestCase(WitchState.Stalking, "vanished")]
+        public void HuntingLastsUntilTheWarningOrUntilTheGirlIsProtected(WitchState state, string protection)
+        {
+            var catchUp = new WitchCatchUp();
+            Assert.IsFalse(catchUp.Hunting);
+            catchUp.Placed();
+            catchUp.Tick(0.1f, profile, in p, WitchState.Stalking);
+            Assert.IsTrue(catchUp.Hunting);
+            p.PlayerInSafeZone = protection == "safe";
+            p.PlayerHidden = protection == "hidden";
+            p.PlayerVanished = protection == "vanished";
+            catchUp.Tick(0.1f, profile, in p, state);
+            Assert.IsFalse(catchUp.Hunting);
+            p.PlayerInSafeZone = p.PlayerHidden = p.PlayerVanished = false;
+            catchUp.Tick(0.1f, profile, in p, WitchState.Stalking);
+            Assert.IsFalse(catchUp.Hunting);
+        }
+
+        [TestCase(14f, 0f, true)]
+        [TestCase(16.9f, 0f, true)]
+        [TestCase(17.1f, 0f, false)]
+        [TestCase(22f, 0f, false)]
+        [TestCase(10f, 0f, false)]
+        [TestCase(14f, 19f, true)]
+        [TestCase(14f, 21f, false)]
+        [TestCase(14f, 180f, false)]
+        public void PlacementMustStayBeyondTheWarningNearTheRequestedDistanceAndDirection(float distance, float angle, bool accepted)
+        {
+            Vector3 player = new Vector3(3f, 1f, -2f);
+            Vector3 wanted = player + Vector3.forward * profile.CatchUpReappearDistance;
+            Vector3 found = player + Quaternion.AngleAxis(angle, Vector3.up) * Vector3.forward * distance + Vector3.up * 0.5f;
+            Assert.AreEqual(accepted, WitchCatchUp.AcceptsPlacement(player, wanted, found, profile));
+        }
+
+        [TestCase(0f, 0f, 0f)]
+        [TestCase(4f, 4f, 0f)]
+        [TestCase(14f, 10f, 4f)]
+        [TestCase(40f, 10f, 10f)]
+        public void PointAlongPathWalksTheCornersByDistance(float distance, float x, float z)
+        {
+            var corners = new[] { Vector3.zero, Vector3.right * 10f, new Vector3(10f, 0f, 10f), Vector3.one * 99f };
+            Vector3 point = WitchCatchUp.PointAlongPath(corners, 3, distance);
+            Assert.Less(Vector3.Distance(new Vector3(x, 0f, z), point), 1e-4f);
         }
 
         private WitchDecision Step(float dt)

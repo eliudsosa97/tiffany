@@ -71,8 +71,13 @@ namespace TiffanyGame
         private const float TrembleOffset = 0.05f, TrembleAngle = 5f;
         private NavMeshPath catchUpPath;
         private readonly Vector3[] catchUpCorners = new Vector3[64];
-        private static readonly float[] CatchUpAngles = { 0f, 60f, -60f, 90f, -90f };
-        private const float CatchUpViewMargin = 0.1f;
+        // Prefiere llegar de lado: de frente la embestida atrapa a quien corre recto.
+        private static readonly float[] CatchUpAngles = { 40f, -40f, 20f, -20f, 60f, -60f, 0f };
+        private const float CatchUpDistanceStep = 2f;
+        private const float CatchUpSampleRadius = 3f;
+        private const float CatchUpViewMargin = 0.05f;
+        private const float CatchUpBodyHeight = 1.2f;
+        private const float CatchUpHeadHeight = 2.5f;
         private const float CatchUpPathRatio = 1.6f;
         private static readonly int SpeedHash = Animator.StringToHash("Speed");
         private static readonly int IdleHash = Animator.StringToHash("Idle");
@@ -247,34 +252,72 @@ namespace TiffanyGame
         private bool TryFindCatchUpPoint(Vector3 playerPosition, out Vector3 point)
         {
             point = default;
-            if (!NavMeshPlacement.TrySample(playerPosition, 3f, agent.areaMask, out var start)) return false;
-            Vector3 ahead = WitchTargets.Direction(playerPosition,
-                Perception.HasNextClearing ? Perception.NextClearingPosition : playerPosition + player.forward);
+            if (!NavMesh.SamplePosition(playerPosition, out var start, CatchUpSampleRadius, agent.areaMask)) return false;
+            Vector3 ahead = CatchUpAhead(playerPosition, start.position);
             Camera view = Camera.main;
             for (int i = 0; i < CatchUpAngles.Length; i++)
             {
-                Vector3 candidate = playerPosition
-                    + Quaternion.AngleAxis(CatchUpAngles[i], Vector3.up) * ahead * profile.CatchUpReappearDistance;
-                if (!NavMeshPlacement.TrySample(candidate, 3f, agent.areaMask, out var hit)
-                    || SafeZones.Contains(hit.position)
-                    || WitchTargets.Distance(hit.position, playerPosition) <= profile.SprintTriggerDistance
-                    || InView(view, hit.position) || InView(view, hit.position + Vector3.up * 2.5f)
-                    || !NavMesh.CalculatePath(start.position, hit.position, agent.areaMask, catchUpPath)
-                    || catchUpPath.status != NavMeshPathStatus.PathComplete) continue;
-                int corners = catchUpPath.GetCornersNonAlloc(catchUpCorners);
-                if (corners >= catchUpCorners.Length) continue;
-                float length = 0f;
-                for (int c = 1; c < corners; c++) length += Vector3.Distance(catchUpCorners[c - 1], catchUpCorners[c]);
-                if (length >= CatchUpPathRatio * Vector3.Distance(start.position, hit.position)) continue;
-                point = hit.position;
-                return true;
+                Vector3 direction = Quaternion.AngleAxis(CatchUpAngles[i], Vector3.up) * ahead;
+                for (float distance = profile.CatchUpReappearDistance; distance <= profile.CatchUpReappearMaxDistance;
+                    distance += CatchUpDistanceStep)
+                {
+                    Vector3 wanted = playerPosition + direction * distance;
+                    if (!NavMesh.SamplePosition(wanted, out var hit, CatchUpSampleRadius, agent.areaMask)
+                        || !WitchCatchUp.AcceptsPlacement(playerPosition, wanted, hit.position, profile)
+                        || SafeZones.Contains(hit.position)
+                        || !HiddenFromCamera(view, hit.position)
+                        || NavMesh.Raycast(start.position, hit.position, out _, agent.areaMask)
+                        || !ShortCatchUpPath(start.position, hit.position)) continue;
+                    point = hit.position;
+                    return true;
+                }
             }
             return false;
         }
 
+        private Vector3 CatchUpAhead(Vector3 playerPosition, Vector3 start)
+        {
+            if (Perception.HasNextClearing
+                && NavMeshPlacement.TrySample(Perception.NextClearingPosition, CatchUpSampleRadius, agent.areaMask, out var goal)
+                && NavMesh.CalculatePath(start, goal.position, agent.areaMask, catchUpPath))
+            {
+                int corners = catchUpPath.GetCornersNonAlloc(catchUpCorners);
+                if (corners >= 2)
+                    return WitchTargets.Direction(playerPosition,
+                        WitchCatchUp.PointAlongPath(catchUpCorners, corners, profile.CatchUpReappearDistance));
+            }
+            return WitchTargets.Direction(playerPosition, playerPosition + player.forward);
+        }
+
+        private bool ShortCatchUpPath(Vector3 from, Vector3 to)
+        {
+            if (!NavMesh.CalculatePath(from, to, agent.areaMask, catchUpPath)
+                || catchUpPath.status != NavMeshPathStatus.PathComplete) return false;
+            int corners = catchUpPath.GetCornersNonAlloc(catchUpCorners);
+            if (corners >= catchUpCorners.Length) return false;
+            float length = 0f;
+            for (int c = 1; c < corners; c++) length += Vector3.Distance(catchUpCorners[c - 1], catchUpCorners[c]);
+            return length < CatchUpPathRatio * Vector3.Distance(from, to);
+        }
+
+        private bool HiddenFromCamera(Camera view, Vector3 position)
+        {
+            if (view == null) return true;
+            Vector3 body = position + Vector3.up * CatchUpBodyHeight;
+            Vector3 head = position + Vector3.up * CatchUpHeadHeight;
+            if (!InView(view, position) && !InView(view, head)) return true;
+            return Occluded(view.transform.position, body) && Occluded(view.transform.position, head);
+        }
+
+        private bool Occluded(Vector3 origin, Vector3 point)
+        {
+            Vector3 ray = point - origin;
+            int count = Physics.RaycastNonAlloc(origin, ray, hits, ray.magnitude, sightMask, QueryTriggerInteraction.Ignore);
+            return ClosestWorldHit(count, out _);
+        }
+
         private static bool InView(Camera view, Vector3 position)
         {
-            if (view == null) return false;
             Vector3 v = view.WorldToViewportPoint(position);
             return v.z > 0f && v.x > -CatchUpViewMargin && v.x < 1f + CatchUpViewMargin
                 && v.y > -CatchUpViewMargin && v.y < 1f + CatchUpViewMargin;

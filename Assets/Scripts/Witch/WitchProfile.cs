@@ -68,6 +68,7 @@ namespace TiffanyGame
         public float CatchUpDistance = 20f;
         public float CatchUpDelay = 6f;
         public float CatchUpReappearDistance = 14f;
+        public float CatchUpReappearMaxDistance = 18f;
 
         public WitchProfile Copy() => (WitchProfile)MemberwiseClone();
     }

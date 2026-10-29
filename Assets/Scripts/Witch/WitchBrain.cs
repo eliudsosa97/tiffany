@@ -85,7 +85,7 @@ namespace TiffanyGame
 
         public void CatchUpPlaced(Vector3 playerPosition)
         {
-            catchUp.Reset();
+            catchUp.Placed();
             tactics.Forget();
             target = playerPosition;
             targetIsPlayer = hasTarget = chasing = true;
@@ -113,7 +113,7 @@ namespace TiffanyGame
                 hasTarget = targetIsPlayer = chasing = warned = false;
             bool detected = trackable && (Watch != null
                 ? p.InWatchPassage && (!Watch.PassageClear(p.WitchPosition) || Watch.RequiresVanish)
-                : (profile.GroundChase && !tactics.Investigating) || p.SeesPlayer || p.SmellsPlayer
+                : (profile.GroundChase && (catchUp.Hunting || !tactics.Investigating)) || p.SeesPlayer || p.SmellsPlayer
                     || (noiseHeard && noiseFromPlayer && (chasing
                         || HorizontalDistance(p.WitchPosition, p.NoisePosition) <= profile.ClearNoiseDistance))
                     || (p.PlayerHidden && sawHiding));
@@ -529,7 +529,7 @@ namespace TiffanyGame
 
         private bool TryTactic(float dt, in WitchPerception p)
         {
-            if (Watch != null || (state != WitchState.Flying && state != WitchState.Stalking)) return false;
+            if (catchUp.Hunting || Watch != null || (state != WitchState.Flying && state != WitchState.Stalking)) return false;
             if (state == WitchState.Stalking && hasNoiseTarget && !p.PlayerAtFamilyCandle) return false;
             if (!tactics.TryDecide(dt, profile, in p, state, !hasTarget, chasing, out tacticDecision)) return false;
             if ((tacticDecision.State == WitchState.Landing || (tacticDecision.State == WitchState.Stalking && tacticDecision.Speed > 0f))
