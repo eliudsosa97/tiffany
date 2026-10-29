@@ -36,7 +36,7 @@ ModelImporter:
       takeName: Idle
       internalID: -3100369314251171874
       firstFrame: 0
-      lastFrame: 720
+      lastFrame: 1536
       wrapMode: 2
       orientationOffsetY: 0
       level: 0
@@ -65,7 +65,7 @@ ModelImporter:
       takeName: Slow
       internalID: -7604753212145149232
       firstFrame: 0
-      lastFrame: 192
+      lastFrame: 160
       wrapMode: 2
       orientationOffsetY: 0
       level: 0
@@ -94,7 +94,7 @@ ModelImporter:
       takeName: Walk
       internalID: 2667949614841947897
       firstFrame: 0
-      lastFrame: 120
+      lastFrame: 112
       wrapMode: 2
       orientationOffsetY: 0
       level: 0
@@ -148,11 +148,69 @@ ModelImporter:
       maskSource: {instanceID: 0}
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
+      name: TurnLeft
+      takeName: TurnLeft
+      internalID: -4049585584969071195
+      firstFrame: 0
+      lastFrame: 192
+      wrapMode: 2
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: TurnRight
+      takeName: TurnRight
+      internalID: 1628252986623654205
+      firstFrame: 0
+      lastFrame: 192
+      wrapMode: 2
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
       name: Hide
       takeName: Hide
       internalID: 3947973512406741949
       firstFrame: 0
-      lastFrame: 720
+      lastFrame: 1152
       wrapMode: 2
       orientationOffsetY: 0
       level: 0
@@ -182,6 +240,93 @@ ModelImporter:
       internalID: 1373286468030731974
       firstFrame: 0
       lastFrame: 480
+      wrapMode: 2
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Flash
+      takeName: Flash
+      internalID: -8486462353552538560
+      firstFrame: 0
+      lastFrame: 168
+      wrapMode: 8
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Caught
+      takeName: Caught
+      internalID: 6569498529150986814
+      firstFrame: 0
+      lastFrame: 336
+      wrapMode: 8
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Vanish
+      takeName: Vanish
+      internalID: -6376915706981925556
+      firstFrame: 0
+      lastFrame: 720
       wrapMode: 2
       orientationOffsetY: 0
       level: 0

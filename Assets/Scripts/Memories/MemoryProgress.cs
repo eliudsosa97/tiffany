@@ -24,6 +24,8 @@ namespace TiffanyGame
 
         public bool IsFound(int id) => found.Contains(id);
 
+        public void Clear() => found.Clear();
+
         public bool TryGetNext(out int id)
         {
             for (int i = 0; i < order.Count; i++)

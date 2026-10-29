@@ -6,7 +6,7 @@ namespace TiffanyGame.EditorTools
 {
     public class ModelImportRules : AssetPostprocessor
     {
-        public override uint GetVersion() => 7;
+        public override uint GetVersion() => 8;
 
         bool IsLibraryModel => Path.GetDirectoryName(assetPath).Replace('\\', '/') == ModelLibrary.ModelFolder &&
                                Path.GetExtension(assetPath).ToLowerInvariant() == ".fbx";

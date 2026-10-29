@@ -1,0 +1,61 @@
+{
+  "materials": [
+    {
+      "name": "RiverBankEarth",
+      "color": "#827564",
+      "smoothness": 0.06
+    },
+    {
+      "name": "RiverBankWetEarth",
+      "color": "#49483F",
+      "smoothness": 0.38
+    },
+    {
+      "name": "RiverBankStone",
+      "color": "#989E98",
+      "smoothness": 0.34
+    },
+    {
+      "name": "RiverBankRoot",
+      "color": "#776C58",
+      "smoothness": 0.08
+    }
+  ],
+  "seed": 131,
+  "pivot": [
+    0,
+    0,
+    0
+  ],
+  "length": 10,
+  "radius": 0,
+  "outside": 1.2,
+  "inside": 0.9,
+  "depth": 1.5,
+  "slopeWidth": 0.8,
+  "lift": 0.03,
+  "waterLevel": -0.15,
+  "segments": 20,
+  "stoneCount": 12,
+  "roots": [
+    1.35,
+    4.6,
+    8.75
+  ],
+  "profileInsets": [
+    0.05,
+    0.1,
+    0.16,
+    0.23,
+    0.31,
+    0.4,
+    0.49,
+    0.57,
+    0.64,
+    0.7,
+    0.75,
+    0.8
+  ],
+  "erosionStart": 3.1,
+  "erosionEnd": 5.3
+}

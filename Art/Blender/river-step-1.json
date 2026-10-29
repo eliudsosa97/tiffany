@@ -1,0 +1,26 @@
+{
+  "materials": [
+    {
+      "name": "RiverGraniteDry",
+      "color": "#A5A6A0",
+      "smoothness": 0.12
+    },
+    {
+      "name": "RiverGraniteWet",
+      "color": "#3B4745",
+      "smoothness": 0.5
+    }
+  ],
+  "seed": 111,
+  "size": [
+    0.88,
+    0.3,
+    0.66
+  ],
+  "sides": 18,
+  "topTiltDegrees": [
+    2,
+    -1
+  ],
+  "shape": "step"
+}

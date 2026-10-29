@@ -1,50 +1,22 @@
-import json
 import os
 import sys
-from math import atan2, cos, pi, radians, sin, sqrt
+from math import atan2, cos, pi, radians, sin
 
 import bpy
 import bmesh
-from mathutils import Matrix, Quaternion, Vector
+from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 from spirit_materials import make_materials
+from tiffany_motion import BONES, CLIPS, FPS, LOG_PREFIX, SKIRT, SPEC, STRIP, U, clamp, make_actions, mix, smooth
+import tiffany_video
 
-with open(os.path.join(HERE, "tiffany-provisional.json"), encoding="utf-8") as source:
-    SPEC = json.load(source)
 FBX = os.path.abspath(os.path.join(HERE, "..", "..", SPEC["modelPath"]))
-SAMPLES_PER_FRAME = 4
-FPS = SPEC["fps"] * SAMPLES_PER_FRAME
-CLIPS = {clip["name"]: dict(clip, frames=clip["frames"] * SAMPLES_PER_FRAME, key=clip["key"] * SAMPLES_PER_FRAME)
-         for clip in SPEC["clips"]}
-STRIP = {name: 1 + sum(c["frames"] + 10 * SAMPLES_PER_FRAME for c in list(CLIPS.values())[:i]) for i, name in enumerate(CLIPS)}
 MATS = [entry["name"] for entry in SPEC["materials"]]
-ARMS = set(SPEC["controller"]["layers"][1]["mask"]["bones"])
-BONES = {bone["name"]: bone for bone in SPEC["skeleton"]}
-SKIRT = ("Skirt.F", "Skirt.R", "Skirt.B", "Skirt.L")
 HEAD = {"Head": 1.0}
-LOG_PREFIX = "[Tiffany]"
-
-
-def U(point):
-    # El FBX conserva Z arriba y Unity convierte +Y de Blender en su frente +Z.
-    return Vector((point[0], point[2], point[1]))
-
-
-def clamp(value, low=0.0, high=1.0):
-    return max(low, min(high, value))
-
-
-def mix(a, b, t):
-    return a * (1 - t) + b * t
-
-
-def smooth(a, b, x):
-    t = clamp((x - a) / (b - a))
-    return t * t * (3 - 2 * t)
 
 
 def weights(height, knots):
@@ -391,209 +363,6 @@ def make_mesh(part, arm):
     return obj
 
 
-def foot_target(phase, clip, gait):
-    duty = gait["duty"]
-    stride = clip["speed"] * clip["frames"] / FPS
-    half = stride * duty / 2
-    if phase < duty:
-        return half - stride * phase, 0.0
-    t = (phase - duty) / (1 - duty)
-    tangent = -stride * (1 - duty)
-    forward = (2 * t ** 3 - 3 * t * t + 1) * -half + (-2 * t ** 3 + 3 * t * t) * half
-    forward += (2 * t ** 3 - 3 * t * t + t) * tangent
-    return forward, gait["lift"] * sin(pi * t) ** 2
-
-
-def leg_angles(upper, lower, forward, vertical):
-    distance = sqrt(forward * forward + vertical * vertical)
-    if not abs(upper - lower) + 1e-6 < distance < upper + lower:
-        raise ValueError(f"{LOG_PREFIX} El pie está fuera del alcance: {distance:.5f} m")
-    along = (upper * upper - lower * lower + distance * distance) / (2 * distance)
-    height = sqrt(max(0.0, upper * upper - along * along))
-    fy, fz = forward / distance, vertical / distance
-    ky, kz = fy * along - fz * height, fz * along + fy * height
-    thigh = atan2(ky, -kz)
-    shin = atan2(forward - ky, -(vertical - kz))
-    return thigh, shin - thigh, -shin
-
-
-class Rig:
-    def __init__(self):
-        self.bones = BONES
-        self.head = {name: U(bone["head"]) for name, bone in self.bones.items()}
-        self.tail = {name: U(bone["tail"]) for name, bone in self.bones.items()}
-
-    def world(self, rotations, location):
-        world = {}
-        for name, bone in self.bones.items():
-            parent = world[bone["parent"]] if bone["parent"] else Matrix.Identity(4)
-            if name == "Hips":
-                parent = parent @ Matrix.Translation(location)
-            head = self.head[name]
-            world[name] = parent @ Matrix.Translation(head) @ rotations.get(name, Quaternion()).to_matrix().to_4x4() @ Matrix.Translation(-head)
-        return world
-
-    def arms(self, rotations, location, name, phase):
-        world = self.world(rotations, location)
-        chest = world["Chest"]
-        pulse = sin(2 * pi * phase)
-        for sign, side in ((-1, "L"), (1, "R")):
-            upper, lower, hand = (part + "." + side for part in ("UpperArm", "LowerArm", "Hand"))
-            pole_target = (sign * 0.31, 0.77, 0.04)
-            if name == "CarryLight":
-                target = (sign * 0.035, 0.85 + 0.002 * pulse, 0.205)
-                direction = (-sign * 0.045, 0.015, 0.035)
-            elif name == "Hide":
-                target, direction = (sign * 0.055, 0.735, 0.2), (-sign * 0.03, -0.02, 0.04)
-            else:
-                gait = SPEC["gaits"].get(name, {})
-                swing = sign * 0.008 * cos(2 * pi * phase)
-                if gait:
-                    clip = CLIPS[name]
-                    forward, _ = foot_target((phase + (0.5 if side == "R" else 0)) % 1, clip, gait)
-                    half_stride = clip["speed"] * clip["frames"] / FPS * gait["duty"] / 2
-                    swing = -gait["armSwing"] * forward / half_stride
-                height = 0.7 if name == "Slow" else 0.59 if gait else 0.56
-                if name == "Run":
-                    height = 0.615 + 0.15 * swing
-                target = (sign * (0.12 if name == "Slow" else 0.16), height + 0.003 * pulse,
-                          (0.13 if name == "Slow" else 0.035) + swing)
-                direction = (0, -0.06, 0.015)
-                pole_target = (sign * 0.14, 0.74, -0.12)
-            parent = world[self.bones[upper]["parent"]]
-            shoulder = parent @ self.head[upper]
-            wrist = chest @ U(target)
-            pole = chest @ U(pole_target)
-            delta = wrist - shoulder
-            distance = delta.length
-            a, b = (self.tail[upper] - self.head[upper]).length, (self.tail[lower] - self.head[lower]).length
-            if not abs(a - b) + 1e-6 < distance < a + b:
-                raise ValueError(f"{LOG_PREFIX} {name}: mano {side} fuera del alcance ({distance:.4f} m)")
-            axis = delta.normalized()
-            bend = pole - shoulder
-            bend = (bend - axis * bend.dot(axis)).normalized()
-            along = (a * a - b * b + distance * distance) / (2 * distance)
-            elbow = shoulder + axis * along + bend * sqrt(max(0, a * a - along * along))
-            q_upper = (self.tail[upper] - self.head[upper]).rotation_difference(elbow - shoulder)
-            q_lower = (self.tail[lower] - self.head[lower]).rotation_difference(wrist - elbow)
-            q_hand = (self.tail[hand] - self.head[hand]).rotation_difference(chest.to_3x3() @ U(direction))
-            rotations[upper] = parent.to_quaternion().inverted() @ q_upper
-            rotations[lower] = q_upper.inverted() @ q_lower
-            rotations[hand] = q_lower.inverted() @ q_hand
-
-    def skirt(self, rotations, thighs):
-        front = 0.9 * max(0.0, max(thighs.values()) - radians(8))
-        back = 0.9 * max(0.0, -min(thighs.values()) - radians(8))
-        rotations["Skirt.F"] = Quaternion((1, 0, 0), front)
-        rotations["Skirt.B"] = Quaternion((1, 0, 0), -back)
-        for sign, side in ((-1, "L"), (1, "R")):
-            thigh = thighs[side]
-            lift = 0.85 * (max(0.0, thigh - radians(8)) - max(0.0, -thigh - radians(8)))
-            rotations["Skirt." + side] = Quaternion((0, 1, 0), -sign * (radians(3) + 0.1 * abs(thigh))) @ Quaternion((1, 0, 0), lift)
-
-    def braids(self, rotations, name, phase, lean):
-        # Las trenzas siguen al pecho y no a la cabeza.
-        world = self.world(rotations, Vector())
-        chest = world["Chest"].to_quaternion()
-        side_amp, bounce = SPEC["braidSway"][name]
-        f = 2 * pi * phase
-        for sign, side in ((-1, "L"), (1, "R")):
-            parent = world["Head"].to_quaternion()
-            for i in (1, 2, 3):
-                lag = 0.7 * i
-                swing = radians(side_amp * (0.5 + 0.5 * i) * sin(f - lag))
-                lift = radians(3 + 0.35 * lean + bounce * i * (1 - cos(2 * f - lag)) / 2)
-                target = chest @ Quaternion((1, 0, 0), lift) @ Quaternion((0, 1, 0), swing)
-                bone = "Braid.%s.%d" % (side, i)
-                rotations[bone] = parent.inverted() @ target
-                parent = target
-
-    def pose(self, name, phase):
-        f = 2 * pi * phase
-        rotations = {}
-        location = Vector((0, 0, 0))
-        if name != "CarryLight":
-            gait = SPEC["gaits"].get(name)
-            crouch = gait["crouch"] + gait["bob"] * (1 - cos(2 * f)) if gait else 0.36 if name == "Hide" else 0.025
-            location.z = -crouch
-            location.y = -0.05 if name == "Hide" else 0.0
-            lean = gait["lean"] if gait else 40 if name == "Hide" else 3
-            rotations["Spine"] = Quaternion((1, 0, 0), radians(-lean * 0.55 - 0.6 * sin(f)))
-            rotations["Chest"] = Quaternion((1, 0, 0), radians(-lean * 0.45 - 0.7 * sin(f)))
-            rotations["Neck"] = Quaternion((1, 0, 0), radians(lean * 0.35))
-            look = 7 * sin(f) + 2 * sin(2 * f) if name == "Idle" else 0
-            rotations["Head"] = Quaternion((0, 0, 1), radians(look)) @ Quaternion((1, 0, 0), radians(-12 if name == "Hide" else 1.5 * sin(f)))
-            thighs = {}
-            for side, offset in (("L", 0.0), ("R", 0.5)):
-                upper, lower, foot = (part + "." + side for part in ("UpperLeg", "LowerLeg", "Foot"))
-                target = self.head[foot].copy()
-                if gait:
-                    forward, lift = foot_target((phase + offset) % 1.0, CLIPS[name], gait)
-                    target += Vector((0, forward, lift))
-                hip = self.head[upper] + location
-                a, b = (self.tail[upper] - self.head[upper]).length, (self.tail[lower] - self.head[lower]).length
-                angles = leg_angles(a, b, target.y - hip.y, target.z - hip.z)
-                for bone, angle in zip((upper, lower, foot), angles):
-                    rotations[bone] = Quaternion((1, 0, 0), angle)
-                thighs[side] = angles[0]
-            self.skirt(rotations, thighs)
-            self.braids(rotations, name, phase, lean)
-        self.arms(rotations, location, name, phase)
-        return rotations, location
-
-
-def make_actions(arm):
-    rig = Rig()
-    rest = {bone.name: bone.matrix_local.to_quaternion() for bone in arm.data.bones}
-    animation = arm.animation_data_create()
-    actions = {}
-    for name, clip in CLIPS.items():
-        action = bpy.data.actions.new(name)
-        action.use_fake_user = True
-        animation.action = action
-        bones = [bone for bone in rest if not clip.get("armsOnly") or bone in ARMS]
-        rotation_keys = {bone: [[] for _ in range(4)] for bone in bones}
-        location_keys, previous = [[], [], []], {}
-        for frame in range(clip["frames"] + 1):
-            rotations, location = rig.pose(name, frame / clip["frames"])
-            for bone in bones:
-                q = rest[bone].inverted() @ rotations.get(bone, Quaternion()) @ rest[bone]
-                if bone in previous and previous[bone].dot(q) < 0:
-                    q.negate()
-                previous[bone] = q
-                for i in range(4):
-                    rotation_keys[bone][i] += [float(frame), q[i]]
-            local = rest["Hips"].inverted() @ location
-            for i in range(3):
-                location_keys[i] += [float(frame), local[i]]
-        curves = [(f'pose.bones["{bone}"].rotation_quaternion', i, bone, rotation_keys[bone][i]) for bone in bones for i in range(4)]
-        if not clip.get("armsOnly"):
-            curves += [('pose.bones["Hips"].location', i, "Hips", location_keys[i]) for i in range(3)]
-        for path, index, group, keys in curves:
-            curve = action.fcurve_ensure_for_datablock(arm, path, index=index, group_name=group)
-            curve.keyframe_points.add(clip["frames"] + 1)
-            curve.keyframe_points.foreach_set("co", keys)
-            for key in curve.keyframe_points:
-                key.interpolation = "LINEAR"
-            curve.update()
-        action.use_frame_range = True
-        action.frame_start, action.frame_end = 0, clip["frames"]
-        action.use_cyclic = clip["loop"]
-        actions[name] = action
-        print(f"{LOG_PREFIX} {name}: {clip['frames']} cuadros, {clip['frames'] / FPS:.2f} s, {clip.get('speed', 0):.1f} m/s")
-    animation.action = None
-    for bone in arm.pose.bones:
-        bone.rotation_quaternion = Quaternion()
-        bone.location = (0, 0, 0)
-    for name, action in actions.items():
-        track = animation.nla_tracks.new()
-        track.name = name
-        strip = track.strips.new(name, STRIP[name], action)
-        strip.extrapolation = "NOTHING"
-        if hasattr(strip, "action_slot") and strip.action_slot is None and len(action.slots):
-            strip.action_slot = action.slots[0]
-
-
 def add(name, data, position, target=None):
     obj = bpy.data.objects.new(name, data)
     bpy.context.scene.collection.objects.link(obj)
@@ -749,6 +518,10 @@ def main():
                                  bake_anim_use_all_bones=True, bake_anim_use_nla_strips=True, bake_anim_use_all_actions=False,
                                  bake_anim_force_startend_keying=True, bake_anim_simplify_factor=0.0, use_custom_props=False)
         print(f"{LOG_PREFIX} Exportado {FBX}")
+    if "--video" in args:
+        tiffany_video.videos(args[args.index("--video") + 1], arm)
+    if "--sheets" in args:
+        tiffany_video.sheets(args[args.index("--sheets") + 1], arm)
     if "--render" in args:
         render(args[args.index("--render") + 1])
     if not bpy.app.background:

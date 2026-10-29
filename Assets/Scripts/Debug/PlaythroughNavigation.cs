@@ -42,6 +42,10 @@ namespace TiffanyGame
             return CameraInput(offset.normalized * strength, yaw);
         }
 
+        public static bool CanMove(Vector3 position, Vector3 direction, float distance) =>
+            NavMesh.SamplePosition(position, out var from, 1f, NavMesh.AllAreas)
+            && !NavMesh.Raycast(from.position, from.position + direction * distance, out _, NavMesh.AllAreas);
+
         public static Vector2 CameraInput(Vector3 worldDirection, float yaw)
         {
             Vector3 local = Quaternion.Euler(0f, -yaw, 0f) * worldDirection;
