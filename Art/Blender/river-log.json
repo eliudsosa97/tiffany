@@ -1,0 +1,84 @@
+{
+  "materials": [
+    {
+      "name": "RiverLogBark",
+      "color": "#655F54",
+      "smoothness": 0.08
+    },
+    {
+      "name": "RiverLogRidges",
+      "color": "#7D776B",
+      "smoothness": 0.1
+    },
+    {
+      "name": "RiverLogWood",
+      "color": "#B7A78A",
+      "smoothness": 0.16
+    },
+    {
+      "name": "RiverLogRing",
+      "color": "#827057",
+      "smoothness": 0.12
+    },
+    {
+      "name": "RiverLogMoss",
+      "color": "#3D4A39",
+      "smoothness": 0.18
+    }
+  ],
+  "seed": 121,
+  "length": 4.5,
+  "diameter": 0.45,
+  "sections": [
+    -0.5,
+    -0.4,
+    -0.28,
+    -0.16,
+    -0.02,
+    0.13,
+    0.27,
+    0.39,
+    0.5
+  ],
+  "trunkCollider": {
+    "center": {
+      "x": 0,
+      "y": 0.225,
+      "z": 0
+    },
+    "radius": 0.225,
+    "height": 4.5
+  },
+  "stubs": [
+    {
+      "start": [
+        -0.17,
+        0.2,
+        -0.9
+      ],
+      "end": [
+        -0.43,
+        0.27,
+        -0.9
+      ],
+      "radius": 0.09,
+      "tipRadius": 0.06
+    },
+    {
+      "start": [
+        0.17,
+        0.2,
+        0.85
+      ],
+      "end": [
+        0.43,
+        0.27,
+        0.85
+      ],
+      "radius": 0.09,
+      "tipRadius": 0.06
+    }
+  ],
+  "tipDiameter": 0.38,
+  "sides": 12
+}
