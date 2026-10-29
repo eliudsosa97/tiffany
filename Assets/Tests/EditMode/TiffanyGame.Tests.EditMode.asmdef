@@ -4,6 +4,7 @@
     "references": [
         "TiffanyGame",
         "TiffanyGame.Editor",
+        "Unity.InputSystem",
         "Unity.AI.Navigation",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

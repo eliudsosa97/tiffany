@@ -10,6 +10,8 @@ namespace TiffanyGame
         public const float RunSpeed = 4f;
         public const float SlowWalkThreshold = (SlowSpeed + WalkSpeed) / 2f;
         public const float WalkRunThreshold = (WalkSpeed + RunSpeed) / 2f;
+        public const float SmoothTime = 0.07f;
+        public const float StopSpeed = 0.05f;
 
         public static Gait ResolveGait(bool slow, bool run)
         {
@@ -33,11 +35,33 @@ namespace TiffanyGame
             return speed < WalkRunThreshold ? Gait.Walk : Gait.Run;
         }
 
-        public static Gait NoiseGait(Gait last, float targetSpeed, float currentSpeed)
+        public static Gait NoiseGait(float currentSpeed) => GaitForSpeed(currentSpeed);
+
+        public static float TargetSpeed(float inputMagnitude, Gait gait)
         {
-            if (targetSpeed <= 0f) return last;
-            var next = GaitForSpeed(targetSpeed);
-            return next >= last || currentSpeed <= targetSpeed ? next : last;
+            float amount = Mathf.Clamp01(inputMagnitude);
+            if (gait == Gait.Slow) return SlowSpeed * amount;
+            float walk = WalkSpeed * Mathf.Clamp01(amount * 2f);
+            return gait == Gait.Run ? walk + (RunSpeed - WalkSpeed) * Mathf.Clamp01(amount * 2f - 1f) : walk;
+        }
+
+        public struct VelocityState
+        {
+            public Vector3 Velocity { get; private set; }
+            Vector3 acceleration;
+
+            public Vector3 Advance(Vector3 target, float dt)
+            {
+                if (dt <= 0f) return Velocity;
+                target.y = 0f;
+                Velocity = Vector3.SmoothDamp(Velocity, target, ref acceleration, SmoothTime, Mathf.Infinity, dt);
+                if (target.sqrMagnitude == 0f && Velocity.sqrMagnitude <= StopSpeed * StopSpeed)
+                {
+                    Velocity = Vector3.zero;
+                    acceleration = Vector3.zero;
+                }
+                return Velocity;
+            }
         }
 
         public static Vector3 CameraRelative(Vector2 input, float cameraYawDegrees)

@@ -644,7 +644,7 @@ namespace TiffanyGame.EditorTools
             border.AddComponent<BoxCollider>().size = size;
         }
 
-        static PlayerController CreatePlayer(Transform spawn, out PlayerLight playerLight)
+        public static PlayerController CreatePlayer(Transform spawn, out PlayerLight playerLight)
         {
             var player = new GameObject("Tiffany");
             player.tag = "Player";
@@ -654,14 +654,8 @@ namespace TiffanyGame.EditorTools
             controller.radius = 0.25f;
             controller.center = Vector3.up * (controller.height * 0.5f);
 
-            var body = CreatePrimitive("Body", PrimitiveType.Capsule, player.transform,
-                new Vector3(0f, 0.6f, 0f), new Vector3(0.5f, 0.6f, 0.5f),
-                GeneratedMaterials.Get("TiffanyBody", new Color(0.86f, 0.86f, 0.72f)));
-            UnityEngine.Object.DestroyImmediate(body.GetComponent<CapsuleCollider>());
-            var facing = CreatePrimitive("Facing", PrimitiveType.Cube, player.transform,
-                new Vector3(0f, 0.97f, 0.26f), new Vector3(0.18f, 0.14f, 0.18f),
-                GeneratedMaterials.Get("TiffanyFacing", new Color(0.8f, 0.43f, 0.16f)));
-            UnityEngine.Object.DestroyImmediate(facing.GetComponent<BoxCollider>());
+            var body = ModelLibrary.Instantiate("tiffany-provisional", player.transform);
+            body.transform.localPosition = controller.center - Vector3.up * (controller.height * 0.5f);
             player.AddComponent<PlayerSoul>().startingPowers = new[] { Power.Light };
             var spot = new GameObject("Soul Light").AddComponent<Light>();
             spot.transform.SetParent(player.transform, false);
@@ -687,6 +681,34 @@ namespace TiffanyGame.EditorTools
             playerLight.startOn = false;
             playerLight.pitch = 42f;
             var movement = player.AddComponent<PlayerController>();
+            var animation = player.AddComponent<TiffanyAnimator>();
+            animation.animator = body.GetComponent<Animator>();
+            animation.animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            var spec = ModelLibrary.LoadSpec("tiffany-provisional");
+            bool hasLocomotionContacts = false;
+            foreach (var clip in spec.clips)
+            {
+                if (clip.name == TiffanyAnimation.Flash) animation.flashDuration = clip.frames / (float)spec.fps;
+                if (clip.contacts == null) continue;
+                var contacts = new Vector2(clip.contacts.left, clip.contacts.right);
+                if (clip.speed > 0f)
+                {
+                    if (hasLocomotionContacts && animation.locomotionContacts != contacts)
+                        throw new System.IO.InvalidDataException("Los ciclos de locomoción deben compartir las fases de contacto.");
+                    animation.locomotionContacts = contacts;
+                    hasLocomotionContacts = true;
+                }
+                if (clip.name == TiffanyAnimation.TurnLeft)
+                {
+                    animation.leftTurnContacts = contacts;
+                    animation.authoredTurnSpeeds.x = clip.turnSpeed;
+                }
+                if (clip.name == TiffanyAnimation.TurnRight)
+                {
+                    animation.rightTurnContacts = contacts;
+                    animation.authoredTurnSpeeds.y = clip.turnSpeed;
+                }
+            }
             AudioBuilder.BuildFootsteps(movement);
             return movement;
         }

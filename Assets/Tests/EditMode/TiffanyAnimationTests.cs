@@ -39,5 +39,38 @@ namespace TiffanyGame.Tests
                 Assert.That(TiffanyAnimation.BlendFor(state), Is.InRange(0.05f, 0.5f), state);
             Assert.Throws<ArgumentOutOfRangeException>(() => TiffanyAnimation.BlendFor("Dance"));
         }
+
+        [TestCase(-180f, 90f, 2f)]
+        [TestCase(45f, 90f, 0.5f)]
+        [TestCase(180f, 60f, 3f)]
+        public void TurnPlaybackUsesAngularSpeedAndTheAuthoredRate(float angular, float authored, float expected)
+        {
+            Assert.AreEqual(expected, TiffanyAnimation.TurnRate(angular, authored));
+        }
+
+        [Test]
+        public void FlashCompletesItsClipThenReturnsToLightPose()
+        {
+            var arms = new TiffanyAnimation.ArmsState();
+            Assert.AreEqual(TiffanyAnimation.CarryLight, arms.Advance(false, true, 0f, 0.7f, 0.01f));
+            Assert.AreEqual(TiffanyAnimation.Flash, arms.Advance(false, true, 0.2f, 0.7f, 0.01f));
+            Assert.IsTrue(arms.RestartFlash);
+            Assert.AreEqual(TiffanyAnimation.Flash, arms.Advance(false, true, 0f, 0.7f, 0.3f));
+            Assert.IsFalse(arms.RestartFlash);
+            Assert.AreEqual(TiffanyAnimation.CarryLight, arms.Advance(false, true, 0f, 0.7f, 0.41f));
+            Assert.AreEqual(TiffanyAnimation.Empty, arms.Advance(false, false, 0f, 0.7f, 0.01f));
+        }
+
+        [Test]
+        public void NewFlashRestartsButSpecialPosesSuppressArmsAndClearPendingFlash()
+        {
+            var arms = new TiffanyAnimation.ArmsState();
+            arms.Advance(false, true, 0.2f, 0.7f, 0.01f);
+            arms.Advance(false, true, 0.1f, 0.7f, 0.1f);
+            arms.Advance(false, true, 0.2f, 0.7f, 0.01f);
+            Assert.IsTrue(arms.RestartFlash);
+            Assert.AreEqual(TiffanyAnimation.Empty, arms.Advance(true, true, 0.1f, 0.7f, 0.01f));
+            Assert.AreEqual(TiffanyAnimation.CarryLight, arms.Advance(false, true, 0f, 0.7f, 0.01f));
+        }
     }
 }

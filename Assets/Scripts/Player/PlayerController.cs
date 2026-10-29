@@ -7,56 +7,69 @@ namespace TiffanyGame
     {
         public Camera viewCamera;
         public bool raining;
-        public float acceleration = 25f;
         public float turnSpeed = 720f;
         public float returnTurnSpeed = 300f;
         public float backwardSpeedFactor = 0.7f;
         public float gravity = 20f;
 
         public Gait CurrentGait { get; private set; }
+        public float HorizontalSpeed { get; private set; }
+        public float AngularSpeed => isActiveAndEnabled ? facingTurn.AngularSpeed : 0f;
+        public bool Grounded => controller.enabled && controller.isGrounded;
         public event System.Action<GroundType, Gait> Stepped;
 
         CharacterController controller;
-        StepCadence cadence;
         readonly RaycastHit[] groundHits = new RaycastHit[4];
-        Vector3 horizontalVelocity;
+        PlayerMotion.VelocityState motion;
         float verticalVelocity;
         Collider lastGroundCollider;
         GroundType lastGroundType = GroundType.Dirt;
         AimSource aimSource;
         PlayerFacing.TurnState facingTurn;
+        TiffanyAnimator tiffanyAnimator;
+        VanishPower vanish;
+        StepGuarantee steps;
+        float horizontalDistance;
 
         void Awake()
         {
             controller = GetComponent<CharacterController>();
             // A muchos cuadros por segundo cada Move mide menos que el mínimo por defecto (0.001 m).
             controller.minMoveDistance = 0f;
-            cadence = new StepCadence();
         }
 
         void Start()
         {
             if (viewCamera == null) viewCamera = Camera.main;
+            tiffanyAnimator = GetComponent<TiffanyAnimator>();
+            vanish = GetComponent<VanishPower>();
         }
 
         void OnEnable()
         {
-            horizontalVelocity = Vector3.zero;
+            motion = default;
+            HorizontalSpeed = 0f;
+            CurrentGait = Gait.Slow;
             verticalVelocity = 0f;
             facingTurn = default;
+            steps = default;
+            horizontalDistance = 0f;
         }
 
-        void Update()
+        void OnDisable() => HorizontalSpeed = 0f;
+
+        void Update() => Move(Time.deltaTime);
+
+        void Move(float dt)
         {
             var inputGait = PlayerMotion.ResolveGait(GameInput.Slow, GameInput.Run);
-            float dt = Time.deltaTime;
+            if (dt <= 0f || !controller.enabled) return;
             float yaw = viewCamera != null ? viewCamera.transform.eulerAngles.y : 0f;
             var direction = PlayerMotion.CameraRelative(GameInput.Move, yaw);
             float speedFactor = PlayerFacing.SpeedFactor(direction, transform.forward,
                 PlayerFacing.FacesMovement(inputGait, direction), backwardSpeedFactor);
-            var targetVelocity = direction * (PlayerMotion.Speed(inputGait) * speedFactor);
-            horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, acceleration * dt);
-            CurrentGait = PlayerMotion.NoiseGait(CurrentGait, targetVelocity.magnitude, horizontalVelocity.magnitude);
+            var targetVelocity = direction.normalized * (PlayerMotion.TargetSpeed(direction.magnitude, inputGait) * speedFactor);
+            var horizontalVelocity = motion.Advance(targetVelocity, dt);
 
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
             else verticalVelocity -= gravity * dt;
@@ -65,14 +78,43 @@ namespace TiffanyGame
             controller.Move((horizontalVelocity + Vector3.up * verticalVelocity) * dt);
             var displacement = transform.position - previousPosition;
             displacement.y = 0f;
-            if (cadence.Advance(displacement.magnitude, CurrentGait))
+            horizontalDistance = displacement.magnitude;
+            HorizontalSpeed = horizontalDistance / dt;
+            CurrentGait = PlayerMotion.NoiseGait(HorizontalSpeed);
+
+            TurnTowardsAim(inputGait, direction, yaw, dt);
+        }
+
+        void LateUpdate() => UpdateFootsteps(Time.deltaTime);
+
+        bool CanStep => isActiveAndEnabled && Grounded && (vanish == null || !vanish.State.IsActive);
+
+        void UpdateFootsteps(float dt)
+        {
+            if (dt <= 0f) return;
+            int contacts = tiffanyAnimator != null && tiffanyAnimator.isActiveAndEnabled ? tiffanyAnimator.ReadFootContacts() : 0;
+            if (CanStep)
+                PublishSteps(steps.Advance(horizontalDistance, CurrentGait, contacts));
+            else
+                steps = default;
+            horizontalDistance = 0f;
+        }
+
+        public void PublishFootstep()
+        {
+            if (!CanStep || Time.deltaTime <= 0f) return;
+            PublishSteps(steps.Advance(0f, CurrentGait, 1));
+        }
+
+        void PublishSteps(int count)
+        {
+            if (count == 0) return;
+            var ground = FindGround();
+            for (int i = 0; i < count; i++)
             {
-                var ground = FindGround();
                 NoiseBus.Publish(new StepNoise(transform.position, NoiseModel.StepRadius(ground, CurrentGait, raining)));
                 Stepped?.Invoke(ground, CurrentGait);
             }
-
-            TurnTowardsAim(inputGait, direction, yaw, dt);
         }
 
         GroundType FindGround()
@@ -121,10 +163,10 @@ namespace TiffanyGame
             var direction = moveDirection;
             bool hasDirection = running || PlayerAim.TryDirection(aimSource, moveDirection, stickDirection,
                 pointerOffset, out direction);
-            var rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
-            var target = hasDirection ? Quaternion.LookRotation(direction) : rotation;
-            float speed = facingTurn.Speed(running, Quaternion.Angle(rotation, target), turnSpeed, returnTurnSpeed);
-            if (hasDirection) transform.rotation = Quaternion.RotateTowards(rotation, target, speed * dt);
+            float currentYaw = transform.eulerAngles.y;
+            float targetYaw = hasDirection ? Quaternion.LookRotation(direction).eulerAngles.y : currentYaw;
+            float nextYaw = facingTurn.Advance(currentYaw, targetYaw, running, turnSpeed, returnTurnSpeed, dt);
+            transform.rotation = Quaternion.Euler(0f, nextYaw, 0f);
         }
     }
 }

@@ -125,6 +125,7 @@ namespace TiffanyGame.EditorTools
             public int frames;
             public bool loop;
             public float speed;
+            public float turnSpeed;
             public ContactSpec contacts;
         }
 

@@ -247,7 +247,7 @@ namespace TiffanyGame.Tests
         {
             Assert.IsTrue(spec.preserveAnimationKeys);
             var importer = (ModelImporter)AssetImporter.GetAtPath(spec.modelPath);
-            Assert.AreEqual(ModelImporterAnimationCompression.Off, importer.animationCompression);
+            Assert.AreEqual(ModelImporterAnimationCompression.Optimal, importer.animationCompression);
             var clips = Clips();
             CollectionAssert.AreEquivalent(ClipNames, clips.Keys);
             Assert.AreEqual(spec.clips.Length, clips.Count);
@@ -378,10 +378,13 @@ namespace TiffanyGame.Tests
         public void ControllerHasNamedStatesAndNoTransitions()
         {
             var controller = Controller();
-            Assert.AreEqual(1, controller.parameters.Length);
+            Assert.AreEqual(2, controller.parameters.Length);
             Assert.AreEqual("Speed", controller.parameters[0].name);
             Assert.AreEqual(AnimatorControllerParameterType.Float, controller.parameters[0].type);
             Assert.AreEqual(0f, controller.parameters[0].defaultFloat);
+            Assert.AreEqual(TiffanyAnimation.TurnRateParameter, controller.parameters[1].name);
+            Assert.AreEqual(AnimatorControllerParameterType.Float, controller.parameters[1].type);
+            Assert.AreEqual(1f, controller.parameters[1].defaultFloat);
             Assert.AreEqual(2, controller.layers.Length);
             var names = StateNames;
             for (int i = 0; i < names.Length; i++)
@@ -481,6 +484,30 @@ namespace TiffanyGame.Tests
             animator.Update(0.05f);
             float elapsed = animator.GetCurrentAnimatorStateInfo(0).normalizedTime - start;
             Assert.AreEqual(0.05f * fraction / (entry.frames / (float)spec.fps), elapsed, 0.002f);
+        }
+
+        [TestCase(TiffanyAnimation.TurnLeft, -180f)]
+        [TestCase(TiffanyAnimation.TurnRight, 45f)]
+        public void TurningScalesOnlyTheTurnClipAndLeavesArmsAtNaturalSpeed(string name, float angularSpeed)
+        {
+            var controller = Controller();
+            var entry = Array.Find(spec.clips, clip => clip.name == name);
+            Assert.AreEqual(90f, entry.turnSpeed);
+            var state = State(controller, 0, name);
+            Assert.IsTrue(state.speedParameterActive);
+            Assert.AreEqual(TiffanyAnimation.TurnRateParameter, state.speedParameter);
+            Assert.IsFalse(State(controller, 1, TiffanyAnimation.CarryLight).speedParameterActive);
+            var animator = Animate(Instance(), controller);
+            float rate = TiffanyAnimation.TurnRate(angularSpeed, entry.turnSpeed);
+            animator.SetFloat(TiffanyAnimation.TurnRateParameter, rate);
+            animator.Play("Base Layer." + name, 0, 0f);
+            animator.Play("Arms.CarryLight", 1, 0f);
+            animator.Update(0f);
+            animator.Update(0.1f);
+            Assert.AreEqual(0.1f * rate / (entry.frames / (float)spec.fps),
+                animator.GetCurrentAnimatorStateInfo(0).normalizedTime, 0.002f);
+            Assert.AreEqual(0.1f / Clips()[TiffanyAnimation.CarryLight].length,
+                animator.GetCurrentAnimatorStateInfo(1).normalizedTime, 0.002f);
         }
 
         [Test]
