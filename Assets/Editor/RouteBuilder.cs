@@ -11,7 +11,8 @@ namespace TiffanyGame.EditorTools
     public static class RouteBuilder
     {
         public const float SkyHeight = 7.9f;
-        const float ClearingSize = 36f;
+        public const float ClearingSize = 36f;
+        public const float TrailRadius = ClearingSize * 0.5f + 2f;
         const float Spacing = 56f;
         const float PathWidth = 5f;
         const string GraveyardFolder = "Assets/Art/Kenney/Graveyard/Models";
@@ -23,7 +24,7 @@ namespace TiffanyGame.EditorTools
             var names = new[] { "Cemetery", "Water Plant", "Train Tracks", "Stable", "Witch Hut", "Lake", "Road", "Tiffany House" };
             var grounds = new[] { GroundType.Grass, GroundType.Slab, GroundType.Gravel, GroundType.Branches,
                 GroundType.Leaves, GroundType.Grass, GroundType.Slab, GroundType.Dirt };
-            var floor = GeneratedMaterials.Get("RouteGround", new Color(0.25f, 0.25f, 0.25f));
+            var pathFloor = GroundMaterials.For(GroundType.Dirt);
             var structure = GeneratedMaterials.Get("RouteStructure", new Color(0.4f, 0.4f, 0.4f));
             var dark = GeneratedMaterials.Get("RouteForest", new Color(0.09f, 0.09f, 0.09f));
             var bush = GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f));
@@ -36,10 +37,11 @@ namespace TiffanyGame.EditorTools
             {
                 var clearing = Root($"Route {i + 1} {names[i]}", route, new Vector3(108f, 0f, i * Spacing));
                 tracker.clearings[i] = clearing;
+                var floor = GroundMaterials.For(grounds[i]);
                 if (i == 5) WaterBuilder.BuildLake(clearing, floor);
                 else Ground("Ground", clearing, Vector3.zero, new Vector2(ClearingSize, ClearingSize), grounds[i], floor);
                 BuildEdges(clearing, i, dark);
-                if (i < names.Length - 1) BuildPath(clearing, floor, dark, structure, i == 4);
+                if (i < names.Length - 1) BuildPath(clearing, pathFloor, dark, GroundMaterials.For(GroundType.Gravel), i == 4);
                 Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush);
                 if (i < memories.Length) memories[i] = Root("Memory Point", clearing, memoryPosition);
                 skyRoute[i] = clearing.position + Vector3.up * SkyHeight;
@@ -139,10 +141,10 @@ namespace TiffanyGame.EditorTools
                     var tracks = Root("Tracks", clearing, Vector3.zero);
                     for (int i = 0; i < 12; i++)
                         Part($"Sleeper {i + 1}", tracks, new Vector3(-12.1f + i * 2.2f, 0.04f, 0f),
-                            new Vector3(0.45f, 0.08f, 5f), structure).AddComponent<GroundSurface>().type = GroundType.Gravel;
+                            new Vector3(0.45f, 0.08f, 5f), GroundMaterials.For(GroundType.Gravel)).AddComponent<GroundSurface>().type = GroundType.Gravel;
                     for (int side = -1; side <= 1; side += 2)
                         Part($"Rail {side}", tracks, new Vector3(0f, 0.1f, side * 1.6f),
-                            new Vector3(28f, 0.2f, 0.15f), dark).AddComponent<GroundSurface>().type = GroundType.Gravel;
+                            new Vector3(28f, 0.2f, 0.15f), GroundMaterials.For(GroundType.Gravel)).AddComponent<GroundSurface>().type = GroundType.Gravel;
                     HidingBuilder.BuildHideSpot(clearing, "Hide Tracks Bush", new Vector3(6f, 0f, -4f), bush);
                     return new Vector3(0f, 0f, -3f);
                 case 3:
@@ -154,7 +156,7 @@ namespace TiffanyGame.EditorTools
                     HidingBuilder.BuildHideSpot(clearing, "Hide Hut Bush", new Vector3(-6f, 0f, 3f), bush);
                     return new Vector3(0f, 0f, 3f);
                 case 6:
-                    Part("Asphalt", clearing, new Vector3(0f, 0.02f, 0f), new Vector3(35f, 0.04f, 8f), dark)
+                    Part("Asphalt", clearing, new Vector3(0f, 0.02f, 0f), new Vector3(35f, 0.04f, 8f), GroundMaterials.For(GroundType.Slab))
                         .AddComponent<GroundSurface>().type = GroundType.Slab;
                     for (int i = -1; i <= 1; i++)
                     {

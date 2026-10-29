@@ -9,6 +9,8 @@ namespace TiffanyGame
         public Vector3 PlayerLightPosition;
         public bool HeardNoise;
         public Vector3 NoisePosition;
+        public bool HasNoiseHide;
+        public Vector3 NoiseHidePosition;
         public bool SmellsPlayer;
         public bool SeesPlayer;
         public Vector3 PlayerPosition;
@@ -20,5 +22,12 @@ namespace TiffanyGame
         public bool Raining;
         public bool HearingMuted;
         public bool InWatchPassage;
+        public Vector3 PlayerForward;
+        public bool HasNextClearing;
+        public Vector3 NextClearingPosition;
+        public bool HasFamilyCandle;
+        public Vector3 FamilyCandlePosition;
+        public float FamilyCandleRadius;
+        public bool PlayerAtFamilyCandle;
     }
 }

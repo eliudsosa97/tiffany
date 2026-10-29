@@ -42,9 +42,7 @@ namespace TiffanyGame.Tests
             var skins = model.GetComponentsInChildren<SkinnedMeshRenderer>(true);
             Assert.AreEqual(1, skins.Length);
             var mesh = skins[0].sharedMesh;
-            long indices = 0;
-            for (int i = 0; i < mesh.subMeshCount; i++) indices += mesh.GetIndexCount(i);
-            Assert.That(indices / 3, Is.InRange(3000, 6000));
+            Assert.That(TriangleCount(mesh), Is.InRange(3000, 6000));
             Assert.That(skins[0].bones.Length, Is.InRange(20, 40));
             foreach (var bone in skins[0].bones) Assert.IsNotNull(bone);
             foreach (string name in new[] { "Hips", "Head", "Hand.L", "Hand.R", "Foot.L", "Foot.R" })
@@ -73,6 +71,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(entry.frames / 30f, clip.length, 0.001f, name);
             var importer = (ModelImporter)AssetImporter.GetAtPath(WitchAnimator.ModelPath);
             Assert.AreEqual(ModelImporterAnimationType.Generic, importer.animationType);
+            Assert.IsFalse(importer.bakeAxisConversion);
+            Assert.IsTrue(importer.preserveHierarchy);
             Assert.AreEqual(ModelImporterAnimationCompression.KeyframeReduction, importer.animationCompression);
             var imported = System.Array.Find(importer.clipAnimations, c => c.name == name);
             Assert.IsNotNull(imported, name);
@@ -290,7 +290,7 @@ namespace TiffanyGame.Tests
         // Su izquierda es -X en Unity: witch.json pone la cabeza en x = -0.14.
         static bool HeadLeansToHerLeft(Bounds hair) => hair.center.x < -0.05f;
 
-        static Bounds SubMeshBounds(SkinnedMeshRenderer skin, string material)
+        internal static Bounds SubMeshBounds(SkinnedMeshRenderer skin, string material)
         {
             var materials = skin.sharedMaterials;
             int index = System.Array.FindIndex(materials, m => m.name == material);
@@ -328,11 +328,16 @@ namespace TiffanyGame.Tests
         [Test]
         public void WitchUsesSyncedOpaqueMaterialsAndNoColliders()
         {
-            var root = ModelLibrary.Instantiate("witch", parent.transform);
+            AssertSyncedMaterials(ModelLibrary.Instantiate("witch", parent.transform), "witch", 1);
+        }
+
+        internal static void AssertSyncedMaterials(GameObject root, string id, int rendererCount,
+            string shaderName = "Universal Render Pipeline/Lit")
+        {
             Assert.IsEmpty(root.GetComponentsInChildren<Collider>(true));
-            var spec = ModelLibrary.LoadSpec("witch");
+            var spec = ModelLibrary.LoadSpec(id);
             var renderers = root.GetComponentsInChildren<Renderer>(true);
-            Assert.AreEqual(1, renderers.Length);
+            Assert.AreEqual(rendererCount, renderers.Length);
             Assert.IsInstanceOf<SkinnedMeshRenderer>(renderers[0]);
             foreach (var renderer in renderers)
             {
@@ -342,7 +347,7 @@ namespace TiffanyGame.Tests
                 {
                     Assert.IsNotNull(material, renderer.name);
                     Assert.AreEqual($"{ModelLibrary.materialFolder}/{material.name}.mat", AssetDatabase.GetAssetPath(material));
-                    Assert.AreEqual("Universal Render Pipeline/Lit", material.shader.name);
+                    Assert.AreEqual(shaderName, material.shader.name);
                     Assert.IsEmpty(material.shaderKeywords, material.name);
                     Assert.AreEqual(0f, material.GetFloat("_Surface"));
                     Assert.AreEqual(0f, material.GetFloat("_AlphaClip"));
@@ -365,6 +370,7 @@ namespace TiffanyGame.Tests
         [TestCase("oak", true)]
         [TestCase("bougainvillea", false)]
         [TestCase("bougainvillea", true)]
+        [TestCase("tyler", false)]
         public void SyncMaterialsIsStable(string id, bool useCommittedMaterials)
         {
             var entries = ModelLibrary.LoadSpec(id).materials;
@@ -402,6 +408,55 @@ namespace TiffanyGame.Tests
             }
         }
 
+        [TestCase("", "#BFE3FF", 3f, 1.5f)]
+        [TestCase(",\"rimIntensity\":0", "#BFE3FF", 3f, 0f)]
+        [TestCase(",\"rimColor\":\"#97DAEF\",\"rimPower\":4.25,\"rimIntensity\":0.65", "#97DAEF", 4.25f, 0.65f)]
+        public void SpiritSettingsAreOptionalAndCanBeOverridden(string settings, string hex, float power, float intensity)
+        {
+            string id = "spirit-test-" + System.Guid.NewGuid().ToString("N");
+            string path = Path.Combine(ModelLibrary.BlenderFolder, id + ".json");
+            try
+            {
+                File.WriteAllText(path, "{\"materials\":[{\"name\":\"SpiritTestFur\",\"color\":\"#123456\",\"spirit\":true" + settings + "}]}");
+                ModelLibrary.SyncMaterials(id);
+                var material = AssetDatabase.LoadAssetAtPath<Material>($"{ModelLibrary.materialFolder}/SpiritTestFur.mat");
+                Assert.AreEqual("TiffanyGame/Spirit", material.shader.name);
+                Assert.IsEmpty(material.shaderKeywords);
+                ColorUtility.TryParseHtmlString(hex, out var color);
+                for (int c = 0; c < 4; c++) Assert.AreEqual(color[c], material.GetColor("_RimColor")[c], 1e-4f);
+                Assert.AreEqual(power, material.GetFloat("_RimPower"), 1e-4f);
+                Assert.AreEqual(intensity, material.GetFloat("_RimIntensity"), 1e-4f);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [Test]
+        public void SyncingTylerLeavesWitchAndCandleMaterialsUnchanged()
+        {
+            ModelLibrary.SyncMaterials("witch");
+            ModelLibrary.SyncMaterials("candle");
+            var saved = new System.Collections.Generic.Dictionary<string, byte[]>();
+            foreach (string path in Directory.GetFiles(ModelLibrary.materialFolder)) saved.Add(path, File.ReadAllBytes(path));
+
+            ModelLibrary.SyncMaterials("tyler");
+
+            foreach (var entry in saved) CollectionAssert.AreEqual(entry.Value, File.ReadAllBytes(entry.Key), entry.Key);
+            var glass = AssetDatabase.LoadAssetAtPath<Material>($"{ModelLibrary.materialFolder}/CandleGlass.mat");
+            var flame = AssetDatabase.LoadAssetAtPath<Material>($"{ModelLibrary.materialFolder}/CandleFlame.mat");
+            Assert.AreEqual("Universal Render Pipeline/Lit", glass.shader.name);
+            Assert.AreEqual(1f, glass.GetFloat("_Surface"));
+            Assert.AreEqual("Universal Render Pipeline/Unlit", flame.shader.name);
+            foreach (var entry in ModelLibrary.LoadSpec("witch").materials)
+            {
+                Assert.IsFalse(entry.spirit, entry.name);
+                var material = AssetDatabase.LoadAssetAtPath<Material>($"{ModelLibrary.materialFolder}/{entry.name}.mat");
+                Assert.AreEqual("Universal Render Pipeline/Lit", material.shader.name, entry.name);
+            }
+        }
+
         [Test]
         public void MissingSourceFailsWithPrefix()
         {
@@ -422,11 +477,35 @@ namespace TiffanyGame.Tests
             Assert.DoesNotThrow(() => ModelLibrary.CheckSpec("rock-a", new ModelLibrary.ModelSpec { materials = new[] { stone } }));
         }
 
-        static void AssertNeutral(Transform t)
+        internal static long TriangleCount(Transform root)
+        {
+            long triangles = 0;
+            foreach (var filter in root.GetComponentsInChildren<MeshFilter>(true))
+                triangles += TriangleCount(filter.sharedMesh);
+            return triangles;
+        }
+
+        internal static long TriangleCount(Mesh mesh)
+        {
+            long indices = 0;
+            for (int i = 0; i < mesh.subMeshCount; i++) indices += mesh.GetIndexCount(i);
+            return indices / 3;
+        }
+
+        internal static void AssertNeutral(Transform t)
         {
             Assert.AreEqual(Vector3.zero, t.localPosition, t.name);
             Assert.AreEqual(Quaternion.identity, t.localRotation, t.name);
             Assert.AreEqual(Vector3.one, t.localScale, t.name);
+        }
+
+        internal static Bounds LocalBounds(Transform root, string pose)
+        {
+            var child = root.Find(pose);
+            Assert.IsNotNull(child, pose);
+            Assert.AreSame(root, child.parent);
+            AssertNeutral(child);
+            return child.GetComponent<MeshFilter>().sharedMesh.bounds;
         }
     }
 }

@@ -14,6 +14,7 @@ namespace TiffanyGame.EditorTools
         public const string MaterialFolder = "Assets/Art/Models/Materials";
         public const string BlenderFolder = "Art/Blender";
         public const string KenneyFolder = "Assets/Art/Kenney";
+        public const string SpiritShader = "TiffanyGame/Spirit";
         public static string materialFolder = MaterialFolder;
         public static string kenneyMaterialRoot = KenneyFolder;
 
@@ -21,11 +22,17 @@ namespace TiffanyGame.EditorTools
         static readonly Dictionary<string, Func<RuntimeAnimatorController>> Controllers = new Dictionary<string, Func<RuntimeAnimatorController>>
         {
             ["witch"] = WitchAnimator.Controller,
+            ["tyler"] = () => TylerAnimatorBuilder.Build(),
         };
 
         [Serializable]
         public class ModelSpec
         {
+            public string modelPath;
+            public string controllerPath;
+            public string rootMotionBone;
+            public bool bakeAxisConversion;
+            public int fps;
             public MaterialSpec[] materials;
             public ClipSpec[] clips;
             public CapsuleSpec trunkCollider;
@@ -55,6 +62,7 @@ namespace TiffanyGame.EditorTools
             public string name;
             public int frames;
             public bool loop;
+            public float speed;
         }
 
         [Serializable]
@@ -64,6 +72,12 @@ namespace TiffanyGame.EditorTools
             public string color;
             public float smoothness;
             public float metallic;
+            public string surface;
+            public bool unlit;
+            public bool spirit;
+            public string rimColor = "#BFE3FF";
+            public float rimPower = 3f;
+            public float rimIntensity = 1.5f;
         }
 
         public static string SpecPath(string id) => Path.Combine(Path.GetDirectoryName(Application.dataPath), BlenderFolder, id + ".json");
@@ -102,8 +116,30 @@ namespace TiffanyGame.EditorTools
                 {
                     if (!ColorUtility.TryParseHtmlString(entry.color, out var color))
                         throw new InvalidDataException($"{GameInfo.LogPrefix} Color inválido '{entry.color}' en {entry.name}.");
-                    var material = GeneratedMaterials.Get(entry.name, color, false, entry.smoothness);
+                    var material = GeneratedMaterials.Get(entry.name, color, entry.unlit, entry.smoothness);
                     material.SetFloat("_Metallic", entry.metallic);
+                    bool transparent = entry.surface == "transparent";
+                    if (transparent || material.GetFloat("_Surface") != 0f)
+                    {
+                        material.SetFloat("_Surface", transparent ? 1f : 0f);
+                        material.SetFloat("_Blend", 0f);
+                        BaseShaderGUI.SetupMaterialBlendMode(material);
+                        material.SetShaderPassEnabled("ShadowCaster", !transparent);
+                    }
+                    if (entry.spirit)
+                    {
+                        var shader = Shader.Find(SpiritShader);
+                        if (shader == null)
+                            throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró el shader '{SpiritShader}'.");
+                        if (!ColorUtility.TryParseHtmlString(entry.rimColor, out var rimColor))
+                            throw new InvalidDataException($"{GameInfo.LogPrefix} Color inválido '{entry.rimColor}' en {entry.name}.");
+                        material.shader = shader;
+                        material.shaderKeywords = Array.Empty<string>();
+                        material.SetColor("_RimColor", rimColor);
+                        material.SetFloat("_RimPower", entry.rimPower);
+                        material.SetFloat("_RimIntensity", entry.rimIntensity);
+                    }
+                    EditorUtility.SetDirty(material);
                 }
             }
             finally
@@ -227,16 +263,18 @@ namespace TiffanyGame.EditorTools
             foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
             {
                 var materials = renderer.sharedMaterials;
+                bool unlit = false;
                 for (int i = 0; i < materials.Length; i++)
                 {
                     string name = materials[i] != null ? materials[i].name : "(vacío)";
                     materials[i] = AssetDatabase.LoadAssetAtPath<Material>($"{materialFolder}/{name}.mat");
                     if (materials[i] == null)
                         throw new InvalidOperationException($"{GameInfo.LogPrefix} {renderer.name} usa el material '{name}', que no está en {materialFolder}.");
+                    unlit |= materials[i].shader.name == "Universal Render Pipeline/Unlit";
                 }
                 renderer.sharedMaterials = materials;
-                renderer.shadowCastingMode = ShadowCastingMode.On;
-                renderer.receiveShadows = true;
+                renderer.shadowCastingMode = unlit ? ShadowCastingMode.Off : ShadowCastingMode.On;
+                renderer.receiveShadows = !unlit;
                 // Las poses salen mucho del reposo: sin margen el culling la apaga estando a la vista.
                 if (renderer is SkinnedMeshRenderer skinned)
                 {

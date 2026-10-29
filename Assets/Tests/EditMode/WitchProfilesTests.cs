@@ -60,5 +60,32 @@ namespace TiffanyGame.Tests
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => WitchProfiles.For((Chapter)99));
         }
+
+        [TestCase(Chapter.Cemetery, false, false, false, false, false)]
+        [TestCase(Chapter.WaterPlant, true, false, false, false, true)]
+        [TestCase(Chapter.TrainTracks, true, false, true, true, true)]
+        [TestCase(Chapter.Stable, true, true, true, true, true)]
+        [TestCase(Chapter.WitchHut, true, true, true, true, true)]
+        [TestCase(Chapter.Return, true, false, false, false, true)]
+        public void TacticsUnlockByClearing(Chapter chapter, bool search, bool ambush, bool candle, bool bark, bool lastSeen)
+        {
+            WitchProfile profile = WitchProfiles.For(chapter);
+            Assert.AreEqual(search, profile.SearchEnabled, "La búsqueda se aprende después del cementerio.");
+            Assert.AreEqual(lastSeen, profile.LastSeenEnabled, "La memoria visual se aprende después del cementerio.");
+            Assert.AreEqual(ambush, profile.AmbushEnabled, "Adelantarse empieza en el establo y se desactiva en el regreso a pie.");
+            Assert.AreEqual(candle, profile.CandleWatchEnabled, "La ronda se aprende en las vías y no detiene el regreso.");
+            Assert.AreEqual(bark, profile.BarkLureEnabled, "El ladrido desde el bosque sustituye la voz continua desde las vías.");
+        }
+
+        [Test]
+        public void DemoCopyDoesNotChangeTheChapterProfile()
+        {
+            var original = WitchProfiles.For(Chapter.Stable);
+            var copy = original.Copy();
+            copy.AmbushMinDelay = 1f;
+            copy.SearchEnabled = false;
+            Assert.AreEqual(40f, original.AmbushMinDelay);
+            Assert.IsTrue(original.SearchEnabled);
+        }
     }
 }

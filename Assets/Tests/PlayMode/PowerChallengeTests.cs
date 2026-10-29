@@ -127,6 +127,68 @@ namespace TiffanyGame.Tests
         public IEnumerator LeavingHutRestoresPatrolAndReturningRestartsWatch() => LeaveAndReturn(challenges[3]);
 
         [UnityTest]
+        public IEnumerator WatchOutranksMainBehaviorsUntilEndWatchRestoresRoaming()
+        {
+            var challenge = challenges[1];
+            var witch = challenge.Witch;
+            yield return Prepare(challenge);
+            var eager = witch.Profile.Copy();
+            eager.SearchEnabled = eager.LastSeenEnabled = eager.AmbushEnabled = eager.CandleWatchEnabled = eager.BarkLureEnabled = true;
+            eager.BarkLureMinDelay = eager.BarkLureMaxDelay = eager.AmbushMinDelay = eager.AmbushMaxDelay = 0f;
+            eager.RoamMinDelay = eager.RoamMaxDelay = 0f;
+            witch.SetProfile(eager);
+            witch.NextClearingOverride = challenge.tracker.clearings[3].position;
+            Vector3 post = witch.transform.position;
+            NoiseBus.Publish(new StepNoise(player.transform.position, 30f));
+            yield return HoldPost(witch, challenge, post, 1f);
+
+            var senses = witch.senses;
+            float dark = senses.DarkSightDistance, lit = senses.LitSightDistance, smell = senses.SmellDistance;
+            senses.DarkSightDistance = senses.LitSightDistance = senses.SmellDistance = 0f;
+            Teleport(challenge.transform.TransformPoint(new Vector3(0f, 0f, -2f)), challenge.transform.forward);
+            yield return HoldPost(witch, challenge, post, 1.5f);
+            (senses.DarkSightDistance, senses.LitSightDistance, senses.SmellDistance) = (dark, lit, smell);
+
+            Teleport(challenge.transform.parent.TransformPoint(new Vector3(0f, 0f, -13f)), -challenge.transform.forward);
+            yield return null;
+            yield return null;
+            Assert.IsNull(witch.WatchPassage);
+            Assert.AreEqual(WitchState.Flying, witch.Decision.State);
+            var roam = witch.Profile.Copy();
+            roam.AmbushEnabled = false;
+            roam.RoamMinDelay = roam.RoamMaxDelay = 0f;
+            roam.RoamMinDistance = roam.RoamMaxDistance = 10f;
+            roam.FarDistance = 0f;
+            witch.SetProfile(roam);
+            yield return null;
+            roam.FarDistance = 1e4f;
+            yield return null;
+            roam.FarDistance = 0f;
+            float deadline = Time.time + 1f;
+            while (Mathf.Abs(Horizontal(witch.Decision.MoveTarget, player.transform.position) - 10f) > 0.01f && Time.time < deadline)
+                yield return null;
+            Assert.AreEqual(WitchState.Flying, witch.Decision.State);
+            Assert.AreEqual(10f, Horizontal(witch.Decision.MoveTarget, player.transform.position), 0.01f,
+                "Al terminar la vigilancia vuelve a deambular cerca de Tiffany como en main.");
+        }
+
+        IEnumerator HoldPost(WitchController witch, PowerChallenge challenge, Vector3 post, float seconds)
+        {
+            float end = Time.time + seconds;
+            while (Time.time < end)
+            {
+                yield return null;
+                Assert.AreSame(challenge.transform, witch.WatchPassage);
+                Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
+                Assert.AreEqual(WitchIntent.None, witch.Decision.Intent);
+                Assert.IsFalse(witch.Decision.VoiceLure);
+                Assert.Less(Horizontal(witch.transform.position, post), 0.3f, "La bruja no deja el puesto mientras vigila el reto.");
+            }
+        }
+
+        static float Horizontal(Vector3 a, Vector3 b) => Vector3.ProjectOnPlane(a - b, Vector3.up).magnitude;
+
+        [UnityTest]
         public IEnumerator StableDetectsVisiblePlayerAndAllowsWalkingWithinThreeSecondsOfVanish()
         {
             var challenge = challenges[2];

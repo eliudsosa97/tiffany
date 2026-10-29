@@ -6,12 +6,14 @@ namespace TiffanyGame.Tests
     public sealed class ReturnChaseTests
     {
         WitchBrain brain;
+        WitchProfile profile;
         WitchPerception perception;
 
         [SetUp]
         public void SetUp()
         {
-            brain = new WitchBrain(WitchProfiles.For(Chapter.Return), new[] { Vector3.up * 14f });
+            profile = WitchProfiles.For(Chapter.Return);
+            brain = new WitchBrain(profile, new[] { Vector3.up * 14f });
             perception = new WitchPerception { PlayerPosition = Vector3.forward * 20f };
         }
 
@@ -51,7 +53,7 @@ namespace TiffanyGame.Tests
         {
             perception.PlayerPosition = Vector3.forward * 8f;
             Assert.AreEqual(WitchState.WindUp, Step(0f).State);
-            var warning = Step(0.59f);
+            var warning = Step(profile.WindUpDuration - 0.01f);
             Assert.AreEqual(WitchState.WindUp, warning.State);
             Assert.AreEqual(0f, warning.Speed);
             var sprint = Step(0.02f);

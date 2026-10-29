@@ -77,9 +77,8 @@ namespace TiffanyGame.EditorTools
         static void BuildAlcove(PowerChallenge challenge, Transform source, Material timber)
         {
             Transform root = challenge.transform;
-            var floor = GeneratedMaterials.Get("RouteGround", new Color(0.25f, 0.25f, 0.25f));
             SceneBuilder.CreatePrimitive("Lure Alcove", PrimitiveType.Cube, root,
-                new Vector3(4.5f, -0.25f, 1.85f), new Vector3(5f, 0.5f, 2.9f), floor)
+                new Vector3(4.5f, -0.25f, 1.85f), new Vector3(5f, 0.5f, 2.9f), GroundMaterials.For(GroundType.Dirt))
                 .AddComponent<GroundSurface>().type = GroundType.Dirt;
             for (int i = 0; i < 2; i++)
                 Wall(root, $"Alcove Edge {i}", new Vector3(4.5f, 0.3f, i == 0 ? 0.3f : 3.4f), new Vector3(5f, 0.6f, 0.2f), timber);

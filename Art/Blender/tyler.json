@@ -1,0 +1,134 @@
+{
+  "modelPath": "Assets/Art/Models/tyler.fbx",
+  "controllerPath": "Assets/Art/Models/Tyler.controller",
+  "rootMotionBone": "Root",
+  "bakeAxisConversion": true,
+  "materials": [
+    { "name": "TylerFur", "color": "#E6E0D3", "smoothness": 0.1, "spirit": true, "rimColor": "#BFE3FF", "rimPower": 3, "rimIntensity": 1.5 },
+    { "name": "TylerTan", "color": "#B98A5E", "smoothness": 0.1, "spirit": true, "rimColor": "#BFE3FF", "rimPower": 3, "rimIntensity": 1.5 },
+    { "name": "TylerPatch", "color": "#8C5B37", "smoothness": 0.1, "spirit": true, "rimColor": "#BFE3FF", "rimPower": 3, "rimIntensity": 1.5 },
+    { "name": "TylerNose", "color": "#1C1816", "smoothness": 0.4, "spirit": true, "rimColor": "#BFE3FF", "rimPower": 3, "rimIntensity": 1.5 }
+  ],
+  "fps": 240,
+  "clips": [
+    { "name": "Idle", "frames": 720, "loop": true, "key": 0 },
+    { "name": "Walk", "frames": 120, "loop": true, "key": 32, "speed": 1.0 },
+    { "name": "Trot", "frames": 108, "loop": true, "key": 28, "speed": 2.2 },
+    { "name": "Run", "frames": 72, "loop": true, "key": 20, "speed": 4.5 },
+    { "name": "Sit", "frames": 720, "loop": true, "key": 0 },
+    { "name": "Whine", "frames": 480, "loop": true, "key": 120 },
+    { "name": "Growl", "frames": 360, "loop": true, "key": 80 },
+    { "name": "Bark", "frames": 112, "loop": false, "key": 32 }
+  ],
+  "fromPhotos": {
+    "build": "jack russell viejo tipo Parson, hueso fino, patas largas, pecho hondo y angosto, cintura recogida y lomo recto",
+    "withersM": 0.3,
+    "noseToButtockM": 0.55,
+    "fur": "blanco hueso en cuerpo, pecho, cuello, patas y casi toda la cola",
+    "head": "canela claro alrededor de los ojos, franja blanca ancha de frente a hocico, stop marcado, belfos canosos con pecas y ojos mansos con parpados caidos",
+    "ears": "semierguidas de boton, puntas hacia delante, canela con borde oscuro y un pliegue mas alto",
+    "saddle": "montura canela irregular en la mitad trasera del lomo y los flancos, separada de la mancha de la grupa",
+    "tail": "larga y fina, blanca con la base cafe",
+    "nose": "negra"
+  },
+  "body": {
+    "sides": 14,
+    "torsoRings": 22,
+    "torso": [
+      [0.0, 0.015, 0.015, 0.015],
+      [0.05, 0.045, 0.048, 0.04],
+      [0.14, 0.058, 0.052, 0.048],
+      [0.32, 0.062, 0.03, 0.038],
+      [0.52, 0.068, 0.072, 0.047],
+      [0.72, 0.072, 0.106, 0.052],
+      [0.88, 0.073, 0.096, 0.048],
+      [0.96, 0.06, 0.067, 0.036],
+      [1.0, 0.018, 0.02, 0.015]
+    ],
+    "patches": [
+      { "from": 0.24, "to": 0.59, "above": -0.25, "side": 0 },
+      { "from": 0.22, "to": 0.63, "above": -0.65, "side": 1 },
+      { "from": 0.02, "to": 0.12, "above": 0.15, "side": 0 }
+    ],
+    "patchWobble": 0.24,
+    "patchEdgeWobble": 0.038,
+    "neckSides": 10,
+    "neckRings": 6,
+    "neckProfile": [[0, 0.049, 0.055], [0.25, 0.045, 0.047], [0.6, 0.038, 0.037], [1, 0.034, 0.033]],
+    "head": { "radius": [0.048, 0.044, 0.055], "rows": 8, "cols": 16, "eyeLine": -0.25, "blaze": 0.44, "flatTop": 0.78 },
+    "cheek": { "at": [0.033, -0.013, 0.021], "radius": [0.023, 0.024, 0.027] },
+    "muzzle": [
+      [0.028, -0.015, 0.032, 0.022],
+      [0.05, -0.017, 0.028, 0.02],
+      [0.076, -0.02, 0.022, 0.016],
+      [0.098, -0.019, 0.013, 0.011]
+    ],
+    "lip": { "at": [0.014, -0.03, 0.068], "radius": [0.017, 0.009, 0.023] },
+    "freckles": [[0.054, -0.028, 0.002], [0.068, -0.029, 0.0017], [0.08, -0.029, 0.0015]],
+    "jaw": [
+      [0.02, -0.036, 0.026, 0.012],
+      [0.055, -0.039, 0.021, 0.009],
+      [0.088, -0.037, 0.012, 0.006]
+    ],
+    "nose": { "at": [0, -0.015, 0.1], "radius": [0.014, 0.01, 0.009],
+              "outline": [[-1, 0.35, 0.7], [-0.65, 0.8, 0.9], [0, 0.65, 0.65], [0.65, 0.8, 0.9],
+                          [1, 0.35, 0.7], [0.6, -0.4, 0.9], [0, -0.8, 1], [-0.6, -0.4, 0.9]] },
+    "eye": { "at": [0.028, 0.011, 0.044], "radius": [0.0105, 0.0085, 0.006],
+             "glintOffset": [0.0015, 0.002, 0.006], "glintRadius": [0.002, 0.002, 0.001], "lidRadius": 0.002 },
+    "ear": {
+      "points": [[-0.032, 0.027, -0.015], [-0.039, 0.055, -0.006], [-0.043, 0.05, 0.016], [-0.045, 0.023, 0.035]],
+      "halfWidth": [0.019, 0.022, 0.018, 0.004],
+      "foldAsymmetry": 0.006,
+      "halfThickness": 0.006,
+      "sides": 8,
+      "rings": 6
+    },
+    "legSides": 8,
+    "legRings": 11,
+    "frontRadius": [[0.017, 0.025], [0.012, 0.018], [0.008, 0.011], [0.009, 0.012]],
+    "hindRadius": [[0.022, 0.033], [0.013, 0.02], [0.009, 0.014], [0.008, 0.011]],
+    "frontMuscle": [0.015, 0.022],
+    "hindMuscle": [0.025, 0.04],
+    "paw": [0.018, 0.012, 0.024],
+    "pawRows": 4,
+    "pawCols": 8,
+    "toes": { "spread": 0.01, "offset": [0, -0.003, 0.016], "radius": [0.006, 0.008, 0.011] },
+    "tailSides": 7,
+    "tailRings": 9,
+    "tailRadius": [0.012, 0.0035],
+    "tailPatch": 0.3
+  },
+  "coat": {
+    "chest": { "rows": [0.78, 0.83, 0.88], "angles": [215, 325], "length": 0.01, "width": 0.034, "flow": [0, -1, 0.2] },
+    "belly": { "rows": [0.48, 0.53], "angles": [245, 295], "length": 0.009, "width": 0.034, "flow": [0, -0.4, -1] },
+    "neck": { "rows": [0.36, 0.48, 0.6], "angles": [90], "length": 0.009, "width": 0.034, "flow": [0, -0.4, -1] },
+    "hind": { "rows": [0.14, 0.2], "angles": [270], "length": 0.01, "width": 0.035, "flow": [0, -0.45, -1] },
+    "cheek": { "points": [[0.05, -0.008, 0.025], [0.045, -0.02, 0.019]], "length": 0.008, "width": 0.03 },
+    "whiskers": { "rows": [0.052, 0.064], "length": 0.009, "width": 0.032 }
+  },
+  "rest": {
+    "spine": [[0, 0.235, -0.18], [0, 0.24, -0.095], [0, 0.232, 0.0], [0, 0.225, 0.075], [0, 0.22, 0.135]],
+    "neck": [[0, 0.26, 0.105], [0, 0.294, 0.132], [0, 0.321, 0.154]],
+    "head": [0, 0.342, 0.178],
+    "headPitchDeg": 12,
+    "front": [[-0.044, 0.215, 0.09], [-0.055, 0.15, 0.062], [-0.05, 0.05, 0.078], [-0.05, 0.012, 0.096]],
+    "hind": [[-0.042, 0.215, -0.14], [-0.056, 0.14, -0.092], [-0.05, 0.065, -0.185], [-0.05, 0.012, -0.168]],
+    "tail": [[0, 0.255, -0.182], [0, 0.3, -0.215], [0, 0.355, -0.232], [0, 0.41, -0.224]]
+  },
+  "gaits": {
+    "Walk": { "duty": 0.4, "stride": 0.5, "lift": { "F": 0.035, "H": 0.03 },
+              "flex": { "F": 55, "H": 25 }, "roll": 10, "phase": { "HL": 0.75, "FL": 0.0, "HR": 0.25, "FR": 0.5 } },
+    "Trot": { "duty": 0.24, "stride": 0.99, "lift": { "F": 0.045, "H": 0.04 },
+              "flex": { "F": 65, "H": 30 }, "roll": 12, "phase": { "FL": 0.0, "HR": 0.0, "FR": 0.5, "HL": 0.5 } },
+    "Run": { "duty": 0.18, "stride": 1.35, "lift": { "F": 0.06, "H": 0.05 },
+             "flex": { "F": 80, "H": 35 }, "roll": 16, "phase": { "HL": 0.5, "HR": 0.6, "FL": 0.0, "FR": 0.1 } }
+  },
+  "sit": {
+    "loc": [0, -0.01, -0.13],
+    "Hips": { "X": -34 }, "Spine": { "X": 0 }, "Chest": { "X": 0 },
+    "Neck": { "X": 16 }, "Head": { "X": 14 },
+    "Tail1": { "X": -25, "Z": 10 }, "Tail2": { "X": -20, "Z": 30 }, "Tail3": { "X": -5, "Z": 35 },
+    "paws": { "FL": [0.06, 0, 0], "FR": [0.06, 0, 0], "HL": [-0.04, 0, -64], "HR": [-0.04, 0, -64] }
+  },
+  "preview": { "frame": 4, "gameCamera": { "pitchDeg": 55, "yawDeg": 45, "distanceM": 8, "verticalFovDeg": 24, "width": 1600, "height": 900 } }
+}

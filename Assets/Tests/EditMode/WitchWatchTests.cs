@@ -70,5 +70,71 @@ namespace TiffanyGame.Tests
             p.PlayerInSafeZone = false;
             Assert.AreEqual(WitchState.Caught, brain.Tick(0.1f, in p).State);
         }
+
+        [Test]
+        public void WatchHoldsThePostWhereTheSameBrainWithoutWatchWouldLureSearchOrCircleTheCandle()
+        {
+            var profile = EagerProfile();
+            var free = new WitchBrain(profile, null);
+            var p = new WitchPerception { Raining = true, PlayerPosition = Vector3.right * 15f, PlayerForward = Vector3.forward };
+            free.Tick(0f, in p);
+            free.Tick(profile.LandingDuration, in p);
+            p.Raining = false;
+            Assert.AreEqual(WitchIntent.BarkLure, free.Tick(0f, in p).Intent, "Sin vigilancia el perfil ya ladra desde el bosque.");
+
+            var post = Vector3.back * 2f;
+            var brain = new WitchBrain(profile, null);
+            brain.BeginWatch(post, false);
+            p = new WitchPerception { WitchPosition = post, PlayerPosition = Vector3.right * 15f, PlayerForward = Vector3.forward,
+                DistanceToPlayer = 15f, HasNextClearing = true, NextClearingPosition = Vector3.right * 80f };
+            AssertHoldsPost(brain, post, 60f, in p);
+            p.SeesPlayer = p.SmellsPlayer = true;
+            AssertHoldsPost(brain, post, 0.1f, in p);
+            p.SeesPlayer = p.SmellsPlayer = false;
+            AssertHoldsPost(brain, post, 30f, in p);
+            p.HasFamilyCandle = p.PlayerAtFamilyCandle = p.PlayerInSafeZone = true;
+            p.FamilyCandlePosition = p.PlayerPosition;
+            p.FamilyCandleRadius = 1.2f;
+            AssertHoldsPost(brain, post, 30f, in p);
+            p.HeardNoise = true;
+            p.NoisePosition = p.PlayerPosition;
+            AssertHoldsPost(brain, post, 0.1f, in p);
+            Assert.IsFalse(brain.Watch.Investigating, "El ruido de Tiffany no es el señuelo.");
+        }
+
+        [Test]
+        public void BeginWatchCancelsABarkLureAlreadyUnderway()
+        {
+            var profile = EagerProfile();
+            var brain = new WitchBrain(profile, null);
+            var p = new WitchPerception { Raining = true, PlayerPosition = Vector3.right * 15f, PlayerForward = Vector3.forward };
+            brain.Tick(0f, in p);
+            brain.Tick(profile.LandingDuration, in p);
+            p.Raining = false;
+            Assert.AreEqual(WitchIntent.BarkLure, brain.Tick(0f, in p).Intent);
+            brain.BeginWatch(Vector3.zero, true);
+            p.WitchPosition = Vector3.zero;
+            AssertHoldsPost(brain, Vector3.zero, 0f, in p);
+        }
+
+        static WitchProfile EagerProfile()
+        {
+            var profile = WitchProfiles.For(Chapter.WitchHut);
+            profile.BarkLureMinDelay = profile.BarkLureMaxDelay = 0f;
+            profile.AmbushMinDelay = profile.AmbushMaxDelay = 0f;
+            profile.RoamMinDelay = profile.RoamMaxDelay = 0f;
+            profile.LoseTrackTime = 100f;
+            return profile;
+        }
+
+        static void AssertHoldsPost(WitchBrain brain, Vector3 post, float dt, in WitchPerception p)
+        {
+            var decision = brain.Tick(dt, in p);
+            Assert.AreEqual(WitchState.Stalking, decision.State);
+            Assert.AreEqual(WitchIntent.None, decision.Intent);
+            Assert.AreEqual(post, decision.MoveTarget);
+            Assert.AreEqual(0f, decision.Speed);
+            Assert.IsFalse(decision.VoiceLure);
+        }
     }
 }

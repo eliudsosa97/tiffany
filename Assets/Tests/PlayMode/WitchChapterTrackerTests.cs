@@ -123,6 +123,48 @@ namespace TiffanyGame.Tests
         private IEnumerator MoveToClearing(int clearing) =>
             MovePlayer(route.GetChild(clearing - 1).position - Vector3.forward * 12f);
 
+        [UnityTest]
+        public IEnumerator ControllerReceivesNextClearingAndTouchedFamilyCandleThroughSenses()
+        {
+            witch.enabled = true;
+            yield return MoveToClearing(2);
+            Assert.AreEqual(1, tracker.LastVisitedClearingIndex);
+            Assert.IsTrue(witch.Perception.HasNextClearing);
+            Assert.AreEqual(tracker.ClearingBounds[2].center, witch.Perception.NextClearingPosition);
+            yield return MoveToClearing(1);
+            Assert.AreEqual(tracker.ClearingBounds[1].center, witch.Perception.NextClearingPosition,
+                "El siguiente claro sigue a la última visita, incluso al retroceder, sin bajar el capítulo.");
+            CandleSpot family = null;
+            foreach (var candle in Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None))
+                if (candle.kind == CandleKind.Family) { family = candle; break; }
+            Assert.IsNotNull(family, "La escena generada debe incluir veladoras de la familia.");
+            yield return MovePlayer(family.transform.position);
+            yield return null;
+            var respawn = collector.GetComponent<PlayerSoul>().Respawn;
+            Assert.IsTrue(respawn.HasFamilyCandle);
+            Assert.IsTrue(witch.Perception.HasFamilyCandle && witch.Perception.PlayerAtFamilyCandle);
+            Assert.AreEqual(respawn.Position, witch.Perception.FamilyCandlePosition);
+            Assert.AreEqual(family.radius, witch.Perception.FamilyCandleRadius);
+            yield return MoveToClearing(8);
+            Assert.IsFalse(tracker.HasNextClearing);
+            Assert.IsFalse(witch.Perception.HasNextClearing);
+        }
+
+        [UnityTest]
+        public IEnumerator BeforeAnyClearingTheNextOneIsTheFirst()
+        {
+            var probeObject = new GameObject("Witch Tracker Before Route");
+            probeObject.transform.SetParent(route, false);
+            var probe = probeObject.AddComponent<WitchChapterTracker>();
+            probe.clearings = tracker.clearings;
+            probe.player = GameObject.Find("Test Zone").transform.Find("Spawn");
+            yield return null;
+            Assert.AreEqual(-1, probe.LastVisitedClearingIndex);
+            Assert.IsTrue(probe.HasNextClearing);
+            Assert.AreEqual(tracker.ClearingBounds[0].center, probe.NextClearingPosition);
+            Object.Destroy(probeObject);
+        }
+
         private IEnumerator MovePlayer(Vector3 position)
         {
             character.enabled = false;

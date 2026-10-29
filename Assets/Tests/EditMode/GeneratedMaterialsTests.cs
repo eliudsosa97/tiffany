@@ -85,6 +85,24 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(GeneratedMaterials.Get("Instanced", Color.white, instancing: false).enableInstancing);
         }
 
+        [TestCase(GroundType.Dirt)]
+        [TestCase(GroundType.Grass)]
+        [TestCase(GroundType.Slab)]
+        [TestCase(GroundType.Gravel)]
+        [TestCase(GroundType.Leaves)]
+        [TestCase(GroundType.Branches)]
+        public void GroundMaterialUsesErrorFreeForestGroundShader(GroundType type)
+        {
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/ForestGround.shader");
+            Assert.IsNotNull(shader);
+            Assert.IsFalse(ShaderUtil.ShaderHasError(shader));
+
+            var material = GroundMaterials.For(type);
+
+            Assert.AreSame(shader, material.shader);
+            Assert.AreEqual($"{GeneratedMaterials.folder}/Route{type}.mat", AssetDatabase.GetAssetPath(material));
+        }
+
         [Test]
         public void GetTexturedThrowsWhenTextureDoesNotExist()
         {

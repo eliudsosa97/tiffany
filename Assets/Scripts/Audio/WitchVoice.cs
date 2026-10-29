@@ -21,8 +21,14 @@ namespace TiffanyGame
                 return;
             }
             if (witch == null || source == null || echo == null || barks == null || barks.Length == 0) return;
-            if (!mimicry.Tick(Time.deltaTime, witch.isActiveAndEnabled
-                && witch.Decision.VoiceLure && witch.Decision.Form == WitchForm.Grounded)) return;
+            bool calling = witch.isActiveAndEnabled && witch.Decision.VoiceLure && witch.Decision.Form == WitchForm.Grounded;
+            if (!calling)
+            {
+                mimicry.Tick(Time.deltaTime, false);
+                StopAudio();
+                return;
+            }
+            if (!mimicry.Tick(Time.deltaTime, true)) return;
             AudioClip clip = barks[mimicry.ClipIndex(barks.Length)];
             if (clip == null) return;
             source.pitch = echo.pitch = mimicry.Pitch;

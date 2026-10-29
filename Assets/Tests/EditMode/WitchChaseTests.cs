@@ -27,7 +27,7 @@ namespace TiffanyGame.Tests
             p.HeardNoise = true;
             p.NoisePosition = Vector3.left * 6f;
             Assert.AreEqual(p.PlayerPosition, Step(0f, WitchState.WindUp).MoveTarget);
-            Step(0.59f, WitchState.WindUp);
+            Step(0.79f, WitchState.WindUp);
             Assert.AreEqual(Vector3.zero, p.WitchPosition);
             p.PlayerPosition = Vector3.forward * 8f + Vector3.up * 15f;
             WitchDecision sprint = Step(0.02f, WitchState.Sprinting, 9f);
@@ -99,6 +99,9 @@ namespace TiffanyGame.Tests
             p.SeesPlayerLight = false;
             p.HeardNoise = true;
             p.NoisePosition = p.WitchPosition + Vector3.forward * 20f;
+            Step(0f, WitchState.Suspicious);
+            p.HeardNoise = false;
+            Step(profile.SuspicionDuration, WitchState.Stalking, 1.2f, true);
             Assert.AreEqual(p.NoisePosition, Step(0f, WitchState.Stalking, 1.2f, true).MoveTarget);
         }
 
@@ -216,7 +219,7 @@ namespace TiffanyGame.Tests
             Step(0f, WitchState.WindUp);
             p.PlayerHidden = p.SeesPlayer = true;
             Assert.AreEqual(p.WitchPosition, Step(0f, WitchState.Stalking, voice: true).MoveTarget);
-            Step(0.61f, WitchState.Stalking, voice: true);
+            Step(0.81f, WitchState.Stalking, voice: true);
         }
 
         [Test]
@@ -243,9 +246,10 @@ namespace TiffanyGame.Tests
             p.HeardNoise = true;
             p.NoisePosition = Vector3.left * 24f;
             Vector3 decoy = p.NoisePosition;
-            Assert.AreEqual(decoy, Step(1f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Assert.AreEqual(decoy, Step(1f, WitchState.Suspicious).MoveTarget);
             p.HeardNoise = false;
             p.PlayerHidden = true;
+            Step(profile.SuspicionDuration, WitchState.Stalking, 1.2f, true);
             Assert.AreEqual(decoy, Step(1f, WitchState.Stalking, 1.2f, true).MoveTarget);
         }
 
@@ -256,10 +260,13 @@ namespace TiffanyGame.Tests
             p.HeardNoise = true;
             p.NoisePosition = p.PlayerPosition + Vector3.forward * 6f;
             Vector3 decoy = p.NoisePosition;
-            Assert.AreEqual(decoy, Step(0f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Assert.AreEqual(decoy, Step(0f, WitchState.Suspicious).MoveTarget);
+            p.HeardNoise = false;
+            Step(profile.SuspicionDuration, WitchState.Stalking, 1.2f, true);
             p.PlayerVanished = true;
             Assert.AreEqual(decoy, Step(0f, WitchState.Stalking, 1.2f, true).MoveTarget);
             p.PlayerVanished = false;
+            p.HeardNoise = true;
             p.HearingMuted = true;
             p.NoisePosition = p.PlayerPosition + Vector3.up * 20f;
             Assert.AreEqual(decoy, Step(0f, WitchState.Stalking, 1.2f, true).MoveTarget);
@@ -278,10 +285,16 @@ namespace TiffanyGame.Tests
             p.HeardNoise = true;
             p.NoisePosition = Vector3.left * 40f;
             Vector3 decoy = p.NoisePosition;
-            Assert.AreEqual(decoy, Step(0.2f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Assert.AreEqual(decoy, Step(0.2f, WitchState.Suspicious).MoveTarget);
+            p.HeardNoise = false;
+            Step(profile.SuspicionDuration, WitchState.Stalking, 1.2f, true);
+            p.HeardNoise = true;
             p.NoisePosition = p.PlayerPosition + Vector3.right * noiseOffset;
             Assert.AreEqual(decoy, Step(7.9f, WitchState.Stalking, 1.2f, true).MoveTarget);
-            Step(0.2f, WitchState.TakingOff);
+            p.WitchPosition = decoy;
+            Step(0f, WitchState.Stalking, voice: true);
+            Step(profile.HideInspectionDuration - 0.1f, WitchState.Stalking, voice: true);
+            Step(0.11f, WitchState.TakingOff);
         }
 
         [Test]
@@ -298,7 +311,7 @@ namespace TiffanyGame.Tests
         private WitchDecision Sprint()
         {
             Step(0f, WitchState.WindUp);
-            Step(0.59f, WitchState.WindUp);
+            Step(0.79f, WitchState.WindUp);
             return Step(0.02f, WitchState.Sprinting, 9f);
         }
 

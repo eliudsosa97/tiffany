@@ -15,6 +15,9 @@ namespace TiffanyGame.EditorTools
     {
         public const string ScenePath = "Assets/Scenes/Main.unity";
         public const float FireBallHeight = 1.5f;
+        public const float NightFogStartDistance = 40f;
+        public const float NightFogEndDistance = 76f;
+        public static readonly Color NightFogColor = new Color(0.018f, 0.028f, 0.052f);
         const float SlopeAngle = 8f;
         const float PatchHeight = 0.1f;
         const float PatchElevation = 0.03f;
@@ -38,6 +41,7 @@ namespace TiffanyGame.EditorTools
             BuildLightStops(testZone);
             HidingBuilder.BuildHideTest(testZone, player);
             var route = RouteBuilder.BuildRoute(world, player, storm, out var memories, out var skyRoute);
+            FogBuilder.Build(world, route.GetComponent<WitchChapterTracker>());
             var viewCamera = CreateCamera(player);
             BakeNavMesh(world);
             playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute,
@@ -81,6 +85,7 @@ namespace TiffanyGame.EditorTools
             caughtStop.AddComponent<CaughtCaptureStage>().spot = firstCandle;
             BuildWitchVoice(playerLight.witch, tyler);
             BuildWitchAudio(playerLight.witch, player.transform);
+            BuildTrailTension(route.GetComponent<WitchChapterTracker>(), playerLight.witch, tyler);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -109,9 +114,9 @@ namespace TiffanyGame.EditorTools
             RenderSettings.reflectionIntensity = 0f;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.025f, 0.035f, 0.055f);
-            RenderSettings.fogStartDistance = 45f;
-            RenderSettings.fogEndDistance = 90f;
+            RenderSettings.fogColor = NightFogColor;
+            RenderSettings.fogStartDistance = NightFogStartDistance;
+            RenderSettings.fogEndDistance = NightFogEndDistance;
         }
 
         static void CreateMoon()
@@ -318,10 +323,10 @@ namespace TiffanyGame.EditorTools
             liveStop.AddComponent<WitchCaptureStage>().live = true;
 
             var states = new[] { WitchState.Flying, WitchState.Landing, WitchState.Stalking, WitchState.WindUp,
-                WitchState.Sprinting, WitchState.Recovering, WitchState.TakingOff };
+                WitchState.Sprinting, WitchState.Recovering, WitchState.TakingOff, WitchState.Suspicious };
             for (int i = 0; i < states.Length; i++)
             {
-                var stop = new GameObject($"Witch {i + 1} {states[i]}");
+                var stop = new GameObject(states[i] == WitchState.Suspicious ? "Witch Suspicious" : $"Witch {i + 1} {states[i]}");
                 stop.transform.SetParent(captureRoot, false);
                 stop.transform.position = SurfacePoint(0f, -4f);
                 var capture = stop.AddComponent<CaptureStop>();
@@ -429,6 +434,30 @@ namespace TiffanyGame.EditorTools
             (audio.owl, audio.barnOwl, audio.coyote) = (LoadClip("owl"), LoadClip("lechuza"), LoadClip("coyote"));
             audio.howls = new[] { LoadClip("distant_howl_1"), LoadClip("distant_howl_2"), LoadClip("distant_howl_3") };
             return audio;
+        }
+
+        static void BuildTrailTension(WitchChapterTracker tracker, WitchController witch, TylerController tyler)
+        {
+            var root = new GameObject("Trail Tension");
+            var tension = root.AddComponent<TrailTension>();
+            tension.clearingRadius = RouteBuilder.TrailRadius;
+            (tension.tracker, tension.witch, tension.tyler) = (tracker, witch, tyler);
+            tension.oneShot = root.AddComponent<AudioSource>();
+            (tension.oneShot.playOnAwake, tension.oneShot.spatialBlend) = (false, 0f);
+            tension.phantomSteps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
+            tension.branchSnaps = new[] { LoadClip("step_branches_1"), LoadClip("step_branches_2"), LoadClip("step_branches_3"), LoadClip("step_branches_4") };
+            tension.skyFire = LoadClip("fireball");
+            var decoy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            decoy.name = "Sky Decoy";
+            decoy.transform.SetParent(root.transform, false);
+            decoy.transform.localScale = Vector3.one * 0.9f;
+            UnityEngine.Object.DestroyImmediate(decoy.GetComponent<Collider>());
+            var renderer = decoy.GetComponent<Renderer>();
+            renderer.sharedMaterial = WitchBuilder.FireMaterial();
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            decoy.SetActive(false);
+            tension.skyDecoy = decoy.transform;
         }
 
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)

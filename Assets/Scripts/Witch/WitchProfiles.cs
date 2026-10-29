@@ -7,6 +7,10 @@ namespace TiffanyGame
         public static WitchProfile For(Chapter chapter)
         {
             var profile = new WitchProfile();
+            profile.SearchEnabled = profile.LastSeenEnabled = chapter != Chapter.Cemetery;
+            profile.CandleWatchEnabled = profile.BarkLureEnabled = chapter == Chapter.TrainTracks
+                || chapter == Chapter.Stable || chapter == Chapter.WitchHut;
+            profile.AmbushEnabled = chapter == Chapter.Stable || chapter == Chapter.WitchHut;
             switch (chapter)
             {
                 case Chapter.Cemetery:

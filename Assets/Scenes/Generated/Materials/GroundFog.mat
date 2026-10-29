@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: GroundFog
+  m_Shader: {fileID: 4800000, guid: 7c292158d47c4e06bb89f98345053de7, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3010
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _CameraFadeEnd: 4
+    - _CameraFadeStart: 1
+    - _Density: 0.78
+    - _EdgeFade: 0.2
+    - _GroundHeight: 0
+    - _HaloRadius: 4.5
+    - _HeightFadeEnd: 1.1
+    - _HeightFadeStart: 0.35
+    - _LightStrength: 0.35
+    - _MoonStrength: 0.08
+    - _NoiseScale: 0.65
+    - _NoiseStretch: 2.5
+    - _PathHalfWidth: 2.5
+    - _PathMultiplier: 0.85
+    - _PathSoftness: 3
+    - _PlayerFadeEnd: 2
+    - _PlayerFadeStart: 0.5
+    - _WaterLayer: 0
+    - _WindSpeed: 0.32
+    m_Colors:
+    - _BaseColor: {r: 0.3810918, g: 0.3958812, b: 0.41002083, a: 0.45}
+    - _PathCorner: {r: 0, g: 0, b: 0, a: 0}
+    - _PathEnd: {r: 0, g: 0, b: 0, a: 0}
+    - _PathStart: {r: 0, g: 0, b: 0, a: 0}
+    - _WaterAxis: {r: 1, g: 0, b: 0, a: 0}
+    - _WaterFootprint: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
