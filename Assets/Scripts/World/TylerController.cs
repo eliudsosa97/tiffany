@@ -49,7 +49,8 @@ namespace TiffanyGame
 
         private Tyler brain;
         private readonly TylerLightShare lightShare = new TylerLightShare();
-        private bool heardMimic;
+        private bool heardMimic, heardForest;
+        private Vector3? forestPoint;
         private NavMeshAgent agent;
         private Vector3 previousPlayerPosition;
         private Vector3 lastDestination;
@@ -122,6 +123,13 @@ namespace TiffanyGame
             if (isActiveAndEnabled) heardMimic = true;
         }
 
+        public void HearForest(Vector3 point)
+        {
+            if (!isActiveAndEnabled) return;
+            heardForest = true;
+            forestPoint = point;
+        }
+
         private void Update()
         {
             bool sharing = lightShare.Tick(Time.deltaTime, shareMode,
@@ -140,7 +148,9 @@ namespace TiffanyGame
             Vector3 playerPosition = player.position;
             var inputs = TylerInputs.None;
             inputs.HeardMimic = heardMimic;
+            inputs.HeardForest = heardForest;
             heardMimic = false;
+            heardForest = false;
             inputs.PlayerStill = TylerMotion.IsStill(previousPlayerPosition, playerPosition, Time.deltaTime);
             previousPlayerPosition = playerPosition;
             if (witch != null)
@@ -149,11 +159,13 @@ namespace TiffanyGame
                 inputs.WitchDistance = Vector3.Distance(transform.position, witch.transform.position);
             }
             TylerReaction reaction = brain.Tick(Time.deltaTime, in inputs);
+            if (reaction != TylerReaction.Growl) forestPoint = null;
             if (reaction != Reaction) EnterReaction(reaction);
             TylerPose pose = TylerPoses.For(Reaction);
             ApplyMovement(pose, playerPosition);
             ApplyPose(pose);
-            if (witch != null) FaceWitch(pose, witch.transform.position);
+            if (brain.GrowlingAtForest && forestPoint.HasValue) FaceWitch(pose, forestPoint.Value);
+            else if (witch != null) FaceWitch(pose, witch.transform.position);
             ApplyAnimation(speed);
         }
 

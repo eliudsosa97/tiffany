@@ -17,7 +17,7 @@ namespace TiffanyGame
         private Camera view;
         private FollowCamera framing;
         private int step, branch;
-        private bool paused, wasChasing;
+        private bool paused, wasChasing, forestLeft;
         private void Start()
         {
             view = Camera.main;
@@ -44,7 +44,7 @@ namespace TiffanyGame
             if (chase && !wasChasing) StopEffects();
             wasChasing = chase;
             TrailEvent result = rules.Tick(Time.deltaTime, onTrail, chase, distance, tyler != null && tyler.NearPlayer,
-                witch != null && witch.Decision.Form == WitchForm.Flying && distance < 45f);
+                witch != null && witch.Decision.Form == WitchForm.Flying && distance < TrailEvents.WitchFlyingNear);
             if (result == TrailEvent.None) return;
             Debug.Log($"{GameInfo.LogPrefix} Sendero: {result}");
             switch (result)
@@ -52,7 +52,10 @@ namespace TiffanyGame
                 case TrailEvent.PhantomSteps: StartCoroutine(PlaySteps()); break;
                 case TrailEvent.BranchSnap: Play(branchSnaps, ref branch, 0.6f); break;
                 case TrailEvent.SkyCrossing: if (skyDecoy != null && framing != null) StartCoroutine(CrossSky()); break;
-                case TrailEvent.TylerGrowl: tyler.HearMimic(); break;
+                case TrailEvent.TylerGrowl:
+                    tyler.HearForest(position + tracker.player.right * (forestLeft ? -10f : 10f));
+                    forestLeft = !forestLeft;
+                    break;
             }
         }
         private IEnumerator PlaySteps()
@@ -72,10 +75,9 @@ namespace TiffanyGame
             Vector3 forward = view.transform.forward;
             forward.y = 0f;
             forward.Normalize();
-            Vector3 center = tracker.player.position + forward * 18f;
-            float offset = 18f - Vector3.Dot(tracker.player.forward * framing.lookAhead, forward);
-            center.y = tracker.player.position.y + CameraFraming.MaxVisibleHeight(framing.distance, framing.pitch,
-                framing.fieldOfView, framing.focusHeight, offset) - 1f;
+            Vector2 offset = CameraFraming.DecoyOffset(framing.distance, framing.pitch, framing.fieldOfView);
+            Vector3 center = view.transform.position + view.transform.forward * framing.distance
+                + forward * offset.x + Vector3.up * offset.y;
             Vector3 across = view.transform.right * (view.WorldToViewportPoint(center).z
                 * Mathf.Tan(framing.fieldOfView * Mathf.Deg2Rad * 0.5f) * view.aspect + framing.lookAhead + 0.5f);
             skyDecoy.position = center - across;

@@ -4,6 +4,7 @@ namespace TiffanyGame
     {
         public bool PlayerStill;
         public bool HeardMimic;
+        public bool HeardForest;
         public WitchForm WitchForm;
         public float WitchDistance;
 

@@ -449,7 +449,7 @@ namespace TiffanyGame.EditorTools
             decoy.transform.localScale = Vector3.one * 0.9f;
             UnityEngine.Object.DestroyImmediate(decoy.GetComponent<Collider>());
             var renderer = decoy.GetComponent<Renderer>();
-            renderer.sharedMaterial = GeneratedMaterials.Get("WitchFire", new Color(1f, 0.65f, 0.08f), true, 0.1f);
+            renderer.sharedMaterial = WitchBuilder.FireMaterial();
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
             decoy.SetActive(false);

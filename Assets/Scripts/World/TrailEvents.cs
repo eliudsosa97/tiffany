@@ -4,6 +4,7 @@ namespace TiffanyGame
     public sealed class TrailEvents
     {
         public const float FirstDelay = 10f, RetryDelay = 4f, ChaseCooldown = 12f, WitchNear = 20f;
+        public const float WitchFlyingNear = 45f;
         public const float FirstInterval = 28f, SecondInterval = 40f, ThirdInterval = 34f, FourthInterval = 46f;
         private float remaining = FirstDelay, cooldown;
         private int interval;
