@@ -66,6 +66,9 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator FifthMemoryStartsGroundChaseThroughLakeRoadAndHouse()
         {
+            var storm = Object.FindAnyObjectByType<Storm>();
+            Assert.AreSame(witch, storm.witch);
+            Assert.IsFalse(storm.raining);
             for (int id = 1; id <= 4; id++)
             {
                 LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo {id} encontrado");
@@ -84,6 +87,7 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(FindMemorySpot(5).visual.activeSelf);
             Assert.IsFalse(collector.Collect(5));
             Assert.AreEqual(Chapter.Return, witch.chapter);
+            Assert.IsTrue(storm.raining);
             Assert.AreEqual(WitchForm.Grounded, witch.Decision.Form);
             Assert.IsTrue(witch.figure.activeSelf);
             Assert.IsFalse(witch.fireBall.activeSelf);
@@ -96,6 +100,7 @@ namespace TiffanyGame.Tests
                 MovePlayer(route.GetChild(clearing).position - Vector3.forward * 12f);
                 yield return null;
                 yield return null;
+                Assert.IsTrue(storm.raining);
                 Assert.AreEqual(WitchForm.Grounded, witch.Decision.Form);
                 Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
                 Assert.AreEqual(2.5f, witch.Decision.Speed);
@@ -116,7 +121,9 @@ namespace TiffanyGame.Tests
             yield return null;
             Assert.AreEqual(Chapter.WitchHut, witch.chapter);
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: Landing");
-            Object.FindAnyObjectByType<Storm>().raining = true;
+            var storm = Object.FindAnyObjectByType<Storm>();
+            storm.followChapter = false;
+            storm.raining = true;
             float deadline = Time.realtimeSinceStartup + 2f;
             while (witch.Decision.State != WitchState.Landing && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.AreEqual(WitchState.Landing, witch.Decision.State);
@@ -125,8 +132,10 @@ namespace TiffanyGame.Tests
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo 5 encontrado");
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Tyler: None");
             Assert.IsTrue(collector.Collect(5));
+            storm.followChapter = true;
             yield return null;
             yield return null;
+            Assert.IsTrue(storm.raining);
             Assert.AreEqual(WitchForm.Grounded, witch.Decision.Form);
             Assert.LessOrEqual(Vector3.Distance(soul.transform.position, witch.transform.position), witch.Profile.ReturnPlacementDistance + 1f, "El regreso la coloca a ReturnPlacementDistance de la niña.");
             Assert.IsTrue(witch.GetComponent<NavMeshAgent>().isOnNavMesh);
