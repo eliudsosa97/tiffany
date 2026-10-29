@@ -22,7 +22,7 @@ namespace TiffanyGame.Tests
             "CarryLight", "Flash", "Caught", "Vanish" };
         static readonly string[][] StateNames =
         {
-            new[] { TiffanyAnimation.Idle, TiffanyAnimation.Walk, TiffanyAnimation.TurnLeft, TiffanyAnimation.TurnRight,
+            new[] { TiffanyAnimation.Idle, TiffanyAnimation.Walk, TiffanyAnimation.WalkBack, TiffanyAnimation.TurnLeft, TiffanyAnimation.TurnRight,
                 TiffanyAnimation.Hide, TiffanyAnimation.Caught, TiffanyAnimation.Vanish },
             new[] { TiffanyAnimation.Empty, TiffanyAnimation.CarryLight, TiffanyAnimation.Flash }
         };
@@ -407,7 +407,7 @@ namespace TiffanyGame.Tests
             var clips = Clips();
             for (int i = 0; i < names.Length; i++)
                 foreach (string name in names[i])
-                    if (name != TiffanyAnimation.Walk && name != TiffanyAnimation.Empty)
+                    if (name != TiffanyAnimation.Walk && name != TiffanyAnimation.WalkBack && name != TiffanyAnimation.Empty)
                         Assert.AreEqual(clips[name], State(controller, i, name).motion, name);
             Assert.IsNull(controller.layers[0].avatarMask);
             AssertMask(controller.layers[1].avatarMask);
@@ -429,14 +429,18 @@ namespace TiffanyGame.Tests
             for (int i = 0; i < (int)AvatarMaskBodyPart.LastBodyPart; i++) Assert.IsFalse(mask.GetHumanoidBodyPartActive((AvatarMaskBodyPart)i));
         }
 
-        [Test]
-        public void BlendTreeHasThreeOrderedCyclesAtTheirSourceSpeeds()
+        [TestCase(TiffanyAnimation.Walk, 1f, "Locomotion")]
+        [TestCase(TiffanyAnimation.WalkBack, -1f, "Locomotion")]
+        public void BlendTreeHasThreeOrderedCyclesAtTheirSourceSpeeds(string name, float speed, string treeName)
         {
-            var state = State(Controller(), 0, "Walk");
+            var state = State(Controller(), 0, name);
+            Assert.IsNotNull(state);
+            Assert.AreEqual(speed, state.speed);
             Assert.IsTrue(state.speedParameterActive);
             Assert.AreEqual("Speed", state.speedParameter);
             var tree = state.motion as BlendTree;
             Assert.IsNotNull(tree);
+            Assert.AreEqual(treeName, tree.name);
             Assert.AreEqual(BlendTreeType.Simple1D, tree.blendType);
             Assert.AreEqual("Speed", tree.blendParameter);
             Assert.IsFalse(tree.useAutomaticThresholds);
@@ -578,6 +582,7 @@ namespace TiffanyGame.Tests
             var guids = Array.ConvertAll(paths, p => AssetDatabase.AssetPathToGUID(p));
             int count = AssetDatabase.LoadAllAssetsAtPath(ControllerPath).Length;
             var tree = (BlendTree)State(controller, 0, "Walk").motion;
+            State(controller, 0, TiffanyAnimation.WalkBack).speed = 1f;
             var children = tree.children;
             children[0].threshold = -1f;
             tree.children = children;
@@ -598,6 +603,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(3, controller.layers[1].stateMachine.states.Length);
             Assert.IsEmpty(controller.layers[1].stateMachine.anyStateTransitions);
             Assert.AreEqual(PlayerMotion.SlowSpeed, ((BlendTree)State(controller, 0, "Walk").motion).children[0].threshold);
+            Assert.AreEqual(-1f, State(controller, 0, TiffanyAnimation.WalkBack).speed);
             Assert.AreEqual(count, AssetDatabase.LoadAllAssetsAtPath(ControllerPath).Length);
             Assert.IsTrue(State(controller, 1, "Empty").writeDefaultValues);
             AssertMask(controller.layers[1].avatarMask);

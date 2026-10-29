@@ -23,7 +23,7 @@ namespace TiffanyGame.Tests
             var input = StickResponse.Shape(Vector2.up * 0.19f);
             float speed = PlayerMotion.TargetSpeed(input.magnitude, Gait.Walk);
             Assert.That(speed, Is.InRange(0.07f, TiffanyAnimation.MoveSpeed));
-            Assert.AreEqual(TiffanyAnimation.Idle, TiffanyAnimation.StateFor(false, false, false, speed, 0f));
+            Assert.AreEqual(TiffanyAnimation.Idle, TiffanyAnimation.StateFor(false, false, false, speed, 0f, false));
             int steps = Travel(5f, input, false, out _, out int contacts);
             Assert.AreEqual(0, contacts);
             Assert.That(steps, Is.InRange(11, 12));
@@ -44,7 +44,7 @@ namespace TiffanyGame.Tests
                 float speed = motion.Advance(Vector3.forward * target, Dt).magnitude;
                 float moved = speed * Dt;
                 var gait = PlayerMotion.NoiseGait(speed);
-                bool walking = TiffanyAnimation.StateFor(false, false, false, speed, 0f) == TiffanyAnimation.Walk;
+                bool walking = TiffanyAnimation.StateFor(false, false, false, speed, 0f, false) == TiffanyAnimation.Walk;
                 int count = 0;
                 if (walking)
                 {
