@@ -8,6 +8,8 @@ namespace TiffanyGame.Tests
 {
     public class PlayerControllerTests
     {
+        static readonly string[] MissingAnimationCases = { "NoDriver", "MissingAnimator", "DisabledAnimator" };
+
         GameObject ground;
         GameObject cameraObject;
         GameObject player;
@@ -196,18 +198,60 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator MovementWithoutAnimationContactsMakesNoSteps()
+        public IEnumerator MovementWithoutAnimationContactsStillPublishesSteps()
         {
             Assert.IsNotNull(animator);
             animator.speed = 0f;
             yield return new WaitForSeconds(0.5f);
             Assert.Greater(player.transform.position.z, 0.5f);
-            Assert.AreEqual(0, steps.Count);
+            AssertSteps(1, 2, 2f);
+            int before = steps.Count;
             animator.speed = 1f;
-            yield return new WaitForSeconds(0.08f);
-            Assert.AreEqual(0, steps.Count);
             yield return new WaitForSeconds(0.5f);
-            Assert.Greater(steps.Count, 0);
+            Assert.Greater(steps.Count, before);
+        }
+
+        [UnityTest]
+        public IEnumerator WalkingWithoutAnimatorPublishesNoiseAndAudioFromPlayerController(
+            [ValueSource(nameof(MissingAnimationCases))] string missing)
+        {
+            player.SetActive(false);
+            var driver = player.GetComponent<TiffanyAnimator>();
+            Assert.IsNotNull(driver);
+            Assert.IsNotNull(animator);
+            if (missing == "NoDriver") Object.Destroy(driver);
+            else if (missing == "MissingAnimator") Object.Destroy(animator);
+            else animator.enabled = false;
+
+            yield return null;
+
+            var movement = player.GetComponent<PlayerController>();
+            var gaits = new List<Gait>();
+            void RecordGait(GroundType _, Gait gait) => gaits.Add(gait);
+            movement.Stepped += RecordGait;
+            try
+            {
+                player.SetActive(true);
+                float deadline = Time.realtimeSinceStartup + 10f;
+                while (player.transform.position.z < 5f && Time.realtimeSinceStartup < deadline)
+                    yield return null;
+
+                Assert.GreaterOrEqual(player.transform.position.z, 5f);
+                Assert.IsTrue(movement.Grounded);
+                Assert.That(steps.Count, Is.InRange(8, 9));
+                Assert.AreEqual(steps.Count, steppedCount);
+                Assert.AreEqual(steps.Count, gaits.Count);
+                for (int i = 0; i < steps.Count; i++)
+                {
+                    var gait = PlayerMotion.NoiseGait(stepSpeeds[i]);
+                    Assert.AreEqual(NoiseModel.StepRadius(GroundType.Dirt, gait, false), steps[i].Radius);
+                    Assert.AreEqual(gait, gaits[i]);
+                }
+            }
+            finally
+            {
+                movement.Stepped -= RecordGait;
+            }
         }
 
         [UnityTest]

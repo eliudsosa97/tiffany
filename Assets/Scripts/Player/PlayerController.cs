@@ -26,6 +26,10 @@ namespace TiffanyGame
         GroundType lastGroundType = GroundType.Dirt;
         AimSource aimSource;
         PlayerFacing.TurnState facingTurn;
+        TiffanyAnimator tiffanyAnimator;
+        VanishPower vanish;
+        StepGuarantee steps;
+        float horizontalDistance;
 
         void Awake()
         {
@@ -38,6 +42,8 @@ namespace TiffanyGame
         void Start()
         {
             if (viewCamera == null) viewCamera = Camera.main;
+            tiffanyAnimator = GetComponent<TiffanyAnimator>();
+            vanish = GetComponent<VanishPower>();
         }
 
         void OnEnable()
@@ -47,14 +53,17 @@ namespace TiffanyGame
             CurrentGait = Gait.Slow;
             verticalVelocity = 0f;
             facingTurn = default;
+            steps = default;
+            horizontalDistance = 0f;
         }
 
         void OnDisable() => HorizontalSpeed = 0f;
 
-        void Update()
+        void Update() => Move(Time.deltaTime);
+
+        void Move(float dt)
         {
             var inputGait = PlayerMotion.ResolveGait(GameInput.Slow, GameInput.Run);
-            float dt = Time.deltaTime;
             if (dt <= 0f || !controller.enabled) return;
             float yaw = viewCamera != null ? viewCamera.transform.eulerAngles.y : 0f;
             var direction = PlayerMotion.CameraRelative(GameInput.Move, yaw);
@@ -70,18 +79,43 @@ namespace TiffanyGame
             controller.Move((horizontalVelocity + Vector3.up * verticalVelocity) * dt);
             var displacement = transform.position - previousPosition;
             displacement.y = 0f;
-            HorizontalSpeed = displacement.magnitude / dt;
+            horizontalDistance = displacement.magnitude;
+            HorizontalSpeed = horizontalDistance / dt;
             CurrentGait = PlayerMotion.NoiseGait(HorizontalSpeed);
 
             TurnTowardsAim(inputGait, direction, yaw, dt);
         }
 
+        void LateUpdate() => UpdateFootsteps(Time.deltaTime);
+
+        bool CanStep => isActiveAndEnabled && Grounded && (vanish == null || !vanish.State.IsActive);
+
+        void UpdateFootsteps(float dt)
+        {
+            if (dt <= 0f) return;
+            int contacts = tiffanyAnimator != null && tiffanyAnimator.isActiveAndEnabled ? tiffanyAnimator.ReadFootContacts() : 0;
+            if (CanStep)
+                PublishSteps(steps.Advance(horizontalDistance, CurrentGait, contacts));
+            else
+                steps = default;
+            horizontalDistance = 0f;
+        }
+
         public void PublishFootstep()
         {
-            if (!isActiveAndEnabled || !Grounded || Time.deltaTime <= 0f) return;
+            if (!CanStep || Time.deltaTime <= 0f) return;
+            PublishSteps(steps.Advance(0f, CurrentGait, 1));
+        }
+
+        void PublishSteps(int count)
+        {
+            if (count == 0) return;
             var ground = FindGround();
-            NoiseBus.Publish(new StepNoise(transform.position, NoiseModel.StepRadius(ground, CurrentGait, raining)));
-            Stepped?.Invoke(ground, CurrentGait);
+            for (int i = 0; i < count; i++)
+            {
+                NoiseBus.Publish(new StepNoise(transform.position, NoiseModel.StepRadius(ground, CurrentGait, raining)));
+                Stepped?.Invoke(ground, CurrentGait);
+            }
         }
 
         GroundType FindGround()

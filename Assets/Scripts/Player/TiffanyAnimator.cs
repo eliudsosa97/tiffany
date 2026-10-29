@@ -84,6 +84,11 @@ namespace TiffanyGame
             float speed = baseState == WalkHash ? player.HorizontalSpeed : 0f;
             animator.transform.localRotation = restRotation * Quaternion.Euler(0f, 0f,
                 lean.Advance(speed, player.AngularSpeed, Time.deltaTime));
+        }
+
+        public int ReadFootContacts()
+        {
+            if (animator == null || !animator.isActiveAndEnabled) return 0;
             var state = animator.IsInTransition(TiffanyAnimation.BaseLayer)
                 ? animator.GetNextAnimatorStateInfo(TiffanyAnimation.BaseLayer)
                 : animator.GetCurrentAnimatorStateInfo(TiffanyAnimation.BaseLayer);
@@ -91,14 +96,12 @@ namespace TiffanyGame
             if (!stepping || !player.isActiveAndEnabled)
             {
                 contacts = default;
-                return;
+                return 0;
             }
-            if (state.fullPathHash != baseState) return;
+            if (state.fullPathHash != baseState) return 0;
             var phases = baseState == LeftHash ? leftTurnContacts
                 : baseState == RightHash ? rightTurnContacts : locomotionContacts;
-            int count = contacts.Advance(baseState, state.normalizedTime, phases);
-            if (!player.Grounded) return;
-            for (int i = 0; i < count; i++) player.PublishFootstep();
+            return contacts.Advance(baseState, state.normalizedTime, phases);
         }
 
         void ApplyState(string state, int layer, ref int previous, bool restart = false)

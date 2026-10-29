@@ -247,7 +247,7 @@ namespace TiffanyGame.Tests
         {
             Assert.IsTrue(spec.preserveAnimationKeys);
             var importer = (ModelImporter)AssetImporter.GetAtPath(spec.modelPath);
-            Assert.AreEqual(ModelImporterAnimationCompression.Off, importer.animationCompression);
+            Assert.AreEqual(ModelImporterAnimationCompression.Optimal, importer.animationCompression);
             var clips = Clips();
             CollectionAssert.AreEquivalent(ClipNames, clips.Keys);
             Assert.AreEqual(spec.clips.Length, clips.Count);

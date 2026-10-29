@@ -6,7 +6,7 @@ namespace TiffanyGame.EditorTools
 {
     public class ModelImportRules : AssetPostprocessor
     {
-        public override uint GetVersion() => 8;
+        public override uint GetVersion() => 9;
 
         bool IsLibraryModel => Path.GetDirectoryName(assetPath).Replace('\\', '/') == ModelLibrary.ModelFolder &&
                                Path.GetExtension(assetPath).ToLowerInvariant() == ".fbx";
@@ -36,7 +36,7 @@ namespace TiffanyGame.EditorTools
                 importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
                 importer.optimizeGameObjects = false;
                 importer.animationCompression = spec.preserveAnimationKeys
-                    ? ModelImporterAnimationCompression.Off
+                    ? ModelImporterAnimationCompression.Optimal
                     : ModelImporterAnimationCompression.KeyframeReduction;
                 importer.animationRotationError = 0.1f;
                 importer.animationPositionError = 0.1f;
