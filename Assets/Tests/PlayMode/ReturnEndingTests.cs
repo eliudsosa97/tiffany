@@ -30,6 +30,11 @@ namespace TiffanyGame.Tests
             // Heartbeat registra cada cambio de ritmo y estos tests no admiten logs inesperados.
             foreach (var heartbeat in Object.FindObjectsByType<Heartbeat>(FindObjectsSortMode.None)) heartbeat.enabled = false;
             collector = Object.FindAnyObjectByType<MemoryCollector>();
+            foreach (var challenge in collector.challenges)
+            {
+                challenge.Rules.Tick(-1f, true, 3, true, true);
+                challenge.Rules.Tick(ChallengeRules.PassageLength, true, 3, true, true);
+            }
             ending = Object.FindAnyObjectByType<EndingController>();
             Assert.IsNotNull(collector);
             Assert.IsNotNull(ending);
