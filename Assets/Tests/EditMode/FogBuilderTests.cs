@@ -241,7 +241,7 @@ namespace TiffanyGame.Tests
             var bank = waterLayers[0];
             Assert.AreEqual(surface.bounds.max.y, bank.groundHeight, 0.001f);
             Assert.AreEqual(surface.bounds.max.y + FogBuilder.WaterHeight, bank.renderer.transform.position.y, 0.001f);
-            Assert.AreEqual(0.95f, bank.density, 0.0001f);
+            Assert.AreEqual(1f, bank.density, 0.0001f);
             Assert.AreEqual(6f, bank.waterFootprint.z, 0.001f);
             Assert.AreEqual(length * 0.5f, bank.waterFootprint.w, 0.001f);
             foreach (float x in new[] { -0.5f, 0.5f })

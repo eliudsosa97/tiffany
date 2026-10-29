@@ -3,7 +3,7 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
     Properties
     {
         _BaseColor ("Color", Color) = (0.0702, 0.0824, 0.1232, 0.7)
-        _Density ("Density", Range(0, 1)) = 0.45
+        _Density ("Density", Range(0, 1)) = 0.6
         _NoiseScale ("Noise scale", Float) = 0.45
         _NoiseStretch ("Noise stretch", Float) = 1.25
         _WindSpeed ("Wind speed", Float) = 0.32
@@ -16,7 +16,7 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
         _CameraFadeEnd ("Camera fade end", Float) = 4
         _PathHalfWidth ("Path half width", Float) = 2
         _PathSoftness ("Path softness", Float) = 7
-        _PathMultiplier ("Path multiplier", Range(0, 1)) = 0.2
+        _PathMultiplier ("Path multiplier", Range(0, 1)) = 0.4
         _PlayerFadeStart ("Player fade start", Float) = 0.5
         _PlayerFadeEnd ("Player fade end", Float) = 2
         [HideInInspector] _GroundHeight ("Ground height", Float) = 0
