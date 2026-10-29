@@ -11,25 +11,25 @@ namespace TiffanyGame
 
         public static float Density(GroundType ground, LitterKind kind) => (ground, kind) switch
         {
-            (GroundType.Leaves, LitterKind.Leaves) => 0.22f,
-            (GroundType.Leaves, LitterKind.Twig) => 0.025f,
-            (GroundType.Leaves, LitterKind.Stone) => 0.009f,
-            (GroundType.Leaves, LitterKind.Root) => 0.0008f,
-            (GroundType.Branches, LitterKind.Twig) => 0.26f,
-            (GroundType.Branches, LitterKind.Leaves) => 0.025f,
-            (GroundType.Branches, LitterKind.PineCone) => 0.006f,
-            (GroundType.Branches, LitterKind.Root) => 0.001f,
-            (GroundType.Branches, LitterKind.Stone) => 0.005f,
-            (GroundType.Grass, LitterKind.Leaves) => 0.06f,
-            (GroundType.Grass, LitterKind.Twig) => 0.01f,
-            (GroundType.Grass, LitterKind.Stone) => 0.04f,
-            (GroundType.Gravel, LitterKind.Stone) => 0.24f,
-            (GroundType.Gravel, LitterKind.Twig) => 0.01f,
-            (GroundType.Dirt, LitterKind.Stone) => 0.04f,
-            (GroundType.Dirt, LitterKind.Leaves) => 0.04f,
-            (GroundType.Dirt, LitterKind.Twig) => 0.015f,
-            (GroundType.Slab, LitterKind.Leaves) => 0.002f,
-            (GroundType.Slab, LitterKind.Stone) => 0.001f,
+            (GroundType.Leaves, LitterKind.Leaves) => 0.275f,
+            (GroundType.Leaves, LitterKind.Twig) => 0.03125f,
+            (GroundType.Leaves, LitterKind.Stone) => 0.01125f,
+            (GroundType.Leaves, LitterKind.Root) => 0.001f,
+            (GroundType.Branches, LitterKind.Twig) => 0.325f,
+            (GroundType.Branches, LitterKind.Leaves) => 0.03125f,
+            (GroundType.Branches, LitterKind.PineCone) => 0.0075f,
+            (GroundType.Branches, LitterKind.Root) => 0.00125f,
+            (GroundType.Branches, LitterKind.Stone) => 0.00625f,
+            (GroundType.Grass, LitterKind.Leaves) => 0.075f,
+            (GroundType.Grass, LitterKind.Twig) => 0.0125f,
+            (GroundType.Grass, LitterKind.Stone) => 0.05f,
+            (GroundType.Gravel, LitterKind.Stone) => 0.3f,
+            (GroundType.Gravel, LitterKind.Twig) => 0.0125f,
+            (GroundType.Dirt, LitterKind.Stone) => 0.05f,
+            (GroundType.Dirt, LitterKind.Leaves) => 0.05f,
+            (GroundType.Dirt, LitterKind.Twig) => 0.01875f,
+            (GroundType.Slab, LitterKind.Leaves) => 0.0025f,
+            (GroundType.Slab, LitterKind.Stone) => 0.00125f,
             _ => 0f
         };
 
@@ -52,6 +52,22 @@ namespace TiffanyGame
             return 1 + (int)(Hash(LitterKind.Stone, chunk.x, chunk.y, 5) % 3u);
         }
 
+        public static float PatchMask(LitterKind kind, Vector3 position)
+        {
+            float x = (position.x + (int)kind * 0.8f) / 10f;
+            float z = (position.z + (int)kind * 1.1f) / 10f;
+            float noise = ValueNoise(x, z, 8) * 0.85f + ValueNoise(x * 2f, z * 2f, 9) * 0.15f;
+            return Mathf.Clamp01(Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.48f, 0.64f, noise)));
+        }
+
+        static float ValueNoise(float x, float z, uint salt)
+        {
+            int cellX = Mathf.FloorToInt(x), cellZ = Mathf.FloorToInt(z);
+            float u = Mathf.SmoothStep(0f, 1f, x - cellX), v = Mathf.SmoothStep(0f, 1f, z - cellZ);
+            float Value(int dx, int dz) => (Hash(LitterKind.Leaves, cellX + dx, cellZ + dz, salt) >> 8) * (1f / 16777216f);
+            return Mathf.Lerp(Mathf.Lerp(Value(0, 0), Value(1, 0), u), Mathf.Lerp(Value(0, 1), Value(1, 1), u), v);
+        }
+
         public readonly struct Candidate
         {
             public readonly LitterKind Kind;
@@ -71,7 +87,8 @@ namespace TiffanyGame
                 this.threshold = threshold;
             }
 
-            public bool IsPresent(GroundType ground) => threshold < Density(ground, Kind) * CellSize(Kind) * CellSize(Kind);
+            public bool IsPresent(GroundType ground) =>
+                threshold < Density(ground, Kind) * CellSize(Kind) * CellSize(Kind) * PatchMask(Kind, Position);
         }
 
         public static Candidate Sample(LitterKind kind, int cellX, int cellZ)

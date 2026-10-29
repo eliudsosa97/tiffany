@@ -14,6 +14,12 @@ namespace TiffanyGame.Tests
     public sealed class GroundLitterTests
     {
         const string Temp = "Assets/GroundLitterTestTemp";
+        const float RoundTwoLeavesDensity = 0.22f + 0.025f + 0.009f + 0.0008f;
+        const float RoundTwoBranchesDensity = 0.26f + 0.025f + 0.006f + 0.001f + 0.005f;
+        const float RoundTwoGrassDensity = 0.06f + 0.01f + 0.04f;
+        const float RoundTwoGravelDensity = 0.24f + 0.01f;
+        const float RoundTwoDirtDensity = 0.04f + 0.04f + 0.015f;
+        const float RoundTwoSlabDensity = 0.002f + 0.001f;
         GameObject root;
         string previousFolder;
         ForestInstances Litter => root.transform.Find("Ground Litter").GetComponent<ForestInstances>();
@@ -84,9 +90,70 @@ namespace TiffanyGame.Tests
                 Assert.That(first.Position.z, Is.InRange(z * size, (z + 1) * size));
                 foreach (GroundType ground in Enum.GetValues(typeof(GroundType)))
                     Assert.AreEqual(first.IsPresent(ground), second.IsPresent(ground));
+                float mask = GroundLitter.PatchMask(kind, first.Position);
+                GroundLitter.PatchMask(kind, first.Position + Vector3.forward * 23f);
+                Assert.AreEqual(mask, GroundLitter.PatchMask(kind, first.Position + Vector3.up * 1000f));
             }
             Assert.AreEqual(new Vector2Int(-1, -1), GroundLitter.Chunk(new Vector3(-0.01f, 20f, -GroundLitter.ChunkSize)));
             Assert.AreEqual(new Vector2Int(1, 0), GroundLitter.Chunk(new Vector3(GroundLitter.ChunkSize, -20f, 0f)));
+        }
+
+        [Test]
+        public void PatchMasksLeaveFortyToFiftyPercentCleanWithSoftEdgesAndPartialOverlap()
+        {
+            const int side = 256;
+            foreach (LitterKind kind in Enum.GetValues(typeof(LitterKind)))
+            {
+                int clean = 0, soft = 0, overlap = 0, different = 0;
+                float minimum = 1f, maximum = 0f;
+                for (int z = -side / 2; z < side / 2; z++)
+                for (int x = -side / 2; x < side / 2; x++)
+                {
+                    var point = new Vector3(x + 0.5f, 0f, z + 0.5f);
+                    float mask = GroundLitter.PatchMask(kind, point);
+                    float leaves = GroundLitter.PatchMask(LitterKind.Leaves, point);
+                    minimum = Mathf.Min(minimum, mask);
+                    maximum = Mathf.Max(maximum, mask);
+                    if (mask == 0f) clean++;
+                    if (mask > 0f && mask < 1f) soft++;
+                    if (mask > 0f && leaves > 0f) overlap++;
+                    if ((mask > 0f) != (leaves > 0f)) different++;
+                }
+                Assert.AreEqual(0f, minimum, kind.ToString());
+                Assert.AreEqual(1f, maximum, kind.ToString());
+                Assert.That((float)clean / (side * side), Is.InRange(0.4f, 0.5f), kind.ToString());
+                Assert.Greater(soft, 0, kind.ToString());
+                Assert.Greater(overlap, 0, kind.ToString());
+                if (kind != LitterKind.Leaves) Assert.Greater(different, 0, kind.ToString());
+            }
+        }
+
+        [TestCase(GroundType.Leaves, RoundTwoLeavesDensity)]
+        [TestCase(GroundType.Branches, RoundTwoBranchesDensity)]
+        [TestCase(GroundType.Grass, RoundTwoGrassDensity)]
+        [TestCase(GroundType.Gravel, RoundTwoGravelDensity)]
+        [TestCase(GroundType.Dirt, RoundTwoDirtDensity)]
+        [TestCase(GroundType.Slab, RoundTwoSlabDensity)]
+        public void SixtyFourMeterFloorHasHalfTheInstancesAndAtLeastThirtyFivePercentEmptyCells(GroundType ground, float roundTwoDensity)
+        {
+            const float side = 64f;
+            const float cellSize = 4f;
+            Floor(Vector3.zero, new Vector2(side, side), ground);
+            Scatter();
+            var matrices = Snapshot();
+            var occupied = new HashSet<Vector2Int>();
+            foreach (var matrix in matrices)
+            {
+                var position = matrix.MultiplyPoint3x4(Vector3.zero);
+                occupied.Add(new Vector2Int(Mathf.FloorToInt((position.x + side * 0.5f) / cellSize),
+                    Mathf.FloorToInt((position.z + side * 0.5f) / cellSize)));
+            }
+            float unmaskedCount = roundTwoDensity * side * side;
+            float retained = matrices.Length / unmaskedCount;
+            float empty = 1f - occupied.Count / ((side / cellSize) * (side / cellSize));
+            TestContext.WriteLine($"{ground}: {matrices.Length} instancias, {retained:P1} de ronda 2, {empty:P1} de celdas vacías.");
+            Assert.That(retained, Is.InRange(0.4f, 0.6f));
+            Assert.GreaterOrEqual(empty, 0.35f);
         }
 
         [Test]
@@ -198,11 +265,7 @@ namespace TiffanyGame.Tests
             var interactive = Child(kind, occupied);
             if (kind == "MemorySpot") interactive.AddComponent<MemorySpot>();
             if (kind == "CandleSpot") interactive.AddComponent<CandleSpot>();
-            if (kind == "MovableObject")
-            {
-                LogAssert.Expect(LogType.Error, "Failed to call static function Reset because an object was provided");
-                interactive.AddComponent<MovableObject>();
-            }
+            if (kind == "MovableObject") interactive.AddComponent<MovableObject>();
             interactive.SetActive(false);
             LogAssert.Expect(LogType.Log, new Regex(@"reservado: [1-9]\d*"));
             Scatter();
@@ -456,26 +519,27 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(expected, File.ReadAllText(path));
         }
 
-        [TestCase(GroundType.Leaves, 4, 8, 20)]
-        [TestCase(GroundType.Branches, 3, 8, 20)]
-        [TestCase(GroundType.Dirt, 7, 3, 5)]
-        [TestCase(GroundType.Grass, 0, 3, 5)]
-        [TestCase(GroundType.Grass, 5, 3, 5)]
-        [TestCase(GroundType.Gravel, 2, 8, 20)]
-        [TestCase(GroundType.Slab, 1, 0, 1)]
-        [TestCase(GroundType.Slab, 6, 0, 1)]
-        public void OpenGroundAtRouteCapturePositionsHasReadableObjectsInThePlayerLight(GroundType ground, int clearing, int minimum, int maximum)
+        [TestCase(GroundType.Leaves, 4, 20)]
+        [TestCase(GroundType.Branches, 3, 20)]
+        [TestCase(GroundType.Dirt, 7, 5)]
+        [TestCase(GroundType.Grass, 0, 5)]
+        [TestCase(GroundType.Grass, 5, 5)]
+        [TestCase(GroundType.Gravel, 2, 20)]
+        [TestCase(GroundType.Slab, 1, 1)]
+        [TestCase(GroundType.Slab, 6, 1)]
+        public void ObjectsAtRouteCapturePositionsStayReadableWithSparseLightFootprints(GroundType ground, int clearing, int maximum)
         {
             root.transform.position += new Vector3(108f, 0f, clearing * 56f);
             Floor(Vector3.zero, new Vector2(36f, 36f), ground);
             Scatter();
+            Assert.IsNotEmpty(Litter.data.batches);
             int count = 0;
             foreach (var matrix in Snapshot())
             {
                 var position = matrix.MultiplyPoint3x4(Vector3.zero);
                 if (position.x * position.x + (position.z + 8f) * (position.z + 8f) <= 16f) count++;
             }
-            Assert.That(count, Is.InRange(minimum, maximum));
+            Assert.That(count, Is.InRange(0, maximum));
             foreach (var batch in Litter.data.batches)
             foreach (var matrix in batch.matrices)
             {
