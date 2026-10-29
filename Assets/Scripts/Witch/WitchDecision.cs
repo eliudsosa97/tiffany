@@ -12,5 +12,6 @@ namespace TiffanyGame
         public bool FireLit;
         public bool VoiceLure;
         public bool InspectingHide;
+        public bool CatchUp;
     }
 }

@@ -14,12 +14,12 @@ namespace TiffanyGame.EditorTools
         {
             var (texture, tint, accent, mix) = type switch
             {
-                GroundType.Dirt => ("dry_ground_rocks", "B6AB93", "gravel_ground_01", 0.25f),
-                GroundType.Grass => ("dry_ground_rocks", "919171", "dry_decay_leaves", 0.30f),
-                GroundType.Slab => ("rock_boulder_dry", "A8A69B", "dry_ground_rocks", 0.15f),
-                GroundType.Gravel => ("gravel_ground_01", "C1BAAA", "dry_ground_rocks", 0.25f),
-                GroundType.Leaves => ("dry_decay_leaves", "A58B6B", "dry_ground_rocks", 0.25f),
-                GroundType.Branches => ("burned_ground_01", "8B7965", "dry_decay_leaves", 0.35f),
+                GroundType.Dirt => ("dry_ground_rocks", "C8AD82", "gravel_ground_01", 0.25f),
+                GroundType.Grass => ("dry_ground_rocks", "9EAF79", "dry_decay_leaves", 0.30f),
+                GroundType.Slab => ("rock_boulder_dry", "B4BFCA", "dry_ground_rocks", 0.15f),
+                GroundType.Gravel => ("gravel_ground_01", "DDD2B9", "dry_ground_rocks", 0.25f),
+                GroundType.Leaves => ("dry_decay_leaves", "C59A60", "dry_ground_rocks", 0.25f),
+                GroundType.Branches => ("burned_ground_01", "AD897B", "dry_decay_leaves", 0.35f),
                 _ => throw new ArgumentOutOfRangeException(nameof(type))
             };
             return Surface("Route" + type, texture, tint, accent, mix);
@@ -44,6 +44,8 @@ namespace TiffanyGame.EditorTools
             material.SetTexture("_DetailMap", detail);
             material.SetTexture("_DetailNormal", detailNormal);
             material.SetFloat("_Mix", mix);
+            material.SetFloat("_NormalStrength", patch ? 1f : 2.8f);
+            material.SetFloat("_Cavity", patch ? 0f : 0.55f);
             material.SetFloat("_Patch", patch ? 1f : 0f);
             material.SetFloat("_SrcBlend", (float)(patch ? BlendMode.SrcAlpha : BlendMode.One));
             material.SetFloat("_DstBlend", (float)(patch ? BlendMode.OneMinusSrcAlpha : BlendMode.Zero));

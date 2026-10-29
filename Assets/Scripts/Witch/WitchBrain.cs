@@ -14,11 +14,13 @@ namespace TiffanyGame
         private readonly System.Random random;
         private readonly Func<Vector3, Vector3> resolveGroundTarget;
         private readonly WitchTactics tactics;
+        private readonly WitchCatchUp catchUp = new WitchCatchUp();
         private WitchDecision tacticDecision;
         private bool hasTacticDecision;
         private WitchState state = WitchState.Flying;
         private int routeIndex;
         private float stateTime;
+        private float returnGraceRemaining;
         private float timeWithoutPerception;
         private bool hasTarget;
         private bool targetIsPlayer;
@@ -61,6 +63,8 @@ namespace TiffanyGame
 
         public bool Chasing => chasing;
 
+        public void StartGrace() => returnGraceRemaining = profile.GroundChase ? profile.ReturnGraceDuration : 0f;
+
         public WitchBrain(WitchProfile profile, IReadOnlyList<Vector3> skyRoute, System.Random random = null,
             Func<Vector3, Vector3> resolveGroundTarget = null)
         {
@@ -79,8 +83,41 @@ namespace TiffanyGame
 
         public WitchDecision Tick(float dt, in WitchPerception p)
         {
-            hasTacticDecision = false;
             dt = dt < 0f || float.IsNaN(dt) || float.IsInfinity(dt) ? 0f : dt;
+            if (returnGraceRemaining > 0f)
+            {
+                float graceTime = Mathf.Min(dt, returnGraceRemaining);
+                returnGraceRemaining -= graceTime;
+                dt -= graceTime;
+                if (returnGraceRemaining > 0f)
+                    return new WitchDecision
+                    {
+                        State = WitchState.Stalking,
+                        Form = WitchForm.Grounded,
+                        MoveTarget = p.WitchPosition
+                    };
+            }
+            WitchDecision decision = TickState(dt, in p);
+            decision.CatchUp = catchUp.Tick(dt, profile, in p, decision.State);
+            return decision;
+        }
+
+        public void CatchUpPlaced(Vector3 playerPosition)
+        {
+            catchUp.Placed();
+            tactics.Forget();
+            target = playerPosition;
+            targetIsPlayer = hasTarget = chasing = true;
+            warned = hasNoiseTarget = hasHideTarget = inspectingNoise = retreatingNoise = false;
+            timeWithoutPerception = 0f;
+            Enter(WitchState.Stalking, playerPosition);
+        }
+
+        public void CatchUpBlocked() => catchUp.Retry(profile);
+
+        private WitchDecision TickState(float dt, in WitchPerception p)
+        {
+            hasTacticDecision = false;
             sawHiding = p.PlayerHidden && (wasHidden ? sawHiding : sawPlayer);
             if (p.PlayerVanished && !wasVanished) sawHiding = false;
             bool trackable = !p.PlayerVanished && !p.PlayerInSafeZone && (!p.PlayerHidden || sawHiding);
@@ -95,7 +132,7 @@ namespace TiffanyGame
                 hasTarget = targetIsPlayer = chasing = warned = false;
             bool detected = trackable && (Watch != null
                 ? p.InWatchPassage && (!Watch.PassageClear(p.WitchPosition) || Watch.RequiresVanish)
-                : (profile.GroundChase && !tactics.Investigating) || p.SeesPlayer || p.SmellsPlayer
+                : (profile.GroundChase && (catchUp.Hunting || !tactics.Investigating)) || p.SeesPlayer || p.SmellsPlayer
                     || (noiseHeard && noiseFromPlayer && (chasing
                         || HorizontalDistance(p.WitchPosition, p.NoisePosition) <= profile.ClearNoiseDistance))
                     || (p.PlayerHidden && sawHiding));
@@ -514,7 +551,7 @@ namespace TiffanyGame
 
         private bool TryTactic(float dt, in WitchPerception p)
         {
-            if (Watch != null || (state != WitchState.Flying && state != WitchState.Stalking)) return false;
+            if (catchUp.Hunting || Watch != null || (state != WitchState.Flying && state != WitchState.Stalking)) return false;
             if (state == WitchState.Stalking && hasNoiseTarget && !p.PlayerAtFamilyCandle) return false;
             if (!tactics.TryDecide(dt, profile, in p, state, !hasTarget, chasing, out tacticDecision)) return false;
             if ((tacticDecision.State == WitchState.Landing || (tacticDecision.State == WitchState.Stalking && tacticDecision.Speed > 0f))

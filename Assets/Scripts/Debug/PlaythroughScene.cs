@@ -16,6 +16,7 @@ namespace TiffanyGame
         readonly VanishPower vanish;
         readonly CandleKindler kindler;
         readonly EndingController ending;
+        readonly WitchController witch;
         readonly Transform route;
         readonly Transform ball;
         readonly MemorySpot ballPickup;
@@ -33,6 +34,7 @@ namespace TiffanyGame
         float arrivalRadius;
 
         public Vector3 Position => player.transform.position;
+        public Vector3 Forward => player.transform.forward;
         public Vector3 Target { get; private set; }
         bool AtTarget => PlaythroughPlan.HorizontalDistance(Position, Target) <= arrivalRadius && Mathf.Abs(Position.y - Target.y) < 0.8f;
         public float CameraYaw => player.viewCamera != null ? player.viewCamera.transform.eulerAngles.y : 0f;
@@ -51,6 +53,7 @@ namespace TiffanyGame
             vanish = Require(player.GetComponent<VanishPower>(), "VanishPower");
             kindler = Require(player.GetComponent<CandleKindler>(), "CandleKindler");
             ending = Require(Object.FindAnyObjectByType<EndingController>(), "EndingController");
+            witch = Object.FindAnyObjectByType<WitchController>();
             var tracker = Require(Object.FindAnyObjectByType<WitchChapterTracker>(), "WitchChapterTracker");
             route = tracker.transform;
             clearings = tracker.clearings;
@@ -221,7 +224,9 @@ namespace TiffanyGame
                 && ((PlaythroughPlan.Action(milestone) == ChallengeAction.Wait && !challenge.Witch.WatchInvestigating)
                     || (PlaythroughPlan.Action(milestone) == ChallengeAction.Cross
                         && ((challenge.Rules.NeedsVanish && !vanish.State.IsActive)
-                            || (challenge.Rules.NeedsDistraction && !challenge.Distracted))))
+                            || (challenge.Rules.NeedsDistraction && !challenge.Distracted)))),
+            WitchState = witch != null && witch.isActiveAndEnabled ? witch.Decision.State : WitchState.Flying,
+            WitchPosition = witch != null ? witch.transform.position : Vector3.zero
         };
 
         public void Apply(in PlaythroughCommand command)

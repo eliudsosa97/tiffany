@@ -191,6 +191,17 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(soul.Powers.Has(Power.Poltergeist));
             Assert.IsTrue(soul.Powers.Has(Power.Manifest));
             Assert.IsFalse(collector.Collect(5));
+            Vector3 respawnPosition = soul.transform.position;
+            Vector3 witchPosition = witch.transform.position;
+            MovePlayer(Vector3.MoveTowards(witchPosition, respawnPosition, 5f));
+            yield return null;
+            yield return null;
+            Assert.IsFalse(SafeZones.Contains(soul.transform.position));
+            Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
+            Assert.AreEqual(0f, witch.Decision.Speed);
+            Assert.IsFalse(witch.Chasing || witch.Decision.CatchUp);
+            Assert.Less(Vector3.Distance(witchPosition, witch.transform.position), 0.05f);
+            MovePlayer(respawnPosition);
             yield return new WaitForSeconds(8.2f);
             Assert.AreEqual(1, caught);
             Assert.AreEqual(Chapter.Return, witch.chapter);

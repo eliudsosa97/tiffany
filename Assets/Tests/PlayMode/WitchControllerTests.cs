@@ -757,6 +757,147 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator ReturnCatchUpReappearsOnNavMeshOutsideSafeZonesBeyondTheWarningAndOutOfView()
+        {
+            player.transform.position = Vector3.zero;
+            var view = new GameObject("Main Camera") { tag = "MainCamera" }.AddComponent<Camera>();
+            view.transform.SetParent(world.transform);
+            view.transform.SetPositionAndRotation(new Vector3(0f, 9f, -12f), Quaternion.LookRotation(new Vector3(0f, -9f, 26f)));
+            view.fieldOfView = 30f;
+            view.aspect = 16f / 9f;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            controller.BeginReturn();
+            Vector3 sideAhead = Quaternion.AngleAxis(60f, Vector3.up) * Vector3.forward * 14f;
+            SafeZones.Add(sideAhead, 3f);
+            var profile = controller.Profile.Copy();
+            profile.CatchUpDistance = 15f;
+            profile.CatchUpDelay = 0.2f;
+            controller.SetProfile(profile);
+            Assert.Greater(HorizontalDistanceToPlayer(), profile.CatchUpDistance);
+            Assert.IsTrue(InCameraView(view, Vector3.forward * profile.CatchUpReappearDistance), "El punto de adelante queda en cámara.");
+            Assert.IsFalse(InCameraView(view, sideAhead) || InCameraView(view, sideAhead + Vector3.up * 2.5f));
+
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: reaparece adelante");
+            yield return WaitForReappearance(3f, true);
+
+            Vector3 position = witch.transform.position;
+            Assert.IsTrue(NavMesh.SamplePosition(position, out _, 0.5f, NavMesh.AllAreas));
+            Assert.IsFalse(SafeZones.Contains(position));
+            Assert.Greater(HorizontalDistanceToPlayer(), controller.Profile.SprintTriggerDistance);
+            Assert.LessOrEqual(HorizontalDistanceToPlayer(), profile.CatchUpReappearMaxDistance + 3f);
+            Assert.Less(Vector3.Angle(Vector3.forward, Flat(position - player.transform.position)), 61f, "Reaparece adelante, no de lado.");
+            Assert.IsFalse(InCameraView(view, position));
+            Assert.IsFalse(InCameraView(view, position + Vector3.up * 2.5f));
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            yield return null;
+            Assert.IsTrue(agent.enabled && agent.isOnNavMesh);
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            Assert.AreEqual(controller.Profile.FollowSpeed, controller.Decision.Speed);
+            Assert.Less(HorizontalDistance(controller.Decision.MoveTarget, player.transform.position), 0.5f);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator ReturnCatchUpNeverReappearsAcrossARiverEvenWithAShortBridgeDetour()
+        {
+            RebuildGround((new Vector3(0f, -0.5f, -20f), new Vector3(80f, 1f, 40f)),
+                (new Vector3(0f, -0.5f, 24f), new Vector3(80f, 1f, 32f)),
+                (new Vector3(-8f, -0.5f, 4f), new Vector3(2f, 1f, 8f)));
+            player.transform.SetPositionAndRotation(new Vector3(-14f, 0f, -2f), Quaternion.Euler(0f, 30f, 0f));
+            Vector3 acrossTheRiver = player.transform.position + player.transform.forward * 14f;
+            Assert.IsTrue(NavMesh.SamplePosition(acrossTheRiver, out var across, 1f, NavMesh.AllAreas));
+            Assert.IsTrue(NavMesh.SamplePosition(player.transform.position, out var girl, 1f, NavMesh.AllAreas));
+            var bridgePath = new NavMeshPath();
+            Assert.IsTrue(NavMesh.CalculatePath(girl.position, across.position, NavMesh.AllAreas, bridgePath));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, bridgePath.status);
+            float length = 0f;
+            for (int i = 1; i < bridgePath.corners.Length; i++) length += Vector3.Distance(bridgePath.corners[i - 1], bridgePath.corners[i]);
+            Assert.Less(length, 1.6f * Vector3.Distance(girl.position, across.position), "El rodeo por el puente es corto.");
+            BeginFarReturn(new Vector3(-38f, 0f, -30f));
+
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: reaparece adelante");
+            yield return WaitForReappearance(3f, true);
+
+            Assert.Less(witch.transform.position.z, 0f, "Reaparece en la orilla de la niña.");
+            Assert.Greater(HorizontalDistanceToPlayer(), controller.Profile.SprintTriggerDistance);
+            Assert.IsFalse(NavMesh.Raycast(player.transform.position, witch.transform.position, out _, NavMesh.AllAreas));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator ReturnCatchUpDoesNotDriftToDistantNavMeshWhenNothingIsNearTheCandidates()
+        {
+            RebuildGround((new Vector3(0f, -0.5f, 0f), new Vector3(80f, 1f, 2f)));
+            player.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            BeginFarReturn(new Vector3(-35f, 0f, 0f));
+
+            yield return WaitForReappearance(1.5f, false);
+
+            Assert.Less(witch.transform.position.x, -25f, "Sin NavMesh a 3 m de un candidato no reaparece.");
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        private void BeginFarReturn(Vector3 witchPosition)
+        {
+            Physics.SyncTransforms();
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            controller.BeginReturn();
+            witch.transform.position = witchPosition;
+            var profile = controller.Profile.Copy();
+            profile.CatchUpDelay = 0.2f;
+            controller.SetProfile(profile);
+            Assert.Greater(HorizontalDistanceToPlayer(), profile.CatchUpDistance);
+        }
+
+        private IEnumerator WaitForReappearance(float timeout, bool expected)
+        {
+            Vector3 previous = witch.transform.position;
+            bool reappeared = false;
+            float deadline = Time.time + timeout;
+            while (!reappeared && Time.time < deadline)
+            {
+                yield return null;
+                reappeared = Vector3.Distance(previous, witch.transform.position) > 5f;
+                previous = witch.transform.position;
+            }
+            Assert.AreEqual(expected, reappeared);
+        }
+
+        private void RebuildGround(params (Vector3 center, Vector3 size)[] boxes)
+        {
+            ground.SetActive(false);
+            foreach (var (center, size) in boxes)
+            {
+                var box = new GameObject("Ground Piece");
+                box.transform.SetParent(world.transform);
+                box.transform.position = center;
+                box.AddComponent<BoxCollider>().size = size;
+            }
+            Physics.SyncTransforms();
+            surface.RemoveData();
+            Object.Destroy(surface.navMeshData);
+            surface.BuildNavMesh();
+        }
+
+        private static Vector3 Flat(Vector3 vector)
+        {
+            vector.y = 0f;
+            return vector;
+        }
+
+        private static bool InCameraView(Camera view, Vector3 position)
+        {
+            Vector3 v = view.WorldToViewportPoint(position);
+            return v.z > 0f && v.x >= 0f && v.x <= 1f && v.y >= 0f && v.y <= 1f;
+        }
+
+        private static float HorizontalDistance(Vector3 a, Vector3 b)
+        {
+            a.y = b.y;
+            return Vector3.Distance(a, b);
+        }
+
+        [UnityTest]
         public IEnumerator SprintStopsAtWallAndRecoversOnNavMesh()
         {
             witch.transform.position = Vector3.zero;

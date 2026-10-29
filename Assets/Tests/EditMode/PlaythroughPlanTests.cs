@@ -192,6 +192,48 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(5f, plan.Elapsed);
         }
 
+        [TestCase(PlaythroughMilestone.Memory1, false)]
+        [TestCase(PlaythroughMilestone.Road, true)]
+        [TestCase(PlaythroughMilestone.Manifest, false)]
+        public void CompletedRespawnRestartsOnlyTheCurrentDeadlineOnce(PlaythroughMilestone milestone, bool atRespawn)
+        {
+            var plan = new PlaythroughPlan(new[] { milestone }, timeout: 4f);
+            var observation = new PlaythroughObservation();
+            plan.Tick(2f, in observation);
+            observation.Respawning = true;
+            plan.Tick(1f, in observation);
+            Assert.AreEqual(3f, plan.MilestoneElapsed);
+            observation.Respawning = false;
+            observation.AtRespawn = atRespawn;
+            plan.Tick(1f, in observation);
+            Assert.IsFalse(plan.Finished);
+            Assert.AreEqual(0f, plan.MilestoneElapsed);
+            Assert.AreEqual(4f, plan.Elapsed);
+            Assert.AreEqual(milestone, plan.Current);
+            Assert.AreEqual(0, plan.CompletedCount);
+            plan.Tick(3.5f, in observation);
+            Assert.IsFalse(plan.Finished);
+            Assert.AreEqual(3.5f, plan.MilestoneElapsed);
+            plan.Tick(0.5f, in observation);
+            Assert.IsTrue(plan.Finished);
+            Assert.AreEqual(1, plan.ExitCode);
+            StringAssert.Contains("tiempo límite", plan.FailureReason);
+        }
+
+        [Test]
+        public void ReachingTheRespawnPointWithoutCaptureDoesNotRestartTheDeadline()
+        {
+            var plan = new PlaythroughPlan(timeout: 2f);
+            var observation = new PlaythroughObservation();
+            plan.Tick(1f, in observation);
+            observation.AtRespawn = true;
+            plan.Tick(1f, in observation);
+            Assert.IsTrue(plan.Finished);
+            Assert.AreEqual(2f, plan.MilestoneElapsed);
+            Assert.AreEqual(1, plan.ExitCode);
+            StringAssert.Contains("tiempo límite", plan.FailureReason);
+        }
+
         [Test]
         public void MovingLessThanOneMeterForThreeSecondsRequestsOneRepath()
         {

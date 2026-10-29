@@ -108,7 +108,7 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(collector.tyler.gameObject.activeSelf);
         }
 
-        [UnityTest]
+        [UnityTest, Timeout(600000)]
         public IEnumerator FullPlaythroughSolvesAllFourChallengesBeforeReturningHome()
         {
             var plan = new PlaythroughPlan();

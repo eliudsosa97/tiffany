@@ -86,6 +86,7 @@ namespace TiffanyGame.EditorTools
             BuildWitchVoice(playerLight.witch, tyler);
             BuildWitchAudio(playerLight.witch, player.transform);
             BuildTrailTension(route.GetComponent<WitchChapterTracker>(), playerLight.witch, tyler);
+            GroundLitterBuilder.Scatter(world);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
