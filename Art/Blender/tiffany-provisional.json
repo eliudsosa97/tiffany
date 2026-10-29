@@ -47,20 +47,43 @@
   ],
   "fps": 60,
   "clips": [
-    { "name": "Idle", "frames": 180, "loop": true, "key": 20 },
-    { "name": "Slow", "frames": 48, "loop": true, "speed": 1.1, "key": 8 },
-    { "name": "Walk", "frames": 30, "loop": true, "speed": 2.2, "key": 5 },
-    { "name": "Run", "frames": 24, "loop": true, "speed": 4.0, "key": 4 },
-    { "name": "Hide", "frames": 180, "loop": true, "key": 20 },
-    { "name": "CarryLight", "frames": 120, "loop": true, "key": 20, "armsOnly": true }
+    { "name": "Idle", "frames": 384, "loop": true, "key": 40 },
+    { "name": "Slow", "frames": 40, "loop": true, "speed": 1.1, "key": 8, "contacts": { "left": 0.0, "right": 0.5 } },
+    { "name": "Walk", "frames": 28, "loop": true, "speed": 2.2, "key": 5, "contacts": { "left": 0.0, "right": 0.5 } },
+    { "name": "Run", "frames": 24, "loop": true, "speed": 4.0, "key": 4, "contacts": { "left": 0.0, "right": 0.5 } },
+    { "name": "TurnLeft", "frames": 48, "loop": true, "turnSpeed": 90, "key": 10, "contacts": { "left": 0.0, "right": 0.5 } },
+    { "name": "TurnRight", "frames": 48, "loop": true, "turnSpeed": 90, "key": 10, "contacts": { "left": 0.0, "right": 0.5 } },
+    { "name": "Hide", "frames": 288, "loop": true, "key": 40 },
+    { "name": "CarryLight", "frames": 120, "loop": true, "key": 20, "armsOnly": true },
+    { "name": "Flash", "frames": 42, "loop": false, "key": 14, "armsOnly": true },
+    { "name": "Caught", "frames": 84, "loop": false, "key": 84 },
+    { "name": "Vanish", "frames": 180, "loop": true, "key": 40 }
   ],
   "gaits": {
-    "Slow": { "duty": 0.62, "lift": 0.035, "crouch": 0.13, "bob": 0.004, "lean": 22, "armSwing": 0.04 },
-    "Walk": { "duty": 0.52, "lift": 0.065, "crouch": 0.09, "bob": 0.008, "lean": 5, "armSwing": 0.1 },
-    "Run": { "duty": 0.34, "lift": 0.15, "crouch": 0.1, "bob": 0.014, "lean": 15, "armSwing": 0.14 }
+    "Slow": { "tuck": 0.05, "duty": 0.62, "lift": 0.04, "liftPeak": 0.35, "crouch": 0.05, "bob": 0.005, "low": 0.05, "sway": 0.012, "hipYaw": 4, "hipRoll": 2.5,
+              "lean": 20, "headPitch": 4, "width": 0.055, "reach": 0.07, "toeOut": 4, "heelStart": 0.6, "heelOff": 22, "toeOff": 35, "land": 16,
+              "armSwing": 6, "armBase": 22, "armLag": 0.04, "abduct": 10, "elbow": 100, "elbowSwing": 8, "inward": 14, "wrist": 10, "shrug": 12, "protract": 8 },
+    "Walk": { "tuck": 0.07, "duty": 0.52, "lift": 0.04, "liftPeak": 0.3, "crouch": 0.065, "bob": 0.008, "low": 0.02, "sway": 0.014, "hipYaw": 7, "hipRoll": 3,
+              "lean": 5, "headPitch": 3, "width": 0.05, "reach": 0.07, "toeOut": 5, "heelStart": 0.55, "heelOff": 22, "toeOff": 40, "land": -10,
+              "armSwing": 22, "armBase": 5, "armLag": 0.04, "abduct": 12, "elbow": 14, "elbowSwing": 22, "inward": 6, "wrist": 8, "shrug": 2, "protract": 0 },
+    "Run": { "tuck": 0.12, "duty": 0.34, "lift": 0.12, "liftPeak": 0.3, "crouch": 0.08, "bob": 0.022, "low": 0.17, "sway": 0.01, "hipYaw": 9, "hipRoll": 3,
+             "lean": 14, "headPitch": 2, "width": 0.045, "reach": 0.06, "toeOut": 3, "heelStart": 0.7, "heelOff": 30, "toeOff": 55, "land": -4,
+             "armSwing": 28, "armBase": 8, "armLag": 0.03, "abduct": 13, "elbow": 88, "elbowSwing": 22, "inward": 10, "wrist": 5, "shrug": 3, "protract": 2 },
+    "Turn": { "duty": 0.6, "width": 0.065, "reach": 0.07, "toeOut": 6, "lift": 0.04, "toeOff": 15, "crouch": 0.03, "bob": 0.006, "sway": 0.015,
+              "lead": 6, "look": 18 }
   },
-  "braidSway": {
-    "Idle": [0.8, 0.4], "Slow": [2.5, 1.5], "Walk": [4, 3], "Run": [6, 5], "Hide": [0.6, 0.3]
+  "poses": {
+    "Hide": { "back": -0.09, "drop": -0.31, "hips": -30, "spine": 38, "chest": 30, "head": 0, "width": 0.065, "toeOut": 4, "reach": 0.12,
+              "cross": 0.035, "front": 0.2, "over": 0.085 },
+    "Vanish": { "drop": -0.06, "hips": 4, "spine": 6, "chest": 10, "head": 20, "shrug": 14, "tremor": 0.5,
+                "wristL": [0.1, 0.87, 0.155], "wristR": [-0.1, 0.785, 0.165] },
+    "Caught": { "forward": 0.07, "drop": -0.34, "hips": 14, "spine": 14, "chest": 16, "head": 16, "shrug": 12, "ball": -0.08, "toe": 75,
+                "cross": 0.04, "shield": 0.16 }
+  },
+  "secondary": {
+    "settle": 2.0, "skirtMargin": 0.006, "skirtFloor": 0.01, "skirtMax": 1.6, "skirtIn": 0.5, "skirtLine": 0.6,
+    "skirt": { "hz": 2.0, "zeta": 0.45, "gravity": 0.7, "wind": 0.007, "side": 0.2, "open": 0.15 },
+    "braid": { "stiffness": [140, 70, 45], "damping": 2.5, "drag": 0.4, "gravity": 1.0, "follow": 0.35, "radius": 0.028 }
   },
   "body": {
     "head": { "center": [0, 1.068, 0.01], "radius": [0.104, 0.115, 0.097], "chin": 0.105, "jaw": 0.3, "cheek": 0.1, "rows": 14, "sides": 18 },
@@ -76,8 +99,8 @@
       {
         "name": "Base Layer", "defaultState": "Idle", "weight": 1.0, "writeDefaultValues": true,
         "states": [
-          { "name": "Idle", "clip": "Idle" },
-          { "name": "Walk", "blendTree": {
+          { "name": "Idle", "clip": "Idle", "blend": 0.25 },
+          { "name": "Walk", "blend": 0.2, "blendTree": {
             "name": "Locomotion", "normalizeSpeed": true,
             "children": [
               { "clip": "Slow", "threshold": 1.1 },
@@ -85,7 +108,11 @@
               { "clip": "Run", "threshold": 4.0 }
             ]
           } },
-          { "name": "Hide", "clip": "Hide" }
+          { "name": "TurnLeft", "clip": "TurnLeft", "blend": 0.15 },
+          { "name": "TurnRight", "clip": "TurnRight", "blend": 0.15 },
+          { "name": "Hide", "clip": "Hide", "blend": 0.3 },
+          { "name": "Caught", "clip": "Caught", "blend": 0.1 },
+          { "name": "Vanish", "clip": "Vanish", "blend": 0.2 }
         ]
       },
       {
@@ -94,7 +121,11 @@
           "path": "Assets/Art/Models/TiffanyArms.mask",
           "bones": ["Shoulder.L", "UpperArm.L", "LowerArm.L", "Hand.L", "Shoulder.R", "UpperArm.R", "LowerArm.R", "Hand.R"]
         },
-        "states": [{ "name": "Empty" }, { "name": "CarryLight", "clip": "CarryLight" }]
+        "states": [
+          { "name": "Empty", "blend": 0.2 },
+          { "name": "CarryLight", "clip": "CarryLight", "blend": 0.2 },
+          { "name": "Flash", "clip": "Flash", "blend": 0.1 }
+        ]
       }
     ]
   }
