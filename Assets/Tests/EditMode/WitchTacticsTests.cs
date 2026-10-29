@@ -256,6 +256,39 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(40f, Step(1f).MoveTarget.y, "El borde del siguiente claro usa la altura de vuelo de ese tramo del cerro.");
         }
 
+        [TestCase(WitchIntent.Ambush)]
+        [TestCase(WitchIntent.LastSeen)]
+        public void CandleLitOnTheDestinationMidLandingMovesTheTouchdownOutsideTheSafeZone(WitchIntent intent)
+        {
+            WitchDecision landing = BeginTargetedLanding(intent, point => SafeZones.PushOut(point, 1f));
+            Assert.AreEqual(intent, landing.Intent);
+            Vector3 destination = landing.MoveTarget;
+            Step(profile.LandingDuration * 0.5f);
+            int zone = SafeZones.Add(destination, 4f);
+            try
+            {
+                p.PlayerPosition = destination;
+                p.PlayerInSafeZone = true;
+                WitchDecision moved = Step(profile.LandingDuration * 0.5f);
+                Assert.AreEqual(WitchState.Landing, moved.State, "El descenso no termina dentro de la veladora recién encendida.");
+                Assert.IsFalse(SafeZones.Contains(moved.MoveTarget));
+                Assert.AreEqual(WitchState.Landing, Step(profile.LandingDuration - 0.01f).State);
+                Assert.AreEqual(moved.MoveTarget, Step(0f).MoveTarget);
+                Assert.AreEqual(WitchState.Stalking, Step(0.02f).State);
+            }
+            finally { SafeZones.Remove(zone); }
+        }
+
+        [Test]
+        public void CandleLitOnTheDestinationWithoutSafeGroundNearbyAbortsTheLanding()
+        {
+            WitchDecision landing = BeginTargetedLanding(WitchIntent.Ambush,
+                point => SafeZones.Count > 0 ? Vector3.positiveInfinity : point);
+            int zone = SafeZones.Add(landing.MoveTarget, 4f);
+            try { Assert.AreEqual(WitchState.TakingOff, Step(0f).State); }
+            finally { SafeZones.Remove(zone); }
+        }
+
         [TestCase(3f, 6f)]
         [TestCase(8f, 11f)]
         public void CandleWatchCirclesOutsideTheActualSafeRadius(float safeRadius, float watchRadius)
@@ -319,6 +352,44 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchState.Flying, Step(profile.TakeOffDuration).State);
             Ground();
             Assert.AreEqual(WitchIntent.None, Step(0f).Intent);
+        }
+
+        [Test]
+        public void RainDuringCandleWatchStillRetreatsOnFootAtTheLimitAndRegistersTheCooldown()
+        {
+            BeginCandleWatch(3f);
+            p.WitchPosition = Vector3.left * 6f;
+            p.Raining = true;
+            Assert.AreEqual(WitchIntent.None, Step(0f).Intent, "La lluvia interrumpe la ronda como cualquier percepción.");
+            Assert.AreEqual(WitchIntent.None, Step(profile.CandleWatchLimit - 0.01f).Intent);
+            WitchDecision retreat = Step(0.02f);
+            Assert.AreEqual(WitchIntent.CandleWatch, retreat.Intent);
+            Assert.AreEqual(WitchState.Stalking, retreat.State);
+            Assert.AreEqual(profile.StalkSpeed, retreat.Speed);
+            Assert.AreEqual(12f, Distance(retreat.MoveTarget, p.FamilyCandlePosition), 1e-4f);
+            p.WitchPosition = retreat.MoveTarget;
+            WitchDecision away = Step(0f);
+            Assert.AreEqual(WitchState.Stalking, away.State, "Con lluvia no despega: se queda a pie lejos de la veladora.");
+            Assert.AreEqual(WitchIntent.None, away.Intent);
+            p.Raining = false;
+            p.PlayerAtFamilyCandle = p.PlayerInSafeZone = false;
+            p.PlayerPosition = Vector3.left * 20f;
+            p.SeesPlayer = true;
+            Step(0f);
+            p.SeesPlayer = false;
+            p.PlayerAtFamilyCandle = p.PlayerInSafeZone = true;
+            p.PlayerPosition = Vector3.zero;
+            Assert.AreEqual(WitchIntent.None, Step(0f).Intent, "La retirada con lluvia registra el enfriamiento de esa veladora.");
+
+            SetUp();
+            BeginCandleWatch(3f);
+            p.WitchPosition = Vector3.left * 6f;
+            WitchDecision leaving = Step(profile.CandleWatchLimit);
+            p.Raining = true;
+            WitchDecision kept = Step(0f);
+            Assert.AreEqual(WitchIntent.CandleWatch, kept.Intent, "La lluvia no detiene una retirada ya empezada.");
+            Assert.AreEqual(leaving.MoveTarget, kept.MoveTarget);
+            Assert.AreEqual(profile.StalkSpeed, kept.Speed);
         }
 
         [Test]
@@ -708,6 +779,29 @@ namespace TiffanyGame.Tests
             p.PlayerPosition = Vector3.zero;
             p.NextClearingPosition = Vector3.right * 50f;
             p.WitchPosition = Vector3.up * 14f;
+        }
+
+        private WitchDecision BeginTargetedLanding(WitchIntent intent, System.Func<Vector3, Vector3> resolve)
+        {
+            if (intent == WitchIntent.Ambush) PrepareAmbush();
+            else
+            {
+                profile.LastSeenEnabled = true;
+                p.WitchPosition = Vector3.up * 14f;
+            }
+            brain = new WitchBrain(profile, null, new FixedRandom(0.5), resolve);
+            if (intent == WitchIntent.LastSeen)
+            {
+                p.SeesPlayerLight = true;
+                p.PlayerLightPosition = Vector3.right * 20f;
+                Step(0f);
+                p.SeesPlayerLight = false;
+                p.PlayerLightPosition = p.PlayerPosition = Vector3.right * 80f;
+            }
+            p.WitchPosition = Step(intent == WitchIntent.Ambush ? 1f : 0f).MoveTarget;
+            WitchDecision landing = Step(0f);
+            Assert.AreEqual(WitchState.Landing, landing.State);
+            return landing;
         }
 
         private void BeginCandleWatch(float safeRadius)

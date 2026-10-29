@@ -443,6 +443,26 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator CandleLitUnderALastSeenLandingMovesTheTouchdownOutside()
+        {
+            LightPlayerAt(new Vector3(18f, 0f, 0f));
+            yield return new WaitForSeconds(0.3f);
+            controller.playerLightOn = false;
+            player.transform.position = new Vector3(-30f, 0f, -30f);
+            yield return WaitForState(WitchState.Landing, 6f);
+            Assert.AreEqual(WitchIntent.LastSeen, controller.Decision.Intent);
+            Vector3 destination = controller.Decision.MoveTarget;
+            yield return new WaitForSeconds(controller.Profile.LandingDuration * 0.5f);
+            Assert.AreEqual(WitchState.Landing, controller.Decision.State);
+            SafeZones.Add(destination, 4f);
+            player.transform.position = destination;
+
+            yield return WaitForState(WitchState.Stalking, controller.Profile.LandingDuration * 2f + 1f);
+
+            Assert.IsFalse(SafeZones.Contains(witch.transform.position));
+        }
+
+        [UnityTest]
         public IEnumerator StalkingClosesHorizontalDistanceOnNavMesh()
         {
             TurnOnPlayerLight();

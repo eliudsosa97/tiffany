@@ -16,13 +16,17 @@ namespace TiffanyGame
         private float angle;
         private float retreatTime;
         private bool retreating;
+        private bool active;
         private int cooldownSlot;
+
+        public bool Retreating => active && retreating;
 
         public void Observe(float dt, in WitchPerception p)
         {
             for (int i = 0; i < cooldowns.Length; i++) cooldowns[i] = Mathf.Max(0f, cooldowns[i] - dt);
             if (!p.PlayerAtFamilyCandle)
             {
+                active = false;
                 inside = false;
                 insideTime = 0f;
                 return;
@@ -34,6 +38,9 @@ namespace TiffanyGame
         }
 
         public bool Matches(in WitchPerception p) => p.PlayerAtFamilyCandle && center == p.FamilyCandlePosition;
+
+        public bool Due(in WitchPerception p, WitchProfile profile) =>
+            active && !retreating && Matches(in p) && insideTime >= profile.CandleWatchLimit;
 
         public bool TryBegin(in WitchPerception p, WitchProfile profile, Func<Vector3, Vector3> resolve)
         {
@@ -51,12 +58,20 @@ namespace TiffanyGame
             angle = Mathf.Atan2(direction.z, direction.x);
             if (!ResolveCirclePoint(resolve, p.FamilyCandleRadius, profile)) return false;
             cooldownSlot = available;
+            active = true;
             retreating = false;
             retreatTime = 0f;
             return true;
         }
 
         public bool Tick(float dt, in WitchPerception p, WitchProfile profile,
+            Func<Vector3, Vector3> resolve, out Vector3 destination)
+        {
+            active = Step(dt, in p, profile, resolve, out destination);
+            return active;
+        }
+
+        private bool Step(float dt, in WitchPerception p, WitchProfile profile,
             Func<Vector3, Vector3> resolve, out Vector3 destination)
         {
             destination = target;

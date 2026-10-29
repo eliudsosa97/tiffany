@@ -48,6 +48,7 @@ namespace TiffanyGame
         private float stateTime;
         private Vector3 entryPosition;
         private Vector3 verticalTarget;
+        private bool landingOnTarget;
         private Vector3 lastDestination;
         private bool hasDestination;
         private float baseFireIntensity;
@@ -225,7 +226,8 @@ namespace TiffanyGame
             stateTime += dt;
             if (Decision.State != previousState)
             {
-                if (previousState == WitchState.Landing) transform.position = verticalTarget;
+                if (previousState == WitchState.Landing && Decision.State == WitchState.Stalking)
+                    transform.position = verticalTarget;
                 EnterState();
             }
             if (Decision.InspectingHide && !wasInspectingHide)
@@ -240,9 +242,11 @@ namespace TiffanyGame
         {
             entryPosition = transform.position;
             stateTime = 0f;
+            landingOnTarget = Decision.State == WitchState.Landing
+                && (Decision.Intent == WitchIntent.Ambush || Decision.Intent == WitchIntent.LastSeen);
             if (Decision.State == WitchState.Landing)
             {
-                if (Decision.Intent == WitchIntent.Ambush || Decision.Intent == WitchIntent.LastSeen)
+                if (landingOnTarget)
                     verticalTarget = Decision.MoveTarget;
                 else
                 {
@@ -274,6 +278,12 @@ namespace TiffanyGame
                     break;
                 case WitchState.Landing:
                     agent.enabled = false;
+                    if (landingOnTarget && Decision.MoveTarget != verticalTarget)
+                    {
+                        entryPosition = transform.position;
+                        verticalTarget = Decision.MoveTarget;
+                        stateTime = 0f;
+                    }
                     transform.position = WitchMotion.Vertical(entryPosition, verticalTarget, stateTime, profile.LandingDuration);
                     break;
                 case WitchState.TakingOff:

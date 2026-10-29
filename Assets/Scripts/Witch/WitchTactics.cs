@@ -14,6 +14,7 @@ namespace TiffanyGame
         private readonly Func<Vector3, Vector3> resolve;
         private bool perceived;
         private bool blocked;
+        private bool onlyRain;
 
         public WitchIntent Intent { get; private set; }
         public bool Investigating => Intent == WitchIntent.Search || Intent == WitchIntent.LastSeen || memory.Pending;
@@ -34,6 +35,8 @@ namespace TiffanyGame
             perceived = seenHiding || noiseHeard
                 || (trackable && (p.SeesPlayer || p.SeesPlayerLight || (grounded && p.SmellsPlayer)));
             blocked = p.Raining || p.PlayerVanished || p.Flashed;
+            onlyRain = p.Raining && !p.PlayerVanished && !p.Flashed;
+            bool rainRetreat = onlyRain && Intent == WitchIntent.CandleWatch && candle.Retreating;
             bool safeInterrupt = p.PlayerInSafeZone && (Intent != WitchIntent.CandleWatch || !candle.Matches(in p));
             bool candleExit = Intent == WitchIntent.CandleWatch && !candle.Matches(in p);
             bool disabled = (Intent == WitchIntent.Search && !profile.SearchEnabled)
@@ -41,7 +44,7 @@ namespace TiffanyGame
                 || (Intent == WitchIntent.Ambush && !profile.AmbushEnabled)
                 || (Intent == WitchIntent.CandleWatch && !profile.CandleWatchEnabled)
                 || (Intent == WitchIntent.BarkLure && !profile.BarkLureEnabled);
-            if (!perceived && !blocked && !safeInterrupt && !candleExit && !disabled) return false;
+            if (!perceived && (!blocked || rainRetreat) && !safeInterrupt && !candleExit && !disabled) return false;
             bool interrupted = Intent != WitchIntent.None;
             Cancel();
             memory.Cancel();
@@ -65,9 +68,13 @@ namespace TiffanyGame
             WitchState state, bool idle, bool chasing, out WitchDecision decision)
         {
             decision = default;
-            if (blocked || perceived || (state != WitchState.Flying && state != WitchState.Stalking)) return false;
+            if (perceived || (state != WitchState.Flying && state != WitchState.Stalking)) return false;
             bool grounded = state == WitchState.Stalking;
-            if (p.PlayerInSafeZone)
+            if (blocked)
+            {
+                if (!RetreatsInRain(in p, profile, grounded)) return false;
+            }
+            else if (p.PlayerInSafeZone)
             {
                 if (!grounded || !profile.CandleWatchEnabled || !p.PlayerAtFamilyCandle) return false;
                 if (Intent != WitchIntent.CandleWatch)
@@ -144,6 +151,16 @@ namespace TiffanyGame
             }
         }
 
+        // Con lluvia no despega: al vencer el límite se aleja a pie para no dejarla atrapada en la veladora.
+        private bool RetreatsInRain(in WitchPerception p, WitchProfile profile, bool grounded)
+        {
+            if (!onlyRain || !grounded || !profile.CandleWatchEnabled) return false;
+            if (Intent == WitchIntent.CandleWatch) return true;
+            if (!candle.Due(in p, profile)) return false;
+            Intent = WitchIntent.CandleWatch;
+            return true;
+        }
+
         private void BeginSearch(Vector3 center)
         {
             search.Begin(center);
@@ -169,8 +186,9 @@ namespace TiffanyGame
         private bool Finish(in WitchPerception p, WitchProfile profile, out WitchDecision decision)
         {
             memory.Forget();
-            if (profile.GroundChase) Cancel();
-            decision = Move(profile.GroundChase ? WitchState.Stalking : WitchState.TakingOff, p.WitchPosition, 0f);
+            bool onFoot = profile.GroundChase || p.Raining;
+            if (onFoot) Cancel();
+            decision = Move(onFoot ? WitchState.Stalking : WitchState.TakingOff, p.WitchPosition, 0f);
             return true;
         }
 

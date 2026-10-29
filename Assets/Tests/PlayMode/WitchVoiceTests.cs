@@ -87,6 +87,8 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator ForestLureReusesBarksAndStopsAudioWhenInterrupted()
         {
+            // Un cuadro corre entre SetUp y la prueba: el reloj del ladrido ya tomó la demora del perfil del capítulo.
+            voice.witch.ResetBrain();
             voice.witch.Profile.BarkLureMinDelay = voice.witch.Profile.BarkLureMaxDelay = 0f;
             voice.witch.Profile.BarkLureTravelLimit = 0f;
             voice.witch.raining = true;

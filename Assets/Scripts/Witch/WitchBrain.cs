@@ -42,6 +42,7 @@ namespace TiffanyGame
         private Vector3 roamTarget;
         private Vector3 target;
         private Vector3 verticalTarget;
+        private bool landingOnTarget;
         private Vector3 sprintEnd;
 
         public bool Chasing => chasing;
@@ -237,6 +238,18 @@ namespace TiffanyGame
                     AdvanceFlying(in p, newLight);
                     break;
                 case WitchState.Landing:
+                    if (landingOnTarget && SafeZones.Contains(verticalTarget))
+                    {
+                        if (!WitchTargets.TryResolve(resolveGroundTarget, verticalTarget, out var safeTarget)
+                            || SafeZones.Contains(safeTarget))
+                        {
+                            hasTarget = false;
+                            Enter(WitchState.TakingOff, p.WitchPosition);
+                            break;
+                        }
+                        verticalTarget = safeTarget;
+                        stateTime = 0f;
+                    }
                     if (stateTime >= profile.LandingDuration)
                     {
                         timeWithoutPerception = 0f;
@@ -459,6 +472,7 @@ namespace TiffanyGame
             state = next;
             stateTime = 0f;
             verticalTarget = position;
+            landingOnTarget = false;
             if (next == WitchState.Stalking && hasTarget
                 && !WitchTargets.TryResolve(resolveGroundTarget, target, out target)) hasTarget = false;
             if (next == WitchState.WindUp) chasing = warned = true;
@@ -480,7 +494,11 @@ namespace TiffanyGame
                 return false;
             }
             if (tacticDecision.State != state) Enter(tacticDecision.State, p.WitchPosition);
-            if (state == WitchState.Landing) verticalTarget = tacticDecision.MoveTarget;
+            if (state == WitchState.Landing)
+            {
+                verticalTarget = tacticDecision.MoveTarget;
+                landingOnTarget = true;
+            }
             if (state == WitchState.Flying)
                 tacticDecision.MoveTarget.y = WitchMotion.CruiseHeight(route, tacticDecision.MoveTarget, p.WitchPosition.y)
                     + (route.Length > 0 ? profile.FlightHeightOffset : 0f);
