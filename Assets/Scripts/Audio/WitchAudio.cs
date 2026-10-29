@@ -22,7 +22,9 @@ namespace TiffanyGame
             }
             Vector3 offset = player != null ? player.position - transform.position : Vector3.zero;
             offset.y = 0f;
-            rules.Tick(Time.deltaTime, witch.Decision, player != null ? offset.magnitude : float.PositiveInfinity);
+            WitchDecision decision = witch.Decision;
+            decision.Speed = witch.EffectiveSpeed;
+            rules.Tick(Time.deltaTime, decision, player != null ? offset.magnitude : float.PositiveInfinity);
             UpdateLoop(fireLoop, rules.FireVolume);
             UpdateLoop(breathLoop, rules.BreathVolume);
             paused = false;

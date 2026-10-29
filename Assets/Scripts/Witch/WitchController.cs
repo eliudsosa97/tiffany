@@ -29,13 +29,19 @@ namespace TiffanyGame
         public bool hearingMuted;
 
         public WitchDecision Decision { get; private set; }
+        public float EffectiveSpeed => Decision.Speed * jerk.SpeedFactor;
+        public WitchPerception Perception { get; private set; }
+        public Vector3? NextClearingOverride { get; set; }
         public WitchProfile Profile => profile;
+        public bool Chasing => brain != null && brain.Chasing;
         public event Action Caught;
 
         private NavMeshAgent agent;
         private WitchProfile profile;
         private WitchSenses witchSenses;
         private WitchBrain brain;
+        private WitchChapterTracker chapterTracker;
+        private RespawnPoint respawn;
         private Vector3[] hidePoints;
         private RaycastHit[] hits;
         private Action<StepNoise> noiseHandler;
@@ -43,6 +49,7 @@ namespace TiffanyGame
         private float stateTime;
         private Vector3 entryPosition;
         private Vector3 verticalTarget;
+        private bool landingOnTarget;
         private Vector3 lastDestination;
         private bool hasDestination;
         private float baseFireIntensity;
@@ -54,6 +61,11 @@ namespace TiffanyGame
         private bool hasAnimationState;
         private NavMeshPath chasePath;
         private readonly GroundChasePlacement.Candidate[] chaseCandidates = new GroundChasePlacement.Candidate[8];
+        private readonly WitchJerk jerk = new WitchJerk(Environment.TickCount);
+        private Vector3 figurePosition;
+        private Quaternion figureRotation = Quaternion.identity;
+        private bool trembling;
+        private const float TrembleOffset = 0.05f, TrembleAngle = 5f;
         private static readonly int SpeedHash = Animator.StringToHash("Speed");
         private static readonly int IdleHash = Animator.StringToHash("Idle");
         private static readonly int StalkingHash = Animator.StringToHash(nameof(WitchState.Stalking));
@@ -70,14 +82,24 @@ namespace TiffanyGame
             agent = GetComponent<NavMeshAgent>();
             hits = new RaycastHit[32];
             noiseHandler = Hear;
-            if (figure != null) animator = figure.GetComponent<Animator>();
+            if (figure != null)
+            {
+                animator = figure.GetComponent<Animator>();
+                figure.transform.GetLocalPositionAndRotation(out figurePosition, out figureRotation);
+            }
             if (fireLight != null) baseFireIntensity = fireLight.intensity;
             InitializeBrain();
         }
 
         private void OnEnable() => NoiseBus.Published += noiseHandler;
 
-        private void OnDisable() => NoiseBus.Published -= noiseHandler;
+        private void OnDisable()
+        {
+            NoiseBus.Published -= noiseHandler;
+            if (animator != null) animator.speed = 1f;
+            if (figure != null) figure.transform.SetLocalPositionAndRotation(figurePosition, figureRotation);
+            trembling = false;
+        }
 
         private void Start()
         {
@@ -85,9 +107,13 @@ namespace TiffanyGame
             hidePoints = new Vector3[volumes.Length];
             for (int i = 0; i < volumes.Length; i++) hidePoints[i] = volumes[i].HidePoint;
             witchSenses = new WitchSenses(senses, hidePoints);
-            if (player != null) return;
-            var found = GameObject.FindGameObjectWithTag("Player");
-            if (found != null) player = found.transform;
+            if (player == null)
+            {
+                var found = GameObject.FindGameObjectWithTag("Player");
+                if (found != null) player = found.transform;
+            }
+            chapterTracker = FindAnyObjectByType<WitchChapterTracker>();
+            if (player != null && player.TryGetComponent<PlayerSoul>(out var soul)) respawn = soul.Respawn;
         }
 
         public void Flash() => flashed = true;
@@ -124,9 +150,14 @@ namespace TiffanyGame
                 BeginReturn();
                 return;
             }
-            profile = WitchProfiles.For(next);
-            brain.SetProfile(profile);
+            SetProfile(WitchProfiles.For(next));
             chapter = next;
+        }
+
+        public void SetProfile(WitchProfile next)
+        {
+            profile = next ?? throw new ArgumentNullException(nameof(next));
+            brain.SetProfile(profile);
         }
 
         private void InitializeBrain()
@@ -147,16 +178,22 @@ namespace TiffanyGame
 
         private void PlaceForGroundChase()
         {
-            if (player == null || !NavMeshPlacement.TrySample(player.position, 6f, agent.areaMask, out var target)) return;
+            if (player == null || !NavMeshPlacement.TrySample(player.position, 6f, agent.areaMask, out var target)
+                || TryPlaceForGroundChase(profile.ReturnPlacementDistance, target.position)) return;
+            TryPlaceForGroundChase(12f, target.position);
+        }
+
+        private bool TryPlaceForGroundChase(float distance, Vector3 target)
+        {
             chasePath ??= new NavMeshPath();
             int count = 0;
             for (int i = 0; i < chaseCandidates.Length; i++)
             {
-                Vector3 offset = Quaternion.AngleAxis(i * 45f, Vector3.up) * -player.forward * 12f;
+                Vector3 offset = Quaternion.AngleAxis(i * 45f, Vector3.up) * -player.forward * distance;
                 if (!SafeZones.TryPushOut(player.position + offset, landingMargin, out var entry)
                     || !NavMeshPlacement.TrySample(entry, 6f, agent.areaMask, out var hit)
                     || SafeZones.Contains(hit.position)) continue;
-                var status = NavMesh.CalculatePath(hit.position, target.position, agent.areaMask, chasePath)
+                var status = NavMesh.CalculatePath(hit.position, target, agent.areaMask, chasePath)
                     ? chasePath.status : NavMeshPathStatus.PathInvalid;
                 float length = 0f;
                 var corners = chasePath.corners;
@@ -164,7 +201,9 @@ namespace TiffanyGame
                 chaseCandidates[count++] = new GroundChasePlacement.Candidate { Position = hit.position, Status = status, PathLength = length };
             }
             int chosen = GroundChasePlacement.Choose(chaseCandidates, count, player.position, profile.SprintTriggerDistance);
-            if (chosen >= 0) transform.position = chaseCandidates[chosen].Position;
+            if (chosen < 0) return false;
+            transform.position = chaseCandidates[chosen].Position;
+            return true;
         }
 
         private void Hear(StepNoise noise) => witchSenses.Hear(in noise, transform.position);
@@ -201,20 +240,32 @@ namespace TiffanyGame
                 PlayerVanished = playerVanished,
                 Flashed = flashThisFrame,
                 Raining = raining,
-                HearingMuted = hearingMuted
+                HearingMuted = hearingMuted,
+                PlayerForward = player.forward,
+                HasNextClearing = NextClearingOverride.HasValue || (chapterTracker != null && chapterTracker.HasNextClearing),
+                NextClearingPosition = NextClearingOverride ?? (chapterTracker != null ? chapterTracker.NextClearingPosition : Vector3.zero),
+                HasFamilyCandle = respawn != null && respawn.HasFamilyCandle,
+                FamilyCandlePosition = respawn != null ? respawn.Position : Vector3.zero,
+                FamilyCandleRadius = respawn != null ? respawn.FamilyCandleRadius : 0f
             };
             float dt = Time.deltaTime;
             WitchState previousState = Decision.State;
+            WitchIntent previousIntent = Decision.Intent;
             bool wasInspectingHide = Decision.InspectingHide;
-            Decision = brain.Tick(dt, witchSenses.Sense(in inputs));
+            Perception = witchSenses.Sense(in inputs);
+            Decision = brain.Tick(dt, Perception);
             stateTime += dt;
             if (Decision.State != previousState)
             {
-                if (previousState == WitchState.Landing) transform.position = verticalTarget;
+                if (previousState == WitchState.Landing && Decision.State == WitchState.Stalking)
+                    transform.position = verticalTarget;
                 EnterState();
             }
             if (Decision.InspectingHide && !wasInspectingHide)
                 Debug.Log($"{GameInfo.LogPrefix} Bruja: revisa escondite en {Decision.MoveTarget}");
+            jerk.Tick(dt, Decision);
+            if (Decision.Intent != previousIntent)
+                Debug.Log($"{GameInfo.LogPrefix} Bruja: {IntentDescription(Decision.Intent)}");
             ApplyMovement(dt);
             ApplyView(position, dt);
         }
@@ -223,11 +274,18 @@ namespace TiffanyGame
         {
             entryPosition = transform.position;
             stateTime = 0f;
+            landingOnTarget = Decision.State == WitchState.Landing
+                && (Decision.Intent == WitchIntent.Ambush || Decision.Intent == WitchIntent.LastSeen);
             if (Decision.State == WitchState.Landing)
             {
-                verticalTarget = GroundPosition(SafeZones.PushOut(entryPosition, landingMargin));
-                if (NavMeshPlacement.TrySample(verticalTarget, 6f, agent.areaMask, out var hit))
-                    verticalTarget = hit.position;
+                if (landingOnTarget)
+                    verticalTarget = Decision.MoveTarget;
+                else
+                {
+                    verticalTarget = GroundPosition(SafeZones.PushOut(entryPosition, landingMargin));
+                    if (NavMeshPlacement.TrySample(verticalTarget, 6f, agent.areaMask, out var hit)
+                        && !SafeZones.Contains(hit.position)) verticalTarget = hit.position;
+                }
             }
             else if (Decision.State == WitchState.TakingOff)
             {
@@ -252,6 +310,12 @@ namespace TiffanyGame
                     break;
                 case WitchState.Landing:
                     agent.enabled = false;
+                    if (landingOnTarget && Decision.MoveTarget != verticalTarget)
+                    {
+                        entryPosition = transform.position;
+                        verticalTarget = Decision.MoveTarget;
+                        stateTime = 0f;
+                    }
                     transform.position = WitchMotion.Vertical(entryPosition, verticalTarget, stateTime, profile.LandingDuration);
                     break;
                 case WitchState.TakingOff:
@@ -294,15 +358,30 @@ namespace TiffanyGame
             if (SafeZones.TryPushOut(position, landingMargin, out var destination)
                 && NavMeshPlacement.TrySample(destination, 6f, agent.areaMask, out var hit)
                 && !SafeZones.Contains(hit.position)) return hit.position;
-            return transform.position;
+            return Vector3.positiveInfinity;
+        }
+
+        private static string IntentDescription(WitchIntent intent)
+        {
+            return intent switch
+            {
+                WitchIntent.Search => "busca en espiral",
+                WitchIntent.Ambush => "se adelanta al siguiente claro",
+                WitchIntent.CandleWatch => "ronda la veladora",
+                WitchIntent.BarkLure => "prepara el ladrido desde el bosque",
+                WitchIntent.LastSeen => "va al último punto visto",
+                _ => "retoma su conducta habitual"
+            };
         }
 
         private void Stalk()
         {
             if (!EnableAgent()) return;
-            agent.isStopped = Decision.Speed <= 0f;
-            if (agent.isStopped) return;
-            agent.speed = Decision.Speed;
+            float speed = EffectiveSpeed;
+            if (speed <= 0f && !agent.isStopped) agent.velocity = Vector3.zero;
+            agent.isStopped = speed <= 0f;
+            if (Decision.Speed <= 0f) return;
+            if (!agent.isStopped) agent.speed = speed;
             Vector3 destination = Decision.MoveTarget;
             if (!hasDestination || WitchMotion.ShouldRepath(lastDestination, destination, repathThreshold))
             {
@@ -310,6 +389,10 @@ namespace TiffanyGame
                 lastDestination = destination;
                 hasDestination = true;
             }
+            if (agent.isStopped || !jerk.PhaseStarted) return;
+            Vector3 direction = (agent.hasPath ? agent.steeringTarget : destination) - transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.0001f) agent.velocity = direction.normalized * speed;
         }
 
         private void Sprint(float dt)
@@ -361,9 +444,24 @@ namespace TiffanyGame
             Vector3 velocity = agent.enabled && agent.isOnNavMesh ? agent.velocity
                 : Decision.State == WitchState.Sprinting && dt > 0f ? (transform.position - previousPosition) / dt : Vector3.zero;
             velocity.y = 0f;
-            ApplyAnimation(Decision.State, velocity.magnitude);
+            bool frozen = Decision.State == WitchState.Stalking
+                && (jerk.Phase == WitchJerkPhase.Still || jerk.Phase == WitchJerkPhase.Tremble);
+            ApplyAnimation(Decision.State, frozen ? Decision.Speed : velocity.magnitude);
+            ApplyTremble();
             if (fireLight != null && fireLight.enabled)
                 fireLight.intensity = WitchPoses.FireIntensity(baseFireIntensity, FireHeightAboveGround(), fireFullHeight);
+        }
+
+        private void ApplyTremble()
+        {
+            float amount = jerk.Tremble;
+            if (figure == null || (amount <= 0f && !trembling)) return;
+            trembling = amount > 0f;
+            float t = Time.time;
+            Vector3 offset = new Vector3(Mathf.Sin(t * 83f), 0f, Mathf.Sin(t * 71f + 1.7f)) * (amount * TrembleOffset);
+            Quaternion shake = Quaternion.Euler(Mathf.Sin(t * 97f + 0.5f) * amount * TrembleAngle,
+                Mathf.Sin(t * 61f) * amount * TrembleAngle * 1.5f, Mathf.Sin(t * 89f + 2.3f) * amount * TrembleAngle);
+            figure.transform.SetLocalPositionAndRotation(figurePosition + offset, figureRotation * shake);
         }
 
         public void ShowPose(WitchState state, bool fireLit)
@@ -403,6 +501,7 @@ namespace TiffanyGame
                 hasAnimationState = false;
                 return;
             }
+            animator.speed = immediate ? 1f : jerk.AnimatorSpeed;
             animator.SetFloat(SpeedHash, speed);
             if (!immediate && hasAnimationState && lastAnimationState == state) return;
             int hash = state switch

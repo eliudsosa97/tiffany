@@ -10,11 +10,14 @@ namespace TiffanyGame
     {
         PlaythroughScene scene;
         PlaythroughNavigation navigation;
+        WitchController witch;
+        WitchTally witchTally;
         bool quitOnFinish, reported;
         int selected = -1;
         int currentClearing = -1;
         Bounds[] clearingBounds;
         string[] clearingLabels;
+        string[] clearingNames = Array.Empty<string>();
         float nextClearingCheck;
         string earlyError;
         static string startupError;
@@ -97,6 +100,8 @@ namespace TiffanyGame
                 scene.Prepare(Plan, LogMilestone);
                 navigation = new PlaythroughNavigation();
                 CacheClearings();
+                witch = FindAnyObjectByType<WitchController>();
+                witchTally = new WitchTally(clearingNames.Length);
             }
             catch (Exception exception) { FailException(exception); }
         }
@@ -125,6 +130,14 @@ namespace TiffanyGame
             int missingCount = Plan.MissingContent.Count;
             var command = Plan.Tick(Time.unscaledDeltaTime, in observation);
             LogClearing();
+            if (witch != null)
+            {
+                var events = witchTally.Observe(currentClearing, witch.Decision.State, witch.Chasing);
+                if ((events & WitchTallyEvent.Suspicion) != 0) LogMilestone("bruja: sospecha");
+                if ((events & WitchTallyEvent.Chase) != 0) LogMilestone("bruja: caza");
+                if ((events & WitchTallyEvent.Sprint) != 0) LogMilestone("bruja: embestida");
+                if ((events & WitchTallyEvent.Catch) != 0) LogMilestone("bruja: atrapada");
+            }
             if (Plan.MissingContent.Count > missingCount) LogMilestone("faltante: " + Plan.MissingContent[missingCount]);
             if (Plan.CompletedCount != selected)
             {
@@ -156,8 +169,13 @@ namespace TiffanyGame
             if (tracker == null) return;
             clearingBounds = tracker.ClearingBounds;
             clearingLabels = new string[tracker.clearings.Length];
+            clearingNames = new string[tracker.clearings.Length];
             for (int i = 0; i < clearingLabels.Length; i++)
-                if (tracker.clearings[i] != null) clearingLabels[i] = "claro: " + tracker.clearings[i].name;
+            {
+                if (tracker.clearings[i] == null) continue;
+                clearingNames[i] = tracker.clearings[i].name;
+                clearingLabels[i] = "claro: " + clearingNames[i];
+            }
         }
 
         void LogClearing()
@@ -200,6 +218,11 @@ namespace TiffanyGame
             if (reported) return;
             reported = true;
             NeutralInput();
+            if (witchTally != null)
+            {
+                Debug.Log($"{GameInfo.LogPrefix} Bruja por claro:");
+                foreach (string line in witchTally.SummaryLines(clearingNames)) Debug.Log($"{GameInfo.LogPrefix} {line}");
+            }
             Debug.Log(Plan.ExitCode switch
             {
                 0 => string.Format(CultureInfo.InvariantCulture, "{0} Partida completa en {1:0.0}s", GameInfo.LogPrefix, Plan.Elapsed),

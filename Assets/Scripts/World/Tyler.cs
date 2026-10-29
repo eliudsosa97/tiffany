@@ -13,6 +13,7 @@ namespace TiffanyGame
         private float mimicCooldown;
 
         public TylerReaction Reaction { get; private set; }
+        public bool GrowlingAtForest { get; private set; }
 
         public TylerReaction Tick(float dt, in TylerInputs inputs)
         {
@@ -25,11 +26,14 @@ namespace TiffanyGame
             bool validWitch = inputs.WitchDistance >= 0f && !float.IsInfinity(inputs.WitchDistance);
             mimicRemaining = System.Math.Max(0f, mimicRemaining - dt);
             mimicCooldown = System.Math.Max(0f, mimicCooldown - dt);
-            if (inputs.HeardMimic && validWitch && inputs.WitchDistance < WhineRadius && mimicCooldown <= 0f)
+            if ((inputs.HeardForest || (inputs.HeardMimic && validWitch && inputs.WitchDistance < WhineRadius))
+                && mimicCooldown <= 0f)
             {
                 mimicRemaining = MimicDuration;
                 mimicCooldown = MimicInterval;
+                GrowlingAtForest = inputs.HeardForest;
             }
+            if (mimicRemaining <= 0f) GrowlingAtForest = false;
             if (mimicRemaining > 0f
                 || (validWitch && (inputs.WitchForm == WitchForm.Grounded || inputs.WitchSuspicious)
                     && inputs.WitchDistance < GrowlRadius))

@@ -5,10 +5,12 @@ using UnityEngine.AI;
 namespace TiffanyGame
 {
     [DefaultExecutionOrder(-900)]
-    public sealed class WitchDemo : MonoBehaviour
+    public sealed partial class WitchDemo : MonoBehaviour
     {
         public const float NothingDuration = 24f;
         public bool chase;
+        public bool stalk;
+        public string mode;
         FollowCamera follow;
         Camera view;
         Storm storm;
@@ -25,12 +27,15 @@ namespace TiffanyGame
             var args = System.Environment.GetCommandLineArgs();
             int index = System.Array.IndexOf(args, "-witchdemo");
             if (index < 0) return;
-            if (index + 1 >= args.Length || (args[index + 1] != "chase" && args[index + 1] != "nothing"))
+            if (index + 1 >= args.Length || (!IsMode(args[index + 1]) && args[index + 1] != "stalk"))
             {
-                Debug.LogError($"{GameInfo.LogPrefix} -witchdemo requiere chase o nothing.");
+                Debug.LogError($"{GameInfo.LogPrefix} -witchdemo requiere chase, nothing, stalk, search, ambush, candle, bark o lightsoff.");
                 return;
             }
-            new GameObject("WitchDemo").AddComponent<WitchDemo>().chase = args[index + 1] == "chase";
+            var demo = new GameObject("WitchDemo").AddComponent<WitchDemo>();
+            demo.chase = args[index + 1] == "chase";
+            demo.stalk = args[index + 1] == "stalk";
+            if (!demo.chase && !demo.stalk && args[index + 1] != "nothing") demo.mode = args[index + 1];
 #endif
         }
 
@@ -53,9 +58,14 @@ namespace TiffanyGame
                 Debug.LogError($"{GameInfo.LogPrefix} WitchDemo necesita la escena generada completa.");
                 yield break;
             }
+            if (!string.IsNullOrEmpty(mode))
+            {
+                yield return RunBehavior(player, witch, stop.transform.position);
+                yield break;
+            }
             Vector3 origin = stop.transform.position + Vector3.back * 12f;
             if (!NavMesh.SamplePosition(origin, out var playerPoint, 4f, NavMesh.AllAreas)
-                || !NavMesh.SamplePosition(playerPoint.position + Vector3.right * 15f, out var witchPoint, 4f, NavMesh.AllAreas))
+                || !NavMesh.SamplePosition(playerPoint.position + Vector3.right * (stalk ? 12f : 15f), out var witchPoint, 4f, NavMesh.AllAreas))
             {
                 Debug.LogError($"{GameInfo.LogPrefix} WitchDemo no encontró NavMesh para el encuentro.");
                 yield break;
@@ -74,6 +84,10 @@ namespace TiffanyGame
             character.enabled = true;
             witch.chapter = Chapter.Stable;
             witch.ResetBrain();
+            var legacy = witch.Profile.Copy();
+            legacy.SearchEnabled = legacy.LastSeenEnabled = legacy.AmbushEnabled = false;
+            legacy.CandleWatchEnabled = legacy.BarkLureEnabled = false;
+            witch.SetProfile(legacy);
             witch.transform.SetPositionAndRotation(witchPoint.position, Quaternion.LookRotation(Vector3.left));
             witch.playerLightOn = witch.playerHidden = witch.playerVanished = witch.hearingMuted = false;
             witch.raining = true;
@@ -86,8 +100,8 @@ namespace TiffanyGame
                 follow.enabled = false;
             }
             Vector3 midpoint = (playerPoint.position + witchPoint.position) * 0.5f + Vector3.up;
-            if (!chase) midpoint += Vector3.left * 4f;
-            Vector3 cameraPosition = midpoint + new Vector3(0f, 9f, -22f);
+            if (!chase && !stalk) midpoint += Vector3.left * 4f;
+            Vector3 cameraPosition = midpoint + (stalk ? new Vector3(0f, 5f, -14f) : new Vector3(0f, 9f, -22f));
             previousFieldOfView = view.fieldOfView;
             view.fieldOfView = 45f;
             view.transform.SetPositionAndRotation(cameraPosition, Quaternion.LookRotation(midpoint - cameraPosition));
@@ -111,7 +125,7 @@ namespace TiffanyGame
             yield return new WaitForSeconds(0.5f);
             NoiseBus.Publish(new StepNoise(player.transform.position, 20f));
             Debug.Log($"{GameInfo.LogPrefix} WitchDemo primer ruido de Tiffany.");
-            if (!chase)
+            if (!chase && !stalk)
             {
                 GameInput.SlowOverride = true;
                 GameInput.MoveOverride = PlaythroughNavigation.CameraInput(Vector3.left, view.transform.eulerAngles.y);
@@ -128,6 +142,10 @@ namespace TiffanyGame
                 NoiseBus.Publish(new StepNoise(player.transform.position, 20f));
                 Debug.Log($"{GameInfo.LogPrefix} WitchDemo segundo ruido de Tiffany: persecución.");
             }
+            else if (stalk)
+            {
+                Debug.Log($"{GameInfo.LogPrefix} WitchDemo Tiffany se queda quieta: la bruja la acecha.");
+            }
             else
             {
                 deadline = Time.time + 9f;
@@ -141,11 +159,15 @@ namespace TiffanyGame
         void OnDisable()
         {
             StopAllCoroutines();
+            RestoreBehavior();
             GameInput.ClearOverrides();
             if (fill != null) Destroy(fill.gameObject);
             if (storm != null) storm.enabled = stormWasEnabled;
             if (view != null && previousFieldOfView > 0f) view.fieldOfView = previousFieldOfView;
             if (follow != null) follow.enabled = followWasEnabled;
         }
+
+        public static bool IsMode(string value) => value == "chase" || value == "nothing" || value == "search"
+            || value == "ambush" || value == "candle" || value == "bark" || value == "lightsoff";
     }
 }

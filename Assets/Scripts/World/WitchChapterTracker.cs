@@ -11,6 +11,10 @@ namespace TiffanyGame
 
         private Bounds[] bounds;
         public Bounds[] ClearingBounds => bounds;
+        public int LastVisitedClearingIndex { get; private set; } = -1;
+        public bool HasNextClearing => bounds != null && LastVisitedClearingIndex + 1 < bounds.Length
+            && bounds[LastVisitedClearingIndex + 1].size != Vector3.zero;
+        public Vector3 NextClearingPosition => HasNextClearing ? bounds[LastVisitedClearingIndex + 1].center : Vector3.zero;
 
         private void Start()
         {
@@ -33,9 +37,12 @@ namespace TiffanyGame
 
         private void Update()
         {
-            if (witch == null || player == null || witch.chapter == Chapter.Return) return;
+            if (player == null) return;
             int clearing = RouteChapters.FindClearing(player.position, bounds);
-            if (clearing >= 0) witch.SetChapter(RouteChapters.Resolve(witch.chapter, clearing + 1));
+            if (clearing < 0) return;
+            LastVisitedClearingIndex = clearing;
+            if (witch != null && witch.chapter != Chapter.Return)
+                witch.SetChapter(RouteChapters.Resolve(witch.chapter, clearing + 1));
         }
     }
 }

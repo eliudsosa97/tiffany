@@ -32,7 +32,7 @@ namespace TiffanyGame
             Candle.Tick(dt, raining);
             PlayerInside = Contains(playerPosition);
             if (!Recharging) return;
-            if (!wasInside) respawn?.Touch(Candle);
+            if (!wasInside) respawn?.Touch(Candle, Radius);
             energy?.Recharge(dt);
         }
     }
