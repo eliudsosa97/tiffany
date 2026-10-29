@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using NUnit.Framework;
 using TiffanyGame.EditorTools;
 using Unity.AI.Navigation;
@@ -17,50 +18,151 @@ namespace TiffanyGame.Tests
             var hut = route.GetChild(4);
             var checkpoint = hut.Find("Family Candle").GetComponent<CandleSpot>();
             if (challengeCheckpoint)
-                foreach (var challenge in route.GetComponentsInChildren<PowerChallenge>())
-                    if (challenge.kind == ChallengeKind.Hut) checkpoint = challenge.checkpoint;
-            var exclusion = checkpoint.gameObject.AddComponent<NavMeshModifierVolume>();
-            exclusion.area = NavMesh.GetAreaFromName("Not Walkable");
-            exclusion.center = Vector3.up;
-            exclusion.size = new Vector3(checkpoint.radius * 2f, 2f, checkpoint.radius * 2f);
-            var surface = route.gameObject.AddComponent<NavMeshSurface>();
+            {
+                var challenge = System.Array.Find(route.GetComponentsInChildren<PowerChallenge>(), item => item.kind == ChallengeKind.Hut);
+                Assert.IsNotNull(challenge, "Falta el reto de la choza para probar su checkpoint.");
+                Assert.IsNotNull(challenge.checkpoint, "Falta la veladora de recarga del reto de la choza.");
+                checkpoint = challenge.checkpoint;
+            }
+            Vector3 position = checkpoint.transform.position + Vector3.back;
+            Vector3 target = route.GetChild(5).Find("Family Candle").position + Vector3.back * 1.5f;
+            string label = $"{checkpoint.transform.parent.name}/{checkpoint.name} -> Route 6 Lake/Family Candle";
+            var handles = new List<int>();
+            try
+            {
+                foreach (var candle in route.GetComponentsInChildren<CandleSpot>())
+                {
+                    candle.GetComponent<NavMeshObstacle>().enabled = false;
+                    if (!candle.startLit && candle.GetComponentInParent<PowerChallenge>() == null) continue;
+                    var exclusion = candle.gameObject.AddComponent<NavMeshModifierVolume>();
+                    exclusion.area = NavMesh.GetAreaFromName("Not Walkable");
+                    exclusion.center = Vector3.up;
+                    exclusion.size = new Vector3(candle.radius * 2f, 2f, candle.radius * 2f);
+                    handles.Add(SafeZones.Add(candle.transform.position, candle.radius));
+                }
+                BakeRouteNavMesh();
+                var navigation = new PlaythroughNavigation();
+                Assert.IsTrue(navigation.Calculate(position, target), NavigationDetails(label, position, target, navigation));
+                string details = NavigationDetails(label, position, target, navigation);
+                Vector2 move = navigation.Move(position, 0f, 0.02f, out _);
+                Assert.Less(move.y, 0f, $"Debe salir por detrás de la veladora, sin atravesar el vaso. {details}");
+
+                Assert.IsTrue(SafeZones.TryPushOut(position, 0.5f, out var exit), $"Sin salida de la zona segura. {details}");
+                Assert.IsTrue(NavMesh.SamplePosition(exit, out _, 1f, NavMesh.AllAreas), $"Salida {exit:F3} fuera del NavMesh. {details}");
+                Assert.IsFalse(NavMesh.SamplePosition(target, out _, 0.5f, NavMesh.AllAreas),
+                    $"La veladora del lago encendida debe recortar el destino interior. {details}");
+                Assert.IsTrue(SafeZones.TryPushOut(target, 0.5f, out var approach), $"Sin aproximación a la zona segura del lago. {details}");
+                int walkable = 1 << NavMesh.GetAreaFromName("Walkable");
+                Assert.IsTrue(NavMesh.SamplePosition(approach, out var end, 0.5f, walkable),
+                    $"Aproximación al lago {approach:F3} fuera de Walkable. {details}");
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, navigation.Status, details);
+                var corners = new Vector3[256];
+                int count = navigation.GetCorners(corners);
+                Assert.Greater(count, 1, $"Faltan esquinas para recorrer el regreso. {details}");
+                float length = 0f;
+                for (int i = 0; i < count; i++)
+                {
+                    Vector3 point = route.InverseTransformPoint(corners[i]);
+                    Assert.Greater(point.z, 25f, $"Esquina {i}, local {point:F3}: rodeo por establo o vías. {details}");
+                    Assert.Less(point.z, 110f, $"Esquina {i}, local {point:F3}: rodeo por río o carretera. {details}");
+                    if (i > 0) length += Vector3.Distance(corners[i - 1], corners[i]);
+                }
+                length += Vector3.Distance(position, corners[0]) + Vector3.Distance(corners[count - 1], target);
+                Assert.Less(length, 140f, $"Regreso de {length:F3} m: debe usar la rampa de la choza. {details}");
+                Assert.Less(Vector3.Distance(corners[count - 1], end.position), 0.5f, $"La ruta debe terminar en la aproximación al lago {end.position:F3}. {details}");
+                Vector2 arrival = Vector2.zero;
+                for (int i = 0; i < count; i++) arrival = navigation.Move(corners[i], 0f, 0.02f, out _);
+                Assert.Greater(Vector2.Dot(arrival, PlaythroughNavigation.CameraInput((target - corners[count - 1]).normalized, 0f)), 0f,
+                    $"Al terminar el NavMesh debe entrar a pie en la zona segura del lago. {details}");
+            }
+            finally { foreach (int handle in handles) SafeZones.Remove(handle); }
+        }
+
+        [Test]
+        public void PlaythroughUsesAShortForestConnectionInsteadOfALongWalkableDetour()
+        {
+            var map = new GameObject("Navigation Cost Test").transform;
+            map.SetParent(root.transform, false);
+            map.position = new Vector3(1000f, 0f, 1000f);
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.transform.SetParent(map, false);
+            floor.transform.localPosition = new Vector3(0f, -0.25f, 15f);
+            floor.transform.localScale = new Vector3(20f, 0.5f, 40f);
+            var forest = map.gameObject.AddComponent<NavMeshModifierVolume>();
+            forest.area = NavMesh.GetAreaFromName(RouteTerrain.ForestArea);
+            forest.center = Vector3.up;
+            forest.size = new Vector3(2f, 2f, 60f);
+            BakeRouteNavMesh(map);
+            Vector3 from = map.TransformPoint(Vector3.left * 6f), to = map.TransformPoint(Vector3.right * 6f);
+            var detour = new NavMeshPath();
+            Assert.IsTrue(NavMesh.CalculatePath(from, to, 1 << NavMesh.GetAreaFromName("Walkable"), detour),
+                RouteDetails("Rodeo sin Forest", from, to, detour));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, detour.status, RouteDetails("Rodeo sin Forest", from, to, detour));
+            var navigation = new PlaythroughNavigation();
+            Assert.IsTrue(navigation.Calculate(from, to), NavigationDetails("Conexión corta por Forest", from, to, navigation));
+            string details = NavigationDetails("Conexión corta por Forest", from, to, navigation);
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, navigation.Status, details);
+            var corners = new Vector3[256];
+            int count = navigation.GetCorners(corners);
+            Assert.Greater(count, 1, details);
+            float length = 0f;
+            for (int i = 1; i < count; i++) length += Vector3.Distance(corners[i - 1], corners[i]);
+            Assert.Less(length, 20f, $"El costo 4 de Forest debe permitir cruzar 2 m de bosque antes que rodear 60 m. {details}");
+        }
+
+        [Test]
+        public void CliffTrailRemainsWalkableFromEndToEnd()
+        {
+            BakeRouteNavMesh();
+            var points = RouteLayout.Path(4);
+            var terrain = new RouteTerrain();
+            int walkable = 1 << NavMesh.GetAreaFromName("Walkable");
+            Vector3 previous = route.TransformPoint(points[0]);
+            for (int segment = 1; segment < points.Length; segment++)
+            {
+                int samples = Mathf.CeilToInt(Vector3.Distance(points[segment - 1], points[segment]));
+                for (int i = 0; i <= samples; i++)
+                {
+                    Vector3 local = Vector3.Lerp(points[segment - 1], points[segment], (float)i / samples);
+                    local.y = terrain.Height(local.x, local.z);
+                    Vector3 point = route.TransformPoint(local);
+                    string label = $"Rampa choza -> lago, tramo {segment}, muestra {i}";
+                    Assert.IsTrue(NavMesh.SamplePosition(point, out var hit, 0.3f, walkable),
+                        $"Rampa sin Walkable. {RouteDetails(label, previous, point)}");
+                    var path = new NavMeshPath();
+                    Assert.IsTrue(NavMesh.CalculatePath(previous, hit.position, walkable, path), RouteDetails(label, previous, hit.position, path));
+                    Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, RouteDetails(label, previous, hit.position, path));
+                    Assert.IsFalse(NavMesh.Raycast(previous, hit.position, out var edge, walkable),
+                        $"Corte de la rampa en {edge.position:F3}. {RouteDetails(label, previous, hit.position, path)}");
+                    previous = hit.position;
+                }
+            }
+        }
+
+        void BakeRouteNavMesh(Transform source = null)
+        {
+            var surface = (source != null ? source : route).gameObject.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;
             surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
             surface.overrideVoxelSize = true;
             surface.voxelSize = 0.1f;
             surface.layerMask = ~LayerMask.GetMask(ForestLayout.CoverLayer, "Ignore Raycast");
+            Physics.SyncTransforms();
             surface.BuildNavMesh();
             navMeshData = surface.navMeshData;
+        }
 
-            Vector3 position = checkpoint.transform.position + Vector3.back;
-            Vector3 target = route.GetChild(5).Find("Family Candle").position + Vector3.back * 1.5f;
-            int handle = SafeZones.Add(checkpoint.transform.position, checkpoint.radius);
-            try
-            {
-                var navigation = new PlaythroughNavigation();
-                Assert.IsTrue(navigation.Calculate(position, target));
-                Vector2 move = navigation.Move(position, 0f, 0.02f, out _);
-                Assert.Less(move.y, 0f, "Debe salir por detrás de la veladora, sin atravesar el vaso.");
+        static string RouteDetails(string label, Vector3 from, Vector3 to, NavMeshPath path = null) =>
+            $"{label}: origen={from:F3}, destino={to:F3}, estado={(path == null ? "sin calcular" : path.status.ToString())}, "
+            + $"esquinas=[{string.Join(" -> ", System.Array.ConvertAll(path == null ? System.Array.Empty<Vector3>() : path.corners, point => point.ToString("F3")))}]";
 
-                Assert.IsTrue(SafeZones.TryPushOut(position, 0.5f, out var exit));
-                int walkable = 1 << NavMesh.GetAreaFromName("Walkable");
-                Assert.IsTrue(NavMesh.SamplePosition(exit, out var start, 1f, walkable));
-                Assert.IsTrue(NavMesh.SamplePosition(target, out var end, 0.5f, walkable));
-                var path = new NavMeshPath();
-                Assert.IsTrue(NavMesh.CalculatePath(start.position, end.position, walkable, path));
-                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
-                var corners = path.corners;
-                float length = 0f;
-                for (int i = 0; i < corners.Length; i++)
-                {
-                    Vector3 point = route.InverseTransformPoint(corners[i]);
-                    Assert.Greater(point.z, 25f, "El regreso no debe rodear por el establo ni las vías.");
-                    Assert.Less(point.z, 110f, "El regreso no debe rodear por el río ni la carretera.");
-                    if (i > 0) length += Vector3.Distance(corners[i - 1], corners[i]);
-                }
-                Assert.Less(length, 140f, "La veladora del lago debe alcanzarse por la rampa de la choza.");
-            }
-            finally { SafeZones.Remove(handle); }
+        static string NavigationDetails(string label, Vector3 from, Vector3 to, PlaythroughNavigation navigation)
+        {
+            var corners = new Vector3[256];
+            int count = navigation.GetCorners(corners);
+            System.Array.Resize(ref corners, count);
+            return $"{label}: origen={from:F3}, destino={to:F3}, estado={navigation.Status}, "
+                + $"esquinas=[{string.Join(" -> ", System.Array.ConvertAll(corners, point => point.ToString("F3")))}]";
         }
 
         [Test]

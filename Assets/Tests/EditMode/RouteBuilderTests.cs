@@ -751,48 +751,51 @@ namespace TiffanyGame.Tests
         public void GateAndCliffAreSolidAndTheBakedRouteConnectsEveryClearing()
         {
             var gate = route.Find("Landscape/Fence/Closed Gate");
-            Assert.IsNotNull(gate.GetComponent<Collider>());
-            Assert.IsFalse(gate.GetComponent<Collider>().isTrigger);
+            Assert.IsNotNull(gate, "Falta Landscape/Fence/Closed Gate.");
+            Assert.IsNotNull(gate.GetComponent<BoxCollider>(), $"La puerta en {gate.position:F3} debe tener colisión sólida.");
+            Assert.IsFalse(gate.GetComponent<Collider>().isTrigger, $"La puerta en {gate.position:F3} no puede ser un trigger.");
             RouteLayout.Gate(out var position, out _, out float width);
-            Assert.Less(Vector3.Distance(route.TransformPoint(position), gate.position), 0.001f);
-            Assert.AreEqual(width, gate.GetComponent<BoxCollider>().size.z, 0.001f);
-            Assert.IsNull(route.GetChild(5).Find("Cliff"));
-            Assert.IsNull(route.GetChild(7).Find("Gate"));
+            Assert.Less(Vector3.Distance(route.TransformPoint(position), gate.position), 0.001f,
+                $"Puerta fuera de sitio: {gate.position:F3}, esperado {route.TransformPoint(position):F3}.");
+            Assert.AreEqual(width, gate.GetComponent<BoxCollider>().size.z, 0.001f, $"Ancho de la puerta en {gate.position:F3}.");
+            Assert.IsNull(route.GetChild(5).Find("Cliff"), "El lago no debe conservar el acantilado anterior.");
+            Assert.IsNull(route.GetChild(7).Find("Gate"), "La casa no debe conservar la puerta anterior.");
             var terrainColliders = route.Find("Landscape/Terrain").GetComponentsInChildren<MeshCollider>();
             float SurfaceHeight(Vector2 point)
             {
                 var ray = new Ray(route.TransformPoint(new Vector3(point.x, 20f, point.y)), Vector3.down);
                 foreach (var collider in terrainColliders)
                     if (collider.Raycast(ray, out var hit, 40f)) return route.InverseTransformPoint(hit.point).y;
-                Assert.Fail("Falta terreno bajo el acantilado.");
+                Assert.Fail($"Falta terreno bajo el acantilado en local {point:F3}, rayo desde {ray.origin:F3}.");
                 return 0f;
             }
-            Assert.GreaterOrEqual(SurfaceHeight(RouteTerrain.Plateau) - RouteLayout.Clearing(5).y, 5.99f);
-            Assert.Less(SurfaceHeight(RouteTerrain.CliffFoot), 1.5f);
-            var surface = route.gameObject.AddComponent<NavMeshSurface>();
-            surface.collectObjects = CollectObjects.Children;
-            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
-            surface.overrideVoxelSize = true;
-            surface.voxelSize = 0.1f;
-            surface.layerMask = ~LayerMask.GetMask(ForestLayout.CoverLayer, "Ignore Raycast");
-            surface.BuildNavMesh();
-            navMeshData = surface.navMeshData;
+            Assert.GreaterOrEqual(SurfaceHeight(RouteTerrain.Plateau) - RouteLayout.Clearing(5).y, 5.99f,
+                $"Altura del acantilado sobre el lago en local {RouteTerrain.Plateau:F3}.");
+            Assert.Less(SurfaceHeight(RouteTerrain.CliffFoot), 1.5f, $"Pie del acantilado demasiado alto en local {RouteTerrain.CliffFoot:F3}.");
+            BakeRouteNavMesh();
             var path = new NavMeshPath();
-            Assert.IsTrue(NavMesh.SamplePosition(player.transform.position, out var start, 0.5f, NavMesh.AllAreas));
+            Assert.IsTrue(NavMesh.SamplePosition(player.transform.position, out var start, 0.5f, NavMesh.AllAreas),
+                $"Spawn fuera del NavMesh. {RouteDetails("Spawn -> primer claro", player.transform.position, ClearingEntry(0))}");
             Vector3 last = start.position;
             for (int i = 1; i < RouteLayout.Count; i++)
             {
-                Assert.IsTrue(NavMesh.SamplePosition(ClearingEntry(i), out var end, 0.5f, NavMesh.AllAreas));
-                Assert.IsTrue(NavMesh.CalculatePath(last, end.position, NavMesh.AllAreas, path), $"Claro {i}");
-                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, $"Claro {i}");
+                string label = $"{route.GetChild(i - 1).name} -> {route.GetChild(i).name}";
+                Assert.IsTrue(NavMesh.SamplePosition(ClearingEntry(i), out var end, 0.5f, NavMesh.AllAreas),
+                    $"Entrada fuera del NavMesh. {RouteDetails(label, last, ClearingEntry(i))}");
+                Assert.IsTrue(NavMesh.CalculatePath(last, end.position, NavMesh.AllAreas, path), RouteDetails(label, last, end.position, path));
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, RouteDetails(label, last, end.position, path));
                 last = end.position;
             }
-            Assert.IsFalse(NavMesh.SamplePosition(gate.position, out _, 0.1f, NavMesh.AllAreas));
-            Assert.IsTrue(NavMesh.SamplePosition(gate.position + Vector3.left * 2f, out var gateWest, 0.5f, NavMesh.AllAreas));
-            Assert.IsTrue(NavMesh.SamplePosition(gate.position + Vector3.right * 2f, out var gateEast, 0.5f, NavMesh.AllAreas));
-            Assert.IsTrue(NavMesh.Raycast(gateWest.position, gateEast.position, out _, NavMesh.AllAreas));
-            Assert.IsTrue(NavMesh.CalculatePath(last, start.position, NavMesh.AllAreas, path));
-            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
+            Assert.IsFalse(NavMesh.SamplePosition(gate.position, out _, 0.1f, NavMesh.AllAreas), $"La puerta en {gate.position:F3} no debe ser caminable.");
+            Vector3 west = gate.position + Vector3.left * 2f, east = gate.position + Vector3.right * 2f;
+            Assert.IsTrue(NavMesh.SamplePosition(west, out var gateWest, 0.5f, NavMesh.AllAreas),
+                $"Lado oeste fuera del NavMesh. {RouteDetails("Puerta oeste -> este", west, east)}");
+            Assert.IsTrue(NavMesh.SamplePosition(east, out var gateEast, 0.5f, NavMesh.AllAreas),
+                $"Lado este fuera del NavMesh. {RouteDetails("Puerta oeste -> este", west, east)}");
+            Assert.IsTrue(NavMesh.Raycast(gateWest.position, gateEast.position, out _, NavMesh.AllAreas),
+                $"La puerta debe cortar el paso directo. {RouteDetails("Puerta oeste -> este", gateWest.position, gateEast.position)}");
+            Assert.IsTrue(NavMesh.CalculatePath(last, start.position, NavMesh.AllAreas, path), RouteDetails("Casa -> spawn", last, start.position, path));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, RouteDetails("Casa -> spawn", last, start.position, path));
             float length = 0f;
             var corners = path.corners;
             for (int i = 1; i < corners.Length; i++)
@@ -800,29 +803,33 @@ namespace TiffanyGame.Tests
                 Vector3 delta = corners[i] - corners[i - 1];
                 length += delta.magnitude;
                 Assert.IsFalse(gate.GetComponent<Collider>().Raycast(new Ray(corners[i - 1] + Vector3.up * 0.6f, delta.normalized),
-                    out _, delta.magnitude));
+                    out _, delta.magnitude), $"Esquina {i}: atraviesa la puerta. {RouteDetails("Casa -> spawn", last, start.position, path)}");
             }
-            Assert.Greater(length, Vector3.Distance(last, start.position) * 2f);
+            Assert.Greater(length, Vector3.Distance(last, start.position) * 2f,
+                $"El regreso de {length:F3} m debe rodear la cerca. {RouteDetails("Casa -> spawn", last, start.position, path)}");
             var terrain = new RouteTerrain();
             int forest = NavMesh.GetAreaFromName(RouteTerrain.ForestArea);
-            Assert.Greater(forest, 0);
-            Assert.AreEqual(4f, NavMesh.GetAreaCost(forest));
-            Assert.AreEqual(4f, PlaythroughNavigation.CreateFilter().GetAreaCost(forest));
-            Assert.IsTrue(NavMesh.SamplePosition(route.TransformPoint(new Vector3(198f, terrain.GroundHeight(198f, 15f), 15f)),
-                out var woods, 3f, 1 << forest));
-            Assert.IsTrue(NavMesh.CalculatePath(start.position, woods.position, NavMesh.AllAreas, path));
-            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
+            Assert.Greater(forest, 0, "Falta el área Forest independiente de Walkable.");
+            Assert.AreEqual(4f, NavMesh.GetAreaCost(forest), "Costo de Forest en NavMeshAreas.");
+            Assert.AreEqual(4f, PlaythroughNavigation.CreateFilter().GetAreaCost(forest), "Costo de Forest en el filtro de la partida automática.");
+            Vector3 forestPoint = route.TransformPoint(new Vector3(198f, terrain.GroundHeight(198f, 15f), 15f));
+            Assert.IsTrue(NavMesh.SamplePosition(forestPoint, out var woods, 3f, 1 << forest),
+                $"Falta NavMesh de Forest. {RouteDetails("Spawn -> bosque", start.position, forestPoint)}");
+            Assert.IsTrue(NavMesh.CalculatePath(start.position, woods.position, NavMesh.AllAreas, path), RouteDetails("Spawn -> bosque", start.position, woods.position, path));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, RouteDetails("Spawn -> bosque", start.position, woods.position, path));
             var tracks = RouteLayout.Clearing(2);
             int walkable = 1 << NavMesh.GetAreaFromName("Walkable");
             Vector3 previous = Vector3.zero;
             for (float z = tracks.z; z <= RouteLayout.TrainNorthEnd; z += 2f)
             {
                 Vector3 point = route.TransformPoint(new Vector3(tracks.x, terrain.TrainHeight(z), z));
-                Assert.IsTrue(NavMesh.SamplePosition(point, out var deck, 0.5f, walkable), $"Puente en {z}");
+                string label = $"Puente del tren, z={z:F3}";
+                Assert.IsTrue(NavMesh.SamplePosition(point, out var deck, 0.5f, walkable),
+                    $"Tablero fuera de Walkable. {RouteDetails(label, previous, point)}");
                 if (z > tracks.z)
                 {
-                    Assert.IsTrue(NavMesh.CalculatePath(previous, deck.position, walkable, path));
-                    Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, $"Puente en {z}");
+                    Assert.IsTrue(NavMesh.CalculatePath(previous, deck.position, walkable, path), RouteDetails(label, previous, deck.position, path));
+                    Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, RouteDetails(label, previous, deck.position, path));
                 }
                 previous = deck.position;
             }
@@ -831,22 +838,28 @@ namespace TiffanyGame.Tests
             {
                 Vector3 origin = ClearingEntry(i);
                 Vector3 target = ClearingEntry(i + 1);
-                Assert.IsTrue(NavMesh.SamplePosition(origin, out var from, 0.5f, walkable));
-                Assert.IsTrue(NavMesh.SamplePosition(target, out var to, 0.5f, walkable));
-                Assert.IsTrue(NavMesh.CalculatePath(from.position, to.position, walkable, path));
-                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, $"Senderos {i}");
-                Assert.IsTrue(navigation.Calculate(origin, target), $"Partida automática {i}");
+                string label = $"Sendero {route.GetChild(i).name} -> {route.GetChild(i + 1).name}";
+                Assert.IsTrue(NavMesh.SamplePosition(origin, out var from, 0.5f, walkable),
+                    $"Origen fuera de Walkable. {RouteDetails(label, origin, target)}");
+                Assert.IsTrue(NavMesh.SamplePosition(target, out var to, 0.5f, walkable),
+                    $"Destino fuera de Walkable. {RouteDetails(label, origin, target)}");
+                Assert.IsTrue(NavMesh.CalculatePath(from.position, to.position, walkable, path), RouteDetails(label, from.position, to.position, path));
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, RouteDetails(label, from.position, to.position, path));
+                Assert.IsTrue(navigation.Calculate(origin, target), NavigationDetails(label, origin, target, navigation));
             }
             var hut = route.GetChild(4);
             var memory = hut.GetComponentInChildren<MemorySpot>();
-            Assert.AreEqual(5, memory.memoryId);
+            Assert.IsNotNull(memory, "Falta el recuerdo de la choza.");
+            Assert.AreEqual(5, memory.memoryId, "El recuerdo de la choza debe ser el quinto.");
             Vector3 previousStop = ClearingEntry(3);
-            foreach (var target in new[] { hut.Find("Family Candle").position + Vector3.back * 1.5f,
-                memory.transform.position, hut.GetComponentInChildren<HideVolume>().HidePoint,
-                route.GetChild(5).Find("Family Candle").position + Vector3.back * 1.5f })
+            string previousName = "Route 4 Stable";
+            foreach (var (name, target) in new[] { ("Choza/Family Candle", hut.Find("Family Candle").position + Vector3.back * 1.5f),
+                ("Recuerdo 5", memory.transform.position), ("Escondite de la choza", hut.GetComponentInChildren<HideVolume>().HidePoint),
+                ("Lago/Family Candle", route.GetChild(5).Find("Family Candle").position + Vector3.back * 1.5f) })
             {
-                Assert.IsTrue(navigation.Calculate(previousStop, target), "Recorrido por recuerdo 5, escondite y lago.");
+                Assert.IsTrue(navigation.Calculate(previousStop, target), NavigationDetails($"{previousName} -> {name}", previousStop, target, navigation));
                 previousStop = target;
+                previousName = name;
             }
         }
 

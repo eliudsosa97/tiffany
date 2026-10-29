@@ -7,20 +7,21 @@ namespace TiffanyGame
     {
         readonly NavMeshPath path = new NavMeshPath();
         readonly Vector3[] corners = new Vector3[256];
-        NavMeshQueryFilter filter = CreateFilter();
+        readonly NavMeshQueryFilter filter = CreateFilter();
         Vector3 target;
         int count, corner;
+
+        public NavMeshPathStatus Status => path.status;
+        public int GetCorners(Vector3[] buffer) => path.GetCornersNonAlloc(buffer);
 
         public bool Calculate(Vector3 position, Vector3 destination)
         {
             target = destination;
             corner = count = 0;
+            path.ClearCorners();
             Vector3 start = position;
             if (SafeZones.Contains(position) && !SafeZones.TryPushOut(position, 0.5f, out start)) return false;
-            int forest = NavMesh.GetAreaFromName(RouteTerrain.ForestArea);
-            filter.areaMask = forest < 0 ? NavMesh.AllAreas : NavMesh.AllAreas & ~(1 << forest);
-            if (TryPath(start, destination)) return true;
-            filter.areaMask = NavMesh.AllAreas;
+            if (SafeZones.Contains(destination) && !SafeZones.TryPushOut(destination, 0.5f, out destination)) return false;
             return TryPath(start, destination);
         }
 
