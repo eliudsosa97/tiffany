@@ -11,8 +11,6 @@ namespace TiffanyGame
         public Transform nextMemory;
         public GameObject figure;
         public Transform head;
-        public GameObject standBody;
-        public GameObject crouchBody;
         public AudioSource voice;
         public AudioClip barkClip;
         public AudioClip whineClip;
@@ -49,11 +47,11 @@ namespace TiffanyGame
 
         private Tyler brain;
         private readonly TylerLightShare lightShare = new TylerLightShare();
-        private bool heardMimic;
+        private bool heardMimic, heardForest;
+        private Vector3? forestPoint;
         private NavMeshAgent agent;
         private Vector3 previousPlayerPosition;
         private Vector3 lastDestination;
-        private Quaternion initialHeadRotation;
         private bool hasDestination;
         private bool warnedMissingNavMesh;
         private TylerPose lastPose;
@@ -74,7 +72,6 @@ namespace TiffanyGame
             brain = new Tyler();
             agent = GetComponent<NavMeshAgent>();
             agent.enabled = false;
-            initialHeadRotation = head != null ? head.localRotation : Quaternion.identity;
             speedParameterHash = Animator.StringToHash(TylerAnimation.SpeedParameter);
             idleHash = Animator.StringToHash(TylerAnimation.Idle);
             walkHash = Animator.StringToHash(TylerAnimation.Walk);
@@ -86,6 +83,7 @@ namespace TiffanyGame
 
         private void OnEnable()
         {
+            hasAnimationState = false;
             if (player != null) previousPlayerPosition = player.position;
         }
 
@@ -122,6 +120,13 @@ namespace TiffanyGame
             if (isActiveAndEnabled) heardMimic = true;
         }
 
+        public void HearForest(Vector3 point)
+        {
+            if (!isActiveAndEnabled) return;
+            heardForest = true;
+            forestPoint = point;
+        }
+
         private void Update()
         {
             bool sharing = lightShare.Tick(Time.deltaTime, shareMode,
@@ -140,20 +145,25 @@ namespace TiffanyGame
             Vector3 playerPosition = player.position;
             var inputs = TylerInputs.None;
             inputs.HeardMimic = heardMimic;
+            inputs.HeardForest = heardForest;
             heardMimic = false;
+            heardForest = false;
             inputs.PlayerStill = TylerMotion.IsStill(previousPlayerPosition, playerPosition, Time.deltaTime);
             previousPlayerPosition = playerPosition;
             if (witch != null)
             {
                 inputs.WitchForm = witch.Decision.Form;
+                inputs.WitchSuspicious = witch.Decision.State == WitchState.Suspicious;
                 inputs.WitchDistance = Vector3.Distance(transform.position, witch.transform.position);
             }
             TylerReaction reaction = brain.Tick(Time.deltaTime, in inputs);
+            if (reaction != TylerReaction.Growl) forestPoint = null;
             if (reaction != Reaction) EnterReaction(reaction);
             TylerPose pose = TylerPoses.For(Reaction);
             ApplyMovement(pose, playerPosition);
             ApplyPose(pose);
-            if (witch != null) FaceWitch(pose, witch.transform.position);
+            if (brain.GrowlingAtForest && forestPoint.HasValue) FaceWitch(pose, forestPoint.Value);
+            else if (witch != null) FaceWitch(pose, witch.transform.position);
             ApplyAnimation(speed);
         }
 
@@ -243,9 +253,6 @@ namespace TiffanyGame
             if (hasPose && lastPose.Crouched == pose.Crouched && lastPose.LookUp == pose.LookUp
                 && lastPose.FaceWitch == pose.FaceWitch && lastPose.Stopped == pose.Stopped) return;
             if (figure != null) figure.SetActive(true);
-            if (standBody != null) standBody.SetActive(!pose.Crouched);
-            if (crouchBody != null) crouchBody.SetActive(pose.Crouched);
-            if (head != null && !pose.LookUp) head.localRotation = initialHeadRotation;
             lastPose = pose;
             hasPose = true;
         }
@@ -256,11 +263,6 @@ namespace TiffanyGame
             Vector3 direction = position - transform.position;
             direction.y = 0f;
             if (direction.sqrMagnitude > 0f) transform.rotation = Quaternion.LookRotation(direction);
-            if (pose.LookUp && head != null)
-            {
-                direction = position - head.position;
-                if (direction.sqrMagnitude > 0f) head.rotation = Quaternion.LookRotation(direction);
-            }
         }
     }
 }

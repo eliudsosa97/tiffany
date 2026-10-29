@@ -124,6 +124,32 @@ namespace TiffanyGame.Tests
             Check(0f, TylerReaction.None);
         }
 
+        [Test]
+        public void ForestGrowlNeedsNoWitchAndCannotRetriggerBeforeMinimumInterval()
+        {
+            inputs.HeardForest = true;
+            Check(0f, TylerReaction.Growl);
+            Assert.IsTrue(tyler.GrowlingAtForest);
+            Check(Tyler.MimicDuration * 0.5f, TylerReaction.Growl);
+            Check(Tyler.MimicDuration * 0.5f, TylerReaction.None);
+            Check(Tyler.MimicInterval - Tyler.MimicDuration - 0.25f, TylerReaction.None);
+            Check(0.25f, TylerReaction.Growl);
+            inputs.HeardForest = false;
+            Check(Tyler.MimicDuration, TylerReaction.None);
+        }
+
+        [Test]
+        public void ForestCannotRedirectMimicGrowlDuringCooldown()
+        {
+            inputs.WitchDistance = 25f;
+            inputs.HeardMimic = true;
+            Check(0f, TylerReaction.Growl);
+            inputs.HeardMimic = false;
+            inputs.HeardForest = true;
+            Check(Tyler.MimicDuration * 0.5f, TylerReaction.Growl);
+            Assert.IsFalse(tyler.GrowlingAtForest);
+        }
+
         private void Check(float dt, TylerReaction expected)
         {
             Assert.AreEqual(expected, tyler.Tick(dt, in inputs));

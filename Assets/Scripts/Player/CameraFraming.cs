@@ -4,6 +4,9 @@ namespace TiffanyGame
 {
     public static class CameraFraming
     {
+        public static Vector2 DecoyOffset(float distance, float pitchDegrees, float verticalFovDegrees) =>
+            new Vector2(2f, MaxVisibleHeight(distance, pitchDegrees, verticalFovDegrees, 0f, 2f) - 1.25f);
+
         public static float MaxVisibleHeight(float distance, float pitchDegrees, float verticalFovDegrees,
             float focusHeight, float offsetAlongView)
         {

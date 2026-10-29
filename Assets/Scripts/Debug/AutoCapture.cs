@@ -46,7 +46,7 @@ namespace TiffanyGame
 
             var followCamera = FindAnyObjectByType<FollowCamera>();
             var stops = FindObjectsByType<CaptureStop>(FindObjectsSortMode.None);
-            System.Array.Sort(stops, (a, b) => string.CompareOrdinal(a.name, b.name));
+            System.Array.Sort(stops, CompareStops);
             var player = GameObject.FindGameObjectWithTag("Player");
             var controller = player != null ? player.GetComponent<CharacterController>() : null;
 
@@ -97,10 +97,15 @@ namespace TiffanyGame
                 if (stormStage != null) stormStage.Apply();
                 var lightStage = stop.GetComponent<LightCaptureStage>();
                 if (lightStage != null && player != null) lightStage.Apply(player.transform);
+                var fogStage = stop.GetComponent<FogCaptureStage>();
+                if (fogStage != null && !fogStage.Apply())
+                    Debug.LogError($"{GameInfo.LogPrefix} No se pudo preparar {stop.name}.");
                 var hideStage = stop.GetComponent<HideCaptureStage>();
                 if (hideStage != null) hideStage.Apply();
                 var powerStage = stop.GetComponent<PowerCaptureStage>();
                 if (powerStage != null && player != null) powerStage.Apply(player.transform);
+                var challengeStage = stop.GetComponent<ChallengeCaptureStage>();
+                if (challengeStage != null) challengeStage.Apply();
                 var memoryStage = stop.GetComponent<MemoryCaptureStage>();
                 if (memoryStage != null) memoryStage.Apply();
                 var panicStage = stop.GetComponent<PanicCaptureStage>();
@@ -115,8 +120,10 @@ namespace TiffanyGame
                 if (tylerStage != null) tylerStage.Clear();
                 if (stormStage != null) stormStage.Clear();
                 if (lightStage != null) lightStage.Clear();
+                if (fogStage != null) fogStage.Clear();
                 if (hideStage != null) hideStage.Clear();
                 if (powerStage != null) powerStage.Clear();
+                if (challengeStage != null) challengeStage.Clear();
                 if (memoryStage != null) memoryStage.Clear();
                 if (panicStage != null) panicStage.Clear();
                 if (caughtStage != null) yield return caughtStage.Clear();
@@ -157,6 +164,14 @@ namespace TiffanyGame
             ScreenCapture.CaptureScreenshot(Path.Combine(directory, name + ".png"));
             Debug.Log($"{GameInfo.LogPrefix} Captura: {name}");
             yield return null;
+        }
+
+        static int CompareStops(CaptureStop a, CaptureStop b)
+        {
+            var left = a.GetComponent<ChallengeCaptureStage>();
+            var right = b.GetComponent<ChallengeCaptureStage>();
+            if (left != null && right != null && left.challenge == right.challenge) return left.after.CompareTo(right.after);
+            return string.CompareOrdinal(a.name, b.name);
         }
     }
 }

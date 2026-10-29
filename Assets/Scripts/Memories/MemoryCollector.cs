@@ -13,6 +13,7 @@ namespace TiffanyGame
         public GameInterface gameInterface;
         public TylerController tyler;
         public MemorySpot[] spots = Array.Empty<MemorySpot>();
+        public PowerChallenge[] challenges = Array.Empty<PowerChallenge>();
         public Volume echoVolume;
         public Camera viewCamera;
         public float searchRadius = 0.6f;
@@ -76,6 +77,10 @@ namespace TiffanyGame
 
         public bool Collect(int memoryId)
         {
+            int completed = 0;
+            for (int i = 0; i < challenges.Length; i++)
+                if (challenges[i] != null && challenges[i].Rules.Completed) completed |= 1 << (int)challenges[i].kind;
+            if (challenges.Length > 0 && !RouteProgress.CanCollectMemory(memoryId, completed)) return false;
             if (!progress.MarkFound(memoryId)) return false;
             MemorySpot found = null;
             for (int i = 0; i < spots.Length; i++)

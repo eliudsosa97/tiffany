@@ -8,17 +8,21 @@ namespace TiffanyGame
         public const float RespawnEnergyFraction = 0.5f;
 
         public Vector3 Position { get; private set; }
+        public bool HasFamilyCandle { get; private set; }
+        public float FamilyCandleRadius { get; private set; }
 
         public RespawnPoint(Vector3 start)
         {
             Position = start;
         }
 
-        public void Touch(Candle candle)
+        public void Touch(Candle candle, float radius = CandleSite.DefaultRadius)
         {
             if (candle != null && candle.Kind == CandleKind.Family)
             {
                 Position = candle.Position;
+                HasFamilyCandle = true;
+                FamilyCandleRadius = radius;
             }
         }
 

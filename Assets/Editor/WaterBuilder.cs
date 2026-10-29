@@ -44,7 +44,7 @@ namespace TiffanyGame.EditorTools
                 CrossingPiece($"Stone {i + 1}", river, stones[i], new Vector3(CrossingWidth, StoneTop * 2f, StoneLength),
                     GroundType.Gravel, stone, i);
             CrossingPiece("Log", river, Vector3.up * 0.03f, new Vector3(CrossingWidth, 0.3f, 1.1f), GroundType.Branches,
-                GeneratedMaterials.Get("WaterLog", new Color(0.19f, 0.105f, 0.045f)));
+                GroundMaterials.For(GroundType.Branches));
             Capture("Water 2 Crossing", river, stones[0] + Vector3.up * StoneTop, 330f,
                 new Vector3(-13f, 19f, 5.5f), new Vector3(0f, 0.4f, 0f));
         }

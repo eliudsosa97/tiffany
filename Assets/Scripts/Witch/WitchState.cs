@@ -10,6 +10,7 @@ namespace TiffanyGame
         Recovering,
         TakingOff,
         Stunned,
-        Caught
+        Caught,
+        Suspicious
     }
 }

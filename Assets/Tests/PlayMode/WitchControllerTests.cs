@@ -46,6 +46,11 @@ namespace TiffanyGame.Tests
             collider.radius = 0.4f;
             collider.center = Vector3.up;
 
+            CreateWitch();
+        }
+
+        private void CreateWitch()
+        {
             witch = new GameObject("Witch");
             witch.SetActive(false);
             witch.transform.SetParent(world.transform);
@@ -91,6 +96,7 @@ namespace TiffanyGame.Tests
 
 #if UNITY_EDITOR
         [TestCase(WitchState.Stalking)]
+        [TestCase(WitchState.Suspicious)]
         [TestCase(WitchState.WindUp)]
         [TestCase(WitchState.Sprinting)]
         [TestCase(WitchState.Recovering)]
@@ -106,6 +112,11 @@ namespace TiffanyGame.Tests
             animator.Update(0f);
 
             Assert.AreEqual(Animator.StringToHash(state.ToString()), animator.GetCurrentAnimatorStateInfo(0).shortNameHash);
+            if (state == WitchState.Suspicious)
+            {
+                Assert.AreEqual(0f, animator.GetFloat("Speed"));
+                Assert.AreEqual(1f, animator.speed);
+            }
             Assert.IsTrue(controller.figure.activeSelf);
             Assert.AreEqual(Vector3.zero, controller.figure.transform.localPosition);
             Assert.AreEqual(Quaternion.identity, controller.figure.transform.localRotation);
@@ -398,6 +409,8 @@ namespace TiffanyGame.Tests
             yield return WaitForStalking();
             float initialDistance = HorizontalDistanceToPlayer();
             NoiseBus.Publish(new StepNoise(player.transform.position, 20f));
+            yield return WaitForState(WitchState.Suspicious, 1f);
+            yield return WaitForState(WitchState.Stalking, controller.Profile.SuspicionDuration + 1f);
 
             float deadline = Time.time + 12f;
             while (Time.time < deadline)
@@ -433,6 +446,26 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator CandleLitUnderALastSeenLandingMovesTheTouchdownOutside()
+        {
+            LightPlayerAt(new Vector3(18f, 0f, 0f));
+            yield return new WaitForSeconds(0.3f);
+            controller.playerLightOn = false;
+            player.transform.position = new Vector3(-30f, 0f, -30f);
+            yield return WaitForState(WitchState.Landing, 6f);
+            Assert.AreEqual(WitchIntent.LastSeen, controller.Decision.Intent);
+            Vector3 destination = controller.Decision.MoveTarget;
+            yield return new WaitForSeconds(controller.Profile.LandingDuration * 0.5f);
+            Assert.AreEqual(WitchState.Landing, controller.Decision.State);
+            SafeZones.Add(destination, 4f);
+            player.transform.position = destination;
+
+            yield return WaitForState(WitchState.Stalking, controller.Profile.LandingDuration * 2f + 1f);
+
+            Assert.IsFalse(SafeZones.Contains(witch.transform.position));
+        }
+
+        [UnityTest]
         public IEnumerator StalkingClosesHorizontalDistanceOnNavMesh()
         {
             TurnOnPlayerLight();
@@ -449,11 +482,103 @@ namespace TiffanyGame.Tests
 #if UNITY_EDITOR
                 Vector3 velocity = agent.velocity;
                 velocity.y = 0f;
-                Assert.AreEqual(velocity.magnitude, controller.figure.GetComponent<Animator>().GetFloat("Speed"), 0.01f);
+                var animator = controller.figure.GetComponent<Animator>();
+                float expected = animator.speed < 1f ? controller.Decision.Speed : velocity.magnitude;
+                Assert.AreEqual(expected, animator.GetFloat("Speed"), 0.01f);
 #endif
             }
 
             Assert.LessOrEqual(HorizontalDistanceToPlayer(), initialDistance - 0.5f);
+        }
+
+        [UnityTest]
+        public IEnumerator SuspicionStopsMovementFacesNoiseAndResumesNavMesh()
+        {
+            controller.raining = true;
+            yield return WaitForStalking();
+            controller.raining = false;
+            Vector3 origin = witch.transform.position + Vector3.right * 15f;
+            NoiseBus.Publish(new StepNoise(origin, 20f));
+            yield return WaitForState(WitchState.Suspicious, 1f);
+            Vector3 anchor = witch.transform.position;
+#if UNITY_EDITOR
+            var animator = controller.figure.GetComponent<Animator>();
+            float blendEnd = Time.time + 0.3f;
+#endif
+            float deadline = Time.time + controller.Profile.SuspicionDuration - 0.2f;
+            while (Time.time < deadline)
+            {
+                Assert.AreEqual(WitchState.Suspicious, controller.Decision.State);
+                Assert.AreEqual(anchor, witch.transform.position);
+                Assert.IsFalse(agent.enabled);
+                Assert.Less(Vector3.Angle(Vector3.right, witch.transform.forward), 0.1f);
+#if UNITY_EDITOR
+                Assert.AreEqual(1f, animator.speed);
+                if (Time.time >= blendEnd)
+                {
+                    Assert.IsFalse(animator.IsInTransition(0));
+                    Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Suspicious"));
+                    Assert.Greater(animator.GetCurrentAnimatorStateInfo(0).normalizedTime, 0f);
+                }
+#endif
+                yield return null;
+            }
+            yield return WaitForState(WitchState.Stalking, 1f);
+            Assert.IsTrue(agent.enabled && agent.isOnNavMesh);
+            Assert.Less(Vector3.Distance(origin, controller.Decision.MoveTarget), 0.01f);
+        }
+
+        [UnityTest]
+        public IEnumerator WindUpKeepsPositionWithoutTryingToSnapToNavMesh()
+        {
+            witch.transform.position = Vector3.zero;
+            LightPlayerAt(Vector3.right * 6f);
+            yield return WaitForStalking();
+            yield return WaitForState(WitchState.WindUp, 1f);
+            Vector3 anchor = witch.transform.position;
+            surface.RemoveData();
+            float started = Time.time;
+            while (controller.Decision.State == WitchState.WindUp)
+            {
+                Assert.AreEqual(anchor, witch.transform.position);
+                Assert.IsFalse(agent.enabled);
+                yield return null;
+            }
+            Assert.GreaterOrEqual(Time.time - started, controller.Profile.WindUpDuration - Time.deltaTime * 2f);
+            Assert.AreEqual(WitchState.Sprinting, controller.Decision.State);
+        }
+
+        [UnityTest]
+        public IEnumerator CachedHideNearNoiseIsReachedInspectedAndLeft()
+        {
+            Object.Destroy(witch);
+            yield return null;
+            var nearWitch = AddBox("Hide Near Witch", Vector3.left, Vector3.one);
+            nearWitch.gameObject.AddComponent<HideVolume>();
+            var nearNoise = AddBox("Hide Near Noise", Vector3.right * 12f, Vector3.one);
+            var hide = nearNoise.gameObject.AddComponent<HideVolume>();
+            CreateWitch();
+            controller.raining = true;
+            yield return WaitForStalking();
+            controller.raining = false;
+            NoiseBus.Publish(new StepNoise(Vector3.right * 13f, 20f));
+            yield return WaitForState(WitchState.Suspicious, 1f);
+            yield return WaitForState(WitchState.Stalking, controller.Profile.SuspicionDuration + 1f);
+            Assert.IsTrue(NavMesh.SamplePosition(hide.HidePoint, out var hidePoint, 1f, NavMesh.AllAreas));
+            Assert.AreEqual(hidePoint.position, controller.Decision.MoveTarget);
+            float deadline = Time.time + 15f;
+            while (!controller.Decision.InspectingHide && Time.time < deadline)
+            {
+                Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+                Assert.IsTrue(agent.enabled && agent.isOnNavMesh);
+                yield return null;
+            }
+            Assert.IsTrue(controller.Decision.InspectingHide);
+            Assert.AreEqual(0f, controller.Decision.Speed);
+            Assert.IsTrue(agent.isStopped);
+            yield return new WaitForSeconds(controller.Profile.HideInspectionDuration - 0.2f);
+            Assert.IsTrue(controller.Decision.InspectingHide);
+            yield return WaitForState(WitchState.TakingOff, 1f);
         }
 
         [UnityTest]
@@ -520,7 +645,7 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator ChapterUpgradeKeepsLandingPositionAndEnablesVoiceWithoutRestarting()
+        public IEnumerator ChapterUpgradeKeepsLandingPositionAndEnablesForestLureWithoutRestarting()
         {
             controller.chapter = Chapter.WaterPlant;
             controller.ResetBrain();
@@ -536,12 +661,13 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(decision, controller.Decision);
             Assert.IsFalse(agent.enabled);
             yield return WaitForStalking();
-            Assert.IsTrue(controller.Decision.VoiceLure);
+            Assert.IsTrue(controller.Profile.BarkLureEnabled);
+            Assert.IsFalse(controller.Decision.VoiceLure, "Las vías habilitan el ladrido del bosque, no la voz al aterrizar.");
             controller.SetChapter(Chapter.Cemetery);
             Assert.AreEqual(Chapter.TrainTracks, controller.chapter);
             yield return null;
             Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
-            Assert.IsTrue(controller.Decision.VoiceLure);
+            Assert.IsFalse(controller.Decision.VoiceLure, "El ladrido permanece apagado fuera de su punto de llamada.");
         }
 
         [UnityTest]
@@ -582,9 +708,24 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
             Assert.AreEqual(WitchForm.Grounded, controller.Decision.Form);
             Assert.AreEqual(2.5f, controller.Decision.Speed);
-            Assert.AreEqual(player.transform.position, controller.Decision.MoveTarget);
+            Assert.IsTrue(NavMesh.SamplePosition(player.transform.position, out var playerPoint, 6f, NavMesh.AllAreas));
+            Assert.AreEqual(playerPoint.position, controller.Decision.MoveTarget);
             Assert.IsFalse(controller.Decision.FireLit || fireLight.enabled);
             LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator ReturnStartsAtTheReturnPlacementDistance()
+        {
+            player.transform.position = Vector3.zero;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
+            controller.BeginReturn();
+
+            Assert.AreEqual(18f, controller.Profile.ReturnPlacementDistance);
+            Assert.AreEqual(controller.Profile.ReturnPlacementDistance, HorizontalDistanceToPlayer(), 0.5f);
+            Assert.IsFalse(SafeZones.Contains(witch.transform.position));
+            yield return null;
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
         }
 
         [UnityTest]

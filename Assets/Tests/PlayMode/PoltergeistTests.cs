@@ -234,6 +234,23 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(16f, publishedNoise.Radius);
             Vector3 destination = SafeZones.PushOut(publishedNoise.Position, 1f);
             float initialDistance = HorizontalDistance(witch.transform.position, destination);
+            deadline = Time.time + 1f;
+            while (Time.time < deadline && controller.Decision.State != WitchState.Suspicious) yield return null;
+            Assert.AreEqual(WitchState.Suspicious, controller.Decision.State);
+            Vector3 anchor = witch.transform.position;
+            float suspicionStarted = Time.time;
+            deadline = Time.time + controller.Profile.SuspicionDuration + 1f;
+            while (Time.time < deadline && controller.Decision.State == WitchState.Suspicious)
+            {
+                Assert.AreEqual(anchor, witch.transform.position);
+                Assert.AreEqual(0f, controller.Decision.Speed);
+                yield return null;
+            }
+            Assert.GreaterOrEqual(Time.time - suspicionStarted, controller.Profile.SuspicionDuration - Time.deltaTime * 2f);
+            Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
+            Assert.IsTrue(NavMesh.SamplePosition(destination, out var noisePoint, 6f, NavMesh.AllAreas));
+            Assert.AreEqual(noisePoint.position, controller.Decision.MoveTarget);
+            Assert.IsFalse(SafeZones.Contains(controller.Decision.MoveTarget));
             deadline = Time.time + 3f;
             while (Time.time < deadline)
             {

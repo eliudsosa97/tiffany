@@ -12,6 +12,7 @@ namespace TiffanyGame
         public float sideOffset = 1f;
         public LayerMask groundMask = Physics.DefaultRaycastLayers;
         public bool Active => sequence.Active;
+        public event System.Action Respawned;
 
         private readonly CaughtSequence sequence = new CaughtSequence();
         private PlayerSoul soul;
@@ -36,6 +37,7 @@ namespace TiffanyGame
 
         public void Trigger()
         {
+            if (Active) return;
             sequence.Begin();
             if (hiding != null)
             {
@@ -61,6 +63,7 @@ namespace TiffanyGame
                 respawn.Respawn(soul.Energy);
                 PlaceAtCheckpoint();
                 if (witch != null) witch.ResetBrain();
+                Respawned?.Invoke();
                 if (playerLight != null && playerLight.State != null && playerLight.State.IsOn) playerLight.Toggle();
                 Debug.Log($"{GameInfo.LogPrefix} Atrapada: regreso a la veladora");
             }

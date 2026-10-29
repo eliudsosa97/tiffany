@@ -6,7 +6,7 @@ namespace TiffanyGame.EditorTools
 {
     public class ModelImportRules : AssetPostprocessor
     {
-        public override uint GetVersion() => 4;
+        public override uint GetVersion() => 7;
 
         bool IsLibraryModel => Path.GetDirectoryName(assetPath).Replace('\\', '/') == ModelLibrary.ModelFolder &&
                                Path.GetExtension(assetPath).ToLowerInvariant() == ".fbx";
@@ -24,8 +24,9 @@ namespace TiffanyGame.EditorTools
         {
             if (!IsLibraryModel && !IsKenneyNature) return;
 
+            var spec = Spec();
             var importer = (ModelImporter)assetImporter;
-            bool rigged = Spec()?.Rigged ?? false;
+            bool rigged = spec?.Rigged ?? false;
             importer.importCameras = false;
             importer.importLights = false;
             importer.importAnimation = rigged;
@@ -34,10 +35,13 @@ namespace TiffanyGame.EditorTools
             {
                 importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
                 importer.optimizeGameObjects = false;
-                importer.animationCompression = ModelImporterAnimationCompression.KeyframeReduction;
+                importer.animationCompression = spec.preserveAnimationKeys
+                    ? ModelImporterAnimationCompression.Off
+                    : ModelImporterAnimationCompression.KeyframeReduction;
                 importer.animationRotationError = 0.1f;
                 importer.animationPositionError = 0.1f;
                 importer.animationScaleError = 0.1f;
+                if (!string.IsNullOrEmpty(spec.rootMotionBone)) importer.motionNodeName = spec.rootMotionBone;
             }
             importer.importBlendShapes = false;
             importer.addCollider = false;
@@ -45,7 +49,7 @@ namespace TiffanyGame.EditorTools
             importer.isReadable = false;
             importer.globalScale = 1f;
             importer.useFileScale = true;
-            importer.bakeAxisConversion = false;
+            importer.bakeAxisConversion = spec?.bakeAxisConversion ?? false;
             importer.materialImportMode = ModelImporterMaterialImportMode.ImportViaMaterialDescription;
             importer.materialLocation = ModelImporterMaterialLocation.InPrefab;
         }
@@ -65,11 +69,23 @@ namespace TiffanyGame.EditorTools
                 var entry = System.Array.Find(spec.clips, c => c.name == name);
                 if (entry == null) continue;
                 clip.name = name;
-                clip.firstFrame = 0f;
-                clip.lastFrame = entry.frames;
+                if (!spec.preserveAnimationKeys)
+                {
+                    clip.firstFrame = 0f;
+                    clip.lastFrame = entry.frames;
+                }
                 clip.loopTime = entry.loop;
                 clip.loopPose = false;
                 clip.wrapMode = entry.loop ? UnityEngine.WrapMode.Loop : UnityEngine.WrapMode.ClampForever;
+                if (!string.IsNullOrEmpty(spec.rootMotionBone))
+                {
+                    clip.lockRootRotation = true;
+                    clip.lockRootHeightY = true;
+                    clip.lockRootPositionXZ = true;
+                    clip.keepOriginalOrientation = true;
+                    clip.keepOriginalPositionY = true;
+                    clip.keepOriginalPositionXZ = true;
+                }
                 clips.Add(clip);
             }
             importer.clipAnimations = clips.ToArray();

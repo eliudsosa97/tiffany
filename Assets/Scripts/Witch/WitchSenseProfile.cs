@@ -10,5 +10,6 @@ namespace TiffanyGame
         public float DarkSightDistance = 3f;
         public float LitSightDistance = 15f;
         public float SmellDistance = 2.5f;
+        public float NoiseHideRadius = 5f;
     }
 }

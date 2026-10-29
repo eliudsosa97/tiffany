@@ -94,19 +94,21 @@ namespace TiffanyGame.Tests
             p.WitchPosition = route[0];
             Check(Step(0f), WitchState.Flying, route[1], 6f);
             p.WitchPosition.y = 2f;
-            p.SeesPlayerLight = true;
+            ConfirmDistantLight();
             Check(Step(0f), WitchState.Flying, new Vector3(60f, 35f, 0f), 6f);
 
             brain = new WitchBrain(profile, null);
+            ConfirmDistantLight();
             Check(Step(0f), WitchState.Flying, new Vector3(60f, 2f, 0f), 6f);
             brain = new WitchBrain(profile, Array.Empty<Vector3>());
+            ConfirmDistantLight();
             Check(Step(0f), WitchState.Flying, new Vector3(60f, 2f, 0f), 6f);
         }
 
         [Test]
         public void LightLeadsToFixedLandingThenStalking()
         {
-            p.SeesPlayerLight = true;
+            ConfirmDistantLight();
             Vector3 light = p.PlayerLightPosition;
             Check(Step(9f), WitchState.Flying, new Vector3(60f, 20f, 0f), 6f);
             Vector3 anchor = p.WitchPosition;
@@ -124,7 +126,7 @@ namespace TiffanyGame.Tests
         [Test]
         public void RememberedLightStillCausesLandingAfterItIsSwitchedOff()
         {
-            p.SeesPlayerLight = true;
+            ConfirmDistantLight();
             Step(1f);
             p.PlayerLightPosition = new Vector3(90f, 0f, 0f);
             Check(Step(13f), WitchState.Flying, new Vector3(90f, 20f, 0f), 6f);
@@ -139,7 +141,7 @@ namespace TiffanyGame.Tests
         public void DisabledLandingHoversAndResumesRouteAfterLosingLight()
         {
             profile.CanLand = false;
-            p.SeesPlayerLight = true;
+            ConfirmDistantLight();
             Vector3 aboveLight = new Vector3(60f, 20f, 0f);
             Check(Step(2f), WitchState.Flying, aboveLight, 6f);
             p.SeesPlayerLight = false;
@@ -154,7 +156,8 @@ namespace TiffanyGame.Tests
         [Test]
         public void SafeZonePreventsLanding()
         {
-            p.PlayerInSafeZone = p.SeesPlayerLight = true;
+            p.PlayerInSafeZone = true;
+            ConfirmDistantLight();
             Vector3 aboveLight = new Vector3(60f, 20f, 0f);
             Check(Step(10f), WitchState.Flying, aboveLight, 6f);
             Check(Step(20f), WitchState.Flying, aboveLight, 6f);
@@ -181,17 +184,18 @@ namespace TiffanyGame.Tests
             Ground();
             p.HeardNoise = true;
             Vector3 noise = p.NoisePosition;
-            Check(Step(1f), WitchState.Stalking, noise, 1.2f);
+            Assert.AreEqual(WitchState.Suspicious, Step(1f).State);
             p.HeardNoise = false;
+            Check(Step(profile.SuspicionDuration), WitchState.Stalking, noise, 1.2f);
             Check(Step(1f), WitchState.Stalking, noise, 1.2f);
             p.HeardNoise = p.HearingMuted = true;
             p.NoisePosition = Vector3.right * 48f;
             Check(Step(1f), WitchState.Stalking, noise, 1.2f);
             p.WitchPosition = new Vector3(23f, 100f, 0f);
-            Check(Step(0f), WitchState.Stalking, p.WitchPosition);
+            Check(Step(0f), WitchState.Stalking, noise);
             profile.UsesVoiceLure = false;
-            Check(Step(0f), WitchState.Stalking, p.WitchPosition);
-            Check(Step(8.1f), WitchState.TakingOff, p.WitchPosition);
+            Check(Step(profile.HideInspectionDuration - 0.1f), WitchState.Stalking, noise);
+            Check(Step(0.11f), WitchState.TakingOff, p.WitchPosition);
         }
 
         [Test]
@@ -216,10 +220,13 @@ namespace TiffanyGame.Tests
             Ground();
             Check(Step(7.9f), WitchState.Stalking, p.WitchPosition);
             p.HeardNoise = true;
-            Check(Step(20f), WitchState.Stalking, p.NoisePosition, 1.2f);
+            Assert.AreEqual(WitchState.Suspicious, Step(20f).State);
             p.HeardNoise = false;
+            Check(Step(profile.SuspicionDuration), WitchState.Stalking, p.NoisePosition, 1.2f);
+            p.WitchPosition = p.NoisePosition;
             Check(Step(7.9f), WitchState.Stalking, p.WitchPosition);
-            Check(Step(0.2f), WitchState.TakingOff, p.WitchPosition);
+            Check(Step(profile.HideInspectionDuration - 0.1f), WitchState.Stalking, p.WitchPosition);
+            Check(Step(0.11f), WitchState.TakingOff, p.WitchPosition);
         }
 
         [Test]
@@ -250,7 +257,7 @@ namespace TiffanyGame.Tests
             p.WitchPosition = route[0] + height;
             p.SeesPlayer = p.Raining = true;
             Check(Step(0f), WitchState.Flying, route[1] + height, 6f);
-            p.SeesPlayerLight = true;
+            ConfirmDistantLight();
             Vector3 aboveLight = new Vector3(p.PlayerLightPosition.x, 30f, p.PlayerLightPosition.z);
             Check(Step(0f), WitchState.Flying, aboveLight, 6f);
             p.WitchPosition = aboveLight;
@@ -269,7 +276,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void ProfileChangeKeepsLandingTimerAndEnablesVoice()
+        public void ProfileChangeKeepsLandingTimerAndEnablesForestLure()
         {
             profile = WitchProfiles.For(Chapter.WaterPlant);
             brain = new WitchBrain(profile, route);
@@ -288,7 +295,7 @@ namespace TiffanyGame.Tests
             p.PlayerPosition = p.WitchPosition + Vector3.forward * 5f;
             p.SeesPlayer = true;
             Assert.AreEqual(WitchState.WindUp, Step(0f).State);
-            Assert.AreEqual(WitchState.Sprinting, Step(0.61f).State);
+            Assert.AreEqual(WitchState.Sprinting, Step(0.81f).State);
             p.PlayerPosition = Vector3.left * 30f;
             WitchDecision sprint = Step(0.4f);
             brain.SetProfile(WitchProfiles.For(Chapter.WitchHut));
@@ -300,6 +307,16 @@ namespace TiffanyGame.Tests
         }
 
         private WitchDecision Step(float dt) => WitchSim.Step(brain, ref p, dt);
+
+        private void ConfirmDistantLight()
+        {
+            p.SeesPlayerLight = true;
+            Assert.AreEqual(WitchState.Suspicious, Step(0f).State);
+            p.SeesPlayerLight = false;
+            Step(0f);
+            p.SeesPlayerLight = true;
+            Assert.AreEqual(WitchState.Flying, Step(0f).State);
+        }
 
         private void Ground()
         {
@@ -315,7 +332,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(state, decision.State);
             Assert.AreEqual(state == WitchState.Stalking ? WitchForm.Grounded : WitchForm.Flying, decision.Form);
             Assert.AreEqual(state == WitchState.Flying || state == WitchState.TakingOff, decision.FireLit);
-            Assert.AreEqual(state == WitchState.Stalking && profile.UsesVoiceLure, decision.VoiceLure);
+            Assert.AreEqual(state == WitchState.Stalking && profile.UsesVoiceLure && !profile.BarkLureEnabled,
+                decision.VoiceLure, "Con el ladrido del bosque habilitado, aterrizar ya no enciende la voz continua.");
             Assert.AreEqual(speed, decision.Speed, 1e-4f);
             Assert.AreEqual(0f, Vector3.Distance(target, decision.MoveTarget), 1e-4f);
         }
