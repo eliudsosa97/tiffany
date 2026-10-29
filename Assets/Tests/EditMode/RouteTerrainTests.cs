@@ -9,6 +9,25 @@ namespace TiffanyGame.Tests
         readonly RouteTerrain terrain = new RouteTerrain();
 
         [Test]
+        public void RampCandleStandsBesideTheHutToLakeRampOnDryGround()
+        {
+            var candle = terrain.RampCandle();
+            var points = RouteLayout.Path(4);
+            float nearest = float.PositiveInfinity;
+            for (int i = 1; i < points.Length; i++)
+                nearest = Mathf.Min(nearest, RouteTerrain.SegmentDistance(new Vector2(candle.x, candle.z),
+                    new Vector2(points[i - 1].x, points[i - 1].z), new Vector2(points[i].x, points[i].z)));
+            Assert.AreEqual(RouteTerrain.RampCandleOffset, nearest, 0.05f, "Junto al sendero, fuera de su franja.");
+            Assert.Greater(nearest, RouteLayout.PathWidth * 0.5f + 1f);
+            Assert.IsFalse(terrain.IsWater(candle.x, candle.z));
+            Assert.AreEqual(terrain.Height(candle.x, candle.z), candle.y, 0.001f);
+            Assert.IsFalse(terrain.InClearingSquare(candle.x, candle.z), "Fuera de los claros.");
+            float hut = Vector2.Distance(new Vector2(candle.x, candle.z), new Vector2(RouteLayout.Clearing(4).x, RouteLayout.Clearing(4).z));
+            float lake = Vector2.Distance(new Vector2(candle.x, candle.z), new Vector2(RouteLayout.Clearing(5).x, RouteLayout.Clearing(5).z));
+            Assert.Less(Mathf.Abs(hut - lake), 20f, "A media rampa entre la choza y el lago.");
+        }
+
+        [Test]
         public void ClearingCoresAreFlatIrregularAndKeepTheirLocalLandmarks()
         {
             for (int i = 0; i < RouteLayout.Count; i++)

@@ -164,7 +164,7 @@ namespace TiffanyGame.Tests
             {
                 PlaythroughMilestone.Hide, PlaythroughMilestone.Memory2, PlaythroughMilestone.Kindle, PlaythroughMilestone.Memory3,
                 PlaythroughMilestone.MoveObject, PlaythroughMilestone.Memory4, PlaythroughMilestone.Memory5,
-                PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
+                PlaythroughMilestone.RampCandle, PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
             };
             foreach (var target in targets)
             {

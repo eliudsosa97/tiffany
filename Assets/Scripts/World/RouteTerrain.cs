@@ -168,6 +168,33 @@ namespace TiffanyGame
             return false;
         }
 
+        public const float RampCandleOffset = 4.5f;
+        public const string RampCandleName = "Ramp Candle";
+
+        public Vector3 RampCandle()
+        {
+            var points = RouteLayout.Path(4);
+            int longest = 1;
+            for (int i = 2; i < points.Length; i++)
+                if (Vector3.Distance(points[i - 1], points[i]) > Vector3.Distance(points[longest - 1], points[longest])) longest = i;
+            Vector3 middle = (points[longest - 1] + points[longest]) * 0.5f;
+            Vector3 along = points[longest] - points[longest - 1];
+            var side = new Vector2(along.z, -along.x).normalized * RampCandleOffset;
+            Vector3 best = default;
+            float bestStep = float.PositiveInfinity;
+            for (int sign = -1; sign <= 1; sign += 2)
+            {
+                float x = middle.x + side.x * sign, z = middle.z + side.y * sign;
+                if (IsWater(x, z)) continue;
+                float height = Height(x, z);
+                float step = Mathf.Abs(height - middle.y);
+                if (step >= bestStep) continue;
+                bestStep = step;
+                best = new Vector3(x, height, z);
+            }
+            return best;
+        }
+
         public float Height(float x, float z)
         {
             if (IsWalkable(x, z)) return RouteHeight(x, z, out _);

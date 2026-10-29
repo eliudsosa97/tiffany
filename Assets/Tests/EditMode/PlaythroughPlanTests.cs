@@ -43,7 +43,8 @@ namespace TiffanyGame.Tests
                 PlaythroughMilestone.Challenge4Distract, PlaythroughMilestone.Challenge4Wait,
                 PlaythroughMilestone.Challenge4Vanish, PlaythroughMilestone.Challenge4Cross,
                 PlaythroughMilestone.Memory5, PlaythroughMilestone.Capture, PlaythroughMilestone.Respawn,
-                PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
+                PlaythroughMilestone.RampCandle, PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road,
+                PlaythroughMilestone.Manifest
             };
             var plan = new PlaythroughPlan();
             Assert.AreEqual(expected.Length, plan.Count);

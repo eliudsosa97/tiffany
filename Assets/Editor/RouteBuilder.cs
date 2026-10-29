@@ -58,6 +58,8 @@ namespace TiffanyGame.EditorTools
             }
 
             TerrainBuilder.Build(route, terrain, structure);
+            SceneBuilder.CreateCandle(route.Find("Landscape"), RouteTerrain.RampCandleName, route.TransformPoint(terrain.RampCandle()),
+                CandleKind.Family, true, player.GetComponent<PlayerSoul>(), storm);
             ChallengeBuilder.Build(tracker, player.GetComponent<PlayerSoul>(), storm);
             var spawn = Root("Spawn", route.GetChild(0), new Vector3(0f, 0f, -13f));
             spawn.rotation = Quaternion.LookRotation(memories[0].position - spawn.position);

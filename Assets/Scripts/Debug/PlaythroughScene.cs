@@ -26,7 +26,7 @@ namespace TiffanyGame
         readonly PowerChallenge[] challenges = new PowerChallenge[4];
         PowerChallenge challenge;
         float selectedAt;
-        CandleSpot kindleTarget, checkpoint;
+        CandleSpot kindleTarget, checkpoint, rampCandle;
         MovableObject movable;
         HideVolume hideVolume;
         PlaythroughMilestone milestone;
@@ -66,6 +66,7 @@ namespace TiffanyGame
                     if (candle.kind == CandleKind.Family) { family[i] = candle; break; }
                 Require(family[i], "veladora familiar");
             }
+            rampCandle = Require(route.Find("Landscape/" + RouteTerrain.RampCandleName), "veladora de la rampa").GetComponent<CandleSpot>();
             ball = clearings[0].Find("Ball");
             foreach (var memory in collector.spots)
             {
@@ -173,6 +174,10 @@ namespace TiffanyGame
                 case PlaythroughMilestone.Recharge2: SelectCandle(1); break;
                 case PlaythroughMilestone.Recharge3: SelectCandle(2); break;
                 case PlaythroughMilestone.Recharge4: SelectCandle(3); break;
+                case PlaythroughMilestone.RampCandle:
+                    checkpoint = rampCandle;
+                    Target = checkpoint.transform.position + Vector3.back * 1.5f;
+                    break;
                 case PlaythroughMilestone.LakeCandle: SelectCandle(5); break;
                 case PlaythroughMilestone.Kindle: Target = kindleTarget.transform.position + Vector3.back * 1.4f; break;
                 case PlaythroughMilestone.MoveObject: Target = movable.transform.position + Vector3.back * 2f; break;

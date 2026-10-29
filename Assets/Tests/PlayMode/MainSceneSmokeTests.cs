@@ -238,8 +238,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(29, route.GetComponentsInChildren<CaptureStop>().Length, "21 paradas previas y ocho vistas de los retos.");
             Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
-            Assert.AreEqual(20, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length,
-                "Doce originales, cuatro de recarga y cuatro para encender en los retos.");
+            Assert.AreEqual(21, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length,
+                "Doce originales, la de la rampa, cuatro de recarga y cuatro para encender en los retos.");
             foreach (var movable in MovableObject.Active)
                 Assert.IsTrue(movable.transform.IsChildOf(cemetery) || movable.GetComponentInParent<PowerChallenge>() != null);
             var player = GameObject.FindGameObjectWithTag("Player");

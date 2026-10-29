@@ -13,7 +13,8 @@ namespace TiffanyGame
         Challenge1Recharge, Challenge1Candle1, Challenge1Candle2, Challenge1Cross,
         Challenge2Recharge, Challenge2Distract, Challenge2Wait, Challenge2Cross,
         Challenge3Recharge, Challenge3Entry, Challenge3Vanish, Challenge3Cross,
-        Challenge4Recharge, Challenge4Candle1, Challenge4Candle2, Challenge4Distract, Challenge4Wait, Challenge4Vanish, Challenge4Cross
+        Challenge4Recharge, Challenge4Candle1, Challenge4Candle2, Challenge4Distract, Challenge4Wait, Challenge4Vanish, Challenge4Cross,
+        RampCandle
     }
 
     public enum ChallengeAction { None, Recharge, Candle1, Candle2, Distract, Wait, Entry, Vanish, Cross }
@@ -79,7 +80,8 @@ namespace TiffanyGame
                     PlaythroughMilestone.Challenge4Distract, PlaythroughMilestone.Challenge4Wait,
                     PlaythroughMilestone.Challenge4Vanish, PlaythroughMilestone.Challenge4Cross,
                     PlaythroughMilestone.Memory5, PlaythroughMilestone.Capture, PlaythroughMilestone.Respawn,
-                    PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
+                    PlaythroughMilestone.RampCandle, PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road,
+                    PlaythroughMilestone.Manifest
                 }
                 : (PlaythroughMilestone[])milestones.Clone();
             if (Count == 0) throw new ArgumentException("La partida necesita hitos.", nameof(milestones));
@@ -204,6 +206,7 @@ namespace TiffanyGame
                 case PlaythroughMilestone.Recharge2:
                 case PlaythroughMilestone.Recharge3:
                 case PlaythroughMilestone.Recharge4:
+                case PlaythroughMilestone.RampCandle:
                 case PlaythroughMilestone.LakeCandle: return o.CheckpointReached && o.Energy >= SoulEnergy.Max - 1f;
                 case PlaythroughMilestone.Capture: return o.Respawning;
                 case PlaythroughMilestone.Respawn: return !o.Respawning && o.AtRespawn;
@@ -289,6 +292,7 @@ namespace TiffanyGame
             PlaythroughMilestone.Recharge4 => "veladora del establo",
             PlaythroughMilestone.Vanish => "desvanecerse",
             PlaythroughMilestone.Memory5 => "brazalete (recuerdo 5)",
+            PlaythroughMilestone.RampCandle => "veladora de la rampa",
             PlaythroughMilestone.LakeCandle => "veladora del lago",
             PlaythroughMilestone.Capture => "captura durante el regreso",
             PlaythroughMilestone.Respawn => "reaparición en la última veladora",
