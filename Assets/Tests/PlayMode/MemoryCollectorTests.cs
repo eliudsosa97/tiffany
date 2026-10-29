@@ -225,6 +225,16 @@ namespace TiffanyGame.Tests
                 Assert.AreSame(echoes, stage.spot.echoPlayer.stageRoot.transform.parent);
                 Assert.IsNotNull(stage.spot.echoPlayer.ground);
                 Assert.IsTrue(stage.spot.echoPlayer.ground.transform.IsChildOf(clearing));
+                var echo = stage.spot.echoPlayer;
+                Assert.AreSame(echo.stageRoot.transform, echo.tyler.parent);
+                var animators = echo.tyler.GetComponentsInChildren<Animator>(true);
+                Assert.AreEqual(1, animators.Length);
+                Assert.AreSame(echo.tyler, animators[0].transform.parent);
+                Assert.AreSame(collector.tyler.animator.runtimeAnimatorController, animators[0].runtimeAnimatorController);
+                Assert.AreEqual(AnimatorCullingMode.CullUpdateTransforms, animators[0].cullingMode);
+                Assert.IsEmpty(echo.tyler.GetComponentsInChildren<Collider>(true));
+                for (int i = 0; i < echo.props.Length; i++)
+                    if (echo.Data.props[i].parent == "tyler") Assert.AreSame(echo.tyler, echo.props[i].parent);
                 Vector3 offset = stage.spot.transform.InverseTransformPoint(stage.transform.position);
                 Assert.AreEqual(-3f, offset.x, 0.001f);
                 Assert.AreEqual(-4f, offset.z, 0.001f);

@@ -6,6 +6,15 @@ namespace TiffanyGame
 {
     public sealed class EchoPlayer : MonoBehaviour
     {
+        sealed class PropAnimation
+        {
+            public Transform Target;
+            public Animator Animator;
+            public Vector3 PreviousPosition;
+            public float Speed;
+            public bool Started;
+        }
+
         public TextAsset echoAsset;
         public GameInterface gameInterface;
         public Image blackout;
@@ -20,6 +29,9 @@ namespace TiffanyGame
         EchoEvaluator evaluator;
         EchoAudioEvaluator audioEvaluator;
         AudioClip[] soundClips;
+        PropAnimation[] animations;
+        int speedParameterHash;
+        int walkStateHash;
         int subtitleIndex = -1;
         bool loaded;
 
@@ -57,9 +69,30 @@ namespace TiffanyGame
             for (int i = 0; i < sources.Length; i++)
                 if (sources[i] == null) return Invalid($"falta el AudioSource {i}");
             audioEvaluator = new EchoAudioEvaluator(data.sounds, clipLengths, sources.Length);
+            speedParameterHash = Animator.StringToHash(TylerAnimation.SpeedParameter);
+            walkStateHash = Animator.StringToHash(TylerAnimation.Walk);
+            var animators = stageRoot.GetComponentsInChildren<Animator>(true);
+            animations = new PropAnimation[animators.Length];
+            for (int i = 0; i < animators.Length; i++)
+            {
+                Transform target = animators[i].transform;
+                while (target != null && target != girl && target != tyler && Array.IndexOf(props, target) < 0)
+                    target = target.parent;
+                if (target != null) animations[i] = CacheAnimation(target, animators[i]);
+            }
             Data = data;
             evaluator = new EchoEvaluator(data);
             return true;
+        }
+
+        PropAnimation CacheAnimation(Transform target, Animator animator)
+        {
+            if (animator.runtimeAnimatorController == null) return null;
+            var parameters = animator.parameters;
+            for (int i = 0; i < parameters.Length; i++)
+                if (parameters[i].nameHash == speedParameterHash && parameters[i].type == AnimatorControllerParameterType.Float)
+                    return new PropAnimation { Target = target, Animator = animator };
+            return null;
         }
 
         bool Invalid(string reason)
@@ -98,6 +131,7 @@ namespace TiffanyGame
             ApplyPose(girl, frame.Girl);
             ApplyPose(tyler, frame.Tyler);
             for (int i = 0; i < props.Length; i++) ApplyPose(props[i], EchoEvaluator.Pose(Data.props[i], Elapsed));
+            ApplyAnimations(previousTime);
             if (subtitleIndex != frame.Subtitle)
             {
                 subtitleIndex = frame.Subtitle;
@@ -108,6 +142,31 @@ namespace TiffanyGame
             blackout.gameObject.SetActive(frame.BlackOpacity > 0f);
             audioEvaluator.Evaluate(previousTime, Elapsed);
             ApplyAudio();
+        }
+
+        void ApplyAnimations(float previousTime)
+        {
+            bool reset = float.IsNegativeInfinity(previousTime);
+            float dt = reset ? 0f : Elapsed - previousTime;
+            for (int i = 0; i < animations.Length; i++)
+            {
+                var animation = animations[i];
+                if (animation == null) continue;
+                var animator = animation.Animator;
+                if (reset || !animator.isActiveAndEnabled) animation.Started = false;
+                if (!animator.isActiveAndEnabled) continue;
+                Vector3 position = animation.Target.position;
+                if (!animation.Started)
+                {
+                    animation.PreviousPosition = position;
+                    animation.Speed = 0f;
+                    if (animator.HasState(0, walkStateHash)) animator.CrossFade(walkStateHash, 0.15f, 0);
+                    animation.Started = true;
+                }
+                animation.Speed = EchoMotion.Speed(Vector3.Distance(animation.PreviousPosition, position), dt, animation.Speed);
+                animation.PreviousPosition = position;
+                animator.SetFloat(speedParameterHash, animation.Speed);
+            }
         }
 
         public void ApplyPose(Transform target, EchoPose pose)
