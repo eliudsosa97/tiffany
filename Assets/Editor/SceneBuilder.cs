@@ -15,6 +15,9 @@ namespace TiffanyGame.EditorTools
     {
         public const string ScenePath = "Assets/Scenes/Main.unity";
         public const float FireBallHeight = 1.5f;
+        public const float NightFogStartDistance = 40f;
+        public const float NightFogEndDistance = 76f;
+        public static readonly Color NightFogColor = new Color(0.018f, 0.028f, 0.052f);
         const float SlopeAngle = 8f;
         const float PatchHeight = 0.1f;
         const float PatchElevation = 0.03f;
@@ -38,6 +41,7 @@ namespace TiffanyGame.EditorTools
             BuildLightStops(testZone);
             HidingBuilder.BuildHideTest(testZone, player);
             var route = RouteBuilder.BuildRoute(world, player, storm, out var memories, out var skyRoute);
+            FogBuilder.Build(world, route.GetComponent<WitchChapterTracker>());
             var viewCamera = CreateCamera(player);
             BakeNavMesh(world);
             playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute,
@@ -109,9 +113,9 @@ namespace TiffanyGame.EditorTools
             RenderSettings.reflectionIntensity = 0f;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.025f, 0.035f, 0.055f);
-            RenderSettings.fogStartDistance = 45f;
-            RenderSettings.fogEndDistance = 90f;
+            RenderSettings.fogColor = NightFogColor;
+            RenderSettings.fogStartDistance = NightFogStartDistance;
+            RenderSettings.fogEndDistance = NightFogEndDistance;
         }
 
         static void CreateMoon()
@@ -320,10 +324,10 @@ namespace TiffanyGame.EditorTools
             liveStop.AddComponent<WitchCaptureStage>().live = true;
 
             var states = new[] { WitchState.Flying, WitchState.Landing, WitchState.Stalking, WitchState.WindUp,
-                WitchState.Sprinting, WitchState.Recovering, WitchState.TakingOff };
+                WitchState.Sprinting, WitchState.Recovering, WitchState.TakingOff, WitchState.Suspicious };
             for (int i = 0; i < states.Length; i++)
             {
-                var stop = new GameObject($"Witch {i + 1} {states[i]}");
+                var stop = new GameObject(states[i] == WitchState.Suspicious ? "Witch Suspicious" : $"Witch {i + 1} {states[i]}");
                 stop.transform.SetParent(captureRoot, false);
                 stop.transform.position = SurfacePoint(0f, -4f);
                 var capture = stop.AddComponent<CaptureStop>();

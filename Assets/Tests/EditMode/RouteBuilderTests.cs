@@ -33,6 +33,7 @@ namespace TiffanyGame.Tests
             storm = new GameObject("Storm").AddComponent<Storm>();
             storm.transform.SetParent(root.transform, false);
             route = RouteBuilder.BuildRoute(root.transform, player, storm, out var memories, out skyRoute);
+            FogBuilder.Build(root.transform, route.GetComponent<WitchChapterTracker>());
             var gameInterface = new GameObject("Interface", typeof(RectTransform)).AddComponent<GameInterface>();
             gameInterface.transform.SetParent(root.transform, false);
             MemoryBuilder.Build(root.transform, player, gameInterface, null, null, memories, TempFolder + "/EchoVolumeProfile.asset");
@@ -271,6 +272,54 @@ namespace TiffanyGame.Tests
                 Assert.IsNotNull(light.GetComponentInParent<CandleSpot>());
                 Assert.AreEqual(LightShadows.None, light.shadows);
             }
+        }
+
+        [Test]
+        public void FogAndItsSixLitComparisonStopsStayOutsideTheRouteBudget()
+        {
+            var fog = root.GetComponentInChildren<GroundFog>();
+            Assert.IsNotNull(fog);
+            Assert.IsFalse(fog.transform.IsChildOf(route));
+            Assert.AreSame(player.transform, fog.player);
+            Assert.AreEqual(25, fog.layers.Length, "Dos tarjetas por ocho claros, una por siete tramos y dos de agua.");
+            Assert.AreEqual(25, fog.GetComponentsInChildren<Renderer>().Length);
+            Assert.AreEqual(2, System.Array.FindAll(fog.layers, layer => layer.water).Length);
+            for (int i = 1; i <= 8; i++)
+            {
+                Assert.AreEqual(2, System.Array.FindAll(fog.layers,
+                    layer => layer.renderer.name.StartsWith($"Clearing {i} Fog ")).Length);
+                Assert.AreEqual(i < 8 ? 1 : 0, System.Array.FindAll(fog.layers,
+                    layer => layer.renderer.name.StartsWith($"Segment {i} Fog ")).Length);
+            }
+            var stages = root.GetComponentsInChildren<FogCaptureStage>();
+            Assert.AreEqual(6, stages.Length, "Cementerio, río y lago, cada uno con y sin neblina.");
+            var names = new[] { "Fog 1 Cemetery", "Fog 2 River", "Fog 3 Lake" };
+            var sources = new[] { route.GetChild(0).Find("Route 1 Cemetery"),
+                route.GetChild(4).Find("Path to Next Clearing/River/Water 2 Crossing"), route.GetChild(5).Find("Water 1 Lake") };
+            for (int i = 0; i < names.Length; i++)
+                foreach (string suffix in new[] { " On", " Off" })
+                {
+                    var stage = System.Array.Find(stages, item => item.name == names[i] + suffix);
+                    Assert.IsNotNull(stage);
+                    Assert.AreSame(fog, stage.fog);
+                    Assert.IsFalse(stage.transform.IsChildOf(route));
+                    Assert.IsFalse(stage.transform.IsChildOf(fog.transform));
+                    Assert.AreEqual(sources[i].position, stage.transform.position);
+                    Assert.AreEqual(sources[i].rotation, stage.transform.rotation);
+                    Assert.AreEqual(suffix == " On", stage.fogEnabled);
+                    Assert.AreEqual(SoulEnergy.Max, stage.GetComponent<LightCaptureStage>().energy);
+                    var capture = stage.GetComponent<CaptureStop>();
+                    var source = sources[i].GetComponent<CaptureStop>();
+                    Assert.AreEqual(source.overrideCamera, capture.overrideCamera);
+                    Assert.AreEqual(source.cameraPosition, capture.cameraPosition);
+                    Assert.AreEqual(source.cameraRotation, capture.cameraRotation);
+                }
+            var cemetery = System.Array.Find(fog.layers, layer => layer.renderer.name == "Clearing 1 Fog 1");
+            var lake = System.Array.Find(fog.layers, layer => layer.renderer.name == "Clearing 6 Fog 1");
+            var river = System.Array.Find(fog.layers, layer => layer.renderer.name == "Segment 5 Fog 1");
+            var dryPath = System.Array.Find(fog.layers, layer => layer.renderer.name == "Segment 1 Fog 1");
+            Assert.Greater(lake.density, cemetery.density);
+            Assert.Greater(river.density, dryPath.density);
         }
 
         [Test]

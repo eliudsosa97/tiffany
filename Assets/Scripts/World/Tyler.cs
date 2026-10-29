@@ -31,7 +31,8 @@ namespace TiffanyGame
                 mimicCooldown = MimicInterval;
             }
             if (mimicRemaining > 0f
-                || (validWitch && inputs.WitchForm == WitchForm.Grounded && inputs.WitchDistance < GrowlRadius))
+                || (validWitch && (inputs.WitchForm == WitchForm.Grounded || inputs.WitchSuspicious)
+                    && inputs.WitchDistance < GrowlRadius))
             {
                 Reaction = TylerReaction.Growl;
             }

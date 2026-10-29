@@ -146,6 +146,7 @@ namespace TiffanyGame
             if (witch != null)
             {
                 inputs.WitchForm = witch.Decision.Form;
+                inputs.WitchSuspicious = witch.Decision.State == WitchState.Suspicious;
                 inputs.WitchDistance = Vector3.Distance(transform.position, witch.transform.position);
             }
             TylerReaction reaction = brain.Tick(Time.deltaTime, in inputs);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace TiffanyGame
@@ -7,12 +8,15 @@ namespace TiffanyGame
     {
         private readonly WitchSenseProfile profile;
         private readonly StepNoise[] pendingNoises;
+        private readonly Vector3[] hidePoints;
         private int pendingCount;
 
-        public WitchSenses(WitchSenseProfile profile)
+        public WitchSenses(WitchSenseProfile profile, IReadOnlyList<Vector3> hidePoints = null)
         {
             this.profile = profile ?? throw new ArgumentNullException(nameof(profile));
             pendingNoises = new StepNoise[8];
+            this.hidePoints = new Vector3[hidePoints?.Count ?? 0];
+            for (int i = 0; i < this.hidePoints.Length; i++) this.hidePoints[i] = hidePoints[i];
         }
 
         public void Hear(in StepNoise noise, Vector3 witchPosition)
@@ -64,6 +68,18 @@ namespace TiffanyGame
                 }
             }
             pendingCount = 0;
+            Vector3 noiseHide = Vector3.zero;
+            float hideDistance = float.PositiveInfinity;
+            if (heardNoise)
+            {
+                for (int i = 0; i < hidePoints.Length; i++)
+                {
+                    float candidate = HorizontalDistance(noisePosition, hidePoints[i]);
+                    if (candidate > profile.NoiseHideRadius || candidate >= hideDistance) continue;
+                    hideDistance = candidate;
+                    noiseHide = hidePoints[i];
+                }
+            }
 
             return new WitchPerception
             {
@@ -85,7 +101,9 @@ namespace TiffanyGame
                     && HorizontalDistance(input.WitchPosition, input.PlayerLightPosition) <= profile.LightSightDistance,
                 SmellsPlayer = grounded && !input.PlayerVanished && distance <= profile.SmellDistance,
                 HeardNoise = heardNoise,
-                NoisePosition = noisePosition
+                NoisePosition = noisePosition,
+                HasNoiseHide = hideDistance < float.PositiveInfinity,
+                NoiseHidePosition = noiseHide
             };
         }
 

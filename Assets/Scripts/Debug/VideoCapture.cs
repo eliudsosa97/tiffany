@@ -17,6 +17,13 @@ namespace TiffanyGame
 
         public static bool ShouldQuit(string[] args) => System.Array.IndexOf(args, "-playthrough") < 0;
 
+        public static float MinimumDuration(string[] args)
+        {
+            int index = System.Array.IndexOf(args, "-witchdemo");
+            return index >= 0 && index + 1 < args.Length && args[index + 1] == "nothing"
+                ? WitchDemo.NothingDuration : 0f;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
         {
@@ -40,7 +47,7 @@ namespace TiffanyGame
             DontDestroyOnLoad(go);
             var capture = go.AddComponent<VideoCapture>();
             capture.directory = directory;
-            capture.seconds = seconds;
+            capture.seconds = Mathf.Max(seconds, MinimumDuration(args));
             capture.quitOnFinish = ShouldQuit(args);
 #endif
         }

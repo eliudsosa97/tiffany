@@ -422,11 +422,29 @@ namespace TiffanyGame.Tests
             Assert.DoesNotThrow(() => ModelLibrary.CheckSpec("rock-a", new ModelLibrary.ModelSpec { materials = new[] { stone } }));
         }
 
-        static void AssertNeutral(Transform t)
+        internal static long TriangleCount(Transform root)
+        {
+            long indices = 0;
+            foreach (var filter in root.GetComponentsInChildren<MeshFilter>(true))
+                for (int i = 0; i < filter.sharedMesh.subMeshCount; i++)
+                    indices += filter.sharedMesh.GetIndexCount(i);
+            return indices / 3;
+        }
+
+        internal static void AssertNeutral(Transform t)
         {
             Assert.AreEqual(Vector3.zero, t.localPosition, t.name);
             Assert.AreEqual(Quaternion.identity, t.localRotation, t.name);
             Assert.AreEqual(Vector3.one, t.localScale, t.name);
+        }
+
+        internal static Bounds LocalBounds(Transform root, string pose)
+        {
+            var child = root.Find(pose);
+            Assert.IsNotNull(child, pose);
+            Assert.AreSame(root, child.parent);
+            AssertNeutral(child);
+            return child.GetComponent<MeshFilter>().sharedMesh.bounds;
         }
     }
 }

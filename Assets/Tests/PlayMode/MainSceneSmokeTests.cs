@@ -214,9 +214,9 @@ namespace TiffanyGame.Tests
             var cemetery = route.GetChild(0);
             Assert.AreEqual(RouteLayout.Count + 1, route.childCount);
             Assert.IsNotNull(route.Find("Landscape/Terrain"));
-            Assert.AreEqual(58, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
-                "48 paradas de escena (46 base, Witch 9 Flying Lit y Tyler 5 Shares Light), " +
-                "una vista previa, cinco ecos, dos de la pelota y dos vistas del agua.");
+            Assert.AreEqual(65, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
+                "58 paradas de main (48 de escena, una vista previa, cinco ecos, dos de la pelota " +
+                "y dos vistas del agua), Witch Suspicious y seis comparaciones de neblina.");
             Assert.AreEqual(21, route.GetComponentsInChildren<CaptureStop>().Length, "19 paradas previas y dos vistas del agua.");
             Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
