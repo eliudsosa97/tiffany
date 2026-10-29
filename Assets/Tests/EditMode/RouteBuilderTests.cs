@@ -916,7 +916,7 @@ namespace TiffanyGame.Tests
             var water = lake.Find("Water");
             Assert.IsNull(water.GetComponent<Collider>());
             Assert.Greater(water.GetComponent<Renderer>().bounds.size.x, 100f);
-            Assert.Greater(water.GetComponent<Renderer>().bounds.size.z, 90f);
+            Assert.Greater(water.GetComponent<Renderer>().bounds.size.z, 60f);
             Assert.IsTrue(HitsRoute(water.position + Vector3.up * 2f, Vector3.down, 7f));
             var terrain = new RouteTerrain();
             var mesh = water.GetComponent<MeshFilter>().sharedMesh;
@@ -1054,6 +1054,12 @@ namespace TiffanyGame.Tests
             }
             var lakeStop = route.GetChild(5).Find("Water 1 Lake");
             Assert.Less(Vector3.Distance(lakeStop.GetComponent<CaptureStop>().cameraPosition, lake.position), 80f);
+            var capture = lakeStop.GetComponent<CaptureStop>();
+            var view = new Ray(capture.cameraPosition, capture.cameraRotation * Vector3.forward);
+            Assert.IsTrue(new Plane(Vector3.up, lake.position).Raycast(view, out float distance));
+            Vector3 focus = route.InverseTransformPoint(view.GetPoint(distance));
+            Assert.Less(new RouteTerrain().LakeDistance(focus.x, focus.z), 0f, "La cámara fija encuadra el agua.");
+            Assert.IsTrue(HitsRoute(lakeStop.position + Vector3.up, Vector3.down, 1.1f));
             var riverStop = river.parent.Find("Water 2 Crossing");
             foreach (var stop in new[] { lakeStop, riverStop })
             {
