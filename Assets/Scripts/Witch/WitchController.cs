@@ -73,7 +73,7 @@ namespace TiffanyGame
         private const float TrembleOffset = 0.05f, TrembleAngle = 5f;
         private NavMeshPath catchUpPath;
         private readonly Vector3[] catchUpCorners = new Vector3[64];
-        // Prefiere llegar de lado: de frente la embestida atrapa a quien corre recto.
+        private readonly GroundChasePlacement.Candidate[] catchUpCandidates = new GroundChasePlacement.Candidate[21];
         private static readonly float[] CatchUpAngles = { 40f, -40f, 20f, -20f, 60f, -60f, 0f };
         private const float CatchUpDistanceStep = 2f;
         private const float CatchUpSampleRadius = 3f;
@@ -265,10 +265,12 @@ namespace TiffanyGame
             if (!NavMesh.SamplePosition(playerPosition, out var start, CatchUpSampleRadius, agent.areaMask)) return false;
             Vector3 ahead = CatchUpAhead(playerPosition, start.position);
             Camera view = Camera.main;
+            int count = 0;
             for (int i = 0; i < CatchUpAngles.Length; i++)
             {
                 Vector3 direction = Quaternion.AngleAxis(CatchUpAngles[i], Vector3.up) * ahead;
-                for (float distance = profile.CatchUpReappearDistance; distance <= profile.CatchUpReappearMaxDistance;
+                for (float distance = profile.CatchUpReappearDistance; distance <= profile.CatchUpReappearMaxDistance
+                    && count < catchUpCandidates.Length;
                     distance += CatchUpDistanceStep)
                 {
                     Vector3 wanted = playerPosition + direction * distance;
@@ -277,12 +279,15 @@ namespace TiffanyGame
                         || SafeZones.Contains(hit.position)
                         || !HiddenFromCamera(view, hit.position)
                         || NavMesh.Raycast(start.position, hit.position, out _, agent.areaMask)
-                        || !ShortCatchUpPath(start.position, hit.position)) continue;
-                    point = hit.position;
-                    return true;
+                        || !ShortCatchUpPath(start.position, hit.position, out float length)) continue;
+                    catchUpCandidates[count++] = new GroundChasePlacement.Candidate
+                        { Position = hit.position, Status = NavMeshPathStatus.PathComplete, PathLength = length };
                 }
             }
-            return false;
+            int chosen = GroundChasePlacement.Choose(catchUpCandidates, count, playerPosition, profile.SprintTriggerDistance);
+            if (chosen < 0) return false;
+            point = catchUpCandidates[chosen].Position;
+            return true;
         }
 
         private Vector3 CatchUpAhead(Vector3 playerPosition, Vector3 start)
@@ -299,13 +304,13 @@ namespace TiffanyGame
             return WitchTargets.Direction(playerPosition, playerPosition + player.forward);
         }
 
-        private bool ShortCatchUpPath(Vector3 from, Vector3 to)
+        private bool ShortCatchUpPath(Vector3 from, Vector3 to, out float length)
         {
+            length = 0f;
             if (!NavMesh.CalculatePath(from, to, agent.areaMask, catchUpPath)
                 || catchUpPath.status != NavMeshPathStatus.PathComplete) return false;
             int corners = catchUpPath.GetCornersNonAlloc(catchUpCorners);
             if (corners >= catchUpCorners.Length) return false;
-            float length = 0f;
             for (int c = 1; c < corners; c++) length += Vector3.Distance(catchUpCorners[c - 1], catchUpCorners[c]);
             return length < CatchUpPathRatio * Vector3.Distance(from, to);
         }
