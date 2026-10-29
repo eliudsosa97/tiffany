@@ -281,7 +281,7 @@ namespace TiffanyGame
                         || NavMesh.Raycast(start.position, hit.position, out _, agent.areaMask)
                         || !ShortCatchUpPath(start.position, hit.position, out float length)) continue;
                     catchUpCandidates[count++] = new GroundChasePlacement.Candidate
-                        { Position = hit.position, Status = NavMeshPathStatus.PathComplete, PathLength = length };
+                        { Position = hit.position, Status = NavMeshPathStatus.PathComplete, PathLength = WitchCatchUp.PlacementCost(length, CatchUpAngles[i]) };
                 }
             }
             int chosen = GroundChasePlacement.Choose(catchUpCandidates, count, playerPosition, profile.SprintTriggerDistance);

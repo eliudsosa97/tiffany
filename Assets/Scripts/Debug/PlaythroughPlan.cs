@@ -41,6 +41,8 @@ namespace TiffanyGame
     {
         public const float DefaultTimeout = 90f;
         public const float CaptureTimeout = 40f;
+        public const float WalkLightEnergy = 30f, WitchFireNear = 25f;
+        public const float WitchGroundNear = 30f;
         public const float StuckSeconds = 3f;
         public const float ProgressDistance = 1f;
         public const float ReturnDepartureClearance = 12f;
@@ -166,7 +168,8 @@ namespace TiffanyGame
             bool press = pressCooldown <= 0f;
             bool wantsLight = Current == PlaythroughMilestone.Light || Current == PlaythroughMilestone.MoveObject
                 || action == ChallengeAction.Distract || action == ChallengeAction.Wait
-                || (Current == PlaythroughMilestone.Capture && observation.AtTarget);
+                || (Current == PlaythroughMilestone.Capture && observation.AtTarget)
+                || WalksWithLight(Current, command.Move, in observation);
             command.ToggleLight = press && observation.LightOn != wantsLight;
             if (observation.AtTarget && press)
             {
@@ -244,6 +247,14 @@ namespace TiffanyGame
             milestone != PlaythroughMilestone.Light && milestone != PlaythroughMilestone.Flash
             && milestone != PlaythroughMilestone.LeaveHide && milestone != PlaythroughMilestone.Vanish
             && milestone != PlaythroughMilestone.Capture && milestone != PlaythroughMilestone.Respawn;
+
+        public static bool WalksWithLight(PlaythroughMilestone milestone, bool moving, in PlaythroughObservation o) =>
+            moving && ChallengeIndex(milestone) < 0 && milestone != PlaythroughMilestone.Hide
+            && milestone != PlaythroughMilestone.LeaveHide && milestone != PlaythroughMilestone.Vanish
+            && o.Energy >= WalkLightEnergy
+            && !(o.WitchState == WitchState.Flying && HorizontalDistance(o.Position, o.WitchPosition) < WitchFireNear)
+            && (o.WitchState == WitchState.Flying || o.WitchState == WitchState.Landing || o.WitchState == WitchState.TakingOff
+                || HorizontalDistance(o.Position, o.WitchPosition) > WitchGroundNear);
 
         public static int ChallengeIndex(PlaythroughMilestone milestone)
         {

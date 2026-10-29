@@ -309,5 +309,12 @@ namespace TiffanyGame.Tests
             p.DistanceToPlayer = offset.magnitude;
             return brain.Tick(dt, in p);
         }
+
+        [Test]
+        public void SideReappearanceBeatsAFrontOneOnlyWhenThePathsAreClose()
+        {
+            Assert.Less(WitchCatchUp.PlacementCost(16f, 40f), WitchCatchUp.PlacementCost(14f, 0f), "De lado gana a un frente apenas más corto.");
+            Assert.Less(WitchCatchUp.PlacementCost(14f, 0f), WitchCatchUp.PlacementCost(20f, 60f), "El frente gana si el lado queda mucho más lejos.");
+        }
     }
 }
