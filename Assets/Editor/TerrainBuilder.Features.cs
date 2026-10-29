@@ -77,6 +77,7 @@ namespace TiffanyGame.EditorTools
 
         static void BuildTown(Transform parent, RouteTerrain terrain, Material material)
         {
+            var building = GeneratedMaterials.Get("RouteBuilding", new Color(0.4f, 0.4f, 0.4f), occluder: true);
             for (int row = 0; row < 4; row++)
             for (int column = 0; column < 6; column++)
             {
@@ -84,7 +85,7 @@ namespace TiffanyGame.EditorTools
                 if (terrain.InClearingSquare(x, z, 8f) || terrain.DistanceToRoute(x, z) < 8f) continue;
                 float width = 6f + (column + row) % 3 * 2f, height = 4f + (column * 3 + row) % 4;
                 var house = SceneBuilder.CreatePrimitive($"House {row} {column}", PrimitiveType.Cube, parent,
-                    new Vector3(x, terrain.GroundHeight(x, z) + height * 0.5f, z), new Vector3(width, height, 8f), material);
+                    new Vector3(x, terrain.GroundHeight(x, z) + height * 0.5f, z), new Vector3(width, height, 8f), building);
                 BlockNavigation(house);
             }
             var houseClearing = parent.parent.parent.GetChild(7);
