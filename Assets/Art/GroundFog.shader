@@ -2,7 +2,7 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
 {
     Properties
     {
-        _BaseColor ("Color", Color) = (0.0702, 0.0824, 0.1232, 0.7)
+        _BaseColor ("Color", Color) = (0.20598416, 0.23479508, 0.28277929, 0.5)
         _Density ("Density", Range(0, 1)) = 0.6
         _NoiseScale ("Noise scale", Float) = 0.45
         _NoiseStretch ("Noise stretch", Float) = 1.25
@@ -120,6 +120,15 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
                 return length(samplePosition - segmentStart - segment * along);
             }
 
+            float FogField(float2 noisePosition)
+            {
+                // La octava fina va girada y deforma la gruesa para deshilachar los bordes sin bandas
+                float2 finePosition = float2(noisePosition.x * 0.8 - noisePosition.y * 0.6, noisePosition.x * 0.6 + noisePosition.y * 0.8);
+                float fine = FogNoise(finePosition * 2.3 + float2(_Time.y * 0.05, -_Time.y * 0.04) + 17.43);
+                float coarse = FogNoise(noisePosition + (fine - 0.5) * 0.9);
+                return coarse * 0.7 + fine * 0.3;
+            }
+
             half3 FogLighting(uint lightIndex, float3 positionWS)
             {
                 Light light = GetAdditionalLight(lightIndex, positionWS);
@@ -166,12 +175,9 @@ Shader "Universal Render Pipeline/Tiffany Ground Fog"
                 float2 drifted = samplePosition - wind * (_Time.y * _WindSpeed);
                 float2 noisePosition = float2(dot(drifted, wind) / _NoiseStretch,
                     dot(drifted, float2(-wind.y, wind.x))) * _NoiseScale;
-                // La octava fina va girada y deforma la gruesa para deshilachar los bordes sin bandas
-                float2 finePosition = float2(noisePosition.x * 0.8 - noisePosition.y * 0.6, noisePosition.x * 0.6 + noisePosition.y * 0.8);
-                float fine = FogNoise(finePosition * 2.3 + float2(_Time.y * 0.05, -_Time.y * 0.04) + 17.43);
-                float coarse = FogNoise(noisePosition + (fine - 0.5) * 0.9);
+                float noise = FogField(noisePosition);
                 float low = lerp(0.62, 0.34, local);
-                float banks = smoothstep(low, low + 0.3, coarse * 0.7 + fine * 0.3);
+                float banks = smoothstep(low, low + 0.3, noise);
                 half alpha = saturate(banks * local * _BaseColor.a * fade);
                 clip(alpha - 0.002h);
                 half3 color = half3(0, 0, 0);

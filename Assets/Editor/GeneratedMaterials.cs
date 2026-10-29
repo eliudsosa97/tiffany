@@ -96,7 +96,7 @@ namespace TiffanyGame.EditorTools
             bool isNew = material == null;
             if (isNew) material = new Material(shader) { name = "GroundFog" };
             else material.shader = shader;
-            material.SetColor("_BaseColor", new Color(0.006f, 0.0075f, 0.014f, 0.7f).gamma);
+            material.SetColor("_BaseColor", new Color(0.035f, 0.045f, 0.065f, 0.5f).gamma);
             material.SetFloat("_Density", FogDensity.BaseDensity);
             material.SetFloat("_NoiseScale", 0.45f);
             material.SetFloat("_NoiseStretch", 1.25f);
