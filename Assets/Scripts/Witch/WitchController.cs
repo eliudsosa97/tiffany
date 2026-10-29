@@ -280,8 +280,9 @@ namespace TiffanyGame
                         || !HiddenFromCamera(view, hit.position)
                         || NavMesh.Raycast(start.position, hit.position, out _, agent.areaMask)
                         || !ShortCatchUpPath(start.position, hit.position, out float length)) continue;
+                    float angle = WitchCatchUp.PlacementAngle(playerPosition, ahead, hit.position);
                     catchUpCandidates[count++] = new GroundChasePlacement.Candidate
-                        { Position = hit.position, Status = NavMeshPathStatus.PathComplete, PathLength = WitchCatchUp.PlacementCost(length, CatchUpAngles[i]) };
+                        { Position = hit.position, Status = NavMeshPathStatus.PathComplete, PathLength = WitchCatchUp.PlacementCost(length, angle) };
                 }
             }
             int chosen = GroundChasePlacement.Choose(catchUpCandidates, count, playerPosition, profile.SprintTriggerDistance);

@@ -310,6 +310,21 @@ namespace TiffanyGame.Tests
             return brain.Tick(dt, in p);
         }
 
+        [TestCase(20f, 8f)]
+        [TestCase(-20f, -8f)]
+        public void ProjectedPointInsideTheFrontConePaysThePenalty(float wantedAngle, float foundAngle)
+        {
+            Vector3 player = new Vector3(3f, 1f, -2f);
+            Vector3 ahead = Vector3.right;
+            Vector3 wanted = player + Quaternion.AngleAxis(wantedAngle, Vector3.up) * ahead * 14f;
+            Vector3 found = player + Quaternion.AngleAxis(foundAngle, Vector3.up) * ahead * 14f + Vector3.up * 0.5f;
+            Assert.Less(Vector3.Distance(wanted, found), WitchCatchUp.PlacementSlack);
+            float angle = WitchCatchUp.PlacementAngle(player, ahead + Vector3.up, found);
+            Assert.AreEqual(Mathf.Abs(foundAngle), angle, 1e-4f);
+            Assert.AreEqual(14f, WitchCatchUp.PlacementCost(14f, wantedAngle));
+            Assert.AreEqual(14f + WitchCatchUp.FrontPenalty, WitchCatchUp.PlacementCost(14f, angle));
+        }
+
         [Test]
         public void SideReappearanceBeatsAFrontOneOnlyWhenThePathsAreClose()
         {
