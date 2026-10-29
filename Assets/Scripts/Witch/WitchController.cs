@@ -30,6 +30,7 @@ namespace TiffanyGame
 
         public WitchDecision Decision { get; private set; }
         public WitchProfile Profile => profile;
+        public bool Chasing => brain != null && brain.Chasing;
         public event Action Caught;
 
         private NavMeshAgent agent;

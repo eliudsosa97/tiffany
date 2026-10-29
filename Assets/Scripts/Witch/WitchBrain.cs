@@ -41,6 +41,8 @@ namespace TiffanyGame
         private Vector3 verticalTarget;
         private Vector3 sprintEnd;
 
+        public bool Chasing => chasing;
+
         public WitchBrain(WitchProfile profile, IReadOnlyList<Vector3> skyRoute, System.Random random = null,
             Func<Vector3, Vector3> resolveGroundTarget = null)
         {
