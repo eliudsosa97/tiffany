@@ -93,6 +93,7 @@ namespace TiffanyGame.Tests
         {
             var player = GameObject.FindGameObjectWithTag("Player");
             var tyler = Object.FindAnyObjectByType<TylerController>(FindObjectsInactive.Include);
+            var light = player.GetComponent<PlayerLight>();
             foreach (var figure in new[] { player.transform, tyler.figure.transform })
             {
                 var renderers = figure.GetComponentsInChildren<Renderer>(true);
@@ -100,20 +101,114 @@ namespace TiffanyGame.Tests
                 foreach (var renderer in renderers)
                 {
                     var materials = renderer.sharedMaterials;
-                    Assert.AreEqual(2, materials.Length, renderer.name);
-                    Assert.IsTrue(materials[0].IsKeywordEnabled("_TIFFANY_CHARACTER"), renderer.name);
-                    Assert.AreEqual("Tiffany/Silhouette", materials[1].shader.name, renderer.name);
-                    Assert.AreEqual(1, materials[1].passCount);
+                    if (renderer is ParticleSystemRenderer || renderer.transform.IsChildOf(light.glow)
+                        || renderer.GetComponentInParent<Light>(true) != null)
+                    {
+                        foreach (var material in materials)
+                        {
+                            Assert.AreNotEqual("Universal Render Pipeline/Tiffany Silhouette", material.shader.name, renderer.name);
+                            Assert.IsFalse(material.IsKeywordEnabled("_TIFFANY_CHARACTER"), renderer.name);
+                        }
+                        continue;
+                    }
+                    var mesh = renderer is SkinnedMeshRenderer skin ? skin.sharedMesh : renderer.GetComponent<MeshFilter>().sharedMesh;
+                    Assert.AreEqual(Mathf.Max(2, mesh.subMeshCount), materials.Length, renderer.name);
+                    for (int i = 0; i < materials.Length - 1; i++)
+                    {
+                        Assert.AreEqual(1f, materials[i].GetFloat("_TiffanyStencil"), renderer.name);
+                        if (materials[i].shader.name != "TiffanyGame/Spirit")
+                            Assert.IsTrue(materials[i].IsKeywordEnabled("_TIFFANY_CHARACTER"), renderer.name);
+                    }
+                    Assert.AreEqual("Universal Render Pipeline/Tiffany Silhouette", materials[materials.Length - 1].shader.name, renderer.name);
+                    Assert.AreEqual(1, materials[materials.Length - 1].passCount);
                 }
             }
             var witch = Object.FindAnyObjectByType<WitchController>();
             foreach (var renderer in witch.GetComponentsInChildren<Renderer>(true))
                 foreach (var material in renderer.sharedMaterials)
-                    Assert.AreNotEqual("Tiffany/Silhouette", material.shader.name, renderer.name);
+                    Assert.AreNotEqual("Universal Render Pipeline/Tiffany Silhouette", material.shader.name, renderer.name);
             foreach (string name in new[] { "Cover 1 Tree", "Cover 2 Building", "Cover 3 Dense Forest" })
-                Assert.IsNotNull(GameObject.Find(name)?.GetComponent<CaptureStop>(), name);
+                foreach (string suffix in new[] { " Before", " After" })
+                {
+                    var stop = GameObject.Find(name + suffix)?.GetComponent<CaptureStop>();
+                    Assert.IsNotNull(stop, name + suffix);
+                    Assert.AreEqual(suffix == " After", stop.GetComponent<OcclusionCaptureStage>().after);
+                }
             yield return null;
             LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator CoverCapturesBlockTiffanyFromTheSettledGameplayCameraAndToggleTheEffect()
+        {
+            Object.FindAnyObjectByType<GameInterface>().StartGame();
+            yield return null;
+            var player = GameObject.FindGameObjectWithTag("Player").transform;
+            var controller = player.GetComponent<CharacterController>();
+            var follow = Camera.main.GetComponent<FollowCamera>();
+            var camera = follow.GetComponent<Camera>();
+            var stages = Object.FindObjectsByType<OcclusionCaptureStage>(FindObjectsSortMode.None);
+            var stops = System.Array.ConvertAll(stages, stage => stage.GetComponent<CaptureStop>());
+            System.Array.Sort(stops, AutoCapture.CompareStops);
+            Assert.AreEqual(6, stops.Length);
+            follow.enabled = false;
+            follow.transform.position = Vector3.one * 500f;
+            Vector3 beforePlayer = default, beforeCamera = default;
+            Quaternion beforeRotation = default;
+            float previousDisabled = Shader.GetGlobalFloat("_TiffanyOcclusionDisabled");
+            for (int i = 0; i < stops.Length; i++)
+            {
+                var stop = stops[i];
+                var stage = stop.GetComponent<OcclusionCaptureStage>();
+                try
+                {
+                    yield return stage.Prepare(player, follow);
+                    var settled = follow.transform.position;
+                    yield return new WaitForSecondsRealtime(stop.wait);
+                    yield return null;
+                    Assert.AreEqual(i % 2 == 1, stage.after, stop.name);
+                    Assert.IsFalse(stop.overrideCamera, stop.name);
+                    Assert.IsFalse(follow.enabled, stop.name);
+                    Assert.Less(Vector3.Distance(settled, follow.transform.position), 1e-4f, stop.name);
+                    Assert.Less(Vector3.Distance(stop.transform.position, player.position), 1e-3f, stop.name);
+                    Assert.Less(Vector3.Distance(stop.cameraPosition, follow.transform.position), 1e-3f, stop.name);
+                    Assert.Less(Quaternion.Angle(stop.cameraRotation, follow.transform.rotation), 0.01f, stop.name);
+                    Assert.AreEqual(follow.fieldOfView, camera.fieldOfView);
+                    var head = player.TransformPoint(controller.center + Vector3.up * controller.height * 0.5f);
+                    var viewport = camera.WorldToViewportPoint(head);
+                    Assert.That(viewport.x, Is.InRange(0f, 1f), stop.name);
+                    Assert.That(viewport.y, Is.InRange(0f, 1f), stop.name);
+                    Assert.Greater(viewport.z, camera.nearClipPlane, stop.name);
+                    var ray = new Ray(camera.transform.position, head - camera.transform.position);
+                    float distance = Vector3.Distance(head, camera.transform.position) - FollowCamera.OcclusionFocusMargin;
+                    Assert.GreaterOrEqual(stage.covers.Length, stop.name.StartsWith("Cover 3") ? 2 : 1, stop.name);
+                    foreach (var cover in stage.covers)
+                        Assert.IsTrue(cover.collider != null ? cover.collider.Raycast(ray, out _, distance)
+                            : cover.bounds.IntersectRay(ray, out float entry) && entry > 0f && entry < distance, stop.name);
+                    Assert.AreEqual(stage.after ? 0f : 1f, Shader.GetGlobalFloat("_TiffanyOcclusionDisabled"), stop.name);
+                    Assert.AreEqual(FollowCamera.OcclusionRadius, Shader.GetGlobalVector("_TiffanyFocusWS").w);
+                    Assert.Less(Vector3.Distance(player.position + Vector3.up * FollowCamera.ChestHeight,
+                        Shader.GetGlobalVector("_TiffanyFocusWS")), 1e-4f, stop.name);
+                    Assert.Less(Vector3.Distance(camera.transform.position,
+                        Shader.GetGlobalVector("_TiffanyCameraWS")), 1e-4f, stop.name);
+                    if (!stage.after)
+                    {
+                        beforePlayer = player.position;
+                        beforeCamera = camera.transform.position;
+                        beforeRotation = camera.transform.rotation;
+                    }
+                    else
+                    {
+                        Assert.AreEqual(beforePlayer, player.position);
+                        Assert.AreEqual(beforeCamera, camera.transform.position);
+                        Assert.AreEqual(beforeRotation, camera.transform.rotation);
+                    }
+                }
+                finally { stage.Clear(); }
+                Assert.AreEqual(previousDisabled, Shader.GetGlobalFloat("_TiffanyOcclusionDisabled"));
+                Assert.AreEqual(1f, Time.timeScale);
+                Assert.IsTrue(player.GetComponent<PlayerController>().enabled);
+            }
         }
 
         [UnityTest]
@@ -244,9 +339,9 @@ namespace TiffanyGame.Tests
             var cemetery = route.GetChild(0);
             Assert.AreEqual(8, route.childCount);
             Assert.AreEqual(4, Object.FindAnyObjectByType<MemoryCollector>().challenges.Length);
-            Assert.AreEqual(76, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
+            Assert.AreEqual(79, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
                 "58 paradas de main (48 de escena, una vista previa, cinco ecos, dos de la pelota " +
-                "y dos vistas del agua), Witch Suspicious, seis comparaciones de neblina ocho vistas de los retos y tres de cobertura.");
+                "y dos vistas del agua), Witch Suspicious, seis comparaciones de neblina, ocho vistas de los retos y seis de cobertura.");
             Assert.AreEqual(29, route.GetComponentsInChildren<CaptureStop>().Length, "21 paradas previas y ocho vistas de los retos.");
             Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);

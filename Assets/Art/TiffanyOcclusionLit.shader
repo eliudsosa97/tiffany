@@ -1,4 +1,4 @@
-Shader "Tiffany/Occlusion Lit"
+Shader "Universal Render Pipeline/Tiffany Occlusion Lit"
 {
     Properties
     {

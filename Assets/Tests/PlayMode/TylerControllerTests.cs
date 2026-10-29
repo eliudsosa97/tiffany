@@ -65,9 +65,12 @@ namespace TiffanyGame.Tests
                 Assert.IsInstanceOf<SkinnedMeshRenderer>(renderer);
                 CollectionAssert.Contains(((SkinnedMeshRenderer)renderer).bones, tyler.head);
                 Assert.IsTrue(renderer.enabled);
-                Assert.IsNotEmpty(renderer.sharedMaterials);
-                foreach (var material in renderer.sharedMaterials)
+                var materials = renderer.sharedMaterials;
+                Assert.AreEqual(5, materials.Length);
+                Assert.AreEqual("Universal Render Pipeline/Tiffany Silhouette", materials[4].shader.name);
+                for (int i = 0; i < 4; i++)
                 {
+                    var material = materials[i];
                     Assert.IsNotNull(material);
                     Assert.AreEqual("TiffanyGame/Spirit", material.shader.name);
                 }

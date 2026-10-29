@@ -80,8 +80,8 @@ namespace TiffanyGame.EditorTools
             var batches = new List<ForestInstanceData.Batch>();
             Scatter("GoldenGrass0", 128, Surface("Grass", new Color(0.42f, 0.46f, 0.27f), foliage: true));
             Scatter("DryShrub0", 32, Surface("Shrub", new Color(0.42f, 0.39f, 0.28f), foliage: true));
-            Scatter("OakLitter0", 48, Surface("Litter", new Color(0.7f, 0.59f, 0.43f), "dry_decay_leaves", true));
-            Scatter("GraniteStone0", 16, Surface("Stone", new Color(0.75f, 0.73f, 0.66f), "rock_boulder_dry"));
+            Scatter("OakLitter0", 48, GroundMaterials.For(GroundType.Leaves));
+            Scatter("GraniteStone0", 16, Surface("Stone", new Color(0.75f, 0.73f, 0.66f), "rock_boulder_dry", occluder: false));
             void Scatter(string meshName, int count, Material material)
             {
                 var mesh = LoadMesh(meshName);
@@ -128,10 +128,10 @@ namespace TiffanyGame.EditorTools
         static Mesh LoadMesh(string name) => AssetDatabase.LoadAssetAtPath<Mesh>($"Assets/Art/Stylized/Meshes/{name}.asset")
             ?? throw new InvalidOperationException($"{GameInfo.LogPrefix} Falta la malla del bosque {name}.");
 
-        static Material Surface(string name, Color color, string texture = null, bool foliage = false)
+        static Material Surface(string name, Color color, string texture = null, bool foliage = false, bool occluder = true)
         {
-            var material = texture == null ? GeneratedMaterials.Get("Forest" + name, color, instancing: true, occluder: true)
-                : GeneratedMaterials.GetTextured("Forest" + name, color, texture, 1f, instancing: true, occluder: true);
+            var material = texture == null ? GeneratedMaterials.Get("Forest" + name, color, instancing: true, occluder: occluder)
+                : GeneratedMaterials.GetTextured("Forest" + name, color, texture, 1f, instancing: true, occluder: occluder);
             material.SetFloat("_Cull", foliage ? 0f : 2f);
             material.SetShaderPassEnabled("ShadowCaster", false);
             EditorUtility.SetDirty(material);

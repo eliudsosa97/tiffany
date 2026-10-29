@@ -127,7 +127,13 @@ namespace TiffanyGame.Tests
             foreach (var batch in Understory.data.batches)
             {
                 Assert.IsTrue(batch.material.enableInstancing);
-                Assert.AreEqual(GeneratedMaterials.OcclusionShader, batch.material.shader.name);
+                string shader = batch.mesh.name switch
+                {
+                    "OakLitter0" or "ForestFloorPatch" or "PineNeedlePatch" => "Universal Render Pipeline/Tiffany Forest Ground",
+                    "GraniteStone0" => "Universal Render Pipeline/Lit",
+                    _ => GeneratedMaterials.OcclusionShader
+                };
+                Assert.AreEqual(shader, batch.material.shader.name, batch.mesh.name);
                 Assert.IsTrue(AssetDatabase.Contains(batch.material));
                 Assert.IsNotEmpty(batch.matrices);
                 var bounds = batch.bounds;

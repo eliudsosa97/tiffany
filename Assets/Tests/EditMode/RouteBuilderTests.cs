@@ -50,7 +50,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void BuildingsAndForestUseOcclusionWhileGroundStaysLit()
+        public void BuildingsAndForestUseOcclusionWhileGroundKeepsItsShader()
         {
             foreach (var clearing in new[] { route.GetChild(3), route.GetChild(4), route.GetChild(7) })
             {
@@ -59,8 +59,16 @@ namespace TiffanyGame.Tests
                     Assert.AreEqual(GeneratedMaterials.OcclusionShader, renderer.sharedMaterial.shader.name, renderer.name);
                 foreach (var renderer in clearing.Find("Forest").GetComponentsInChildren<Renderer>(true))
                     Assert.AreEqual(GeneratedMaterials.OcclusionShader, renderer.sharedMaterial.shader.name, renderer.name);
-                Assert.AreEqual("Universal Render Pipeline/Lit", clearing.Find("Ground").GetComponent<Renderer>().sharedMaterial.shader.name);
+                Assert.AreEqual("Universal Render Pipeline/Tiffany Forest Ground",
+                    clearing.Find("Ground").GetComponent<Renderer>().sharedMaterial.shader.name);
             }
+            Assert.AreEqual("Universal Render Pipeline/Lit", route.GetChild(0).Find("Ball").GetComponent<Renderer>().sharedMaterial.shader.name);
+            foreach (var movable in route.GetComponentsInChildren<MovableObject>(true))
+                Assert.AreNotEqual(GeneratedMaterials.OcclusionShader, movable.GetComponent<Renderer>().sharedMaterial.shader.name);
+            foreach (var candle in route.GetComponentsInChildren<CandleSpot>(true))
+                foreach (var renderer in candle.GetComponentsInChildren<Renderer>(true))
+                    foreach (var material in renderer.sharedMaterials)
+                        Assert.AreNotEqual(GeneratedMaterials.OcclusionShader, material.shader.name, renderer.name);
         }
 
         [Test]

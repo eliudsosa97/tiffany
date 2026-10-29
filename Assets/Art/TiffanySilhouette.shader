@@ -1,4 +1,4 @@
-Shader "Tiffany/Silhouette"
+Shader "Universal Render Pipeline/Tiffany Silhouette"
 {
     Properties { _Color ("Color", Color) = (0.5,0.62,0.7,0.45) }
     SubShader
@@ -22,6 +22,7 @@ Shader "Tiffany/Silhouette"
             CBUFFER_START(UnityPerMaterial)
                 half4 _Color;
             CBUFFER_END
+            float _TiffanyOcclusionDisabled;
             struct Attributes
             {
                 float4 positionOS : POSITION;
@@ -43,6 +44,7 @@ Shader "Tiffany/Silhouette"
             half4 Fragment(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                clip(0.5 - _TiffanyOcclusionDisabled);
                 return _Color;
             }
             ENDHLSL

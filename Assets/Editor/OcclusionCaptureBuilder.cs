@@ -1,38 +1,20 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Cover = TiffanyGame.OcclusionCaptureStage.Cover;
 
 namespace TiffanyGame.EditorTools
 {
     public static class OcclusionCaptureBuilder
     {
-        readonly struct Cover
-        {
-            public readonly Bounds Bounds;
-            public readonly Collider Collider;
-            public Cover(Bounds bounds, Collider collider = null) { Bounds = bounds; Collider = collider; }
-            public bool Intersects(Ray ray, float distance) => Collider != null
-                ? Collider.Raycast(ray, out _, distance)
-                : Bounds.IntersectRay(ray, out float entry) && entry > 0f && entry < distance;
-
-            public Vector3 FarSide(Vector3 direction)
-            {
-                float reach = Bounds.extents.magnitude + 1f;
-                var ray = new Ray(Bounds.center + direction * reach, -direction);
-                if (Collider != null && Collider.Raycast(ray, out var hit, reach * 2f))
-                    return hit.point + hit.normal * 0.8f;
-                Bounds.IntersectRay(ray, out float entry);
-                return ray.GetPoint(entry) + direction * 0.8f;
-            }
-        }
-
         public static void Build(Transform world)
         {
             Physics.SyncTransforms();
             var trees = new List<Cover>();
             var buildings = new List<Cover>();
             foreach (var collider in world.GetComponentsInChildren<CapsuleCollider>())
-                if (IsTree(collider.transform)) trees.Add(new Cover(collider.bounds, collider));
+                if (IsTree(collider.transform) && collider.enabled && !collider.isTrigger)
+                    trees.Add(new Cover { bounds = collider.bounds, collider = collider });
             foreach (var instances in world.GetComponentsInChildren<ForestInstances>())
             {
                 if (instances.data == null) continue;
@@ -42,14 +24,14 @@ namespace TiffanyGame.EditorTools
                         || batch.mesh.name.IndexOf("canopy", StringComparison.OrdinalIgnoreCase) >= 0
                         || batch.mesh.name.IndexOf("leaves", StringComparison.OrdinalIgnoreCase) >= 0) continue;
                     foreach (var matrix in batch.matrices)
-                        trees.Add(new Cover(ForestInstances.TransformBounds(batch.mesh.bounds,
-                            instances.transform.localToWorldMatrix * matrix)));
+                        trees.Add(new Cover { bounds = ForestInstances.TransformBounds(batch.mesh.bounds,
+                            instances.transform.localToWorldMatrix * matrix) });
                 }
             }
             foreach (var renderer in world.GetComponentsInChildren<Renderer>())
             {
                 if (!renderer.enabled || renderer.bounds.size.y < 2f) continue;
-                if (IsBuilding(renderer.transform)) buildings.Add(new Cover(renderer.bounds, renderer.GetComponent<Collider>()));
+                if (IsBuilding(renderer.transform)) buildings.Add(new Cover { bounds = renderer.bounds, collider = renderer.GetComponent<Collider>() });
             }
             var root = new GameObject("Cover Captures").transform;
             root.SetParent(world, false);
@@ -74,62 +56,76 @@ namespace TiffanyGame.EditorTools
         static bool IsBuilding(Transform node)
         {
             for (; node != null; node = node.parent)
-                if (node.name == "House" || node.name == "Barn" || node.name == "Hut") return true;
+                if (node.name == "House") return true;
             return false;
         }
 
         static void CreateStop(string name, List<Cover> covers, bool dense, Transform parent)
         {
             int bestScore = 0;
-            Vector3 bestPlayer = default, bestCamera = default, bestDirection = default;
-            float pitch = dense ? 22f : FollowCamera.DefaultPitch;
-            float coverDistance = FollowCamera.DefaultDistance - FollowCamera.OcclusionFocusMargin;
-            var defaultDirection = Vector3.ProjectOnPlane(
-                Quaternion.Euler(0f, FollowCamera.DefaultYaw, 0f) * Vector3.forward, Vector3.up);
+            Vector3 bestPlayer = default, bestCamera = default;
+            Cover[] bestCovers = null;
+            var rotation = Quaternion.Euler(FollowCamera.DefaultPitch, FollowCamera.DefaultYaw, 0f);
+            var direction = Vector3.ProjectOnPlane(rotation * Vector3.forward, Vector3.up).normalized;
+            var playerRotation = Quaternion.LookRotation(-direction);
+            var side = Vector3.Cross(Vector3.up, direction) * 0.2f;
             for (int i = 0; i < covers.Count; i++)
             {
-                int directions = dense ? covers.Count : 1;
-                for (int j = 0; j < directions; j++)
+                var bounds = covers[i].bounds;
+                var player = FarSide(covers[i], direction);
+                if (!TryGround(player, bounds.max.y, parent.parent, out player)) continue;
+                var focus = player + Vector3.up * FollowCamera.ChestHeight - direction * FollowCamera.DefaultLookAhead;
+                var camera = focus - rotation * Vector3.forward * FollowCamera.DefaultDistance;
+                bool hidden = true;
+                for (int height = 0; height < 3; height++)
+                    for (int width = -1; width <= 1; width++)
+                        hidden &= covers[i].Intersects(camera,
+                            player + Vector3.up * (height == 0 ? 0.15f : height == 1 ? FollowCamera.ChestHeight : 1.2f) + side * width);
+                if (!hidden) continue;
+                var head = player + Vector3.up * 1.2f;
+                var blocking = new List<Cover> { covers[i] };
+                int neighbors = 0;
+                for (int k = 0; k < covers.Count; k++)
                 {
-                    var direction = dense && i != j
-                        ? Vector3.ProjectOnPlane(covers[i].Bounds.center - covers[j].Bounds.center, Vector3.up)
-                        : defaultDirection;
-                    if (direction.sqrMagnitude < 0.01f || direction.sqrMagnitude > 18f * 18f) continue;
-                    direction.Normalize();
-                    var bounds = covers[i].Bounds;
-                    var player = covers[i].FarSide(direction);
-                    if (!TryGround(player, bounds.max.y, parent.parent, out player)) continue;
-                    var focus = player + Vector3.up * FollowCamera.ChestHeight;
-                    var cameraDirection = direction * Mathf.Cos(pitch * Mathf.Deg2Rad) - Vector3.up * Mathf.Sin(pitch * Mathf.Deg2Rad);
-                    var camera = focus - cameraDirection * FollowCamera.DefaultDistance;
-                    var ray = new Ray(camera, cameraDirection);
-                    if (!covers[i].Intersects(ray, coverDistance)) continue;
-                    int count = 0, neighbors = 0;
-                    for (int k = 0; k < covers.Count; k++)
-                    {
-                        if (covers[k].Intersects(ray, coverDistance)) count++;
-                        if ((covers[k].Bounds.center - bounds.center).sqrMagnitude < 12f * 12f) neighbors++;
-                    }
-                    if (dense && (count < 2 || neighbors < 3)) continue;
-                    int score = dense ? count * 100 + neighbors : 1;
-                    if (score <= bestScore) continue;
-                    bestScore = score;
-                    bestPlayer = player;
-                    bestCamera = camera;
-                    bestDirection = direction;
+                    if (k != i && covers[k].Intersects(camera, head)) blocking.Add(covers[k]);
+                    if ((covers[k].bounds.center - bounds.center).sqrMagnitude < 12f * 12f) neighbors++;
                 }
-                if (!dense && bestScore > 0) break;
+                if (dense && (blocking.Count < 2 || neighbors < 3)) continue;
+                int score = dense ? blocking.Count * 100 + neighbors : Mathf.RoundToInt(bounds.size.y * 100f);
+                if (score <= bestScore) continue;
+                bestScore = score;
+                bestPlayer = player;
+                bestCamera = camera;
+                bestCovers = blocking.ToArray();
             }
             if (bestScore == 0)
                 throw new InvalidOperationException($"{GameInfo.LogPrefix} No se encontró cobertura para '{name}'.");
-            var stop = new GameObject(name);
-            stop.transform.SetParent(parent, false);
-            stop.transform.SetPositionAndRotation(bestPlayer, Quaternion.LookRotation(-bestDirection));
-            var capture = stop.AddComponent<CaptureStop>();
-            capture.overrideCamera = true;
-            capture.cameraPosition = bestCamera;
-            capture.cameraRotation = Quaternion.LookRotation(bestPlayer + Vector3.up * FollowCamera.ChestHeight - bestCamera);
-            stop.AddComponent<LightCaptureStage>();
+            var pair = new GameObject(name).transform;
+            pair.SetParent(parent, false);
+            for (int i = 0; i < 2; i++)
+            {
+                var stop = new GameObject(name + (i == 0 ? " Before" : " After"));
+                stop.transform.SetParent(pair, false);
+                stop.transform.SetPositionAndRotation(bestPlayer, playerRotation);
+                var capture = stop.AddComponent<CaptureStop>();
+                capture.overrideCamera = false;
+                capture.cameraPosition = bestCamera;
+                capture.cameraRotation = rotation;
+                stop.AddComponent<LightCaptureStage>();
+                var stage = stop.AddComponent<OcclusionCaptureStage>();
+                stage.after = i == 1;
+                stage.covers = bestCovers;
+            }
+        }
+
+        static Vector3 FarSide(Cover cover, Vector3 direction)
+        {
+            float reach = cover.bounds.extents.magnitude + 1f;
+            var ray = new Ray(cover.bounds.center + direction * reach, -direction);
+            if (cover.collider != null && cover.collider.Raycast(ray, out var hit, reach * 2f))
+                return hit.point + direction * 0.8f;
+            cover.bounds.IntersectRay(ray, out float entry);
+            return ray.GetPoint(entry) + direction * 0.8f;
         }
 
         static bool TryGround(Vector3 position, float top, Transform world, out Vector3 grounded)

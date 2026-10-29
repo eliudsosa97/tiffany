@@ -107,22 +107,43 @@ namespace TiffanyGame.Tests
         public void OccluderKeepsSavedMapsTilingAndInstancingWhenRegenerated()
         {
             var material = GeneratedMaterials.GetTextured("Tree", Color.green, "pine_bark", 2f, instancing: true);
-            string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(material));
+            string path = AssetDatabase.GetAssetPath(material);
+            Assert.IsTrue(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long id));
             var diffuse = material.GetTexture("_BaseMap");
             var normal = material.GetTexture("_BumpMap");
             var regenerated = GeneratedMaterials.GetTextured("Tree", Color.green, "pine_bark", 2f,
                 instancing: true, occluder: true);
-            Assert.AreSame(material, regenerated);
-            Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(regenerated)));
+            Assert.IsTrue(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(regenerated, out string actualGuid, out long actualId));
+            Assert.AreEqual(guid, actualGuid);
+            Assert.AreEqual(id, actualId);
+            Assert.AreEqual(path, AssetDatabase.GetAssetPath(regenerated));
+            AssetDatabase.SaveAssets();
+            using var snapshot = new MaterialAssetSnapshot(regenerated);
+            Resources.UnloadAsset(regenerated);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            material = GeneratedMaterials.GetTextured("Tree", Color.green, "pine_bark", 2f, occluder: true);
+            AssetDatabase.SaveAssets();
+            Assert.IsTrue(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out actualGuid, out actualId));
+            Assert.AreEqual(guid, actualGuid);
+            Assert.AreEqual(id, actualId);
+            snapshot.AssertUnchanged(material);
             Assert.AreEqual(GeneratedMaterials.OcclusionShader, material.shader.name);
             Assert.AreSame(diffuse, material.GetTexture("_BaseMap"));
             Assert.AreSame(normal, material.GetTexture("_BumpMap"));
             Assert.AreEqual(Vector2.one * 2f, material.mainTextureScale);
+            Assert.AreEqual(Vector2.one * 2f, material.GetTextureScale("_BumpMap"));
             Assert.IsTrue(material.IsKeywordEnabled("_NORMALMAP"));
             Assert.IsFalse(material.IsKeywordEnabled("_TIFFANY_CHARACTER"));
             Assert.IsTrue(material.enableInstancing);
-            foreach (string pass in new[] { "ForwardLit", "DepthOnly", "DepthNormals", "ShadowCaster" })
-                Assert.GreaterOrEqual(material.FindPass(pass), 0, pass);
+            Assert.IsFalse(ShaderUtil.ShaderHasError(material.shader));
+            var subshader = ShaderUtil.GetShaderData(material.shader).GetSubshader(0);
+            foreach (string lightMode in new[] { "UniversalForward", "DepthOnly", "DepthNormals", "ShadowCaster" })
+            {
+                bool found = false;
+                for (int pass = 0; pass < subshader.PassCount; pass++)
+                    found |= subshader.GetPass(pass).FindTagValue(new UnityEngine.Rendering.ShaderTagId("LightMode")).name == lightMode;
+                Assert.IsTrue(found, lightMode);
+            }
         }
 
         [Test]

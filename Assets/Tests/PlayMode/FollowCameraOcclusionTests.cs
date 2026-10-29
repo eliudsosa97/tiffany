@@ -10,10 +10,15 @@ namespace TiffanyGame.Tests
         GameObject player;
         GameObject cameraObject;
         FollowCamera follow;
+        float previousDisabled;
+        float previousTimeScale;
 
         [SetUp]
         public void SetUp()
         {
+            previousDisabled = Shader.GetGlobalFloat("_TiffanyOcclusionDisabled");
+            previousTimeScale = Time.timeScale;
+            Shader.SetGlobalFloat("_TiffanyOcclusionDisabled", 0f);
             player = new GameObject("Tiffany");
             cameraObject = new GameObject("Camera");
             follow = cameraObject.AddComponent<FollowCamera>();
@@ -28,6 +33,8 @@ namespace TiffanyGame.Tests
             Object.Destroy(cameraObject);
             Object.Destroy(player);
             yield return null;
+            Shader.SetGlobalFloat("_TiffanyOcclusionDisabled", previousDisabled);
+            Time.timeScale = previousTimeScale;
         }
 
         [UnityTest]
@@ -63,6 +70,33 @@ namespace TiffanyGame.Tests
             Assert.Less(Vector3.Distance(cameraObject.transform.position, Shader.GetGlobalVector("_TiffanyCameraWS")), 1e-4f);
             Assert.Less(Vector3.Distance(player.transform.position + Vector3.up * FollowCamera.ChestHeight,
                 Shader.GetGlobalVector("_TiffanyFocusWS")), 1e-4f);
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureOverrideSurvivesFocusPublishingAndRestoresOnClearOrDisable()
+        {
+            var stage = cameraObject.AddComponent<OcclusionCaptureStage>();
+            Assert.AreEqual(0f, Shader.GetGlobalFloat("_TiffanyOcclusionDisabled"));
+            Shader.SetGlobalFloat("_TiffanyOcclusionDisabled", 0.25f);
+            Time.timeScale = 0.75f;
+            follow.enabled = false;
+            stage.Apply();
+            stage.Apply();
+            follow.PublishOcclusionFocus();
+            yield return null;
+            Assert.AreEqual(1f, Shader.GetGlobalFloat("_TiffanyOcclusionDisabled"));
+            Assert.AreEqual(FollowCamera.OcclusionRadius, Shader.GetGlobalVector("_TiffanyFocusWS").w);
+            Assert.AreEqual(0f, Time.timeScale);
+            stage.Clear();
+            stage.Clear();
+            Assert.AreEqual(0.25f, Shader.GetGlobalFloat("_TiffanyOcclusionDisabled"));
+            Assert.AreEqual(0.75f, Time.timeScale);
+            stage.after = true;
+            stage.Apply();
+            Assert.AreEqual(0f, Shader.GetGlobalFloat("_TiffanyOcclusionDisabled"));
+            stage.enabled = false;
+            Assert.AreEqual(0.25f, Shader.GetGlobalFloat("_TiffanyOcclusionDisabled"));
+            Assert.AreEqual(0.75f, Time.timeScale);
         }
     }
 }

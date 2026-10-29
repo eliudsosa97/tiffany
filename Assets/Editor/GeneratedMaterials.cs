@@ -7,8 +7,8 @@ namespace TiffanyGame.EditorTools
     public static class GeneratedMaterials
     {
         public const string DefaultFolder = "Assets/Scenes/Generated/Materials";
-        public const string OcclusionShader = "Tiffany/Occlusion Lit";
-        public const string SilhouetteShader = "Tiffany/Silhouette";
+        public const string OcclusionShader = "Universal Render Pipeline/Tiffany Occlusion Lit";
+        public const string SilhouetteShader = "Universal Render Pipeline/Tiffany Silhouette";
         public static string folder = DefaultFolder;
 
         public static Material Get(string name, Color color, bool unlit = false, float smoothness = 0.08f,

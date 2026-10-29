@@ -10,6 +10,7 @@
 float4 _TiffanyFocusWS;
 float4 _TiffanyCameraWS;
 float4 _TiffanyOcclusionParams;
+float _TiffanyOcclusionDisabled;
 static const float TiffanyBayer4[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
 
 float TiffanyKeepFraction(float3 point)
@@ -17,7 +18,7 @@ float TiffanyKeepFraction(float3 point)
     float radius = _TiffanyFocusWS.w;
     float3 toFocus = _TiffanyFocusWS.xyz - _TiffanyCameraWS.xyz;
     float distance = length(toFocus);
-    if (radius <= 0 || distance <= 0.0001) return 1;
+    if (_TiffanyOcclusionDisabled > 0.5 || radius <= 0 || distance <= 0.0001) return 1;
     float3 axis = toFocus / distance;
     float3 offset = point - _TiffanyCameraWS.xyz;
     float along = dot(offset, axis);

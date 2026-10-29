@@ -13,6 +13,7 @@ Shader "TiffanyGame/Spirit"
         [HideInInspector] _AlphaClip("Alpha Clip", Float) = 0
         [HideInInspector] _BaseMap("Base Map", 2D) = "white" {}
         [HideInInspector] _EmissionMap("Emission Map", 2D) = "white" {}
+        [HideInInspector] _TiffanyStencil("Character Stencil", Float) = 0
     }
 
     SubShader
@@ -41,6 +42,7 @@ Shader "TiffanyGame/Spirit"
         {
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForwardOnly" }
+            Stencil { Ref [_TiffanyStencil] ReadMask 1 WriteMask 1 Comp Always Pass Replace }
 
             HLSLPROGRAM
             #pragma target 3.5
