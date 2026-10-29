@@ -68,7 +68,18 @@ namespace TiffanyGame.Tests
                 {
                     if (surface.type != GroundType.Dirt) continue;
                     Assert.IsTrue(surface.GetComponent<NavMeshModifier>().ignoreFromBuild);
-                    Assert.IsFalse(surface.GetComponent<Renderer>().enabled);
+                    Assert.IsTrue(surface.GetComponent<Collider>().enabled);
+                    var renderer = surface.GetComponent<Renderer>();
+                    Assert.IsTrue(renderer.enabled);
+                    Assert.AreEqual("RoutePathDirt", renderer.sharedMaterial.name);
+                    Assert.AreEqual(new Color(0.36f, 0.27f, 0.18f), renderer.sharedMaterial.GetColor("_BaseColor"));
+                    Assert.IsTrue(AssetDatabase.Contains(renderer.sharedMaterial));
+                    if (!surface.TryGetComponent<MeshCollider>(out var floor)) continue;
+                    foreach (var vertex in floor.sharedMesh.vertices)
+                    {
+                        Vector3 point = route.InverseTransformPoint(surface.transform.TransformPoint(vertex));
+                        Assert.AreEqual(terrain.Height(point.x, point.z) + TerrainBuilder.FloorOffset, point.y, 0.001f);
+                    }
                 }
             }
         }

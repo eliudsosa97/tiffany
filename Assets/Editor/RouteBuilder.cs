@@ -24,6 +24,7 @@ namespace TiffanyGame.EditorTools
             var grounds = new[] { GroundType.Grass, GroundType.Slab, GroundType.Gravel, GroundType.Branches,
                 GroundType.Leaves, GroundType.Grass, GroundType.Slab, GroundType.Dirt };
             var floor = GeneratedMaterials.Get("RouteGround", new Color(0.25f, 0.25f, 0.25f));
+            var pathDirt = GeneratedMaterials.Get("RoutePathDirt", new Color(0.36f, 0.27f, 0.18f));
             var structure = GeneratedMaterials.Get("RouteStructure", new Color(0.4f, 0.4f, 0.4f));
             var dark = GeneratedMaterials.Get("RouteForest", new Color(0.09f, 0.09f, 0.09f));
             var bush = GeneratedMaterials.Get("HideBush", new Color(0.08f, 0.18f, 0.09f));
@@ -39,7 +40,7 @@ namespace TiffanyGame.EditorTools
                 if (i == 5) WaterBuilder.BuildLake(clearing, floor);
                 else Ground("Ground", clearing, Vector3.zero, new Vector2(ClearingSize, ClearingSize), grounds[i], floor);
                 BuildEdges(clearing, i);
-                if (i < names.Length - 1) BuildPath(clearing, i, floor, structure, terrain);
+                if (i < names.Length - 1) BuildPath(clearing, i, pathDirt, structure, terrain);
                 Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush);
                 if (i < memories.Length) memories[i] = Root("Memory Point", clearing, memoryPosition);
 

@@ -17,15 +17,15 @@ namespace TiffanyGame.EditorTools
             var origin = RouteLayout.Clearing(5);
             Water("Water", clearing, new Vector3(center.x - origin.x, -0.15f, center.y - origin.z),
                 RouteTerrain.LakeRadius * 2f, "lake_loop");
-            var vertices = new Vector3[97];
-            var triangles = new int[96 * 3];
-            for (int i = 0; i < 96; i++)
+            int segments = RouteTerrain.LakeSegments;
+            var vertices = new Vector3[segments + 1];
+            var triangles = new int[segments * 3];
+            for (int i = 0; i < segments; i++)
             {
-                float angle = i * Mathf.PI * 2f / 96f;
-                vertices[i + 1] = new Vector3(Mathf.Cos(angle) * RouteTerrain.LakeRadius.x, 0f,
-                    Mathf.Sin(angle) * RouteTerrain.LakeRadius.y);
+                Vector2 point = RouteTerrain.LakeShorePoint(i * Mathf.PI * 2f / segments) - center;
+                vertices[i + 1] = new Vector3(point.x, 0f, point.y);
                 triangles[i * 3] = 0;
-                triangles[i * 3 + 1] = (i + 1) % 96 + 1;
+                triangles[i * 3 + 1] = (i + 1) % segments + 1;
                 triangles[i * 3 + 2] = i + 1;
             }
             var water = clearing.Find("Water");
@@ -33,7 +33,7 @@ namespace TiffanyGame.EditorTools
             water.GetComponent<MeshFilter>().sharedMesh = TerrainBuilder.SaveMesh("Lake Water", vertices, triangles);
             water.GetComponent<AudioSource>().maxDistance = 120f;
             Capture("Water 1 Lake", clearing, new Vector3(2.3f, 0f, 1f), 240f,
-                new Vector3(-24f, 38f, 12f), new Vector3(-24f, 0.4f, -12f));
+                new Vector3(-40f, 38f, 12f), new Vector3(-40f, 0.4f, -12f));
         }
 
         public static void BuildRiver(Transform path, float pathWidth, float pathLength, Material floor, Material stone)
@@ -120,6 +120,7 @@ namespace TiffanyGame.EditorTools
                 new Vector3(size.x, 0.06f, size.y), material);
             floor.AddComponent<GroundSurface>().type = ground;
             TerrainBuilder.HideFloor(floor);
+            if (ground == GroundType.Dirt) floor.GetComponent<Renderer>().enabled = true;
         }
 
         static void Block(string name, Transform parent, Vector3 position, Vector3 size) =>

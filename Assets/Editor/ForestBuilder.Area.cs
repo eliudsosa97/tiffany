@@ -12,8 +12,7 @@ namespace TiffanyGame.EditorTools
     public static partial class ForestBuilder
     {
         public const float CellSize = 32f;
-        public const float FillTreeSpacing = 12f;
-        public const float FillTreeDensity = 0.7f;
+        public const float FillTreeSpacing = 4f;
         public const float UnderstoryDistance = 10f;
         public const long AreaTriangleBudget = 250000;
 
@@ -62,12 +61,13 @@ namespace TiffanyGame.EditorTools
             for (float z = terrain.Bounds.yMin + 3f; z < terrain.Bounds.yMax - 3f; z += FillTreeSpacing)
             for (float x = terrain.Bounds.xMin + 3f; x < terrain.Bounds.xMax - 3f; x += FillTreeSpacing)
             {
-                var point = new Vector2(x + Range(-2f, 2f), z + Range(-2f, 2f));
-                float density = FillTreeDensity * (terrain.ForestGround(point.x, point.y) == GroundType.Branches ? 1f : 0.7f);
-                if (random.NextDouble() > density) continue;
-                int model = random.Next(3) * 2;
-                float height = Range(1.05f, 1.2f);
-                var scale = model == 4 ? Vector3.one * (height * 0.44f) : new Vector3(height * 0.7f, height, height * 0.7f);
+                var point = new Vector2(x + Range(-1f, 1f), z + Range(-1f, 1f));
+                if (random.NextDouble() >= terrain.ForestDensity(point.x, point.y)) continue;
+                bool haunted = terrain.IsHauntedForest(point.x, point.y);
+                int model = haunted ? (random.Next(4) == 0 ? 2 : 4) : random.Next(3) * 2;
+                float height = haunted ? Range(1.25f, 1.4f) : Range(1.05f, 1.2f);
+                float width = height * (haunted ? 0.85f : 0.7f);
+                var scale = model == 4 ? Vector3.one * (height * 0.44f) : new Vector3(width, height, width);
                 var bounds = meshes[model].bounds;
                 bounds.Encapsulate(meshes[model + 1].bounds);
                 float radius = Radius(bounds) * scale.x;

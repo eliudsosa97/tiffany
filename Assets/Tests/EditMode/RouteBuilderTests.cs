@@ -462,14 +462,25 @@ namespace TiffanyGame.Tests
             Assert.Greater(water.GetComponent<Renderer>().bounds.size.x, 100f);
             Assert.Greater(water.GetComponent<Renderer>().bounds.size.z, 90f);
             Assert.IsTrue(HitsRoute(water.position + Vector3.up * 2f, Vector3.down, 7f));
+            var terrain = new RouteTerrain();
+            var mesh = water.GetComponent<MeshFilter>().sharedMesh;
+            Assert.IsTrue(AssetDatabase.Contains(mesh));
+            var vertices = mesh.vertices;
+            for (int i = 1; i < vertices.Length; i++)
+            {
+                Vector3 point = route.InverseTransformPoint(water.TransformPoint(vertices[i]));
+                Vector2 shore = RouteTerrain.LakeShorePoint((i - 1) * Mathf.PI * 2f / (vertices.Length - 1));
+                Assert.Less(Vector2.Distance(new Vector2(point.x, point.z), shore), 0.001f);
+                Assert.AreEqual(-0.15f, point.y, 0.001f);
+            }
             var shores = route.Find("Landscape/Lake Banks").GetComponentsInChildren<Collider>();
             for (int degrees = 0; degrees < 360; degrees += 15)
             {
                 float angle = degrees * Mathf.Deg2Rad;
-                var point = RouteTerrain.LakeCenter + new Vector2(Mathf.Cos(angle) * RouteTerrain.LakeRadius.x,
-                    Mathf.Sin(angle) * RouteTerrain.LakeRadius.y);
+                var point = RouteTerrain.LakeShorePoint(angle);
                 var normal = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
-                var ray = new Ray(route.TransformPoint(new Vector3(point.x, 1f, point.y) + normal * 2f), -normal);
+                var ray = new Ray(route.TransformPoint(new Vector3(point.x, terrain.GroundHeight(point.x, point.y) + 1f, point.y)
+                    + normal * 2f), -normal);
                 Assert.IsTrue(System.Array.Exists(shores, shore => shore.Raycast(ray, out _, 4f)));
             }
         }

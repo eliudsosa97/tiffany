@@ -138,8 +138,69 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(terrain.Road.center.y, gate.z);
             Assert.AreEqual(90f, yaw);
             Assert.AreEqual(RouteTerrain.RoadWidth, width);
-            Assert.GreaterOrEqual(RouteTerrain.LakeCenter.x - RouteTerrain.LakeRadius.x - terrain.Bounds.xMin, RouteTerrain.Margin);
+            Assert.Less(terrain.LakeDistance(terrain.Bounds.xMin, RouteTerrain.LakeCenter.y), -6f);
             Assert.GreaterOrEqual(terrain.Bounds.yMax - terrain.Town.yMax, RouteTerrain.Margin);
+        }
+
+        [Test]
+        public void IrregularLakeHasOneContinuousBasinAtTheWestEdgeAndKeepsTheClearingOnShore()
+        {
+            Vector2 min = Vector2.positiveInfinity, max = Vector2.negativeInfinity;
+            float smallest = float.PositiveInfinity, largest = 0f, shoreDistance = float.PositiveInfinity;
+            var clearing = RouteLayout.Clearing(5);
+            for (int degrees = 0; degrees < 360; degrees++)
+            {
+                Vector2 point = RouteTerrain.LakeShorePoint(degrees * Mathf.Deg2Rad);
+                min = Vector2.Min(min, point);
+                max = Vector2.Max(max, point);
+                shoreDistance = Mathf.Min(shoreDistance, Vector2.Distance(point, new Vector2(clearing.x, clearing.z)));
+                if (point.x > terrain.Bounds.xMin + 0.001f)
+                {
+                    Assert.AreEqual(0f, terrain.LakeDistance(point.x, point.y), 0.0001f);
+                    Vector2 delta = point - RouteTerrain.LakeCenter;
+                    float radius = new Vector2(delta.x / RouteTerrain.LakeRadius.x, delta.y / RouteTerrain.LakeRadius.y).magnitude;
+                    smallest = Mathf.Min(smallest, radius);
+                    largest = Mathf.Max(largest, radius);
+                }
+                for (int sample = 0; sample < 50; sample++)
+                {
+                    Vector2 inside = Vector2.Lerp(RouteTerrain.LakeCenter, point, sample / 50f);
+                    Assert.Less(terrain.LakeDistance(inside.x, inside.y), 0f);
+                    Assert.Less(terrain.GroundHeight(inside.x, inside.y), 0f);
+                    Assert.IsFalse(terrain.IsWalkable(inside.x, inside.y));
+                }
+            }
+            Assert.AreEqual(terrain.Bounds.xMin, min.x, 0.001f);
+            Assert.Greater(max.x - min.x, (max.y - min.y) * 1.5f);
+            Assert.Greater(largest - smallest, 0.2f);
+            Assert.That(shoreDistance, Is.InRange(18f, 27f));
+        }
+
+        [Test]
+        public void ForestDensityIsDeterministicDenserAroundTheHutAndHasSixMeterHolesInsidePatches()
+        {
+            var repeat = new RouteTerrain();
+            float haunted = 0f, rest = 0f;
+            int hauntedSamples = 0, restSamples = 0, holes = 0;
+            for (float z = Mathf.Ceil(terrain.Bounds.yMin / 6f) * 6f; z < terrain.Bounds.yMax - 6f; z += 6f)
+            for (float x = Mathf.Ceil(terrain.Bounds.xMin / 6f) * 6f; x < terrain.Bounds.xMax - 6f; x += 6f)
+            {
+                float density = terrain.ForestDensity(x + 3f, z + 3f);
+                Assert.That(density, Is.InRange(0f, 1f));
+                Assert.AreEqual(density, repeat.ForestDensity(x + 3f, z + 3f));
+                if (terrain.IsHauntedForest(x + 3f, z + 3f)) { haunted += density; hauntedSamples++; }
+                else { rest += density; restSamples++; }
+                int neighbors = 0;
+                foreach (var side in new[] { Vector2.left, Vector2.right, Vector2.up, Vector2.down })
+                    if (terrain.ForestDensity(x + 3f + side.x * 6f, z + 3f + side.y * 6f) > 0f) neighbors++;
+                if (neighbors < 2) continue;
+                bool empty = true;
+                for (int dz = 0; dz < 6; dz++)
+                for (int dx = 0; dx < 6; dx++) empty &= terrain.ForestDensity(x + dx + 0.5f, z + dz + 0.5f) == 0f;
+                if (empty) holes++;
+            }
+            Assert.Greater(haunted / hauntedSamples, rest / restSamples * 1.5f);
+            Assert.Greater(holes, 10);
         }
 
         [Test]
@@ -163,7 +224,7 @@ namespace TiffanyGame.Tests
         {
             var tracks = RouteLayout.Clearing(2);
             Assert.AreEqual(terrain.Bounds.center.x, tracks.x, 0.001f);
-            Assert.That(tracks.x - RouteTerrain.LakeCenter.x - RouteTerrain.LakeRadius.x, Is.InRange(0f, 20f));
+            Assert.That(tracks.x - RouteTerrain.LakeShorePoint(0f).x, Is.InRange(0f, 20f));
             Assert.Less(RouteLayout.TrainNorthEnd, terrain.Road.yMin);
             Assert.Less(RouteLayout.TrainNorthEnd, terrain.Town.yMin);
             Assert.That(RouteLayout.TrainWidth, Is.InRange(2.5f, 3f));

@@ -13,8 +13,10 @@ namespace TiffanyGame
         public const float ForestTileSize = 32f;
         public const string ForestArea = "Forest";
         public const float ForestCost = 4f;
-        public static readonly Vector2 LakeCenter = new Vector2(-32f, 44f);
-        public static readonly Vector2 LakeRadius = new Vector2(65f, 52f);
+        public const int LakeSegments = 192;
+        const float WestBoundary = -118f;
+        public static readonly Vector2 LakeCenter = new Vector2(-48f, 44f);
+        public static readonly Vector2 LakeRadius = new Vector2(82f, 50f);
         public static readonly Vector2 CliffFoot = new Vector2(75f, 94f);
         public static readonly Vector2 Plateau = new Vector2(77f, 94f);
 
@@ -35,7 +37,7 @@ namespace TiffanyGame
             RouteLayout.RiverSpan(out var start, out var end);
             Crossing = (start + end) * 0.5f;
             Town = Rect.MinMaxRect(-73f, 160f, 146f, 242f);
-            Bounds = Rect.MinMaxRect(Mathf.Floor((LakeCenter.x - LakeRadius.x - Margin) / 2f) * 2f,
+            Bounds = Rect.MinMaxRect(WestBoundary,
                 RouteLayout.Clearing(2).z - RouteLayout.ClearingSize * 0.5f - Margin, 218f, Town.yMax + Margin);
             Road = Rect.MinMaxRect(Bounds.xMin, RouteLayout.Clearing(6).z - RoadWidth * 0.5f,
                 150f, RouteLayout.Clearing(6).z + RoadWidth * 0.5f);
@@ -62,6 +64,24 @@ namespace TiffanyGame
             int column = Mathf.FloorToInt((x - Bounds.xMin) / ForestTileSize);
             int row = Mathf.FloorToInt((z - Bounds.yMin) / ForestTileSize);
             return ((column * 17 + row * 31) & 3) == 0 ? GroundType.Branches : GroundType.Leaves;
+        }
+
+        public bool IsHauntedForest(float x, float z)
+        {
+            float distance = Vector2.Distance(new Vector2(x, z), Xz(RouteLayout.Clearing(4)));
+            return distance > RouteLayout.ClearingSize * 0.5f && distance <= 45f;
+        }
+
+        public float ForestDensity(float x, float z)
+        {
+            uint hole = unchecked((uint)(Mathf.FloorToInt(x / 6f) * 73856093)
+                ^ (uint)(Mathf.FloorToInt(z / 6f) * 19349663));
+            hole = unchecked((hole ^ (hole >> 13)) * 1274126177u);
+            if (hole % 7 == 0) return 0f;
+            float patch = 0.5f + 0.25f * Mathf.Sin(x * 0.23f + Mathf.Sin(z * 0.07f))
+                + 0.25f * Mathf.Cos(z * 0.22f - x * 0.05f);
+            bool haunted = IsHauntedForest(x, z);
+            return Smooth((patch - (haunted ? 0.58f : 0.64f)) / 0.2f) * (haunted ? 0.95f : 0.35f);
         }
 
         public float TrainDistance(float x, float z) => SegmentDistance(new Vector2(x, z),
@@ -115,8 +135,21 @@ namespace TiffanyGame
             return distance;
         }
 
-        public float LakeDistance(float x, float z) =>
-            (new Vector2((x - LakeCenter.x) / LakeRadius.x, (z - LakeCenter.y) / LakeRadius.y).magnitude - 1f) * LakeRadius.y;
+        public float LakeDistance(float x, float z)
+        {
+            var delta = new Vector2((x - LakeCenter.x) / LakeRadius.x, (z - LakeCenter.y) / LakeRadius.y);
+            return (delta.magnitude - LakeScale(Mathf.Atan2(delta.y, delta.x))) * LakeRadius.y;
+        }
+
+        public static Vector2 LakeShorePoint(float angle)
+        {
+            var delta = new Vector2(Mathf.Cos(angle) * LakeRadius.x, Mathf.Sin(angle) * LakeRadius.y) * LakeScale(angle);
+            if (LakeCenter.x + delta.x < WestBoundary) delta *= (WestBoundary - LakeCenter.x) / delta.x;
+            return LakeCenter + delta;
+        }
+
+        static float LakeScale(float angle) =>
+            1f - 0.1f * Mathf.Sin(3f * angle) + 0.07f * Mathf.Cos(2f * angle) + 0.04f * Mathf.Sin(5f * angle);
 
         public bool IsWater(float x, float z) => LakeDistance(x, z) < 0f || RiverDistance(x, z) < RiverWidth * 0.5f;
 

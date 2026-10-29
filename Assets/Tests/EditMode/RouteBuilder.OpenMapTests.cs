@@ -153,6 +153,55 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void FillClustersLeaveSixMeterGapsAndTheHauntedRingHasMoreLargeTreesPerArea()
+        {
+            var terrain = new RouteTerrain();
+            var occupied = new System.Collections.Generic.HashSet<Vector2Int>();
+            int hauntedTrees = 0, otherTrees = 0, hauntedArea = 0, otherArea = 0, gaps = 0;
+            foreach (var cell in route.Find("Landscape/Forest Fill").GetComponentsInChildren<ForestInstances>())
+            foreach (var batch in cell.data.batches)
+            {
+                bool pine = batch.mesh.name == "Ocote0";
+                if (!pine && !batch.mesh.name.StartsWith("BugambiliasOak")) continue;
+                foreach (var matrix in batch.matrices)
+                {
+                    Vector3 point = cell.transform.localPosition + matrix.MultiplyPoint3x4(Vector3.zero);
+                    Assert.Greater(terrain.ForestDensity(point.x, point.z), 0f);
+                    occupied.Add(new Vector2Int(Mathf.FloorToInt(point.x / 6f), Mathf.FloorToInt(point.z / 6f)));
+                    if (!terrain.IsHauntedForest(point.x, point.z)) { otherTrees++; continue; }
+                    hauntedTrees++;
+                    Assert.IsTrue(pine || batch.mesh.name == "BugambiliasOak1");
+                    Assert.AreEqual(pine ? "ForestPineBark" : "ForestOakBark", batch.material.name);
+                    Assert.That(matrix.MultiplyVector(Vector3.up).magnitude / (pine ? 0.44f : 1f), Is.InRange(1.25f, 1.4f));
+                }
+            }
+            for (float z = terrain.Bounds.yMin + 3f; z < terrain.Bounds.yMax; z += 6f)
+            for (float x = terrain.Bounds.xMin + 3f; x < terrain.Bounds.xMax; x += 6f)
+            {
+                if (terrain.DistanceToRoute(x, z) <= 3.5f || terrain.InClearingSquare(x, z, 3f)
+                    || RouteTerrain.RectangleDistance(new Vector2(x, z), terrain.Town) <= 3f
+                    || terrain.LakeDistance(x, z) <= 4f || terrain.RiverDistance(x, z) <= 5f
+                    || terrain.TrainDistance(x, z) <= 4.9f) continue;
+                if (terrain.IsHauntedForest(x, z)) hauntedArea++;
+                else otherArea++;
+            }
+            foreach (var cell in occupied)
+            {
+                var gap = cell + Vector2Int.right;
+                if (occupied.Contains(gap)) continue;
+                int neighbors = 0;
+                for (int z = -1; z <= 1; z++)
+                for (int x = -1; x <= 1; x++)
+                    if (occupied.Contains(gap + new Vector2Int(x, z))) neighbors++;
+                if (neighbors >= 3) gaps++;
+            }
+            Assert.Greater(hauntedArea, 0);
+            Assert.Greater(otherArea, 0);
+            Assert.Greater((float)hauntedTrees / hauntedArea, (float)otherTrees / otherArea * 1.5f);
+            Assert.Greater(gaps, 5);
+        }
+
+        [Test]
         public void TrainDeckHasSolidGuardrailsAndTwoRampsOfAtMostEightDegrees()
         {
             var terrain = new RouteTerrain();

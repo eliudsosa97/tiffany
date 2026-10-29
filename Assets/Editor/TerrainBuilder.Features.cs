@@ -48,13 +48,9 @@ namespace TiffanyGame.EditorTools
 
         static void BuildLakeBanks(Transform parent, RouteTerrain terrain)
         {
-            for (int i = 0; i < 96; i++) Border("Shore", parent, terrain, LakePoint(i), LakePoint(i + 1));
-            Vector2 LakePoint(int index)
-            {
-                float angle = index * Mathf.PI * 2f / 96f;
-                return RouteTerrain.LakeCenter + new Vector2(Mathf.Cos(angle) * RouteTerrain.LakeRadius.x,
-                    Mathf.Sin(angle) * RouteTerrain.LakeRadius.y);
-            }
+            for (int i = 0; i < RouteTerrain.LakeSegments; i++)
+                Border("Shore", parent, terrain, RouteTerrain.LakeShorePoint(i * Mathf.PI * 2f / RouteTerrain.LakeSegments),
+                    RouteTerrain.LakeShorePoint((i + 1) * Mathf.PI * 2f / RouteTerrain.LakeSegments));
         }
 
         static void BuildRoad(Transform parent, RouteTerrain terrain, Material asphalt, Material stripe)

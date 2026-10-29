@@ -125,6 +125,7 @@ namespace TiffanyGame.EditorTools
             floor.AddComponent<MeshCollider>().sharedMesh = mesh;
             floor.AddComponent<GroundSurface>().type = GroundType.Dirt;
             HideFloor(floor);
+            floor.GetComponent<Renderer>().enabled = true;
         }
 
         public static void HideFloor(GameObject floor)
