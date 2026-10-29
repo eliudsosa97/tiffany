@@ -7,6 +7,7 @@ namespace TiffanyGame.EditorTools
 {
     public static class ChallengeBuilder
     {
+        static readonly RouteTerrain Terrain = new RouteTerrain();
         static readonly Pose[] Placements =
         {
             OnPath(1, 4, 0.5f), OnPath(2, 2, 0.5f), OnPath(3, 2, 0.15f), OnPath(3, 5, 0.35f)
@@ -14,6 +15,7 @@ namespace TiffanyGame.EditorTools
 
         public static void Build(WitchChapterTracker tracker, PlayerSoul soul, Storm storm)
         {
+            Physics.SyncTransforms();
             BuildOne(tracker, soul, storm, ChallengeKind.Candles, 1);
             BuildOne(tracker, soul, storm, ChallengeKind.Distract, 2);
             BuildOne(tracker, soul, storm, ChallengeKind.Vanish, 3);
@@ -27,10 +29,8 @@ namespace TiffanyGame.EditorTools
         {
             var points = RouteLayout.Path(from);
             Vector3 position = Vector3.Lerp(points[segment - 1], points[segment], fraction);
-            float dx = RouteLayout.PathPlaneHeight(from, position.x + 1f, position.z) - position.y;
-            float dz = RouteLayout.PathPlaneHeight(from, position.x, position.z + 1f) - position.y;
-            return new Pose(position + Vector3.up * TerrainBuilder.FloorOffset,
-                Quaternion.LookRotation(points[segment] - points[segment - 1], new Vector3(-dx, 1f, -dz)));
+            position.y = Terrain.Height(position.x, position.z) + TerrainBuilder.FloorOffset;
+            return new Pose(position, Quaternion.LookRotation(Vector3.ProjectOnPlane(points[segment] - points[segment - 1], Vector3.up)));
         }
 
         public static bool Reserves(Vector3 point, float radius)
@@ -58,6 +58,8 @@ namespace TiffanyGame.EditorTools
             var challenge = root.gameObject.AddComponent<PowerChallenge>();
             challenge.kind = kind;
             challenge.tracker = tracker;
+            challenge.entryOffset = GroundLocal(root, challenge.entryOffset);
+            challenge.exitOffset = GroundLocal(root, challenge.exitOffset);
             var rules = new ChallengeRules(kind);
             var timber = GeneratedMaterials.Get("RouteStructure", new Color(0.4f, 0.4f, 0.4f));
             float rechargeZ = kind == ChallengeKind.Hut ? -6f : rules.NeedsCandles ? -8f : -4f;
@@ -86,7 +88,7 @@ namespace TiffanyGame.EditorTools
                     challenge.candles[i] = Candle(root, $"Challenge Kindled Candle {i + 1}", new Vector3(-1f, 0f, z),
                         CandleKind.Kindled, soul, storm, 1f);
                     var gate = SceneBuilder.CreatePrimitive($"Darkness {i + 1}", PrimitiveType.Cube, root,
-                        new Vector3(0f, 1.5f, z + 1.1f), new Vector3(5f, 3f, 0.25f), dark);
+                        GroundLocal(root, new Vector3(0f, 1.5f, z + 1.1f)), new Vector3(5f, 3f, 0.25f), dark);
                     gate.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
                     challenge.darkness[i] = gate;
                 }
@@ -106,13 +108,10 @@ namespace TiffanyGame.EditorTools
         static void BuildAlcove(PowerChallenge challenge, Material timber)
         {
             Transform root = challenge.transform;
-            SceneBuilder.CreatePrimitive("Lure Alcove", PrimitiveType.Cube, root,
-                new Vector3(4.5f, -0.25f, 1.85f), new Vector3(5f, 0.5f, 2.9f), GroundMaterials.For(GroundType.Dirt))
-                .AddComponent<GroundSurface>().type = GroundType.Dirt;
             for (int i = 0; i < 2; i++)
                 Wall(root, $"Alcove Edge {i}", new Vector3(4.5f, 0.3f, i == 0 ? 0.3f : 3.4f), new Vector3(5f, 0.6f, 0.2f), timber);
             Wall(root, "Alcove End", new Vector3(7f, 0.3f, 1.85f), new Vector3(0.2f, 0.6f, 3.3f), timber);
-            challenge.lure = PowerBuilder.BuildObject(root, ThrowableKind.Bell, root.TransformPoint(new Vector3(6f, 0f, 2.2f)),
+            challenge.lure = PowerBuilder.BuildObject(root, ThrowableKind.Bell, root.TransformPoint(GroundLocal(root, new Vector3(6f, 0f, 2.2f))),
                 0.35f, 0.35f, 0.3f, new Color(0.7f, 0.53f, 0.2f));
             challenge.lure.pushSpeed = 0.4f;
         }
@@ -120,7 +119,7 @@ namespace TiffanyGame.EditorTools
         static CandleSpot Candle(Transform root, string name, Vector3 position, CandleKind kind,
             PlayerSoul soul, Storm storm, float radius)
         {
-            var spot = SceneBuilder.CreateCandle(root, name, root.TransformPoint(position), kind, kind == CandleKind.Family, soul, storm);
+            var spot = SceneBuilder.CreateCandle(root, name, root.TransformPoint(GroundLocal(root, position)), kind, kind == CandleKind.Family, soul, storm);
             spot.radius = radius;
             spot.GetComponent<NavMeshObstacle>().radius = radius;
             return spot;
@@ -130,16 +129,29 @@ namespace TiffanyGame.EditorTools
         {
             var point = new GameObject(name).transform;
             point.SetParent(root, false);
-            point.localPosition = position;
+            point.localPosition = GroundLocal(root, position);
             return point;
         }
 
         static void Wall(Transform root, string name, Vector3 position, Vector3 size, Material material)
         {
-            var wall = SceneBuilder.CreatePrimitive(name, PrimitiveType.Cube, root, position, size, material);
+            var wall = SceneBuilder.CreatePrimitive(name, PrimitiveType.Cube, root, GroundLocal(root, position), size, material);
             var modifier = wall.AddComponent<NavMeshModifier>();
             modifier.overrideArea = true;
             modifier.area = NavMesh.GetAreaFromName("Not Walkable");
+        }
+
+        static Vector3 GroundLocal(Transform root, Vector3 offset)
+        {
+            Transform route = root.GetComponent<PowerChallenge>().tracker.transform;
+            Vector3 point = route.InverseTransformPoint(root.TransformPoint(new Vector3(offset.x, 0f, offset.z)));
+            point.y = Terrain.Height(point.x, point.z) + TerrainBuilder.FloorOffset;
+            point = route.TransformPoint(point);
+            foreach (var hit in Physics.RaycastAll(point + Vector3.up * 2f, Vector3.down, 4f,
+                Physics.AllLayers, QueryTriggerInteraction.Ignore))
+                if (hit.transform.IsChildOf(route) && hit.collider.TryGetComponent<GroundSurface>(out _))
+                    point.y = Mathf.Max(point.y, hit.point.y);
+            return root.InverseTransformPoint(point + Vector3.up * offset.y);
         }
 
         public static bool IsMoving(Transform node)

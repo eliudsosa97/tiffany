@@ -324,9 +324,11 @@ namespace TiffanyGame.Tests
                 Vector3 start = points[segments[i] - 1], end = points[segments[i]];
                 Assert.AreSame(tracker, challenge.tracker);
                 Assert.AreSame(source, challenge.transform.parent);
-                Vector3 expected = Vector3.Lerp(start, end, fractions[i]) + Vector3.up * TerrainBuilder.FloorOffset;
+                Vector3 expected = Vector3.Lerp(start, end, fractions[i]);
+                expected.y = terrain.Height(expected.x, expected.z) + TerrainBuilder.FloorOffset;
                 Assert.Less(Vector3.Distance(route.TransformPoint(expected), challenge.transform.position), 0.001f);
-                Assert.Greater(Vector3.Dot(challenge.transform.forward, route.TransformDirection(end - start).normalized), 0.999f);
+                Assert.Greater(Vector3.Dot(challenge.transform.forward,
+                    route.TransformDirection(Vector3.ProjectOnPlane(end - start, Vector3.up)).normalized), 0.999f);
                 Assert.AreEqual(CandleKind.Family, challenge.checkpoint.kind);
                 Assert.Less(challenge.checkpoint.transform.localPosition.z, -3f);
                 Assert.AreEqual(i == 0 || i == 3 ? 2 : 0, challenge.candles.Length);
@@ -357,6 +359,58 @@ namespace TiffanyGame.Tests
                 "La zona segura de la choza debe dejar libre la salida del pasillo del establo.");
             foreach (var clearing in tracker.clearings)
                 Assert.LessOrEqual(clearing.GetComponentsInChildren<Renderer>(true).Length, 200, clearing.name);
+        }
+
+        [Test]
+        public void ChallengeInteractionPointsAndCapturesStayAboveTheirSupportingGround()
+        {
+            var terrain = new RouteTerrain();
+            var floors = route.GetComponentsInChildren<GroundSurface>();
+            foreach (var challenge in route.GetComponentsInChildren<PowerChallenge>())
+            {
+                Check(challenge.Entry, challenge.name);
+                Check(challenge.Exit, challenge.name);
+                Check(challenge.post.position, challenge.name);
+                foreach (var candle in challenge.GetComponentsInChildren<CandleSpot>()) Check(candle.transform.position, candle.name);
+                if (challenge.lure != null)
+                {
+                    var bounds = challenge.lure.GetComponent<Collider>().bounds;
+                    Check(new Vector3(bounds.center.x, bounds.min.y, bounds.center.z), challenge.lure.name);
+                }
+                foreach (var stage in challenge.GetComponentsInChildren<ChallengeCaptureStage>())
+                {
+                    Check(stage.transform.position, stage.name);
+                    Assert.DoesNotThrow(stage.FrameCamera, stage.name);
+                }
+            }
+
+            void Check(Vector3 position, string name)
+            {
+                Vector3 local = route.InverseTransformPoint(position);
+                Assert.AreEqual(terrain.Height(local.x, local.z) + TerrainBuilder.FloorOffset, local.y, 0.15f, name);
+                bool supported = false;
+                foreach (var floor in floors)
+                {
+                    if (!floor.GetComponent<Collider>().Raycast(new Ray(position + Vector3.up * 2f, Vector3.down), out var hit, 4f)) continue;
+                    Assert.GreaterOrEqual(position.y + 0.005f, hit.point.y, name + ": " + floor.name);
+                    supported |= position.y - hit.point.y < 0.15f;
+                }
+                Assert.IsTrue(supported, name);
+            }
+        }
+
+        [Test]
+        public void ChallengeCameraStillRejectsAnOccludedCandle()
+        {
+            var challenge = System.Array.Find(route.GetComponentsInChildren<PowerChallenge>(), item => item.kind == ChallengeKind.Vanish);
+            var blocker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            blocker.name = "Challenge Occluder";
+            blocker.transform.SetParent(root.transform, false);
+            blocker.transform.position = challenge.checkpoint.transform.position + Vector3.up;
+            blocker.transform.localScale = new Vector3(3f, 5f, 3f);
+            var stage = challenge.GetComponentInChildren<ChallengeCaptureStage>();
+            var error = Assert.Throws<System.InvalidOperationException>(stage.FrameCamera);
+            StringAssert.Contains("Challenge Occluder", error.Message);
         }
 
         [Test]

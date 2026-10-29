@@ -63,7 +63,7 @@ namespace TiffanyGame
                 if (challenge.lure != null)
                 {
                     Vector3 position = challenge.lure.transform.position;
-                    position.y = challenge.post.position.y;
+                    position.y = challenge.lure.GetComponent<Collider>().bounds.min.y;
                     targets.Add(new CameraTarget(witch, position + Vector3.up * 1.15f, new Vector3(1f, 2.3f, 1f)));
                 }
             }
@@ -215,7 +215,7 @@ namespace TiffanyGame
                 if (challenge.kind != ChallengeKind.Candles)
                 {
                     Vector3 position = after && challenge.lure != null ? challenge.lure.transform.position : challenge.post.position;
-                    position.y = challenge.post.position.y;
+                    if (after && challenge.lure != null) position.y = challenge.lure.GetComponent<Collider>().bounds.min.y;
                     witch.transform.SetPositionAndRotation(position, challenge.transform.rotation * Quaternion.Euler(0f, after ? 90f : 180f, 0f));
                     witch.ShowPose(WitchState.Stalking, false);
                 }

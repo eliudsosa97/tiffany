@@ -139,7 +139,7 @@ namespace TiffanyGame.EditorTools
                 var key = new Vector2Int(Mathf.FloorToInt(point.x / CellSize), Mathf.FloorToInt(point.y / CellSize));
                 var bounds = CellBounds(key);
                 for (int i = 0; i < used.Length; i++)
-                    if (bounds.Overlaps(ViewSquare(i)) && used[i] + triangles > AreaTriangleBudget) return null;
+                    if (bounds.Overlaps(ViewSquare(i)) && used[i] + triangles > AreaTriangleBudget - GroundLitterBuilder.AreaTriangleBudget) return null;
                 for (int i = 0; i < used.Length; i++)
                     if (bounds.Overlaps(ViewSquare(i))) used[i] += triangles;
                 if (cells.TryGetValue(key, out var existing)) return existing;
