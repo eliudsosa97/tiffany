@@ -462,6 +462,41 @@ namespace TiffanyGame.Tests
             }
         }
 
+        [Test]
+        public void WalkBackPlaysTheCycleBackwardWhileNormalizedTimeGrows()
+        {
+            var walk = Array.Find(spec.clips, c => c.name == "Walk");
+            var root = Instance();
+            var animator = Animate(root, Controller());
+            var foot = Bone(root, "Foot.L");
+            animator.SetFloat("Speed", walk.speed);
+            var poses = new Vector3[8];
+            for (int i = 0; i < poses.Length; i++)
+            {
+                animator.Play("Base Layer.Walk", 0, i / 8f);
+                animator.Update(0f);
+                poses[i] = foot.position;
+            }
+            animator.Play("Base Layer.WalkBack", 0, 0f);
+            animator.Update(0f);
+            var contacts = new FootContacts();
+            int steps = 0;
+            float previous = 0f;
+            for (int sample = 1; sample <= 15; sample++)
+            {
+                animator.Update(walk.frames / (float)spec.fps / 8f);
+                float time = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+                Assert.Greater(time, previous);
+                previous = time;
+                int nearest = 0;
+                for (int i = 1; i < poses.Length; i++)
+                    if ((foot.position - poses[i]).sqrMagnitude < (foot.position - poses[nearest]).sqrMagnitude) nearest = i;
+                Assert.AreEqual((8 - sample % 8) % 8, nearest, $"muestra {sample}");
+                steps += contacts.Advance(1, time, new Vector2(walk.contacts.left, walk.contacts.right), true);
+            }
+            Assert.AreEqual(3, steps);
+        }
+
         Animator Animate(GameObject root, AnimatorController controller)
         {
             var animator = root.GetComponent<Animator>() ?? root.AddComponent<Animator>();

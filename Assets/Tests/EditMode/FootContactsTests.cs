@@ -7,22 +7,17 @@ namespace TiffanyGame.Tests
     {
         static readonly Vector2 Phases = new Vector2(0f, 0.5f);
 
-        [TestCase(0f, 0.5f, 0f, 0.5f)]
-        [TestCase(0.2f, 0.7f, 0.8f, 0.3f)]
-        public void ReversedPlaybackReflectsContactsAndCountsDecreasingAnimationTime(float left, float right, float reversedLeft, float reversedRight)
+        [Test]
+        public void ReversedPlaybackReflectsContactsWhileNormalizedTimeGrows()
         {
-            var phases = FootContacts.Reversed(new Vector2(left, right));
-            Assert.AreEqual(new Vector2(reversedLeft, reversedRight), phases);
+            Assert.AreEqual(new Vector2(0.8f, 0.3f), FootContacts.Reversed(new Vector2(0.2f, 0.7f)));
             var contacts = new FootContacts();
-            float first = Mathf.Min(reversedLeft > 0f ? reversedLeft : 1f, reversedRight);
-            float normalizedTime = -first + 0.01f;
-            Assert.AreEqual(0, contacts.Advance(1, -0f, phases));
-            Assert.AreEqual(0, contacts.Advance(1, -normalizedTime, phases));
-            normalizedTime -= 0.02f;
-            Assert.AreEqual(1, contacts.Advance(1, -normalizedTime, phases));
-            Assert.AreEqual(0, contacts.Advance(1, -normalizedTime, phases));
-            normalizedTime = -2f;
-            Assert.AreEqual(3, contacts.Advance(1, -normalizedTime, phases));
+            var phases = new Vector2(0.2f, 0.7f);
+            Assert.AreEqual(0, contacts.Advance(1, 0.29f, phases, true));
+            Assert.AreEqual(1, contacts.Advance(1, 0.31f, phases, true));
+            Assert.AreEqual(0, contacts.Advance(1, 0.79f, phases, true));
+            Assert.AreEqual(1, contacts.Advance(1, 0.81f, phases, true));
+            Assert.AreEqual(2, contacts.Advance(1, 1.81f, phases, true));
         }
 
         [Test]

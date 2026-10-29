@@ -144,9 +144,7 @@ namespace TiffanyGame
             if (state.fullPathHash != baseState) return 0;
             var phases = baseState == LeftHash ? leftTurnContacts
                 : baseState == RightHash ? rightTurnContacts : locomotionContacts;
-            bool backward = baseState == WalkBackHash;
-            return contacts.Advance(baseState, backward ? -state.normalizedTime : state.normalizedTime,
-                backward ? FootContacts.Reversed(phases) : phases);
+            return contacts.Advance(baseState, state.normalizedTime, phases, baseState == WalkBackHash);
         }
 
         void ApplyState(string state, int layer, ref int previous, bool restart = false)

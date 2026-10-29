@@ -10,8 +10,10 @@ namespace TiffanyGame
         public static Vector2 Reversed(Vector2 contacts) =>
             new Vector2(Mathf.Repeat(1f - contacts.x, 1f), Mathf.Repeat(1f - contacts.y, 1f));
 
-        public int Advance(int state, float normalizedTime, Vector2 contacts)
+        // Con speed -1 Unity sigue subiendo normalizedTime y el clip va hacia atrás: se reflejan las fases.
+        public int Advance(int state, float normalizedTime, Vector2 contacts, bool reversed = false)
         {
+            if (reversed) contacts = Reversed(contacts);
             if (state != previousState)
             {
                 previousState = state;
