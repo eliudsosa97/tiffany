@@ -25,6 +25,133 @@ namespace TiffanyGame.Tests
         public void InvalidTimeoutKeepsThePreviousCommandLineValue() =>
             Assert.AreEqual(30f, PlaythroughPlan.ParseTimeout("invalid", 30f));
 
+        [TestCase(PlaythroughMilestone.Respawn)]
+        [TestCase(PlaythroughMilestone.RampCandle)]
+        [TestCase(PlaythroughMilestone.LakeCandle)]
+        [TestCase(PlaythroughMilestone.Road)]
+        public void ReturnRequestsRunningAfterRespawn(PlaythroughMilestone milestone)
+        {
+            var plan = new PlaythroughPlan(new[] { milestone });
+            var observation = new PlaythroughObservation { Respawning = true };
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsFalse(command.Move || command.Run);
+            observation.Respawning = false;
+            command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Run);
+            Assert.AreEqual(PlaythroughPlan.NeedsNavigation(milestone), command.Move);
+        }
+
+        [Test]
+        public void OtherMilestonesDoNotRequestRunning()
+        {
+            foreach (PlaythroughMilestone milestone in System.Enum.GetValues(typeof(PlaythroughMilestone)))
+            {
+                if (milestone == PlaythroughMilestone.Respawn || milestone == PlaythroughMilestone.RampCandle
+                    || milestone == PlaythroughMilestone.LakeCandle || milestone == PlaythroughMilestone.Road) continue;
+                var plan = new PlaythroughPlan(new[] { milestone });
+                var observation = new PlaythroughObservation();
+                Assert.IsFalse(plan.Tick(0.1f, in observation).Run, milestone.ToString());
+            }
+        }
+
+        [TestCase(PlaythroughMilestone.RampCandle)]
+        [TestCase(PlaythroughMilestone.LakeCandle)]
+        [TestCase(PlaythroughMilestone.Road)]
+        public void ReturnWaitsInsideSafeZoneUntilWitchLeavesNextDestination(PlaythroughMilestone milestone)
+        {
+            var plan = new PlaythroughPlan(new[] { milestone });
+            var observation = new PlaythroughObservation
+            {
+                Target = Vector3.forward * 30f, WitchPosition = Vector3.forward * 35f,
+                InSafeZone = true, Respawning = true
+            };
+            plan.Tick(0.1f, in observation);
+            observation.Respawning = false;
+            observation.RespawnGraceRemaining = 7f;
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsFalse(command.Move || command.Run || command.Repath);
+            observation.RespawnGraceRemaining = 3f;
+            command = plan.Tick(4f, in observation);
+            Assert.IsFalse(command.Move || command.Run || command.Repath);
+            Assert.AreEqual(milestone, plan.Current);
+            observation.WitchPosition = observation.Target + Vector3.forward * PlaythroughPlan.ReturnDepartureClearance;
+            command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Move && command.Run && command.Repath);
+            Assert.IsFalse(plan.Tick(0.1f, in observation).Repath);
+        }
+
+        [TestCase(0f)]
+        [TestCase(-1f)]
+        public void ReturnLeavesSafeZoneWhenGraceEndsEvenIfWitchStillBlocksDestination(float remaining)
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.LakeCandle });
+            var observation = new PlaythroughObservation
+            {
+                Target = Vector3.forward * 30f, WitchPosition = Vector3.forward * 30f,
+                InSafeZone = true, RespawnGraceRemaining = 0.01f
+            };
+            Assert.IsFalse(plan.Tick(0.1f, in observation).Move);
+            observation.RespawnGraceRemaining = remaining;
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Move && command.Run);
+            Assert.IsFalse(command.Repath);
+        }
+
+        [Test]
+        public void WitchNearPlayerDoesNotBlockDepartureWhenNextDestinationIsClear()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.RampCandle });
+            var observation = new PlaythroughObservation
+            {
+                Target = Vector3.forward * 30f, WitchPosition = Vector3.forward * 5f,
+                InSafeZone = true, RespawnGraceRemaining = 7f
+            };
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Move && command.Run);
+        }
+
+        [TestCase(false, 7f)]
+        [TestCase(true, 0f)]
+        public void ReturnDoesNotWaitOutsideSafeZoneOrWithoutRespawnGrace(bool safe, float grace)
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.LakeCandle });
+            var observation = new PlaythroughObservation
+            {
+                InSafeZone = safe, RespawnGraceRemaining = grace
+            };
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Move && command.Run);
+        }
+
+        [Test]
+        public void RespawnWaitDoesNotApplyOutsideReturn()
+        {
+            var plan = new PlaythroughPlan();
+            var observation = new PlaythroughObservation { InSafeZone = true, RespawnGraceRemaining = 7f };
+            var command = plan.Tick(0.1f, in observation);
+            Assert.IsTrue(command.Move);
+            Assert.IsFalse(command.Run);
+        }
+
+        [Test]
+        public void RampCandleIsAStandaloneCheckpointAndRequiresTouchAndFullRecharge()
+        {
+            Assert.AreEqual(-1, PlaythroughPlan.ChallengeIndex(PlaythroughMilestone.RampCandle));
+            Assert.AreEqual(ChallengeAction.None, PlaythroughPlan.Action(PlaythroughMilestone.RampCandle));
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.RampCandle, PlaythroughMilestone.LakeCandle });
+            var observation = new PlaythroughObservation { AtTarget = true, Energy = SoulEnergy.Max };
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.RampCandle, plan.Current);
+            observation.CheckpointReached = true;
+            observation.Energy = SoulEnergy.Max - 2f;
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.RampCandle, plan.Current);
+            observation.Energy = SoulEnergy.Max;
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.LakeCandle, plan.Current);
+            Assert.AreEqual(1, plan.CompletedCount);
+        }
+
         [Test]
         public void FullRouteRequiresMemoriesPowersHidingCaptureAndHomeInOrder()
         {
@@ -43,7 +170,8 @@ namespace TiffanyGame.Tests
                 PlaythroughMilestone.Challenge4Distract, PlaythroughMilestone.Challenge4Wait,
                 PlaythroughMilestone.Challenge4Vanish, PlaythroughMilestone.Challenge4Cross,
                 PlaythroughMilestone.Memory5, PlaythroughMilestone.Capture, PlaythroughMilestone.Respawn,
-                PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road, PlaythroughMilestone.Manifest
+                PlaythroughMilestone.RampCandle, PlaythroughMilestone.LakeCandle, PlaythroughMilestone.Road,
+                PlaythroughMilestone.Manifest
             };
             var plan = new PlaythroughPlan();
             Assert.AreEqual(expected.Length, plan.Count);
