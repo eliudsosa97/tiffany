@@ -305,7 +305,7 @@ namespace TiffanyGame.Tests
 
         void RecordMilestone(string message, string stackTrace, LogType type)
         {
-            if (type == LogType.Log && Regex.IsMatch(message, @"^\[Tiffany\] Partida \d+\.\ds (?!claro: )")) milestones.Add(message);
+            if (type == LogType.Log && Regex.IsMatch(message, @"^\[Tiffany\] Partida \d+\.\ds (?!claro: |bruja: |esquiva la embestida$)")) milestones.Add(message);
             if (message.EndsWith("recoger la pelota"))
                 ballVisitPosition = Object.FindAnyObjectByType<PlayerController>().transform.position;
         }

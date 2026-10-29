@@ -285,8 +285,11 @@ namespace TiffanyGame
         private bool ClearLight(in WitchPerception p) => SeesLight(in p)
             && HorizontalDistance(p.WitchPosition, p.PlayerLightPosition) <= profile.ClearLightDistance;
 
-        public void SetProfile(WitchProfile next) =>
+        public void SetProfile(WitchProfile next)
+        {
             profile = next ?? throw new ArgumentNullException(nameof(next));
+            if (roamDelay < profile.RoamMinDelay || roamDelay > profile.RoamMaxDelay) roamDelay = NextRoamDelay();
+        }
 
         private void Advance(float dt, in WitchPerception p, bool trackable, bool detected, bool newLight)
         {

@@ -12,6 +12,11 @@ namespace TiffanyGame
         readonly HeartbeatRate rate = new HeartbeatRate();
         int lastLoggedBpm;
 
+        void Start()
+        {
+            if (source != null) source.clip = clip;
+        }
+
         void Update()
         {
             if (Time.timeScale == 0f) return;
@@ -20,7 +25,7 @@ namespace TiffanyGame
             {
                 Vector3 offset = witch.transform.position - transform.position;
                 offset.y = 0f;
-                distance = offset.magnitude;
+                distance = HeartbeatRate.WitchDistance(witch.isActiveAndEnabled, witch.Decision.Form, offset.magnitude);
             }
             float intensity = HeartbeatRate.Intensity(panic != null ? panic.Model.Level : 0f, distance);
             float bpm = HeartbeatRate.BeatsPerMinute(intensity);
@@ -30,7 +35,8 @@ namespace TiffanyGame
                 Debug.Log($"{GameInfo.LogPrefix} Latidos: {bpm:0} lpm");
             }
             if (!rate.Tick(Time.deltaTime, bpm) || source == null || clip == null) return;
-            source.PlayOneShot(clip, HeartbeatRate.Volume(intensity));
+            source.volume = HeartbeatRate.Volume(intensity);
+            source.Play();
             Beats++;
         }
     }

@@ -309,5 +309,27 @@ namespace TiffanyGame.Tests
             p.DistanceToPlayer = offset.magnitude;
             return brain.Tick(dt, in p);
         }
+
+        [TestCase(20f, 8f)]
+        [TestCase(-20f, -8f)]
+        public void ProjectedPointInsideTheFrontConePaysThePenalty(float wantedAngle, float foundAngle)
+        {
+            Vector3 player = new Vector3(3f, 1f, -2f);
+            Vector3 ahead = Vector3.right;
+            Vector3 wanted = player + Quaternion.AngleAxis(wantedAngle, Vector3.up) * ahead * 14f;
+            Vector3 found = player + Quaternion.AngleAxis(foundAngle, Vector3.up) * ahead * 14f + Vector3.up * 0.5f;
+            Assert.Less(Vector3.Distance(wanted, found), WitchCatchUp.PlacementSlack);
+            float angle = WitchCatchUp.PlacementAngle(player, ahead + Vector3.up, found);
+            Assert.AreEqual(Mathf.Abs(foundAngle), angle, 1e-4f);
+            Assert.AreEqual(14f, WitchCatchUp.PlacementCost(14f, wantedAngle));
+            Assert.AreEqual(14f + WitchCatchUp.FrontPenalty, WitchCatchUp.PlacementCost(14f, angle));
+        }
+
+        [Test]
+        public void SideReappearanceBeatsAFrontOneOnlyWhenThePathsAreClose()
+        {
+            Assert.Less(WitchCatchUp.PlacementCost(16f, 40f), WitchCatchUp.PlacementCost(14f, 0f), "De lado gana a un frente apenas más corto.");
+            Assert.Less(WitchCatchUp.PlacementCost(14f, 0f), WitchCatchUp.PlacementCost(20f, 60f), "El frente gana si el lado queda mucho más lejos.");
+        }
     }
 }

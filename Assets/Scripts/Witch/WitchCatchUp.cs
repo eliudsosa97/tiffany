@@ -29,6 +29,17 @@ namespace TiffanyGame
 
         public void Retry(WitchProfile profile) => farTime = Mathf.Min(farTime, profile.CatchUpDelay - RetryDelay);
 
+        public const float FrontPenalty = 4f;
+
+        public static float PlacementCost(float pathLength, float angle) =>
+            pathLength + (Mathf.Abs(angle) < 10f ? FrontPenalty : 0f);
+
+        public static float PlacementAngle(Vector3 player, Vector3 ahead, Vector3 point)
+        {
+            ahead.y = 0f;
+            return Vector3.Angle(ahead, WitchTargets.Direction(player, point));
+        }
+
         public static bool AcceptsPlacement(Vector3 player, Vector3 wanted, Vector3 found, WitchProfile profile)
         {
             float distance = WitchTargets.Distance(found, player);

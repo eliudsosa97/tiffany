@@ -26,6 +26,7 @@ namespace TiffanyGame
         public Rect Bounds { get; }
         public Rect Town { get; }
         public Rect Road { get; }
+        public float RoadBendEnd => RouteLayout.Clearing(0).x - RouteLayout.ClearingSizeOf(0) * 0.5f;
         public Vector2 FenceStart { get; }
         public Vector2 FenceEnd { get; }
         public Vector3 Crossing { get; }
@@ -47,16 +48,16 @@ namespace TiffanyGame
         {
             RouteLayout.RiverSpan(out var start, out var end);
             Crossing = (start + end) * 0.5f;
-            Town = Rect.MinMaxRect(-73f, 160f, 146f, 242f);
+            Town = Rect.MinMaxRect(86f, 160f, 146f, 216f);
             Bounds = Rect.MinMaxRect(WestBoundary,
-                RouteLayout.Clearing(2).z - RouteLayout.ClearingSizeOf(2) * 0.5f - Margin, 218f, Town.yMax + Margin);
+                RouteLayout.Clearing(2).z - RouteLayout.ClearingSizeOf(2) * 0.5f - Margin, 218f, 262f);
             Road = Rect.MinMaxRect(Bounds.xMin, RouteLayout.Clearing(6).z - RoadWidth * 0.5f,
-                150f, RouteLayout.Clearing(6).z + RoadWidth * 0.5f);
+                Bounds.xMax, RouteLayout.Clearing(6).z + RoadWidth * 0.5f);
             river = new[] { new Vector2(150f, 116f), new Vector2(120f, 121f),
                 new Vector2(80f, Crossing.z), new Vector2(20f, Crossing.z),
                 new Vector2(-40f, 112f), new Vector2(Bounds.xMin, 108f) };
             FenceStart = river[0];
-            FenceEnd = new Vector2(FenceStart.x, Bounds.yMax);
+            FenceEnd = new Vector2(FenceStart.x, Road.yMax);
             for (int i = 0; i < paths.Length; i++) paths[i] = RouteLayout.Path(i);
             for (int i = 0; i < openings.Length; i++) openings[i] = RouteLayout.Openings(i);
         }
@@ -69,6 +70,15 @@ namespace TiffanyGame
         }
 
         public bool IsWalkable(float x, float z) => WalkableDistance(x, z) <= 0f;
+
+        public float RoadCenterZ(float x)
+        {
+            float north = RouteLayout.Clearing(0).z + RouteLayout.ClearingSizeOf(0) * 0.5f + RoadWidth * 0.5f + 10f;
+            return Mathf.Lerp(Road.center.y, north, Mathf.InverseLerp(FenceStart.x, RoadBendEnd, x));
+        }
+
+        public float RoadDistance(float x, float z) => RectangleDistance(
+            new Vector2(x, z - RoadCenterZ(x) + Road.center.y), Road);
 
         public GroundType ForestGround(float x, float z)
         {
@@ -130,7 +140,7 @@ namespace TiffanyGame
         public float DistanceToRoute(float x, float z, bool includeRoad = true)
         {
             var point = new Vector2(x, z);
-            float distance = includeRoad ? RectangleDistance(point, Road) : float.PositiveInfinity;
+            float distance = includeRoad ? RoadDistance(x, z) : float.PositiveInfinity;
             for (int i = 0; i < RouteLayout.Count; i++)
             {
                 Vector3 center = RouteLayout.Clearing(i);
@@ -242,7 +252,7 @@ namespace TiffanyGame
                 if (distance <= 0f) { nearest = 0f; return center.y; }
                 Accumulate(distance, center.y, ref nearest, ref sum, ref weight);
             }
-            float roadDistance = RectangleDistance(point, Road);
+            float roadDistance = RoadDistance(x, z);
             if (roadDistance <= 0f) { nearest = 0f; return RouteLayout.Clearing(6).y; }
             Accumulate(roadDistance, RouteLayout.Clearing(6).y, ref nearest, ref sum, ref weight);
             for (int from = 0; from < paths.Length; from++)
