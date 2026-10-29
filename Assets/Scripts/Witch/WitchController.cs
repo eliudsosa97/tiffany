@@ -36,6 +36,7 @@ namespace TiffanyGame
         private WitchProfile profile;
         private WitchSenses witchSenses;
         private WitchBrain brain;
+        private Vector3[] hidePoints;
         private RaycastHit[] hits;
         private Action<StepNoise> noiseHandler;
         private bool flashed;
@@ -78,6 +79,10 @@ namespace TiffanyGame
 
         private void Start()
         {
+            var volumes = FindObjectsByType<HideVolume>(FindObjectsSortMode.None);
+            hidePoints = new Vector3[volumes.Length];
+            for (int i = 0; i < volumes.Length; i++) hidePoints[i] = volumes[i].HidePoint;
+            witchSenses = new WitchSenses(senses, hidePoints);
             if (player != null) return;
             var found = GameObject.FindGameObjectWithTag("Player");
             if (found != null) player = found.transform;
@@ -125,8 +130,8 @@ namespace TiffanyGame
         private void InitializeBrain()
         {
             profile = WitchProfiles.For(chapter);
-            brain = new WitchBrain(profile, skyRoute);
-            witchSenses = new WitchSenses(senses);
+            brain = new WitchBrain(profile, skyRoute, resolveGroundTarget: ResolveGroundTarget);
+            witchSenses = new WitchSenses(senses, hidePoints);
             agent.enabled = false;
             hasDestination = hasPose = flashed = false;
             stateTime = 0f;
@@ -193,6 +198,7 @@ namespace TiffanyGame
             };
             float dt = Time.deltaTime;
             WitchState previousState = Decision.State;
+            bool wasInspectingHide = Decision.InspectingHide;
             Decision = brain.Tick(dt, witchSenses.Sense(in inputs));
             stateTime += dt;
             if (Decision.State != previousState)
@@ -200,6 +206,8 @@ namespace TiffanyGame
                 if (previousState == WitchState.Landing) transform.position = verticalTarget;
                 EnterState();
             }
+            if (Decision.InspectingHide && !wasInspectingHide)
+                Debug.Log($"{GameInfo.LogPrefix} Bruja: revisa escondite en {Decision.MoveTarget}");
             ApplyMovement(dt);
             ApplyView(position, dt);
         }
@@ -247,16 +255,17 @@ namespace TiffanyGame
                     Stalk();
                     break;
                 case WitchState.WindUp:
+                case WitchState.Suspicious:
+                    agent.enabled = false;
+                    hasDestination = false;
+                    Vector3 direction = Decision.MoveTarget - transform.position;
+                    direction.y = 0f;
+                    if (direction.sqrMagnitude > 0f) transform.rotation = Quaternion.LookRotation(direction);
+                    break;
                 case WitchState.Recovering:
                 case WitchState.Stunned:
                 case WitchState.Caught:
                     if (EnableAgent()) agent.isStopped = true;
-                    if (Decision.State == WitchState.WindUp)
-                    {
-                        Vector3 direction = Decision.MoveTarget - transform.position;
-                        direction.y = 0f;
-                        if (direction.sqrMagnitude > 0f) transform.rotation = Quaternion.LookRotation(direction);
-                    }
                     break;
                 case WitchState.Sprinting:
                     agent.enabled = false;
@@ -273,13 +282,21 @@ namespace TiffanyGame
             return ready;
         }
 
+        private Vector3 ResolveGroundTarget(Vector3 position)
+        {
+            if (SafeZones.TryPushOut(position, landingMargin, out var destination)
+                && NavMeshPlacement.TrySample(destination, 6f, agent.areaMask, out var hit)
+                && !SafeZones.Contains(hit.position)) return hit.position;
+            return transform.position;
+        }
+
         private void Stalk()
         {
             if (!EnableAgent()) return;
             agent.isStopped = Decision.Speed <= 0f;
             if (agent.isStopped) return;
             agent.speed = Decision.Speed;
-            Vector3 destination = SafeZones.PushOut(Decision.MoveTarget, landingMargin);
+            Vector3 destination = Decision.MoveTarget;
             if (!hasDestination || WitchMotion.ShouldRepath(lastDestination, destination, repathThreshold))
             {
                 agent.SetDestination(destination);
@@ -331,7 +348,9 @@ namespace TiffanyGame
 
         private void ApplyView(Vector3 previousPosition, float dt)
         {
-            ApplyPose(WitchPoses.For(Decision.State, Decision.FireLit));
+            WitchState poseState = Decision.State == WitchState.Suspicious && Decision.Form == WitchForm.Flying
+                ? WitchState.Flying : Decision.State;
+            ApplyPose(WitchPoses.For(poseState, Decision.FireLit));
             Vector3 velocity = agent.enabled && agent.isOnNavMesh ? agent.velocity
                 : Decision.State == WitchState.Sprinting && dt > 0f ? (transform.position - previousPosition) / dt : Vector3.zero;
             velocity.y = 0f;
@@ -382,6 +401,8 @@ namespace TiffanyGame
             int hash = state switch
             {
                 WitchState.Stalking => StalkingHash,
+                // Provisional hasta que E haga el clip de sospecha: Stalking con Speed 0 usa Idle.
+                WitchState.Suspicious => StalkingHash,
                 WitchState.WindUp => WindUpHash,
                 WitchState.Sprinting => SprintingHash,
                 WitchState.Recovering => RecoveringHash,

@@ -318,10 +318,10 @@ namespace TiffanyGame.EditorTools
             liveStop.AddComponent<WitchCaptureStage>().live = true;
 
             var states = new[] { WitchState.Flying, WitchState.Landing, WitchState.Stalking, WitchState.WindUp,
-                WitchState.Sprinting, WitchState.Recovering, WitchState.TakingOff };
+                WitchState.Sprinting, WitchState.Recovering, WitchState.TakingOff, WitchState.Suspicious };
             for (int i = 0; i < states.Length; i++)
             {
-                var stop = new GameObject($"Witch {i + 1} {states[i]}");
+                var stop = new GameObject(states[i] == WitchState.Suspicious ? "Witch Suspicious" : $"Witch {i + 1} {states[i]}");
                 stop.transform.SetParent(captureRoot, false);
                 stop.transform.position = SurfacePoint(0f, -4f);
                 var capture = stop.AddComponent<CaptureStop>();
