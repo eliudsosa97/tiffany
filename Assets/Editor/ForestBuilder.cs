@@ -11,13 +11,14 @@ namespace TiffanyGame.EditorTools
     public static partial class ForestBuilder
     {
         public static void Populate(Transform clearing, int seed, float size, float pathWidth,
-            (Vector2 center, float radius)[] exclusions, Vector2[] viewPoints = null)
+            (Vector2 center, float radius)[] exclusions, Vector2[] viewPoints = null, int ringPines = 0, RouteTerrain terrain = null)
         {
             int cover = LayerMask.NameToLayer(ForestLayout.CoverLayer);
             if (cover < 0) throw new InvalidOperationException($"{GameInfo.LogPrefix} Falta la capa Cover.");
             var previous = clearing.Find("Forest");
             if (previous != null) Object.DestroyImmediate(previous.gameObject);
             int treeLimit = Mathf.Min(12, (200 - clearing.GetComponentsInChildren<Renderer>(true).Length) / 2);
+            int ringLimit = Mathf.Max(0, Mathf.Min(ringPines, (200 - clearing.GetComponentsInChildren<Renderer>(true).Length) / 2 - treeLimit));
             var forest = new GameObject("Forest").transform;
             forest.SetParent(clearing, false);
             var random = new System.Random(seed);
@@ -25,21 +26,34 @@ namespace TiffanyGame.EditorTools
             var localViewDirection = clearing.InverseTransformDirection(
                 Quaternion.Euler(FollowCamera.DefaultPitch, FollowCamera.DefaultYaw, 0f) * Vector3.forward);
             float Range(float min, float max) => min + (float)random.NextDouble() * (max - min);
-            bool Free(Vector3 position, float radius)
+            bool Free(Vector3 position, float radius, bool ring)
             {
+                if (terrain != null && ChallengeBuilder.Reserves(clearing.localPosition + position, radius)) return false;
                 var p = new Vector2(position.x, position.z);
-                if (Mathf.Abs(p.x) < pathWidth * 0.5f + radius + 0.5f
-                    || Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.y)) + radius > size * 0.5f - 0.5f) return false;
+                float edge = Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.y));
+                if (ring)
+                {
+                    if (edge < size * 0.5f + 0.5f || edge + radius > size * 0.5f + 6f) return false;
+                }
+                else if (Mathf.Abs(p.x) < pathWidth * 0.5f + radius + 0.5f
+                    || edge + radius > size * 0.5f - 0.5f) return false;
                 foreach (var zone in blocked)
                     if ((p - zone.center).sqrMagnitude < (radius + zone.radius) * (radius + zone.radius)) return false;
                 return true;
             }
-            bool TryPosition(float radius, float height, out Vector3 position)
+            bool TryPosition(float radius, float height, out Vector3 position, bool ring = false)
             {
+                float half = size * 0.5f + (ring ? 6f : 0f);
                 for (int attempt = 0; attempt < 2048; attempt++)
                 {
-                    position = new Vector3(Range(-size * 0.5f, size * 0.5f), 0f, Range(-size * 0.5f, size * 0.5f));
-                    if (Free(position, radius) && KeepsView(position, radius, height, viewPoints, localViewDirection)) return true;
+                    position = new Vector3(Range(-half, half), 0f, Range(-half, half));
+                    if (!Free(position, radius, ring)) continue;
+                    if (ring && terrain != null)
+                    {
+                        Vector3 point = clearing.localPosition + clearing.localRotation * position;
+                        position.y = terrain.GroundHeight(point.x, point.z) - clearing.localPosition.y;
+                    }
+                    if (KeepsView(position, radius, height + position.y, viewPoints, localViewDirection)) return true;
                 }
                 position = default;
                 return false;
@@ -50,16 +64,17 @@ namespace TiffanyGame.EditorTools
             var needles = Surface("PineNeedles", new Color(0.26f, 0.34f, 0.23f), "dry_decay_leaves", true);
             int trees = 0;
             long triangles = 0;
-            for (int i = 0; i < treeLimit; i++)
+            for (int i = 0; i < treeLimit + ringLimit; i++)
             {
-                bool pine = i % 3 == 2;
+                bool ring = i >= treeLimit;
+                bool pine = ring || i % 3 == 2;
                 var trunk = LoadMesh(pine ? "Ocote0" : "BugambiliasOak" + i % 3);
                 var crown = LoadMesh(pine ? "OcoteCanopy0" : "BugambiliasLeaves" + i % 3);
                 float height = Range(1.05f, 1.2f);
                 var scale = pine ? Vector3.one * (height * 0.44f) : new Vector3(height * 0.7f, height, height * 0.7f);
                 var bounds = trunk.bounds;
                 bounds.Encapsulate(crown.bounds);
-                if (!TryPosition(Radius(bounds) * scale.x, bounds.max.y * scale.y, out var position)) continue;
+                if (!TryPosition(Radius(bounds) * scale.x, bounds.max.y * scale.y, out var position, ring)) continue;
                 var tree = Place(pine ? "Pine" : "Oak", forest, trunk, pine ? pineBark : oakBark);
                 tree.transform.localPosition = position;
                 tree.transform.localRotation = Quaternion.Euler(0f, Range(0f, 360f), 0f);
@@ -73,6 +88,7 @@ namespace TiffanyGame.EditorTools
                 var roof = canopy.AddComponent<BoxCollider>();
                 roof.center = crown.bounds.center;
                 roof.size = crown.bounds.size;
+                canopy.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild = true;
                 blocked.Add((new Vector2(position.x, position.z), 0.9f));
                 triangles += (trunk.GetIndexCount(0) + crown.GetIndexCount(0)) / 3;
                 trees++;

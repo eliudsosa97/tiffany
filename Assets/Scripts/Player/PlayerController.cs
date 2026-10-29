@@ -18,7 +18,7 @@ namespace TiffanyGame
 
         CharacterController controller;
         StepCadence cadence;
-        RaycastHit[] groundHits;
+        readonly RaycastHit[] groundHits = new RaycastHit[4];
         Vector3 horizontalVelocity;
         float verticalVelocity;
         Collider lastGroundCollider;
@@ -32,7 +32,6 @@ namespace TiffanyGame
             // A muchos cuadros por segundo cada Move mide menos que el mínimo por defecto (0.001 m).
             controller.minMoveDistance = 0f;
             cadence = new StepCadence();
-            groundHits = new RaycastHit[4];
         }
 
         void Start()
@@ -89,6 +88,11 @@ namespace TiffanyGame
                 closest = hit.collider;
                 closestDistance = hit.distance;
             }
+
+            // Un buffer lleno no garantiza que Physics haya incluido el impacto más cercano.
+            if (count == groundHits.Length && Physics.Raycast(transform.position + Vector3.up * 0.5f, Vector3.down,
+                out var nearest, closestDistance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+                && nearest.collider != controller) closest = nearest.collider;
 
             if (closest == null || closest != lastGroundCollider)
             {

@@ -38,9 +38,9 @@ namespace TiffanyGame
             GradedPath(2, new Vector2(68f, -50f), new Vector2(72f, -50f),
                 new Vector2(80f, -30f), new Vector2(80f, -22f), new Vector2(80f, -18f)),
             GradedPath(3, new Vector2(80f, 18f), new Vector2(80f, 22f),
-                new Vector2(84f, 29f), new Vector2(92f, 31f), new Vector2(96f, 38f), new Vector2(96f, 42f)),
-            new[] { new Vector3(86f, 6f, 46f), new Vector3(82f, 6f, 46f),
-                new Vector3(58f, 0f, 96f), new Vector3(54f, 0f, 96f) },
+                new Vector2(84f, 29f), new Vector2(92f, 31f), new Vector2(96f, 38f), new Vector2(96f, 48f)),
+            new[] { new Vector3(92f, 6f, 52f), new Vector3(88f, 6f, 52f),
+                new Vector3(58f, 0f, 98f), new Vector3(54f, 0f, 98f) },
             GradedPath(5, new Vector2(36f, 102f), new Vector2(36f, 106f),
                 new Vector2(38f, 110f), new Vector2(42f, 112f), new Vector2(44f, 116f), new Vector2(44f, 130f),
                 new Vector2(44f, 134f), new Vector2(44f, 138f)),
@@ -52,6 +52,12 @@ namespace TiffanyGame
         {
             if (index < 0 || index >= Count) throw new ArgumentOutOfRangeException(nameof(index));
             return Clearings[index];
+        }
+
+        public static float ClearingSizeOf(int index)
+        {
+            Clearing(index);
+            return index == 4 ? 24f : ClearingSize;
         }
 
         public static Vector3[] Path(int from)
@@ -103,9 +109,11 @@ namespace TiffanyGame
             var direction = new Vector2(b.x - a.x, b.z - a.z);
             float distance = direction.magnitude;
             direction /= distance;
-            float edge = ClearingSize * 0.5f * (Mathf.Abs(direction.x) + Mathf.Abs(direction.y));
+            float projection = 0.5f * (Mathf.Abs(direction.x) + Mathf.Abs(direction.y));
+            float startEdge = ClearingSizeOf(from) * projection;
+            float endEdge = ClearingSizeOf(from + 1) * projection;
             float along = Vector2.Dot(new Vector2(x - a.x, z - a.z), direction);
-            return Mathf.Lerp(a.y, b.y, Mathf.Clamp01((along - edge) / (distance - edge * 2f)));
+            return Mathf.Lerp(a.y, b.y, Mathf.Clamp01((along - startEdge) / (distance - startEdge - endEdge)));
         }
     }
 }

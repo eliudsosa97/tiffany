@@ -96,6 +96,24 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchState.Caught, brain.Tick(0.1f, in p).State);
         }
 
+        [TestCase(-1.5f, false)]
+        [TestCase(-1.49f, true)]
+        [TestCase(1.49f, true)]
+        [TestCase(1.5f, false)]
+        public void WatchSprintRespectsCatchHeightAfterWarning(float height, bool caught)
+        {
+            var profile = new WitchProfile { CanSprint = false };
+            var brain = new WitchBrain(profile, null);
+            brain.BeginWatch(Vector3.zero, false);
+            var p = new WitchPerception
+            {
+                PlayerPosition = new Vector3(0f, height, 0.5f), DistanceToPlayer = 0.5f, InWatchPassage = true
+            };
+            Assert.AreEqual(WitchState.WindUp, brain.Tick(0.1f, in p).State);
+            Assert.AreEqual(WitchState.Sprinting, brain.Tick(profile.WindUpDuration, in p).State);
+            Assert.AreEqual(caught ? WitchState.Caught : WitchState.Sprinting, brain.Tick(0.1f, in p).State);
+        }
+
         [TestCase(true, false, false)]
         [TestCase(false, true, false)]
         [TestCase(false, false, true)]
