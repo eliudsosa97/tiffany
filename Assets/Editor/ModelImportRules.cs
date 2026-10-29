@@ -6,7 +6,7 @@ namespace TiffanyGame.EditorTools
 {
     public class ModelImportRules : AssetPostprocessor
     {
-        public override uint GetVersion() => 5;
+        public override uint GetVersion() => 7;
 
         bool IsLibraryModel => Path.GetDirectoryName(assetPath).Replace('\\', '/') == ModelLibrary.ModelFolder &&
                                Path.GetExtension(assetPath).ToLowerInvariant() == ".fbx";
@@ -35,7 +35,9 @@ namespace TiffanyGame.EditorTools
             {
                 importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
                 importer.optimizeGameObjects = false;
-                importer.animationCompression = ModelImporterAnimationCompression.KeyframeReduction;
+                importer.animationCompression = spec.preserveAnimationKeys
+                    ? ModelImporterAnimationCompression.Off
+                    : ModelImporterAnimationCompression.KeyframeReduction;
                 importer.animationRotationError = 0.1f;
                 importer.animationPositionError = 0.1f;
                 importer.animationScaleError = 0.1f;
@@ -67,8 +69,11 @@ namespace TiffanyGame.EditorTools
                 var entry = System.Array.Find(spec.clips, c => c.name == name);
                 if (entry == null) continue;
                 clip.name = name;
-                clip.firstFrame = 0f;
-                clip.lastFrame = entry.frames;
+                if (!spec.preserveAnimationKeys)
+                {
+                    clip.firstFrame = 0f;
+                    clip.lastFrame = entry.frames;
+                }
                 clip.loopTime = entry.loop;
                 clip.loopPose = false;
                 clip.wrapMode = entry.loop ? UnityEngine.WrapMode.Loop : UnityEngine.WrapMode.ClampForever;
