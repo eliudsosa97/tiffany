@@ -12,7 +12,7 @@ namespace TiffanyGame.EditorTools
         public const string ModelPath = ModelLibrary.ModelFolder + "/witch.fbx";
         public const string ControllerPath = ModelLibrary.ModelFolder + "/Witch.controller";
         public const string SpeedParameter = "Speed";
-        public static readonly string[] States = { "Idle", "Stalking", "WindUp", "Sprinting", "Recovering", "Stunned", "Caught", "Landing", "TakingOff" };
+        public static readonly string[] States = { "Idle", "Stalking", "WindUp", "Sprinting", "Recovering", "Stunned", "Caught", "Landing", "TakingOff", "Suspicious" };
 
         public static Dictionary<string, AnimationClip> Clips()
         {

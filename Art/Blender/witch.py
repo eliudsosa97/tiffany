@@ -718,7 +718,7 @@ def main():
         arm.data.pose_position = "POSE"
     speeds = {name: SPEC["motion"][name].get("speed", 0.0) for name in SPEC["motion"]}
     if args.stills:
-        witch_video.stills(args.stills, arm, actions, {"Idle": 10, "Stalking": 12, "Sprinting": 12, "WindUp": 10, "Recovering": 10})
+        witch_video.stills(args.stills, arm, actions, {"Idle": 10, "Stalking": 12, "Sprinting": 12, "WindUp": 10, "Recovering": 10, "Suspicious": 10})
     if args.video:
         witch_video.videos(args.video, arm, actions, speeds)
     if not bpy.app.background:
