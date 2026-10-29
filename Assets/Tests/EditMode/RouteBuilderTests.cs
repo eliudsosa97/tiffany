@@ -575,9 +575,9 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(fog);
             Assert.IsFalse(fog.transform.IsChildOf(route));
             Assert.AreSame(player.transform, fog.player);
-            Assert.AreEqual(108, fog.layers.Length, "16 de claros, 54 del sendero, 8 del bosque embrujado y 30 de agua.");
-            Assert.AreEqual(108, fog.GetComponentsInChildren<Renderer>().Length);
-            Assert.AreEqual(30, System.Array.FindAll(fog.layers, layer => layer.water).Length);
+            Assert.AreEqual(100, fog.layers.Length, "16 de claros, 54 del sendero, 8 del bosque embrujado y 22 de agua.");
+            Assert.AreEqual(100, fog.GetComponentsInChildren<Renderer>().Length);
+            Assert.AreEqual(22, System.Array.FindAll(fog.layers, layer => layer.water).Length);
             Assert.IsEmpty(fog.GetComponentsInChildren<Collider>());
             Assert.IsEmpty(fog.GetComponentsInChildren<Light>());
             foreach (var layer in fog.layers)
