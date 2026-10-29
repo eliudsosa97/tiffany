@@ -67,7 +67,7 @@ namespace TiffanyGame
                 transform.position = position;
                 Physics.SyncTransforms();
                 if (character != null) character.enabled = true;
-                if (witch != null) witch.ResetBrain();
+                if (witch != null) witch.ResetBrain(afterCapture: true);
                 Respawned?.Invoke();
                 if (playerLight != null && playerLight.State != null && playerLight.State.IsOn) playerLight.Toggle();
                 Debug.Log($"{GameInfo.LogPrefix} Atrapada: regreso a la veladora");
