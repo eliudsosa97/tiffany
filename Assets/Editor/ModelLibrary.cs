@@ -296,7 +296,7 @@ namespace TiffanyGame.EditorTools
             material.SetFloat("_SrcBlend", (float)BlendMode.One);
             material.SetFloat("_DstBlend", (float)BlendMode.Zero);
             material.SetFloat("_ZWrite", 1f);
-            material.SetOverrideTag("RenderType", "Opaque");
+            material.SetOverrideTag("RenderType", occluder ? "" : "Opaque");
             material.renderQueue = -1;
             material.shaderKeywords = Array.Empty<string>();
             foreach (string property in material.GetTexturePropertyNames()) material.SetTexture(property, null);

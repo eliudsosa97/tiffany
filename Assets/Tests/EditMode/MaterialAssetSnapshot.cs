@@ -32,11 +32,11 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(saved.globalIlluminationFlags, actual.globalIlluminationFlags, actual.name);
             Assert.AreEqual(renderType, actual.GetTag("RenderType", false), actual.name);
             CollectionAssert.AreEquivalent(saved.shaderKeywords, actual.shaderKeywords, actual.name);
-            var subshader = ShaderUtil.GetShaderData(saved.shader).GetSubshader(0);
-            for (int pass = 0; pass < subshader.PassCount; pass++)
+            Assert.AreEqual(saved.passCount, actual.passCount, actual.name);
+            for (int pass = 0; pass < saved.passCount; pass++)
             {
-                string lightMode = subshader.GetPass(pass).FindTagValue(new ShaderTagId("LightMode")).name;
-                Assert.AreEqual(saved.GetShaderPassEnabled(lightMode), actual.GetShaderPassEnabled(lightMode), lightMode);
+                string passName = saved.GetPassName(pass);
+                Assert.AreEqual(saved.GetShaderPassEnabled(passName), actual.GetShaderPassEnabled(passName), passName);
             }
             for (int i = 0; i < saved.shader.GetPropertyCount(); i++)
             {

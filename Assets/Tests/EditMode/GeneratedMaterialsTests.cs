@@ -3,6 +3,7 @@ using NUnit.Framework;
 using TiffanyGame.EditorTools;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace TiffanyGame.Tests
 {
@@ -115,10 +116,25 @@ namespace TiffanyGame.Tests
             Assert.Throws<AssertionException>(() => snapshot.AssertUnchanged(material));
         }
 
+        [TestCase("ForwardLit")]
+        [TestCase("ShadowCaster")]
+        public void MaterialSnapshotPreservesAndChecksPassEnablement(string passName)
+        {
+            var material = GeneratedMaterials.Get("Occluder", Color.white, occluder: true);
+            Assert.GreaterOrEqual(material.FindPass(passName), 0, passName);
+            Assert.IsTrue(material.GetShaderPassEnabled(passName), passName);
+            using var snapshot = new MaterialAssetSnapshot(material);
+
+            snapshot.AssertUnchanged(material);
+            material.SetShaderPassEnabled(passName, false);
+            Assert.Throws<AssertionException>(() => snapshot.AssertUnchanged(material));
+        }
+
         [Test]
         public void OccluderKeepsSavedMapsTilingAndInstancingWhenRegenerated()
         {
             var material = GeneratedMaterials.GetTextured("Tree", Color.green, "pine_bark", 2f, instancing: true);
+            material.SetShaderPassEnabled("ShadowCaster", false);
             string path = AssetDatabase.GetAssetPath(material);
             Assert.IsTrue(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long id));
             var diffuse = material.GetTexture("_BaseMap");
@@ -129,6 +145,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(guid, actualGuid);
             Assert.AreEqual(id, actualId);
             Assert.AreEqual(path, AssetDatabase.GetAssetPath(regenerated));
+            Assert.IsTrue(regenerated.GetShaderPassEnabled("ShadowCaster"));
             AssetDatabase.SaveAssets();
             using var snapshot = new MaterialAssetSnapshot(regenerated);
             Resources.UnloadAsset(regenerated);
@@ -148,13 +165,16 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(material.IsKeywordEnabled("_TIFFANY_CHARACTER"));
             Assert.IsTrue(material.enableInstancing);
             Assert.IsFalse(ShaderUtil.ShaderHasError(material.shader));
-            var subshader = ShaderUtil.GetShaderData(material.shader).GetSubshader(0);
-            foreach (string lightMode in new[] { "UniversalForward", "DepthOnly", "DepthNormals", "ShadowCaster" })
+            foreach (var (passName, lightMode) in new[]
+                {
+                    ("ForwardLit", "UniversalForward"), ("DepthOnly", "DepthOnly"),
+                    ("DepthNormals", "DepthNormals"), ("ShadowCaster", "ShadowCaster")
+                })
             {
-                bool found = false;
-                for (int pass = 0; pass < subshader.PassCount; pass++)
-                    found |= subshader.GetPass(pass).FindTagValue(new UnityEngine.Rendering.ShaderTagId("LightMode")).name == lightMode;
-                Assert.IsTrue(found, lightMode);
+                int pass = material.FindPass(passName);
+                Assert.GreaterOrEqual(pass, 0, passName);
+                Assert.AreEqual(lightMode, material.shader.FindPassTagValue(pass, new ShaderTagId("LightMode")).name, passName);
+                Assert.IsTrue(material.GetShaderPassEnabled(passName), passName);
             }
         }
 

@@ -33,6 +33,7 @@ namespace TiffanyGame.EditorTools
             {
                 material.SetFloat("_TiffanyStencil", 0f);
                 material.renderQueue = -1;
+                material.SetShaderPassEnabled("ShadowCaster", true);
             }
 
             material.SetColor("_BaseColor", color);
