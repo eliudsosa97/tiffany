@@ -5,7 +5,6 @@
         "TiffanyGame",
         "TiffanyGame.Editor",
         "Unity.InputSystem",
-        "Unity.InputSystem.TestFramework",
         "Unity.AI.Navigation",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

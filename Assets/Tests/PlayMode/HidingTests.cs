@@ -45,6 +45,14 @@ namespace TiffanyGame.Tests
             movement.viewCamera = camera;
             var body = Create("Body").AddComponent<MeshRenderer>();
             body.transform.SetParent(player.transform, false);
+#if UNITY_EDITOR
+            var model = Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Art/Models/tiffany-provisional.fbx"), player.transform, false);
+            var animator = model.GetComponent<Animator>() ?? model.AddComponent<Animator>();
+            animator.runtimeAnimatorController = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
+                "Assets/Art/Models/TiffanyProvisional.controller");
+            player.AddComponent<TiffanyAnimator>().animator = animator;
+#endif
             var rain = Create("Rain").AddComponent<ParticleSystem>();
             rain.transform.SetParent(player.transform, false);
             var rainRenderer = rain.GetComponent<ParticleSystemRenderer>();
@@ -71,7 +79,11 @@ namespace TiffanyGame.Tests
             GameInput.InteractOverride = false;
             Physics.SyncTransforms();
             yield return null;
+            GameInput.MoveOverride = Vector2.down;
+            yield return new WaitForSeconds(0.6f);
+            Assert.Greater(steps, 0);
             Vector3 entry = player.transform.position;
+            steps = 0;
 
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Escondida");
             hiding.Hide(volume);
@@ -81,6 +93,7 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(rainRenderer.enabled);
             Assert.Less(Vector3.Distance(volume.HidePoint, player.transform.position), 0.001f);
             GameInput.MoveOverride = Vector2.up;
+            movement.PublishFootstep();
             yield return new WaitForSeconds(1f);
             Assert.AreEqual(0, steps);
             Assert.AreEqual(volume.HidePoint, player.transform.position);

@@ -90,6 +90,29 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void RiverWalkAndReversalStayWithinWalkingSpeed(
+            [Values(30, 60, 144, 1000, 5000)] int fps)
+        {
+            var state = new PlayerMotion.VelocityState();
+            float dt = 1f / fps;
+            foreach (int direction in new[] { 1, -1 })
+            {
+                for (int frame = 0; frame < Mathf.CeilToInt(0.15f * fps); frame++)
+                    state.Advance(Vector3.zero, dt);
+                var target = Vector3.forward * (PlayerMotion.WalkSpeed * direction);
+                float previous = state.Velocity.z * direction;
+                for (int frame = 0; frame < fps; frame++)
+                {
+                    var velocity = state.Advance(target, dt);
+                    Assert.That(velocity.magnitude, Is.LessThanOrEqualTo(PlayerMotion.WalkSpeed));
+                    Assert.That(velocity.z * direction, Is.GreaterThanOrEqualTo(previous));
+                    previous = velocity.z * direction;
+                }
+                Assert.AreEqual(PlayerMotion.WalkSpeed, previous, 0.001f);
+            }
+        }
+
+        [Test]
         public void PausedMotionAndResetHaveNoResidualVelocity()
         {
             var state = new PlayerMotion.VelocityState();

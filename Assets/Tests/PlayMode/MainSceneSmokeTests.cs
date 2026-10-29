@@ -15,10 +15,12 @@ namespace TiffanyGame.Tests
     {
         Scene mainScene;
         List<StepNoise> steps;
+        float previousCaptureDeltaTime;
 
         [UnitySetUp]
         public IEnumerator SetUp()
         {
+            previousCaptureDeltaTime = Time.captureDeltaTime;
             steps = new List<StepNoise>();
             GameInput.MoveOverride = Vector2.zero;
             GameInput.SlowOverride = false;
@@ -36,6 +38,7 @@ namespace TiffanyGame.Tests
         [UnityTearDown]
         public IEnumerator TearDown()
         {
+            Time.captureDeltaTime = previousCaptureDeltaTime;
             NoiseBus.Published -= RecordStep;
             GameInput.ClearOverrides();
             SceneManager.CreateScene(nameof(MainSceneSmokeTests));
@@ -209,7 +212,8 @@ namespace TiffanyGame.Tests
         public IEnumerator TiffanyAnimationFollowsLightHidingVanishAndCapture()
         {
             var player = GameObject.FindGameObjectWithTag("Player");
-            var animator = player.GetComponent<TiffanyAnimator>().animator;
+            var animation = player.GetComponent<TiffanyAnimator>();
+            var animator = animation.animator;
             var light = player.GetComponent<PlayerLight>();
             light.Toggle();
             yield return new WaitForSeconds(0.3f);
@@ -218,16 +222,21 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(light.TryFlash());
             yield return new WaitForSeconds(0.15f);
             Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Flash"));
-            yield return new WaitForSeconds(0.7f);
+            yield return new WaitForSeconds(animation.flashDuration + TiffanyAnimation.CarryLightBlend);
             Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.CarryLight"));
 
             var hiding = player.GetComponent<PlayerHiding>();
             var hide = GameObject.Find("Test Zone").transform.Find("Hide Test").GetComponent<HideVolume>();
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Escondida");
             hiding.Hide(hide);
+            int before = steps.Count;
+            Vector3 hiddenPosition = player.transform.position;
+            GameInput.MoveOverride = Vector2.up;
             yield return new WaitForSeconds(0.35f);
             Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Hide"));
             Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Empty"));
+            Assert.AreEqual(hiddenPosition, player.transform.position);
+            Assert.AreEqual(before, steps.Count);
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Fuera del escondite");
             hiding.Leave();
 
@@ -237,9 +246,9 @@ namespace TiffanyGame.Tests
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Tiffany se desvanece");
             Assert.IsTrue(vanish.TryStart());
             GameInput.MoveOverride = Vector2.up;
-            int before = steps.Count;
             yield return new WaitForSeconds(0.5f);
             Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Vanish"));
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Empty"));
             Assert.AreEqual(before, steps.Count);
             vanish.Cancel();
             GameInput.MoveOverride = Vector2.zero;
@@ -425,6 +434,7 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator TiffanyWalksAcrossRiverBothWaysWithoutFallingAndPublishesGravelAndBranches()
         {
+            Time.captureDeltaTime = 1f / 60f;
             var river = PrepareRiverWalk(out var player);
             var body = player.GetComponent<CharacterController>();
             var water = river.Find("Water").GetComponent<Renderer>().bounds;
@@ -443,9 +453,11 @@ namespace TiffanyGame.Tests
                 float deadline = Time.time + 5f;
                 while (river.InverseTransformPoint(player.transform.position).z * direction < 3f && Time.time < deadline)
                 {
+                    Vector3 previousPosition = player.transform.position;
                     yield return null;
                     Assert.GreaterOrEqual(player.transform.position.y, minimumHeight, "Tiffany cayó por debajo del cruce.");
-                    Assert.That(player.HorizontalSpeed, Is.InRange(0f, PlayerMotion.WalkSpeed + 0.05f));
+                    Assert.That(player.HorizontalSpeed, Is.InRange(0f, PlayerMotion.WalkSpeed + 0.05f),
+                        $"dt={Time.deltaTime:R}, desde={previousPosition:R}, hasta={player.transform.position:R}");
                     Assert.AreEqual(PlayerMotion.GaitForSpeed(player.HorizontalSpeed), player.CurrentGait);
                 }
                 GameInput.MoveOverride = Vector2.zero;
