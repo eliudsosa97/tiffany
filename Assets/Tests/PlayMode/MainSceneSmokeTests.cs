@@ -243,7 +243,7 @@ namespace TiffanyGame.Tests
             Assert.AreSame(witch, save.witch);
             var family = System.Array.FindAll(Object.FindObjectsByType<CandleSpot>(FindObjectsInactive.Include, FindObjectsSortMode.None),
                 candle => candle.kind == CandleKind.Family);
-            Assert.AreEqual(14, family.Length);
+            Assert.AreEqual(15, family.Length, "Catorce veladoras familiares originales y la de la rampa.");
             CollectionAssert.AreEquivalent(family, save.candles);
             var ids = new HashSet<string>();
             foreach (var candle in family)
@@ -429,8 +429,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(29, route.GetComponentsInChildren<CaptureStop>().Length, "21 paradas previas y ocho vistas de los retos.");
             Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
-            Assert.AreEqual(20, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length,
-                "Doce originales, cuatro de recarga y cuatro para encender en los retos.");
+            Assert.AreEqual(21, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length,
+                "Doce originales, la de la rampa, cuatro de recarga y cuatro para encender en los retos.");
             foreach (var movable in MovableObject.Active)
                 Assert.IsTrue(movable.transform.IsChildOf(cemetery) || movable.GetComponentInParent<PowerChallenge>() != null);
             var player = GameObject.FindGameObjectWithTag("Player");

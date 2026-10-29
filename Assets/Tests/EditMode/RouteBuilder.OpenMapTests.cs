@@ -10,7 +10,7 @@ namespace TiffanyGame.Tests
     public sealed partial class RouteBuilderTests
     {
         [Test]
-        public void LandscapeOnlyBlocksMapEdgesWaterCliffTownTreesAndBridgeRails()
+        public void LandscapeOnlyBlocksMapEdgesWaterCliffTownTreesBridgeRailsAndCandles()
         {
             var terrain = new RouteTerrain();
             var landscape = route.Find("Landscape");
@@ -18,7 +18,7 @@ namespace TiffanyGame.Tests
             string[] allowed = { "Map Boundary", "River", "Lake Banks", "Town", "Fence", "Cliff Rocks", "Forest Fill", "Train Bridge" };
             foreach (var collider in landscape.GetComponentsInChildren<Collider>())
             {
-                if (collider.TryGetComponent<GroundSurface>(out _)) continue;
+                if (collider.TryGetComponent<GroundSurface>(out _) || collider.GetComponentInParent<CandleSpot>() != null) continue;
                 Assert.IsTrue(System.Array.Exists(allowed, name => collider.transform.IsChildOf(landscape.Find(name))), collider.name);
             }
             var border = landscape.Find("Map Boundary").GetComponentsInChildren<Collider>();

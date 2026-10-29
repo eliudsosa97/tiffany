@@ -560,7 +560,7 @@ namespace TiffanyGame.Tests
             var graveMaterial = route.GetChild(0).Find("Tiffany Gravestone").GetComponentInChildren<Renderer>().sharedMaterial;
             Assert.AreEqual("Assets/Art/Kenney/Graveyard/Models/Textures/colormap.png", AssetDatabase.GetAssetPath(graveMaterial.GetTexture("_BaseMap")));
             var lights = route.GetComponentsInChildren<Light>(true);
-            Assert.AreEqual(16, lights.Length, "Ocho veladoras originales, cuatro de recarga y cuatro para encender.");
+            Assert.AreEqual(17, lights.Length, "Ocho veladoras originales, la de la rampa, cuatro de recarga y cuatro para encender.");
             foreach (var light in lights)
             {
                 Assert.IsNotNull(light.GetComponentInParent<CandleSpot>());

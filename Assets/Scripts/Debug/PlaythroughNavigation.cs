@@ -35,7 +35,7 @@ namespace TiffanyGame
             return count > 0 && count < corners.Length;
         }
 
-        public Vector2 Move(Vector3 position, float yaw, float dt, out bool run)
+        public Vector2 Move(Vector3 position, float yaw, float dt, out bool run, bool forceRun = false)
         {
             while (corner < count && PlaythroughPlan.HorizontalDistance(position, corners[corner]) < 0.3f
                 && Mathf.Abs(position.y - corners[corner].y) < 0.8f) corner++;
@@ -43,7 +43,7 @@ namespace TiffanyGame
             Vector3 offset = (corner < count ? corners[corner] : target) - position;
             offset.y = 0f;
             float distance = offset.magnitude;
-            run = distance > 2f;
+            run = forceRun || distance > 2f;
             float speed = run ? PlayerMotion.RunSpeed : PlayerMotion.WalkSpeed;
             float strength = Mathf.Clamp01(distance / (speed * Mathf.Max(dt, 0.05f)));
             return CameraInput(offset.normalized * strength, yaw);
