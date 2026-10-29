@@ -18,9 +18,12 @@ namespace TiffanyGame.Tests
                 nearest = Mathf.Min(nearest, RouteTerrain.SegmentDistance(new Vector2(candle.x, candle.z),
                     new Vector2(points[i - 1].x, points[i - 1].z), new Vector2(points[i].x, points[i].z)));
             Assert.AreEqual(RouteTerrain.RampCandleOffset, nearest, 0.05f, "Junto al sendero, fuera de su franja.");
-            Assert.Greater(nearest, RouteLayout.PathWidth * 0.5f + 1f);
+            Assert.Greater(nearest - CandleSite.DefaultRadius, RouteLayout.PathWidth * 0.5f,
+                "La zona segura no toca el sendero.");
             Assert.IsFalse(terrain.IsWater(candle.x, candle.z));
             Assert.AreEqual(terrain.Height(candle.x, candle.z), candle.y, 0.001f);
+            Vector3 middle = (points[1] + points[2]) * 0.5f;
+            Assert.Less(Mathf.Abs(candle.y - middle.y), 1.5f, "Alcanzable a pie desde la rampa.");
             Assert.IsFalse(terrain.InClearingSquare(candle.x, candle.z), "Fuera de los claros.");
             float hut = Vector2.Distance(new Vector2(candle.x, candle.z), new Vector2(RouteLayout.Clearing(4).x, RouteLayout.Clearing(4).z));
             float lake = Vector2.Distance(new Vector2(candle.x, candle.z), new Vector2(RouteLayout.Clearing(5).x, RouteLayout.Clearing(5).z));

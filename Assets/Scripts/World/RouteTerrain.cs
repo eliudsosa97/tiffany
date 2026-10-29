@@ -168,7 +168,7 @@ namespace TiffanyGame
             return false;
         }
 
-        public const float RampCandleOffset = 4.5f;
+        public const float RampCandleOffset = 6f;
         public const string RampCandleName = "Ramp Candle";
 
         public Vector3 RampCandle()
