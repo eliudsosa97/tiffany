@@ -18,6 +18,18 @@ namespace TiffanyGame.EditorTools
         public const float NightFogStartDistance = 40f;
         public const float NightFogEndDistance = 76f;
         public static readonly Color NightFogColor = new Color(0.018f, 0.028f, 0.052f);
+        const string DirtyProfilePath = "Assets/Settings/DirtyNightProfile.asset";
+        const float DirtyVignetteIntensity = 0.4f;
+        const float DirtyVignetteSmoothness = 0.8f;
+        const FilmGrainLookup DirtyGrainType = FilmGrainLookup.Thin1;
+        const float DirtyGrainIntensity = 0.25f;
+        const float DirtyGrainResponse = 0.5f;
+        const float DirtySaturation = -35f;
+        const float DirtyContrast = 10f;
+        const float DirtyToningBalance = 0f;
+        static readonly Color DirtyColorFilter = new Color(0.99f, 1f, 0.97f);
+        static readonly Color DirtyShadows = new Color(0.485f, 0.5f, 0.505f);
+        static readonly Color DirtyHighlights = new Color(0.501f, 0.5005f, 0.499f);
         const float SlopeAngle = 8f;
         const float PatchHeight = 0.1f;
         const float PatchElevation = 0.03f;
@@ -102,6 +114,7 @@ namespace TiffanyGame.EditorTools
             CharacterSilhouetteBuilder.Add(tyler.figure.transform);
             OcclusionCaptureBuilder.Build(world);
             OcclusionSceneAudit.Log(world, player.transform, tyler.figure.transform);
+            BuildDirtyLook(world);
             SaveScene();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
@@ -120,6 +133,52 @@ namespace TiffanyGame.EditorTools
                 Debug.LogException(exception);
                 EditorApplication.Exit(1);
             }
+        }
+
+        static void BuildDirtyLook(Transform world)
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(DirtyProfilePath);
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                profile.name = "DirtyNightProfile";
+                AssetDatabase.CreateAsset(profile, DirtyProfilePath);
+            }
+            var vignette = GetDirtyOverride<Vignette>(profile);
+            vignette.color.Override(Color.black);
+            vignette.intensity.Override(DirtyVignetteIntensity);
+            vignette.smoothness.Override(DirtyVignetteSmoothness);
+            var grain = GetDirtyOverride<FilmGrain>(profile);
+            grain.type.Override(DirtyGrainType);
+            grain.intensity.Override(DirtyGrainIntensity);
+            grain.response.Override(DirtyGrainResponse);
+            var color = GetDirtyOverride<ColorAdjustments>(profile);
+            color.saturation.Override(DirtySaturation);
+            color.contrast.Override(DirtyContrast);
+            color.colorFilter.Override(DirtyColorFilter);
+            var toning = GetDirtyOverride<SplitToning>(profile);
+            toning.shadows.Override(DirtyShadows);
+            toning.highlights.Override(DirtyHighlights);
+            toning.balance.Override(DirtyToningBalance);
+            EditorUtility.SetDirty(profile);
+            var volume = new GameObject("Dirty Night").AddComponent<Volume>();
+            volume.transform.SetParent(world, false);
+            volume.isGlobal = true;
+            volume.priority = 0f;
+            volume.weight = 1f;
+            volume.sharedProfile = profile;
+        }
+
+        static T GetDirtyOverride<T>(VolumeProfile profile) where T : VolumeComponent
+        {
+            if (!profile.TryGet<T>(out var component))
+            {
+                component = profile.Add<T>();
+                AssetDatabase.AddObjectToAsset(component, profile);
+            }
+            component.active = true;
+            EditorUtility.SetDirty(component);
+            return component;
         }
 
         static void ConfigureNight()
@@ -736,7 +795,7 @@ namespace TiffanyGame.EditorTools
             var cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
             var camera = cameraObject.AddComponent<Camera>();
-            cameraObject.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = false;
+            cameraObject.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = true;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = RenderSettings.fogColor;
             camera.farClipPlane = 80f;

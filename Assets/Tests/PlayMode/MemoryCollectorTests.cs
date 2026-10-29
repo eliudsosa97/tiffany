@@ -2,6 +2,7 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -28,6 +29,73 @@ namespace TiffanyGame.Tests
             AudioListener.pause = false;
             SceneManager.CreateScene(nameof(MemoryCollectorTests));
             yield return SceneManager.UnloadSceneAsync(SceneManager.GetSceneByName("Main"));
+        }
+        [UnityTest] public IEnumerator MainSceneHasPersistentGlobalDirtyLookAndPostProcessing()
+        {
+            var root = GameObject.Find("World/Dirty Night");
+            Assert.IsNotNull(root, "Regenera Main para incluir World/Dirty Night.");
+            var volume = root.GetComponent<Volume>();
+            Assert.IsNotNull(volume);
+            Assert.IsTrue(volume.isGlobal);
+            Assert.AreEqual(0f, volume.priority);
+            Assert.AreEqual(1f, volume.weight);
+            var profile = volume.sharedProfile;
+            Assert.IsNotNull(profile);
+#if UNITY_EDITOR
+            Assert.AreEqual("Assets/Settings/DirtyNightProfile.asset", UnityEditor.AssetDatabase.GetAssetPath(profile));
+#endif
+            Assert.AreEqual(4, profile.components.Count);
+            Assert.IsTrue(profile.TryGet<Vignette>(out var vignette));
+            Assert.IsTrue(vignette.active && vignette.intensity.overrideState && vignette.smoothness.overrideState && vignette.color.overrideState);
+            Assert.AreEqual(0.4f, vignette.intensity.value, 0.001f);
+            Assert.AreEqual(0.8f, vignette.smoothness.value, 0.001f);
+            Assert.AreEqual(Color.black, vignette.color.value);
+            Assert.IsTrue(profile.TryGet<FilmGrain>(out var grain));
+            Assert.IsTrue(grain.active && grain.type.overrideState && grain.intensity.overrideState && grain.response.overrideState);
+            Assert.AreEqual(FilmGrainLookup.Thin1, grain.type.value);
+            Assert.AreEqual(0.25f, grain.intensity.value, 0.001f);
+            Assert.AreEqual(0.5f, grain.response.value, 0.001f);
+            Assert.IsTrue(profile.TryGet<ColorAdjustments>(out var color));
+            Assert.IsTrue(color.active && color.saturation.overrideState && color.contrast.overrideState && color.colorFilter.overrideState);
+            Assert.AreEqual(-35f, color.saturation.value, 0.001f);
+            Assert.AreEqual(10f, color.contrast.value, 0.001f);
+            Assert.AreEqual(new Color(0.99f, 1f, 0.97f), color.colorFilter.value);
+            Assert.IsTrue(profile.TryGet<SplitToning>(out var toning));
+            Assert.IsTrue(toning.active && toning.shadows.overrideState && toning.highlights.overrideState && toning.balance.overrideState);
+            Assert.AreEqual(new Color(0.485f, 0.5f, 0.505f), toning.shadows.value);
+            Assert.AreEqual(new Color(0.501f, 0.5005f, 0.499f), toning.highlights.value);
+            Assert.AreEqual(0f, toning.balance.value);
+            Assert.AreSame(Camera.main, collector.viewCamera);
+            Assert.IsTrue(collector.viewCamera.GetComponent<UniversalAdditionalCameraData>().renderPostProcessing);
+            Assert.Greater(collector.echoVolume.priority, volume.priority);
+            yield return null;
+        }
+        [UnityTest] public IEnumerator EchoOverridesSaturationAndRestoresDirtyLookWhenPlaybackStops()
+        {
+            var root = GameObject.Find("World/Dirty Night");
+            Assert.IsNotNull(root, "Regenera Main para incluir World/Dirty Night.");
+            var dirty = root.GetComponent<Volume>();
+            var profile = dirty.sharedProfile;
+            var cameraData = collector.viewCamera.GetComponent<UniversalAdditionalCameraData>();
+            Assert.IsTrue(cameraData.renderPostProcessing);
+            collector.gameInterface.StartGame();
+            Assert.IsTrue(collector.PlayEcho(collector.spots[0]));
+            yield return new WaitForSeconds(MemoryEcho.Fade + 0.1f);
+            Assert.AreEqual(1f, collector.echoVolume.weight);
+            VolumeManager.instance.Update(collector.viewCamera.transform, cameraData.volumeLayerMask);
+            Assert.AreEqual(-100f, VolumeManager.instance.stack.GetComponent<ColorAdjustments>().saturation.value, 0.001f);
+            collector.ActiveEcho.Stop();
+            yield return null;
+            yield return null;
+            Assert.IsNull(collector.ActiveEcho);
+            Assert.AreEqual(0f, collector.echoVolume.weight);
+            Assert.IsTrue(cameraData.renderPostProcessing);
+            Assert.AreSame(profile, dirty.sharedProfile);
+            Assert.AreEqual(1f, dirty.weight);
+            VolumeManager.instance.Update(collector.viewCamera.transform, cameraData.volumeLayerMask);
+            Assert.AreEqual(-35f, VolumeManager.instance.stack.GetComponent<ColorAdjustments>().saturation.value, 0.001f);
+            Assert.AreEqual(0.4f, VolumeManager.instance.stack.GetComponent<Vignette>().intensity.value, 0.001f);
+            Assert.AreEqual(0.25f, VolumeManager.instance.stack.GetComponent<FilmGrain>().intensity.value, 0.001f);
         }
         [UnityTest] public IEnumerator ReplacingSubtitleClearsPreviousTextAndQueue()
         {
@@ -82,7 +150,7 @@ namespace TiffanyGame.Tests
             Assert.IsEmpty(ui.subtitleText.text);
             Assert.IsNull(collector.ActiveEcho);
             Assert.AreEqual(0f, collector.echoVolume.weight);
-            Assert.IsFalse(collector.viewCamera.GetComponent<UniversalAdditionalCameraData>().renderPostProcessing);
+            Assert.IsTrue(collector.viewCamera.GetComponent<UniversalAdditionalCameraData>().renderPostProcessing);
             tyler.voice.Stop();
             Assert.IsFalse(collector.Collect(MemoryProgress.BallId));
             Assert.IsFalse(tyler.voice.isPlaying);
@@ -195,7 +263,7 @@ namespace TiffanyGame.Tests
             Assert.IsNull(collector.tyler.nextMemory);
             collector.enabled = false;
             Assert.AreEqual(0f, collector.echoVolume.weight);
-            Assert.IsFalse(cameraData.renderPostProcessing);
+            Assert.IsTrue(cameraData.renderPostProcessing);
             Assert.IsFalse(collector.spots[2].echoPlayer.stageRoot.activeSelf);
             Assert.IsTrue(ui.noticeText.gameObject.activeSelf);
         }
