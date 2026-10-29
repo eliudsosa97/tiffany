@@ -14,7 +14,7 @@ namespace TiffanyGame
         public const float TrainClearance = 3.5f;
         public const float TrainRampLength = 28f;
         public const float TrainSouthRampLength = 52f;
-        public const float TrainNorthEnd = 148f;
+        public const float TrainNorthEnd = 142f;
 
         static readonly Vector3[] Clearings =
         {

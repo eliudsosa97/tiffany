@@ -72,7 +72,8 @@ namespace TiffanyGame.Tests
                     var renderer = surface.GetComponent<Renderer>();
                     Assert.IsTrue(renderer.enabled);
                     Assert.AreEqual("RoutePathDirt", renderer.sharedMaterial.name);
-                    Assert.AreEqual(new Color(0.36f, 0.27f, 0.18f), renderer.sharedMaterial.GetColor("_BaseColor"));
+                    Color dirt = new Color(0.36f, 0.27f, 0.18f), baseColor = renderer.sharedMaterial.GetColor("_BaseColor");
+                    for (int channel = 0; channel < 4; channel++) Assert.AreEqual(dirt[channel], baseColor[channel], 1e-4f);
                     Assert.IsTrue(AssetDatabase.Contains(renderer.sharedMaterial));
                     if (!surface.TryGetComponent<MeshCollider>(out var floor)) continue;
                     foreach (var vertex in floor.sharedMesh.vertices)

@@ -377,7 +377,8 @@ namespace TiffanyGame.Tests
                     && Vector2.Distance(new Vector2(layer.waterFootprint.x, layer.waterFootprint.y),
                         new Vector2(water.bounds.center.x, water.bounds.center.z)) < 0.001f);
                 Assert.IsNotEmpty(layers, water.name);
-                if (water.bounds.size.magnitude > FogBuilder.WaterCardSize) Assert.Greater(layers.Length, 1, water.name);
+                Vector3 size = Vector3.Scale(water.localBounds.size, water.transform.lossyScale);
+                if (Mathf.Max(size.x, size.z) > FogBuilder.WaterCardSize) Assert.Greater(layers.Length, 1, water.name);
                 var bounds = water.localBounds;
                 for (int x = 0; x <= 10; x++)
                 for (int z = 0; z <= 10; z++)

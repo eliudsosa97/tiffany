@@ -94,7 +94,11 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(WitchForm.Grounded, witch.Decision.Form);
                 Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
                 Assert.AreEqual(2.5f, witch.Decision.Speed);
-                Assert.Less(Vector3.Distance(soul.transform.position, witch.Decision.MoveTarget), 0.1f);
+                Vector3 offset = witch.Decision.MoveTarget - soul.transform.position;
+                // El NavMesh sigue al terreno y la jugadora se apoya en el piso visible más el skin del CharacterController.
+                Assert.Less(Mathf.Abs(offset.y), 0.2f);
+                offset.y = 0f;
+                Assert.Less(offset.magnitude, 0.1f);
             }
             LogAssert.NoUnexpectedReceived();
         }
