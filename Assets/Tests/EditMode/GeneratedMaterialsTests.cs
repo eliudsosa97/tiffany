@@ -116,18 +116,22 @@ namespace TiffanyGame.Tests
             Assert.Throws<AssertionException>(() => snapshot.AssertUnchanged(material));
         }
 
-        [TestCase("ForwardLit")]
-        [TestCase("ShadowCaster")]
-        public void MaterialSnapshotPreservesAndChecksPassEnablement(string passName)
+        [TestCase("ForwardLit", "UniversalForward", true)]
+        [TestCase("ForwardLit", "UniversalForward", false)]
+        [TestCase("ShadowCaster", "ShadowCaster", true)]
+        [TestCase("ShadowCaster", "ShadowCaster", false)]
+        public void MaterialSnapshotPreservesAndChecksPassEnablement(string passName, string lightMode, bool enabled)
         {
             var material = GeneratedMaterials.Get("Occluder", Color.white, occluder: true);
-            Assert.GreaterOrEqual(material.FindPass(passName), 0, passName);
-            Assert.IsTrue(material.GetShaderPassEnabled(passName), passName);
+            AssertPassEnabled(material, passName, lightMode);
+            material.SetShaderPassEnabled(lightMode, enabled);
             using var snapshot = new MaterialAssetSnapshot(material);
 
             snapshot.AssertUnchanged(material);
-            material.SetShaderPassEnabled(passName, false);
+            material.SetShaderPassEnabled(lightMode, !enabled);
             Assert.Throws<AssertionException>(() => snapshot.AssertUnchanged(material));
+            material.SetShaderPassEnabled(lightMode, enabled);
+            snapshot.AssertUnchanged(material);
         }
 
         [Test]
@@ -170,12 +174,7 @@ namespace TiffanyGame.Tests
                     ("ForwardLit", "UniversalForward"), ("DepthOnly", "DepthOnly"),
                     ("DepthNormals", "DepthNormals"), ("ShadowCaster", "ShadowCaster")
                 })
-            {
-                int pass = material.FindPass(passName);
-                Assert.GreaterOrEqual(pass, 0, passName);
-                Assert.AreEqual(lightMode, material.shader.FindPassTagValue(pass, new ShaderTagId("LightMode")).name, passName);
-                Assert.IsTrue(material.GetShaderPassEnabled(passName), passName);
-            }
+                AssertPassEnabled(material, passName, lightMode);
         }
 
         [Test]
@@ -187,6 +186,25 @@ namespace TiffanyGame.Tests
             StringAssert.StartsWith(GameInfo.LogPrefix, exception.Message);
             StringAssert.Contains("Assets/Art/CC0/PolyHaven/missing_ground_texture/missing_ground_texture_diff.jpg", exception.Message);
             Assert.IsNull(AssetDatabase.LoadAssetAtPath<Material>(GeneratedMaterials.folder + "/Ground.mat"));
+        }
+
+        static void AssertPassEnabled(Material material, string passName, string lightMode)
+        {
+            var subshader = ShaderUtil.GetShaderData(material.shader).GetSubshader(0);
+            Assert.IsNotNull(subshader, material.shader.name);
+            ShaderData.Pass matchingPass = null;
+            for (int index = 0; index < subshader.PassCount; index++)
+            {
+                var pass = subshader.GetPass(index);
+                if (string.Equals(pass.Name, passName, StringComparison.OrdinalIgnoreCase))
+                {
+                    matchingPass = pass;
+                    break;
+                }
+            }
+            Assert.IsNotNull(matchingPass, passName);
+            Assert.AreEqual(lightMode, matchingPass.FindTagValue(new ShaderTagId("LightMode")).name, passName);
+            Assert.IsTrue(material.GetShaderPassEnabled(lightMode), lightMode);
         }
 
         static void AssertColor(Color expected, Color actual)

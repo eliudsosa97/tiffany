@@ -5,6 +5,7 @@ using NUnit.Framework;
 using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using LogAssert = TiffanyGame.Tests.TiffanyLogs;
@@ -85,6 +86,35 @@ namespace TiffanyGame.Tests
 
             yield return null;
 
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator MainSceneOcclusionShaderExposesSupportedPasses()
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Tiffany Occlusion Lit");
+            Assert.IsNotNull(shader);
+            Assert.IsTrue(shader.isSupported, shader.name);
+            var material = new Material(shader);
+            try
+            {
+                foreach (var (passName, lightMode) in new[]
+                    {
+                        ("ForwardLit", "UniversalForward"), ("DepthOnly", "DepthOnly"),
+                        ("DepthNormals", "DepthNormals"), ("ShadowCaster", "ShadowCaster")
+                    })
+                {
+                    int pass = material.FindPass(passName);
+                    Assert.GreaterOrEqual(pass, 0, passName);
+                    Assert.AreEqual(lightMode, shader.FindPassTagValue(pass, new ShaderTagId("LightMode")).name, passName);
+                    Assert.IsTrue(material.GetShaderPassEnabled(lightMode), lightMode);
+                }
+            }
+            finally
+            {
+                Object.Destroy(material);
+            }
+            yield return null;
             LogAssert.NoUnexpectedReceived();
         }
 
