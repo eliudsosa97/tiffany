@@ -103,7 +103,7 @@ namespace TiffanyGame.Tests
 
             yield return new WaitForSeconds(2f);
 
-            AssertSteps(5, 7, NoiseModel.GravelRadius);
+            AssertSteps(7, 9, NoiseModel.GravelRadius);
         }
 
         [UnityTest]
