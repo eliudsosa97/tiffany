@@ -58,7 +58,8 @@ namespace TiffanyGame.EditorTools
             }
 
             TerrainBuilder.Build(route, terrain, structure);
-            SceneBuilder.CreateCandle(route.Find("Landscape"), RouteTerrain.RampCandleName, route.TransformPoint(terrain.RampCandle()),
+            var landscape = route.Find("Landscape");
+            SceneBuilder.CreateCandle(landscape, RouteTerrain.RampCandleName, route.TransformPoint(terrain.RampCandle()),
                 CandleKind.Family, true, player.GetComponent<PlayerSoul>(), storm);
             ChallengeBuilder.Build(tracker, player.GetComponent<PlayerSoul>(), storm);
             var spawn = Root("Spawn", route.GetChild(0), new Vector3(0f, 0f, -13f));
@@ -74,9 +75,10 @@ namespace TiffanyGame.EditorTools
             Physics.SyncTransforms();
             skyRoute = BuildSkyRoute(route, tracker.clearings);
             int notWalkable = NavMesh.GetAreaFromName("Not Walkable");
-            foreach (var clearing in tracker.clearings)
+            foreach (Transform clearing in route)
             foreach (var collider in clearing.GetComponentsInChildren<Collider>())
             {
+                if (clearing == landscape && collider.GetComponentInParent<CandleSpot>() == null) continue;
                 if (collider.isTrigger || collider.TryGetComponent<GroundSurface>(out _)) continue;
                 if (collider.bounds.max.y <= clearing.position.y + 1f && collider.bounds.size.y <= 1f) continue;
                 if (collider.TryGetComponent<NavMeshModifier>(out var modifier) && modifier.ignoreFromBuild) continue;

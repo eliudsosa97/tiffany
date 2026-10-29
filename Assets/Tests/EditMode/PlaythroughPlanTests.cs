@@ -26,6 +26,25 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(30f, PlaythroughPlan.ParseTimeout("invalid", 30f));
 
         [Test]
+        public void RampCandleIsAStandaloneCheckpointAndRequiresTouchAndFullRecharge()
+        {
+            Assert.AreEqual(-1, PlaythroughPlan.ChallengeIndex(PlaythroughMilestone.RampCandle));
+            Assert.AreEqual(ChallengeAction.None, PlaythroughPlan.Action(PlaythroughMilestone.RampCandle));
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.RampCandle, PlaythroughMilestone.LakeCandle });
+            var observation = new PlaythroughObservation { AtTarget = true, Energy = SoulEnergy.Max };
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.RampCandle, plan.Current);
+            observation.CheckpointReached = true;
+            observation.Energy = SoulEnergy.Max - 2f;
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.RampCandle, plan.Current);
+            observation.Energy = SoulEnergy.Max;
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.LakeCandle, plan.Current);
+            Assert.AreEqual(1, plan.CompletedCount);
+        }
+
+        [Test]
         public void FullRouteRequiresMemoriesPowersHidingCaptureAndHomeInOrder()
         {
             var expected = new[]

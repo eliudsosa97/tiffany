@@ -105,7 +105,7 @@ namespace TiffanyGame.Tests
             Assert.AreSame(witch, save.witch);
             var family = System.Array.FindAll(Object.FindObjectsByType<CandleSpot>(FindObjectsInactive.Include, FindObjectsSortMode.None),
                 candle => candle.kind == CandleKind.Family);
-            Assert.AreEqual(14, family.Length);
+            Assert.AreEqual(15, family.Length, "Catorce veladoras familiares originales y la de la rampa.");
             CollectionAssert.AreEquivalent(family, save.candles);
             var ids = new HashSet<string>();
             foreach (var candle in family)

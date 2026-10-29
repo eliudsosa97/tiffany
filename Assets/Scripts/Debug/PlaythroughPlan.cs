@@ -240,10 +240,11 @@ namespace TiffanyGame
 
         public static int ChallengeIndex(PlaythroughMilestone milestone)
         {
+            if (milestone < PlaythroughMilestone.Challenge1Recharge || milestone > PlaythroughMilestone.Challenge4Cross) return -1;
             if (milestone >= PlaythroughMilestone.Challenge4Recharge) return 3;
             if (milestone >= PlaythroughMilestone.Challenge3Recharge) return 2;
             if (milestone >= PlaythroughMilestone.Challenge2Recharge) return 1;
-            return milestone >= PlaythroughMilestone.Challenge1Recharge ? 0 : -1;
+            return 0;
         }
 
         public static ChallengeAction Action(PlaythroughMilestone milestone) => milestone switch
