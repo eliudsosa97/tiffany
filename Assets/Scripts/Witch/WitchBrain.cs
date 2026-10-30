@@ -190,7 +190,7 @@ namespace TiffanyGame
             }
             if (grounded)
             {
-                if (state == WitchState.Stalking && !chasing && noiseHeard && !detected && !profile.GroundChase)
+                if (state == WitchState.Stalking && !chasing && !harass.Active && noiseHeard && !detected && !profile.GroundChase)
                 {
                     TargetNoise(in p);
                     Suspect(WitchState.Stalking, p.NoisePosition, p.WitchPosition);
@@ -201,7 +201,7 @@ namespace TiffanyGame
                     if (hasNoiseTarget) chasing = true;
                     TargetPlayer(in p);
                 }
-                else if (noiseHeard) TargetNoise(in p);
+                else if (noiseHeard && !harass.Active) TargetNoise(in p);
                 else timeWithoutPerception += dt;
             }
             Advance(dt, in p, trackable, detected, newLight);
@@ -309,7 +309,7 @@ namespace TiffanyGame
 
         private void Advance(float dt, in WitchPerception p, bool trackable, bool detected, bool newLight)
         {
-            if (harass.Active && !detected && !harass.SeekingCover && TryTactic(dt, in p))
+            if (harass.Active && !detected && !harass.AvoidingLight && TryTactic(dt, in p))
             {
                 harass.Cancel();
                 return;
@@ -320,7 +320,11 @@ namespace TiffanyGame
                 tactics.Cancel();
                 chasing = false;
                 if (harass.Tick(dt, profile, in p, out tacticDecision)) hasTacticDecision = true;
-                else Enter(WitchState.WindUp, p.WitchPosition);
+                else
+                {
+                    TargetPlayer(in p);
+                    Enter(WitchState.WindUp, p.WitchPosition);
+                }
                 return;
             }
             if (TryTactic(dt, in p)) return;

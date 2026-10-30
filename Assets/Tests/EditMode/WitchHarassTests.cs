@@ -66,14 +66,29 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void ApprovedArcDestinationIsNotProjectedAgainWhileWalking()
+        {
+            var harass = new WitchHarass(new FixedRandom(0.5), point => point + Vector3.up);
+            Measure();
+            harass.Tick(0f, profile, in p, out _);
+            harass.Tick(2f, profile, in p, out var circle);
+            Assert.AreEqual(1f, circle.MoveTarget.y, "La proyección validada se usa una sola vez por destino.");
+            harass.Tick(0.1f, profile, in p, out var walking);
+            Assert.AreEqual(circle.MoveTarget, walking.MoveTarget);
+        }
+
+        [Test]
         public void CloseInitialDetectionRetreatsToEightMetersBeforeLooking()
         {
             p.WitchPosition = Vector3.right * 5f;
             WitchDecision retreat = Tick(0f);
             Assert.AreEqual(WitchIntent.Harass, retreat.Intent);
-            Assert.AreEqual(Vector3.right * 8f, retreat.MoveTarget);
+            Assert.AreEqual(Vector3.right * (profile.HarassRetreatDistance + profile.ArriveDistance), retreat.MoveTarget,
+                "El destino deja margen para cruzar los 8 m antes de frenar.");
             Assert.AreEqual(profile.StalkSpeed, retreat.Speed);
-            p.WitchPosition = retreat.MoveTarget;
+            p.WitchPosition = Vector3.right * 7.99f;
+            Assert.Greater(Tick(0f).Speed, 0f, "No empieza a mirar antes de los 8 m.");
+            p.WitchPosition = Vector3.right * 8f;
             Assert.AreEqual(0f, Tick(1f).Speed);
             Assert.AreEqual(0f, Tick(1.99f).Speed, "La mirada empieza al terminar la retirada.");
             Assert.Greater(Tick(0.02f).Speed, 0f);
@@ -109,6 +124,94 @@ namespace TiffanyGame.Tests
             p.HasCover = p.SeesPlayerLight = true;
             p.CoverPosition = p.WitchPosition + Vector3.back * 2f;
             Assert.AreEqual(p.CoverPosition, Tick(0f).MoveTarget);
+        }
+
+        [Test]
+        public void CoverAtTheLastArcPointFinishesAfterThePauseWithoutWaitingForTheLimit()
+        {
+            profile.HarassMinArc = profile.HarassMaxArc = profile.HarassAngleStep;
+            Tick(0f);
+            WitchDecision circle = Tick(2f);
+            p.PlayerLightTouchesWitch = true;
+            WitchDecision cover = Tick(0f);
+            Assert.AreEqual(circle.MoveTarget, cover.MoveTarget, "Al terminar el arco, el último punto sirve de refugio.");
+            p.WitchPosition = cover.MoveTarget;
+            Assert.AreEqual(0f, Tick(0f).Speed);
+            Assert.AreEqual(WitchState.WindUp, Tick(profile.HarassHideDuration).State,
+                "La pausa completa el arco sin prolongar el acoso hasta los 12 s.");
+        }
+
+        [Test]
+        public void RealCoverResumesTheUnfinishedArcInsteadOfCountingAsAnArcPoint()
+        {
+            Tick(0f);
+            WitchDecision circle = Tick(2f);
+            p.HasCover = p.PlayerLightTouchesWitch = true;
+            p.CoverPosition = p.WitchPosition + Vector3.back * 2f;
+            Assert.AreEqual(p.CoverPosition, Tick(0f).MoveTarget);
+            p.WitchPosition = p.CoverPosition;
+            Tick(0f);
+            p.PlayerLightTouchesWitch = false;
+            WitchDecision resumed = Tick(profile.HarassHideDuration);
+            Assert.AreEqual(circle.MoveTarget, resumed.MoveTarget);
+            Assert.AreEqual(profile.StalkSpeed, resumed.Speed);
+        }
+
+        [Test]
+        public void CoverKeepsTheHarassmentThroughLostSightAndNoiseUntilTheTwelveSecondLimit()
+        {
+            profile.SearchEnabled = profile.LastSeenEnabled = true;
+            Tick(0f);
+            Tick(2f);
+            p.HasCover = p.PlayerLightTouchesWitch = true;
+            p.CoverPosition = p.WitchPosition + Vector3.back * 2f;
+            WitchDecision cover = Tick(0f);
+            p.SeesPlayer = p.PlayerLightTouchesWitch = false;
+            p.WitchPosition = cover.MoveTarget;
+            Tick(0f);
+            Assert.AreEqual(0f, Tick(profile.HarassHideDuration - 0.01f).Speed);
+            Assert.AreEqual(WitchIntent.Harass, Tick(0.02f).Intent);
+            p.HeardNoise = true;
+            p.NoisePosition = Vector3.left * 30f;
+            Assert.AreEqual(WitchIntent.Harass, Tick(0.1f).Intent,
+                "Perderla de vista tras cubrirse no inicia una búsqueda ni una sospecha por otro ruido.");
+            WitchDecision warning = Tick(profile.HarassTimeLimit - 4.1f);
+            Assert.AreEqual(WitchState.WindUp, warning.State);
+            Assert.AreEqual(p.PlayerPosition, warning.MoveTarget);
+            p.HeardNoise = false;
+            Assert.AreEqual(WitchState.WindUp, Tick(profile.WindUpDuration - 0.01f).State);
+            Assert.AreEqual(WitchState.Sprinting, Tick(0.02f).State);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void UnsafeOrUnresolvedCoverFallsBackToAFiniteArcPoint(bool tooClose)
+        {
+            var harass = new WitchHarass(new FixedRandom(0.5), point => point.x < 0f ? Vector3.positiveInfinity : point);
+            Measure();
+            harass.Tick(0f, profile, in p, out _);
+            harass.Tick(2f, profile, in p, out _);
+            p.HasCover = p.PlayerLightTouchesWitch = true;
+            p.CoverPosition = tooClose ? Vector3.right * 2f : Vector3.left * 20f;
+            Assert.IsTrue(harass.Tick(0f, profile, in p, out var cover));
+            Assert.AreNotEqual(p.CoverPosition, cover.MoveTarget);
+            Assert.IsFalse(float.IsInfinity(cover.MoveTarget.x));
+            Assert.That(WitchTargetsDistance(cover.MoveTarget, p.PlayerPosition), Is.InRange(10f, 15f));
+        }
+
+        [Test]
+        public void AvailableCoverCanBeReachedEvenWhenEveryArcPointIsBlocked()
+        {
+            p.HasCover = p.PlayerLightTouchesWitch = true;
+            p.CoverPosition = Vector3.right * 20f;
+            Vector3 coverPoint = p.CoverPosition;
+            var harass = new WitchHarass(new FixedRandom(0.5), point =>
+                point == coverPoint ? point : Vector3.positiveInfinity);
+            Measure();
+            harass.Tick(0f, profile, in p, out _);
+            Assert.IsTrue(harass.Tick(2f, profile, in p, out var cover));
+            Assert.AreEqual(coverPoint, cover.MoveTarget);
+            Assert.AreEqual(profile.StalkSpeed, cover.Speed);
         }
 
         [Test]
@@ -180,16 +283,50 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void ReturnFlightAndWatchKeepTheirExistingDecisions()
+        public void ReturnKeepsFollowingAndWarnsOnlyInsideTheSprintDistance()
         {
             brain = new WitchBrain(WitchProfiles.For(Chapter.Return), null);
+            p.WitchPosition = Vector3.right * 12f;
+            WitchDecision following = Tick(0f);
+            Assert.AreEqual(WitchIntent.None, following.Intent);
+            Assert.AreEqual(profile.FollowSpeed, following.Speed);
             p.WitchPosition = Vector3.right * 8f;
             Assert.AreEqual(WitchState.WindUp, Tick(0f).State);
+            Assert.AreEqual(WitchState.Sprinting, Tick(profile.WindUpDuration).State);
+        }
+
+        [Test]
+        public void FlightAndWatchNeverHarass()
+        {
             brain = new WitchBrain(profile, null);
+            p.PlayerLightTouchesWitch = p.SeesPlayerLight = true;
             Assert.AreNotEqual(WitchIntent.Harass, Tick(0f).Intent);
             brain.BeginWatch(p.WitchPosition, false);
             p.InWatchPassage = true;
+            p.PlayerPosition = p.WitchPosition + Vector3.forward * 5f;
+            WitchDecision warning = Tick(0f);
+            Assert.AreEqual(WitchState.WindUp, warning.State);
+            Assert.AreEqual(WitchIntent.None, warning.Intent);
+        }
+
+        [TestCase("safe")]
+        [TestCase("vanished")]
+        [TestCase("hidden")]
+        [TestCase("flash")]
+        public void ProtectionAndFlashInterruptHarassmentWithoutStartingItsCooldown(string interruption)
+        {
+            p.SeesPlayer = interruption != "hidden";
+            p.SmellsPlayer = interruption == "hidden";
+            Tick(0f);
+            p.PlayerInSafeZone = interruption == "safe";
+            p.PlayerVanished = interruption == "vanished";
+            p.PlayerHidden = interruption == "hidden";
+            p.Flashed = interruption == "flash";
             Assert.AreNotEqual(WitchIntent.Harass, Tick(0f).Intent);
+            p.PlayerInSafeZone = p.PlayerVanished = p.PlayerHidden = p.Flashed = false;
+            if (interruption == "flash") Tick(profile.StunDuration);
+            Assert.AreEqual(WitchIntent.Harass, Tick(0f).Intent,
+                "Interrumpir el acoso antes del aviso no consume los 20 s de enfriamiento.");
         }
 
         [Test]
@@ -215,11 +352,25 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(harass.Tick(0.02f, profile, in p, out _));
         }
 
-        [Test]
-        public void RepeatedHarassTicksDoNotAllocate()
+        [TestCase("look")]
+        [TestCase("circle")]
+        [TestCase("cover")]
+        [TestCase("hide")]
+        public void RepeatedHarassTicksDoNotAllocate(string phase)
         {
             Tick(0f);
-            Tick(2f);
+            if (phase != "look") Tick(2f);
+            if (phase == "cover" || phase == "hide")
+            {
+                p.HasCover = p.PlayerLightTouchesWitch = true;
+                p.CoverPosition = p.WitchPosition + Vector3.back * 2f;
+                WitchDecision cover = Tick(0f);
+                if (phase == "hide")
+                {
+                    p.WitchPosition = cover.MoveTarget;
+                    Tick(0f);
+                }
+            }
             long before = System.GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 1000; i++) Tick(0.001f);
             long allocated = System.GC.GetAllocatedBytesForCurrentThread() - before;

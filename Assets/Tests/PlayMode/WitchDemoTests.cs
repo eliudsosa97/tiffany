@@ -133,19 +133,35 @@ namespace TiffanyGame.Tests
             demo.mode = "harass";
             float deadline = Time.time + 25f;
             bool looked = false, circled = false, hid = false, warned = false;
+            bool lit = false;
+            float lookingTime = 0f, hidingTime = 0f, warningTime = 0f;
             while (Time.time < deadline && witch.Decision.State != WitchState.Sprinting)
             {
                 WitchDecision decision = witch.Decision;
+                lit |= witch.Perception.PlayerLightTouchesWitch;
                 if (decision.Intent == WitchIntent.Harass)
                 {
                     if (decision.Speed > 0f) circled |= looked;
-                    else if (circled) hid = true;
-                    else looked = true;
+                    else if (circled && lit)
+                    {
+                        hid = true;
+                        hidingTime += Time.deltaTime;
+                    }
+                    else if (!circled)
+                    {
+                        looked = true;
+                        lookingTime += Time.deltaTime;
+                    }
                 }
                 warned |= decision.State == WitchState.WindUp;
+                if (decision.State == WitchState.WindUp) warningTime += Time.deltaTime;
                 yield return null;
             }
             Assert.IsTrue(looked && circled && hid && warned, "La demo debe mostrar las fases del acoso en orden.");
+            Assert.GreaterOrEqual(lookingTime, witch.Profile.HarassMinLookDuration - Time.deltaTime * 3f);
+            Assert.GreaterOrEqual(hidingTime, witch.Profile.HarassHideDuration - Time.deltaTime * 3f,
+                "El refugio debe mostrar una pausa completa después de recibir la luz.");
+            Assert.GreaterOrEqual(warningTime, witch.Profile.WindUpDuration - Time.deltaTime * 3f);
             Assert.AreEqual(WitchState.Sprinting, witch.Decision.State, "El aviso y la embestida caben en menos de 25 s.");
             CheckFraming(witch.transform.position);
             CheckFraming(witch.player.position);

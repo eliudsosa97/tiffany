@@ -397,7 +397,7 @@ namespace TiffanyGame
                 && playerLamp != null && playerLamp.spot != null
                 && SoulLight.InCone(playerPosition, player.forward, position, playerLamp.spot.range,
                     playerLamp.spot.spotAngle * 0.5f);
-            if (Decision.Intent == WitchIntent.Harass && perception.PlayerLightTouchesWitch)
+            if (Decision.Intent == WitchIntent.Harass && (perception.PlayerLightTouchesWitch || perception.SeesPlayerLight))
                 FindHarassCover(ref perception);
             if (WatchPassage != null)
             {

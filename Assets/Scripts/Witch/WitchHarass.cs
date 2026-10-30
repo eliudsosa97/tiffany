@@ -12,11 +12,11 @@ namespace TiffanyGame
         private Phase phase;
         private float elapsed, phaseTime, lookDuration, cooldown;
         private float radius, arc, angle, turn;
-        private Vector3 center, radial, destination;
+        private Vector3 center, radial, destination, circleDestination;
         private bool hasDestination, lightSeen, awaitingWarning;
 
         public bool Active => phase != Phase.None;
-        public bool SeekingCover => phase == Phase.Cover || phase == Phase.Hide;
+        public bool AvoidingLight { get; private set; }
 
         public WitchHarass(System.Random random, Func<Vector3, Vector3> resolveGroundTarget = null)
         {
@@ -30,6 +30,7 @@ namespace TiffanyGame
         {
             phase = Phase.None;
             hasDestination = false;
+            AvoidingLight = false;
         }
 
         public void CompleteWarning(WitchProfile profile)
@@ -73,8 +74,9 @@ namespace TiffanyGame
                 else
                 {
                     Vector3 retreat = p.PlayerPosition + WitchTargets.Direction(p.PlayerPosition, p.WitchPosition)
-                        * profile.HarassRetreatDistance;
-                    return Move(in p, profile, retreat, out decision);
+                        * (profile.HarassRetreatDistance + profile.ArriveDistance);
+                    if (!WitchTargets.TryResolve(resolve, retreat, out var ground)) return Still(in p, out decision);
+                    return Move(profile, ground, out decision);
                 }
             }
             if (phase == Phase.Look)
@@ -84,7 +86,6 @@ namespace TiffanyGame
                 phase = Phase.Circle;
                 hasDestination = false;
             }
-
             bool lit = p.SeesPlayerLight || p.PlayerLightTouchesWitch;
             bool newLight = lit && !lightSeen;
             lightSeen = lit;
@@ -93,15 +94,21 @@ namespace TiffanyGame
                 phaseTime += dt;
                 if (phaseTime < profile.HarassHideDuration) return Still(in p, out decision);
                 phase = Phase.Circle;
-                hasDestination = false;
+                destination = circleDestination;
             }
             if (phase == Phase.Circle && newLight)
             {
-                if (!p.HasCover || !WitchTargets.TryResolve(resolve, p.CoverPosition, out destination))
+                AvoidingLight = true;
+                if (!hasDestination) NextPoint(profile, p.PlayerPosition);
+                circleDestination = destination;
+                if (p.HasCover && WitchTargets.TryResolve(resolve, p.CoverPosition, out var cover)
+                    && WitchTargets.Distance(cover, p.PlayerPosition) >= profile.HarassCloseDistance)
+                    destination = cover;
+                else
                 {
                     if (!NextPoint(profile, p.PlayerPosition) && !hasDestination) return Still(in p, out decision);
+                    circleDestination = destination;
                 }
-                hasDestination = true;
                 phase = Phase.Cover;
             }
             if (phase == Phase.Cover)
@@ -112,7 +119,7 @@ namespace TiffanyGame
                     phaseTime = 0f;
                     return Still(in p, out decision);
                 }
-                return Move(in p, profile, destination, out decision);
+                return Move(profile, destination, out decision);
             }
             if (!hasDestination || WitchTargets.Distance(p.WitchPosition, destination) <= profile.ArriveDistance)
             {
@@ -120,7 +127,7 @@ namespace TiffanyGame
                 hasDestination = false;
                 if (!NextPoint(profile, p.PlayerPosition)) return Still(in p, out decision);
             }
-            return Move(in p, profile, destination, out decision);
+            return Move(profile, destination, out decision);
         }
 
         private bool NextPoint(WitchProfile profile, Vector3 playerPosition)
@@ -142,10 +149,9 @@ namespace TiffanyGame
             return false;
         }
 
-        private bool Move(in WitchPerception p, WitchProfile profile, Vector3 point, out WitchDecision decision)
+        private static bool Move(WitchProfile profile, Vector3 point, out WitchDecision decision)
         {
-            if (!WitchTargets.TryResolve(resolve, point, out var ground)) return Still(in p, out decision);
-            decision = Decision(ground, profile.StalkSpeed);
+            decision = Decision(point, profile.StalkSpeed);
             return true;
         }
 
