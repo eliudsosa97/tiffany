@@ -56,7 +56,7 @@ namespace TiffanyGame.EditorTools
             var ball = route.GetChild(0).Find("Ball");
             tyler.transform.position = ball.position + new Vector3(1.5f, -0.2f, 0f);
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories, ball: ball);
-            PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
+            PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler, gameInterface.transform);
             var ambience = BuildForestAmbience(player.transform, route, playerLight.witch);
             ambience.music = BuildTensionMusic(playerLight.witch, player.transform);
             BuildBackgroundMusic(gameInterface, route.GetComponent<WitchChapterTracker>(), ambience.music, playerLight.witch);

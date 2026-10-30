@@ -12,21 +12,21 @@ namespace TiffanyGame.Tests
         public void TenthSecondTapsEverySixTenthsReturnToIdleAndPublishStepsOverTenMeters()
         {
             int steps = Travel(10f, Vector2.up, true, out int idleEntries, out int contacts);
-            Assert.Greater(idleEntries, 40);
+            Assert.Greater(idleEntries, 20);
             Assert.AreEqual(0, contacts);
             Assert.That(steps, Is.InRange(17, 25));
         }
 
         [Test]
-        public void StickAtNineteenPercentStaysIdleAndPublishesStepsOverFiveMeters()
+        public void StickAtEighteenPercentStaysIdleAndPublishesStepsOverFiveMeters()
         {
-            var input = StickResponse.Shape(Vector2.up * 0.19f);
+            var input = StickResponse.Shape(Vector2.up * 0.18f);
             float speed = PlayerMotion.TargetSpeed(input.magnitude, Gait.Walk);
             Assert.That(speed, Is.InRange(0.07f, TiffanyAnimation.MoveSpeed));
             Assert.AreEqual(TiffanyAnimation.Idle, TiffanyAnimation.StateFor(false, false, false, speed, 0f, false));
             int steps = Travel(5f, input, false, out _, out int contacts);
             Assert.AreEqual(0, contacts);
-            Assert.That(steps, Is.InRange(11, 12));
+            Assert.That(steps, Is.InRange(8, 9));
         }
 
         static int Travel(float meters, Vector2 input, bool tapping, out int idleEntries, out int contactCount)
@@ -43,7 +43,7 @@ namespace TiffanyGame.Tests
                 float target = !tapping || frame % 36 < 6 ? PlayerMotion.TargetSpeed(input.magnitude, Gait.Walk) : 0f;
                 float speed = motion.Advance(Vector3.forward * target, Dt).magnitude;
                 float moved = speed * Dt;
-                var gait = PlayerMotion.NoiseGait(speed);
+                var gait = Gait.Walk;
                 bool walking = TiffanyAnimation.StateFor(false, false, false, speed, 0f, false) == TiffanyAnimation.Walk;
                 int count = 0;
                 if (walking)

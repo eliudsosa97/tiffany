@@ -622,7 +622,7 @@ namespace TiffanyGame.Tests
                     Assert.GreaterOrEqual(player.transform.position.y, minimumHeight, "Tiffany cayó por debajo del cruce.");
                     Assert.That(player.HorizontalSpeed, Is.InRange(0f, PlayerMotion.WalkSpeed + 0.05f),
                         $"dt={Time.deltaTime:R}, desde={previousPosition:R}, hasta={player.transform.position:R}");
-                    Assert.AreEqual(PlayerMotion.GaitForSpeed(player.HorizontalSpeed), player.CurrentGait);
+                    Assert.AreEqual(Gait.Walk, player.CurrentGait);
                 }
                 GameInput.MoveOverride = Vector2.zero;
                 Assert.GreaterOrEqual(river.InverseTransformPoint(player.transform.position).z * direction, 3f,

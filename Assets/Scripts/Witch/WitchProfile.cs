@@ -40,7 +40,7 @@ namespace TiffanyGame
         public float FlySpeed = 6f;
         public float FlightHeightOffset;
         public float StalkSpeed = 1.2f;
-        public float FollowSpeed = 2.5f;
+        public float FollowSpeed = PlayerMotion.WalkSpeed + 0.3f;
         public float SprintSpeed = 9f;
         public float SprintDuration = 1.2f;
         public float WindUpDuration = 0.8f;

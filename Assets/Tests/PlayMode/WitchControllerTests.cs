@@ -707,7 +707,7 @@ namespace TiffanyGame.Tests
             yield return null;
             Assert.AreEqual(WitchState.Stalking, controller.Decision.State);
             Assert.AreEqual(WitchForm.Grounded, controller.Decision.Form);
-            Assert.AreEqual(2.5f, controller.Decision.Speed);
+            Assert.AreEqual(controller.Profile.FollowSpeed, controller.Decision.Speed);
             Assert.IsTrue(NavMesh.SamplePosition(player.transform.position, out var playerPoint, 6f, NavMesh.AllAreas));
             Assert.AreEqual(playerPoint.position, controller.Decision.MoveTarget);
             Assert.IsFalse(controller.Decision.FireLit || fireLight.enabled);

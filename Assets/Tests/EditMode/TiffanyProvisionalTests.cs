@@ -243,7 +243,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void ClipsUseSourceDurationsLoopsAndPlayerSpeeds()
+        public void ClipsPreserveSourceDurationsLoopsAndAuthoredSpeeds()
         {
             Assert.IsTrue(spec.preserveAnimationKeys);
             var importer = (ModelImporter)AssetImporter.GetAtPath(spec.modelPath);
@@ -257,9 +257,9 @@ namespace TiffanyGame.Tests
             Assert.That(clips["Flash"].length, Is.InRange(0.6f, 0.8f));
             Assert.That(clips["Caught"].length, Is.InRange(1.2f, 1.6f));
             Assert.AreEqual(3f, clips["Vanish"].length, 0.5f / spec.fps);
-            Assert.AreEqual(PlayerMotion.SlowSpeed, Array.Find(spec.clips, c => c.name == "Slow").speed);
-            Assert.AreEqual(PlayerMotion.WalkSpeed, Array.Find(spec.clips, c => c.name == "Walk").speed);
-            Assert.AreEqual(PlayerMotion.RunSpeed, Array.Find(spec.clips, c => c.name == "Run").speed);
+            Assert.AreEqual(1.1f, Array.Find(spec.clips, c => c.name == "Slow").speed);
+            Assert.AreEqual(2.2f, Array.Find(spec.clips, c => c.name == "Walk").speed);
+            Assert.AreEqual(4f, Array.Find(spec.clips, c => c.name == "Run").speed);
             foreach (var entry in spec.clips)
             {
                 var clip = clips[entry.name];
@@ -431,7 +431,7 @@ namespace TiffanyGame.Tests
 
         [TestCase(TiffanyAnimation.Walk, 1f, "Locomotion")]
         [TestCase(TiffanyAnimation.WalkBack, -1f, "Locomotion")]
-        public void BlendTreeHasThreeOrderedCyclesAtTheirSourceSpeeds(string name, float speed, string treeName)
+        public void BlendTreeUsesPlayerSpeedsAndNormalizesAuthoredCycles(string name, float speed, string treeName)
         {
             var state = State(Controller(), 0, name);
             Assert.IsNotNull(state);
@@ -450,7 +450,7 @@ namespace TiffanyGame.Tests
             {
                 var child = tree.children[i];
                 float natural = Array.Find(spec.clips, c => c.name == names[i]).speed;
-                Assert.AreEqual(natural, child.threshold);
+                Assert.AreEqual(PlayerMotion.Speed((Gait)Enum.Parse(typeof(Gait), names[i])), child.threshold);
                 Assert.AreEqual(child.threshold / natural, child.timeScale);
                 if (i > 0) Assert.Greater(child.threshold, tree.children[i - 1].threshold);
                 var cycle = child.motion as BlendTree;
@@ -458,7 +458,7 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(names[i], cycle.name);
                 Assert.AreEqual(1, cycle.children.Length);
                 Assert.AreEqual(Clips()[names[i]], cycle.children[0].motion);
-                Assert.AreEqual(1f, child.threshold * child.timeScale * cycle.children[0].timeScale, 1e-5f);
+                Assert.AreEqual(1f, natural * child.timeScale * cycle.children[0].timeScale, 1e-5f);
             }
         }
 
@@ -469,7 +469,7 @@ namespace TiffanyGame.Tests
             var root = Instance();
             var animator = Animate(root, Controller());
             var foot = Bone(root, "Foot.L");
-            animator.SetFloat("Speed", walk.speed);
+            animator.SetFloat("Speed", PlayerMotion.WalkSpeed);
             var poses = new Vector3[8];
             for (int i = 0; i < poses.Length; i++)
             {
@@ -484,7 +484,7 @@ namespace TiffanyGame.Tests
             float previous = 0f;
             for (int sample = 1; sample <= 15; sample++)
             {
-                animator.Update(walk.frames / (float)spec.fps / 8f);
+                animator.Update(walk.frames / (float)spec.fps / 8f * walk.speed / PlayerMotion.WalkSpeed);
                 float time = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
                 Assert.Greater(time, previous);
                 previous = time;
@@ -516,13 +516,14 @@ namespace TiffanyGame.Tests
         {
             var entry = Array.Find(spec.clips, c => c.name == gait);
             var animator = Animate(Instance(), Controller());
-            animator.SetFloat("Speed", entry.speed * fraction);
+            float speed = PlayerMotion.Speed((Gait)Enum.Parse(typeof(Gait), gait));
+            animator.SetFloat("Speed", speed * fraction);
             animator.Play("Base Layer.Walk", 0, 0f);
             animator.Update(0f);
             float start = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
             animator.Update(0.05f);
             float elapsed = animator.GetCurrentAnimatorStateInfo(0).normalizedTime - start;
-            Assert.AreEqual(0.05f * fraction / (entry.frames / (float)spec.fps), elapsed, 0.002f);
+            Assert.AreEqual(0.05f * fraction * speed / entry.speed / (entry.frames / (float)spec.fps), elapsed, 0.002f);
         }
 
         [TestCase(TiffanyAnimation.TurnLeft, -180f)]

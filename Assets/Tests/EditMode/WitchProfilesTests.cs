@@ -5,6 +5,18 @@ namespace TiffanyGame.Tests
 {
     public sealed class WitchProfilesTests
     {
+        [Test]
+        public void ChasePressuresWalkingButAllowsRunningAndKeepsTheDodgeWarning()
+        {
+            var profile = new WitchProfile();
+            Assert.AreEqual(4.3f, profile.FollowSpeed, 1e-5f);
+            Assert.Greater(profile.FollowSpeed, PlayerMotion.WalkSpeed);
+            Assert.Less(profile.FollowSpeed, PlayerMotion.RunSpeed);
+            Assert.Greater(profile.SprintSpeed, PlayerMotion.RunSpeed);
+            Assert.AreEqual(0.8f, profile.WindUpDuration);
+            Assert.AreEqual(1.2f, profile.SprintDuration);
+        }
+
         [TestCase(Chapter.Cemetery, false, false, false, false, 10f)]
         [TestCase(Chapter.WaterPlant, true, false, false, false, 0f)]
         [TestCase(Chapter.TrainTracks, true, false, true, false, 0f)]
