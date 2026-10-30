@@ -41,6 +41,7 @@ namespace TiffanyGame.EditorTools
             BuildLightStops(testZone);
             HidingBuilder.BuildHideTest(testZone, player);
             var route = RouteBuilder.BuildRoute(world, player, storm, out var memories, out var skyRoute);
+            PosterBuilder.Build(route);
             FogBuilder.Build(world, route.GetComponent<WitchChapterTracker>());
             var viewCamera = CreateCamera(player);
             BakeNavMesh(world);
