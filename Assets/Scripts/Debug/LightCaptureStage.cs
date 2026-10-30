@@ -65,7 +65,7 @@ namespace TiffanyGame
         {
             yield return new WaitForSecondsRealtime(Mathf.Max(0f, GetComponent<CaptureStop>().wait - SoulLight.FlashDuration * 0.5f));
             if (soul.Energy.Current < SoulCosts.Flash) soul.Energy.ResetTo(SoulEnergy.Max);
-            playerLight.TryFlash();
+            playerLight.TryBurst();
             flashRoutine = null;
         }
     }

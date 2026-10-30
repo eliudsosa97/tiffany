@@ -11,6 +11,7 @@ namespace TiffanyGame
         public float returnTurnSpeed = 300f;
         public float backwardSpeedFactor = 0.7f;
         public float gravity = 20f;
+        public float speedScale = 1f;
 
         public Gait CurrentGait { get; private set; }
         public float HorizontalSpeed { get; private set; }
@@ -69,7 +70,7 @@ namespace TiffanyGame
             float speedFactor = PlayerFacing.SpeedFactor(direction, transform.forward,
                 PlayerFacing.FacesMovement(inputGait, direction), backwardSpeedFactor);
             var targetVelocity = direction.normalized * (PlayerMotion.TargetSpeed(direction.magnitude, inputGait) * speedFactor);
-            var horizontalVelocity = motion.Advance(targetVelocity, dt);
+            var horizontalVelocity = motion.Advance(targetVelocity, dt) * speedScale;
 
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
             else verticalVelocity -= gravity * dt;
@@ -80,7 +81,7 @@ namespace TiffanyGame
             displacement.y = 0f;
             horizontalDistance = displacement.magnitude;
             HorizontalSpeed = horizontalDistance / dt;
-            CurrentGait = PlayerMotion.NoiseGait(HorizontalSpeed);
+            CurrentGait = inputGait;
 
             TurnTowardsAim(inputGait, direction, yaw, dt);
         }

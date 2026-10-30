@@ -10,11 +10,13 @@ namespace TiffanyGame.Tests
     {
         const float Tolerance = 0.00001f;
 
-        internal static void Press(ButtonControl control)
+        internal static void Press(ButtonControl control) => Change(control, 1f);
+
+        static void Change(ButtonControl control, float value)
         {
             using (StateEvent.From(control.device, out var eventPtr))
             {
-                control.WriteValueIntoEvent(1f, eventPtr);
+                control.WriteValueIntoEvent(value, eventPtr);
                 InputSystem.QueueEvent(eventPtr);
             }
             InputSystem.Update();
@@ -23,43 +25,94 @@ namespace TiffanyGame.Tests
         [TestCase("left", true, false)]
         [TestCase("consumed", false, false)]
         [TestCase("submit", false, false)]
-        [TestCase("f", false, true)]
+        [TestCase("f", true, false)]
         [TestCase("right", false, false)]
         [TestCase("north", true, false)]
         [TestCase("r2", false, true)]
-        public void LightAndFlashUseSeparateKeyboardAndMouseInputs(string input, bool toggle, bool flash)
+        public void LightUsesHeldMouseTriangleAndFWhileR2Runs(string input, bool held, bool run)
+        {
+            WithPointerInput(() =>
+            {
+                var pad = InputSystem.AddDevice<Gamepad>();
+                try
+                {
+                    var keyboard = Keyboard.current;
+                    var mouse = Mouse.current;
+                    ButtonControl button = input == "f" ? keyboard.fKey : input == "north" ? pad.buttonNorth
+                        : input == "r2" ? pad.rightTrigger : input == "right" ? mouse.rightButton : mouse.leftButton;
+                    Change(button, 1f);
+                    if (input == "consumed") GameInput.ConsumePointerPress();
+                    if (input == "submit") Assert.IsTrue(GameInput.StartPressed);
+                    Assert.AreEqual(held, GameInput.LightHeld);
+                    Assert.AreEqual(run, GameInput.Run);
+                    InputSystem.Update();
+                    Assert.AreEqual(held, GameInput.LightHeld);
+                    Assert.AreEqual(run, GameInput.Run);
+                    Change(button, 0f);
+                    Assert.IsFalse(GameInput.LightHeld || GameInput.Run);
+                }
+                finally { InputSystem.RemoveDevice(pad); }
+            });
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ConsumedOrFocusFilteredClickStaysInvalidUntilReleased(bool focusFiltered)
+        {
+            WithPointerInput(() =>
+            {
+                var filter = typeof(GameInput).GetField("focusClickFilter", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+                if (focusFiltered) filter.SetValue(null, new FocusClickFilter(true, float.NegativeInfinity, true));
+                var consumed = typeof(GameInput).GetField("pointerConsumedThroughFrame", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+                var charge = new FlashCharge();
+                Change(Mouse.current.leftButton, 1f);
+                if (!focusFiltered) GameInput.ConsumePointerPress();
+                Assert.IsFalse(GameInput.LightHeld);
+                consumed.SetValue(null, -1);
+                InputSystem.Update();
+                Assert.IsFalse(GameInput.LightHeld);
+                Assert.AreEqual(FlashChargeResult.None, charge.Tick(4f, GameInput.LightHeld, true));
+                Change(Mouse.current.leftButton, 0f);
+                Assert.IsFalse(GameInput.LightHeld);
+                Assert.AreEqual(FlashChargeResult.None, charge.Tick(0.1f, GameInput.LightHeld, true));
+                Change(Mouse.current.leftButton, 1f);
+                Assert.IsTrue(GameInput.LightHeld);
+            });
+        }
+
+        static void WithPointerInput(System.Action test)
         {
             var devices = new DualSenseInputTests();
             devices.SetUp();
-            var field = typeof(GameInput).GetField("focusClickFilter", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
-            var previousFilter = field.GetValue(null);
-            var consumed = typeof(GameInput).GetField("pointerConsumedThroughFrame", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic;
+            var filter = typeof(GameInput).GetField("focusClickFilter", flags);
+            var consumed = typeof(GameInput).GetField("pointerConsumedThroughFrame", flags);
+            var held = typeof(GameInput).GetField("pointerLightHeld", flags);
+            var invalid = typeof(GameInput).GetField("pointerLightInvalid", flags);
+            var previousFilter = filter.GetValue(null);
             var previousConsumed = consumed.GetValue(null);
-            var pad = InputSystem.AddDevice<Gamepad>();
+            var previousHeld = held.GetValue(null);
+            var previousInvalid = invalid.GetValue(null);
             try
             {
-                field.SetValue(null, new FocusClickFilter(true, float.NegativeInfinity, false));
+                filter.SetValue(null, new FocusClickFilter(true, float.NegativeInfinity, false));
                 consumed.SetValue(null, -1);
+                held.SetValue(null, false);
+                invalid.SetValue(null, false);
                 var keyboard = Keyboard.current;
                 var mouse = Mouse.current;
                 InputSystem.Update();
                 keyboard.MakeCurrent();
                 mouse.MakeCurrent();
-                Press(input == "f" ? keyboard.fKey : input == "north" ? pad.buttonNorth : input == "r2" ? pad.rightTrigger
-                    : input == "right" ? mouse.rightButton : mouse.leftButton);
-                if (input == "consumed") GameInput.ConsumePointerPress();
-                if (input == "submit") Assert.IsTrue(GameInput.StartPressed);
-                Assert.AreEqual(toggle, GameInput.LightTogglePressed);
-                Assert.AreEqual(flash, GameInput.FlashPressed);
-                InputSystem.Update();
-                Assert.IsFalse(GameInput.LightTogglePressed || GameInput.FlashPressed);
+                test();
             }
             finally
             {
-                field.SetValue(null, previousFilter);
-                consumed.SetValue(null, previousConsumed);
-                InputSystem.RemoveDevice(pad);
                 devices.TearDown();
+                filter.SetValue(null, previousFilter);
+                consumed.SetValue(null, previousConsumed);
+                held.SetValue(null, previousHeld);
+                invalid.SetValue(null, previousInvalid);
             }
         }
 
@@ -100,31 +153,12 @@ namespace TiffanyGame.Tests
 
         [TestCase(false)]
         [TestCase(true)]
-        public void FlashOverrideControlsFlashPressed(bool pressed)
+        public void LightHeldOverrideControlsHoldAndCanBeCleared(bool held)
         {
-            GameInput.FlashOverride = pressed;
-
-            Assert.That(GameInput.FlashPressed, Is.EqualTo(pressed));
-        }
-
-        [Test]
-        public void ClearOverridesClearsFlashOverride()
-        {
-            GameInput.FlashOverride = true;
-
+            GameInput.LightHeldOverride = held;
+            Assert.That(GameInput.LightHeld, Is.EqualTo(held));
             GameInput.ClearOverrides();
-
-            Assert.That(GameInput.FlashOverride, Is.Null);
-        }
-
-        [TestCase(false)]
-        [TestCase(true)]
-        public void LightToggleOverrideControlsPressAndCanBeCleared(bool pressed)
-        {
-            GameInput.LightToggleOverride = pressed;
-            Assert.That(GameInput.LightTogglePressed, Is.EqualTo(pressed));
-            GameInput.ClearOverrides();
-            Assert.That(GameInput.LightToggleOverride, Is.Null);
+            Assert.That(GameInput.LightHeldOverride, Is.Null);
         }
 
         [TestCase(0f, 0f)]

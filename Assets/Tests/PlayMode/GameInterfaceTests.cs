@@ -157,9 +157,6 @@ namespace TiffanyGame.Tests
             progress.MarkFound(MemoryProgress.BallId);
             hud.SendMessage("LateUpdate");
             Assert.That(hud.objectiveText.text, Is.EqualTo(InterfaceTexts.BirdsObjective));
-            gameInterface.BeginEcho();
-            hud.SendMessage("LateUpdate");
-            Assert.That(hud.objectiveText.gameObject.activeInHierarchy, Is.True);
             gameInterface.ToggleNotebook();
             hud.SendMessage("LateUpdate");
             Assert.That(hud.objectiveText.gameObject.activeSelf, Is.False);

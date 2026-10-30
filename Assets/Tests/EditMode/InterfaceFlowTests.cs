@@ -5,6 +5,20 @@ namespace TiffanyGame.Tests
 {
     public sealed class InterfaceFlowTests
     {
+        [Test] public void MemoryFreezesAndBlocksPauseAndNotebookUntilItEnds()
+        {
+            var flow = new InterfaceFlow();
+            flow.SetMemory(true);
+            flow.PressPause();
+            flow.PressNotebook();
+            flow.PressStart();
+            Assert.AreEqual(InterfaceScreen.Memory, flow.Screen);
+            Assert.IsTrue(flow.IsFrozen);
+            flow.SetMemory(false);
+            Assert.AreEqual(InterfaceScreen.Playing, flow.Screen);
+            Assert.IsFalse(flow.IsFrozen);
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void TitleOffersContinueOnlyWithValidSave(bool validSave)
@@ -98,7 +112,8 @@ namespace TiffanyGame.Tests
         }
 
         [TestCase(Power.Light, "Clic / Triángulo", "prende o apaga")]
-        [TestCase(Power.Light, "F / R2", "cegar")]
+        [TestCase(Power.Light, "Mantén clic / Triángulo / F", "cegar")]
+        [TestCase(Power.Light, "3 segundos", "360°")]
         [TestCase(Power.Candles, "Q / Cuadrado", "protege")]
         [TestCase(Power.Poltergeist, "E / Círculo", "distrae")]
         [TestCase(Power.Vanish, "R / R1", "pierde tu rastro")]
@@ -112,10 +127,10 @@ namespace TiffanyGame.Tests
 
         [TestCase("WASD / stick izquierdo  moverte")]
         [TestCase("Ratón / stick derecho  apuntar la luz")]
-        [TestCase("Shift / L3  correr")]
+        [TestCase("Shift / L3 / R2  correr")]
         [TestCase("Ctrl / L2  despacio")]
         [TestCase("Clic / Triángulo  prender la luz")]
-        [TestCase("F / R2  destello")]
+        [TestCase("mantén clic / △ / F  destello")]
         [TestCase("Q / Cuadrado  encender veladora")]
         [TestCase("E / Círculo  mover objeto")]
         [TestCase("R / R1  desvanecerte")]
@@ -131,7 +146,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(expected, InterfaceTexts.ControllerText("△ □ ○ ✕", hasSymbols));
 
         [TestCase("Clic / Triángulo")]
-        [TestCase("F / R2")]
+        [TestCase("mantén clic / Triángulo / F")]
         [TestCase("Q / Cuadrado")]
         [TestCase("E / Círculo")]
         [TestCase("R / R1")]
@@ -139,7 +154,7 @@ namespace TiffanyGame.Tests
         [TestCase("Tab / Create")]
         [TestCase("Esc o P / Options")]
         public void ControlsExplainKeyboardAndDualSenseTogether(string controls) =>
-            Assert.That(InterfaceTexts.Controls, Does.Contain(controls));
+            Assert.That(InterfaceTexts.ControllerText(InterfaceTexts.Controls, false), Does.Contain(controls));
 
         [Test]
         public void PowerNoticeLastsSevenSeconds() =>

@@ -62,7 +62,7 @@ namespace TiffanyGame.EditorTools
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories, ball: ball);
             gameInterface.route = route.GetComponent<WitchChapterTracker>();
             gameInterface.memories = player.GetComponent<MemoryCollector>();
-            PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
+            PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler, gameInterface.transform);
             var ambience = BuildForestAmbience(player.transform, route, playerLight.witch);
             ambience.music = BuildTensionMusic(playerLight.witch, player.transform);
             ambience.panic.music = ambience.music;
@@ -647,10 +647,29 @@ namespace TiffanyGame.EditorTools
             controller.head = head;
             controller.animator = controller.figure.GetComponent<Animator>();
             controller.voice = tyler.AddComponent<AudioSource>();
-            controller.voice.spatialBlend = 0f;
+            controller.voice.spatialBlend = 1f;
+            controller.voice.rolloffMode = AudioRolloffMode.Linear;
+            controller.voice.minDistance = 2f;
+            controller.voice.maxDistance = 30f;
+            controller.voice.dopplerLevel = 0f;
             controller.voice.playOnAwake = false;
             controller.barkClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/bark_1.wav");
             controller.growlClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/growl_1.wav");
+            controller.whineClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/whine.wav");
+            var icon = new GameObject("Reaction Icon", typeof(RectTransform), typeof(Canvas));
+            icon.transform.SetParent(tyler.transform, false);
+            icon.transform.localPosition = head.position - tyler.transform.position + Vector3.up * 0.6f;
+            icon.transform.localScale = Vector3.one * 0.01f;
+            icon.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
+            var label = new GameObject("Label", typeof(RectTransform)).AddComponent<Text>();
+            label.transform.SetParent(icon.transform, false);
+            label.rectTransform.sizeDelta = new Vector2(80f, 50f);
+            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.fontSize = 36;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.raycastTarget = false;
+            label.enabled = false;
+            controller.reactionIcon = label;
             var names = new[] { "Tyler 1 Follow", "Tyler 2 Guide", "Tyler 3 Whine", "Tyler 4 Growl", "Tyler 5 Shares Light" };
             var reactions = new[] { TylerReaction.None, TylerReaction.Guide, TylerReaction.Whine, TylerReaction.Growl, TylerReaction.None };
             for (int i = 0; i < reactions.Length; i++)
@@ -739,9 +758,28 @@ namespace TiffanyGame.EditorTools
             baseGlow.intensity = 1.2f;
             baseGlow.shadows = LightShadows.None;
             baseGlow.renderMode = LightRenderMode.Auto;
+            var burstLight = new GameObject("Flash Burst").AddComponent<Light>();
+            burstLight.transform.SetParent(player.transform, false);
+            burstLight.transform.localPosition = Vector3.up;
+            burstLight.type = LightType.Point;
+            burstLight.color = baseGlow.color;
+            burstLight.range = FlashCharge.BurstRadius;
+            burstLight.intensity = 70f;
+            burstLight.shadows = LightShadows.None;
+            burstLight.enabled = false;
+            var flashAudio = player.AddComponent<AudioSource>();
+            flashAudio.playOnAwake = false;
+            flashAudio.spatialBlend = 0f;
             playerLight = player.AddComponent<PlayerLight>();
             playerLight.spot = spot;
             playerLight.baseGlow = baseGlow;
+            playerLight.burstLight = burstLight;
+            playerLight.visual = body.transform;
+            playerLight.flashAudio = flashAudio;
+            playerLight.chargeClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/flash_charge.wav");
+            playerLight.burstClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/flash_burst.wav");
+            if (playerLight.chargeClip == null || playerLight.burstClip == null)
+                Debug.LogError($"{GameInfo.LogPrefix} Faltan los clips flash_charge o flash_burst.");
             playerLight.bodyRenderers = body.GetComponentsInChildren<Renderer>(true);
             playerLight.bodyGlowBoost = 1.2f;
             playerLight.startOn = false;
@@ -863,6 +901,7 @@ namespace TiffanyGame.EditorTools
                 new Vector2(0.06f, 0.07f), new Vector2(0.94f, 0.19f));
 
             ui.notebookPanel = InterfacePanel("Notebook", root.transform, 0.92f);
+            ui.notebookBackground = ui.notebookPanel.GetComponent<Image>();
             var notebook = ui.notebookPanel.transform;
             var frame = InterfaceRect("Drawing Frame", notebook,
                 new Vector2(0.08f, 0.23f), new Vector2(0.92f, 0.84f));
@@ -879,7 +918,7 @@ namespace TiffanyGame.EditorTools
             ui.notebookPage = InterfaceText("Page", notebook, font, "", 28,
                 new Vector2(0.84f, 0.025f), new Vector2(0.97f, 0.085f));
             ui.notebookPage.alignment = TextAnchor.MiddleRight;
-            InterfaceText("Hint", notebook, font, InterfaceTexts.NotebookHint, 26,
+            ui.notebookHint = InterfaceText("Hint", notebook, font, InterfaceTexts.NotebookHint, 26,
                 new Vector2(0.15f, 0.025f), new Vector2(0.85f, 0.085f));
             ui.notebookEmpty = InterfaceText("Empty", notebook, font, InterfaceTexts.NotebookEmpty, 44,
                 new Vector2(0.1f, 0.4f), new Vector2(0.9f, 0.6f));
@@ -914,6 +953,13 @@ namespace TiffanyGame.EditorTools
                 new Vector2(0.15f, 0.08f), new Vector2(0.85f, 0.15f));
             ui.storyPanel.SetActive(false);
 
+            ui.memoryMusic = root.AddComponent<AudioSource>();
+            ui.memoryMusic.clip = LoadClip("music_theme");
+            ui.memoryMusic.spatialBlend = 0f;
+            ui.memoryMusic.loop = true;
+            ui.memoryMusic.playOnAwake = false;
+            ui.memoryMusic.ignoreListenerPause = true;
+            ui.memoryMusic.volume = 0f;
             ui.memoryAssets = LoadInterfaceAssets<TextAsset>("t:TextAsset", "Assets/Data/Memories");
             ui.drawings = LoadInterfaceAssets<Texture2D>("t:Texture2D", "Assets/Art/Memories");
             ui.pausePanel.SetActive(false);

@@ -20,8 +20,7 @@ namespace TiffanyGame.Tests
         {
             SafeZones.Clear();
             Time.timeScale = 1f;
-            GameInput.LightToggleOverride = false;
-            GameInput.FlashOverride = false;
+            GameInput.LightHeldOverride = false;
             var witchObject = new GameObject("Witch");
             witchObject.SetActive(false);
             witchObject.AddComponent<NavMeshAgent>().enabled = false;

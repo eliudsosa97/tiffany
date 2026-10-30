@@ -10,10 +10,10 @@ namespace TiffanyGame
         public const string NewGame = "Nueva partida";
         public const string Controls = "WASD / stick izquierdo  moverte\n"
             + "Ratón / stick derecho  apuntar la luz\n"
-            + "Shift / L3  correr\n"
+            + "Shift / L3 / R2  correr\n"
             + "Ctrl / L2  despacio\n"
             + "Clic / Triángulo  prender la luz\n"
-            + "F / R2  destello\n"
+            + "mantén clic / △ / F  destello\n"
             + "Q / Cuadrado  encender veladora\n"
             + "E / Círculo  mover objeto\n"
             + "R / R1  desvanecerte\n"
@@ -29,12 +29,15 @@ namespace TiffanyGame
         public const string PauseConfirmRestart = "¿Reiniciar? Se pierde la partida";
         public const string NotebookEmpty = "Aún no recuerdas nada";
         public const string NotebookHint = "A / D o cruceta para pasar de página · Tab o Create para cerrar";
+        public const string MemoryHint = "Espacio / Cruz para continuar";
         public const float PowerNoticeSeconds = 7f;
         public const string SoulEnergy = "Energía del alma";
         public const string RouteReminder = "Los pájaros amarillos marcan el camino.";
         public const string StoryHint = "Clic, Enter u Options para seguir";
         public const string GraveObjective = "Toca tu lápida (" + GameInput.InteractBinding + ")";
         public const string BallObjective = "Busca la pelota";
+        public const string TylerNotice = "Tyler te sigue. Si te detienes, te lleva al siguiente recuerdo.\n"
+            + "Gruñe cuando la bruja anda cerca. Junto a él tienes menos miedo y te presta su luz.";
         public const string BirdsObjective = "Sigue a los pájaros amarillos";
         public const string TouchPrompt = GameInput.InteractBinding + ": recordar";
         public const string CollectPrompt = GameInput.InteractBinding + ": recoger";
@@ -63,7 +66,7 @@ namespace TiffanyGame
             switch (power)
             {
                 case Power.Light: return "Clic / Triángulo: prende o apaga tu luz.\n"
-                    + "F / R2: destello para cegar a la bruja en el suelo y escapar.";
+                    + "Mantén clic / Triángulo / F durante 3 segundos: destello de 360° para cegar a la bruja en el suelo y escapar.";
                 case Power.Candles: return "Q / Cuadrado: enciende una veladora apagada cercana.\n"
                     + "Su luz te protege de la bruja por un tiempo.";
                 case Power.Poltergeist: return "E / Círculo: mueve un objeto iluminado a 12 m o menos.\n"

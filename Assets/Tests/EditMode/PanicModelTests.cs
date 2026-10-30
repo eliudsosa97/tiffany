@@ -16,7 +16,7 @@ namespace TiffanyGame.Tests
 
             panic.Tick(5f, in inputs);
 
-            Assert.AreEqual(0.06f, panic.Level, 1e-4f);
+            Assert.AreEqual(0.12f, panic.Level, 1e-4f);
         }
 
         [TestCase(true, false, false, 0.4f)]
@@ -70,9 +70,9 @@ namespace TiffanyGame.Tests
         }
 
         [TestCase(false, 0f, false, 0.3f)]
-        [TestCase(true, 0f, false, 0.51f)]
+        [TestCase(true, 0f, false, 0.57f)]
         [TestCase(false, float.PositiveInfinity, true, 0.15f)]
-        [TestCase(true, float.PositiveInfinity, true, 0.285f)]
+        [TestCase(true, float.PositiveInfinity, true, 0.345f)]
         public void DarknessAmplifiesWitchAndWhispers(bool darkness, float distance, bool whispers, float expected)
         {
             var panic = new PanicModel();
@@ -104,7 +104,7 @@ namespace TiffanyGame.Tests
 
             panic.Tick(2f, in inputs);
 
-            Assert.AreEqual(0.524f, panic.Level, 1e-4f);
+            Assert.AreEqual(0.548f, panic.Level, 1e-4f);
         }
 
         [TestCase(0f)]

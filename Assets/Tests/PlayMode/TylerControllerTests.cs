@@ -84,7 +84,11 @@ namespace TiffanyGame.Tests
         {
             Assert.IsNotNull(tyler.nextMemory);
             Assert.IsNotNull(tyler.voice);
-            Assert.AreEqual(0f, tyler.voice.spatialBlend);
+            Assert.AreEqual(1f, tyler.voice.spatialBlend);
+            Assert.AreEqual(AudioRolloffMode.Linear, tyler.voice.rolloffMode);
+            Assert.AreEqual(2f, tyler.voice.minDistance);
+            Assert.AreEqual(30f, tyler.voice.maxDistance);
+            Assert.AreEqual(0f, tyler.voice.dopplerLevel);
             Assert.IsFalse(tyler.voice.playOnAwake);
             tyler.nextMemory = null;
             tyler.player.GetComponent<PlayerController>().enabled = false;
