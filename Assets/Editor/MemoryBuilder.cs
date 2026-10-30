@@ -27,14 +27,13 @@ namespace TiffanyGame.EditorTools
             collector.challenges = zone.GetComponentsInChildren<PowerChallenge>();
             collector.echoVolume = BuildEchoVolume(zone, profilePath);
             collector.viewCamera = viewCamera;
-            var blackout = EchoBuilder.BuildBlackout(gameInterface);
             var echoes = new GameObject("Memory Echoes").transform;
             echoes.SetParent(zone, false);
             for (int i = 0; i < spots.Length; i++)
             {
                 var spot = spots[i];
                 if (spot.kind == MemorySpotKind.Ball) continue;
-                EchoBuilder.Build(spot, echoes, gameInterface, blackout);
+                EchoBuilder.Build(spot, echoes);
                 EchoData.TryLoad(spot.echoPlayer.echoAsset.text, out var data, out _);
                 var stop = new GameObject($"Echo {spot.memoryId} Memory");
                 stop.transform.SetParent(zone, false);

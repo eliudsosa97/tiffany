@@ -15,8 +15,8 @@ namespace TiffanyGame.Tests
         private static readonly (float, bool, bool)[] GroundedFlashCases =
         {
             (5f, true, true),
-            (5f, false, false),
-            (12f, true, false)
+            (8f, false, true),
+            (13f, false, false)
         };
 
         private GameObject world;
@@ -35,6 +35,7 @@ namespace TiffanyGame.Tests
             SafeZones.Clear();
             Time.timeScale = 1f;
             GameInput.InteractOverride = false;
+            GameInput.LightHeldOverride = false;
             world = new GameObject("PlayerLightTestWorld");
             ground = AddBox("Ground", Vector3.down * 0.5f, new Vector3(80f, 1f, 80f)).gameObject;
             CreatePlayer();
@@ -64,6 +65,12 @@ namespace TiffanyGame.Tests
             playerLight.spot = spot;
             playerLight.baseGlow = new GameObject("Soul Glow").AddComponent<Light>();
             playerLight.baseGlow.transform.SetParent(player.transform, false);
+            playerLight.burstLight = new GameObject("Flash Burst").AddComponent<Light>();
+            playerLight.burstLight.transform.SetParent(player.transform, false);
+            playerLight.burstLight.type = LightType.Point;
+            playerLight.burstLight.intensity = 70f;
+            playerLight.burstLight.range = FlashCharge.BurstRadius;
+            playerLight.burstLight.enabled = false;
             if (withBody)
             {
                 var body = new GameObject("Body", typeof(MeshRenderer));
@@ -71,6 +78,7 @@ namespace TiffanyGame.Tests
                 var renderer = body.GetComponent<Renderer>();
                 renderer.sharedMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Models/Materials/TiffanySkin.mat");
                 playerLight.bodyRenderers = new[] { renderer };
+                playerLight.visual = body.transform;
                 playerLight.bodyGlowBoost = 1.2f;
             }
             playerLight.startOn = true;
@@ -167,6 +175,7 @@ namespace TiffanyGame.Tests
             soul.Powers.Clear();
             world.AddComponent<MotionDemo>();
             yield return null;
+            yield return null;
             Assert.IsTrue(soul.Powers.Has(Power.Light) && playerLight.State.IsOn);
             yield return null;
             Assert.IsTrue(playerLight.State.IsOn);
@@ -226,8 +235,8 @@ namespace TiffanyGame.Tests
         {
             yield return null;
             if (playerLight.State.IsOn) playerLight.Toggle();
-            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello");
-            Assert.IsTrue(playerLight.TryFlash());
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: estallido");
+            Assert.IsTrue(playerLight.TryBurst());
             yield return null;
             Assert.IsFalse(playerLight.State.IsOn);
             Assert.IsTrue(spot.enabled);
@@ -237,7 +246,7 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator FlashInsideConeDoesNotReportStunForFlyingWitch()
+        public IEnumerator BurstDoesNotReportStunForFlyingWitch()
         {
             CreateWitch(Chapter.Cemetery);
             yield return null;
@@ -251,9 +260,9 @@ namespace TiffanyGame.Tests
             PlacePlayerNearWitch(5f, true);
             Assert.IsTrue(SoulLight.InCone(player.transform.position, player.transform.forward,
                 controller.transform.position, 11f, 35f));
-            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: estallido");
             float initialEnergy = soul.Energy.Current;
-            Assert.IsTrue(playerLight.TryFlash());
+            Assert.IsTrue(playerLight.TryBurst());
             Assert.AreEqual(initialEnergy - SoulCosts.Flash, soul.Energy.Current, 1e-4f);
             yield return null;
             Assert.AreEqual(WitchState.Flying, controller.Decision.State);
@@ -261,7 +270,7 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator FlashStunsOnlyGroundedWitchInFront(
+        public IEnumerator BurstStunsGroundedWitchWithinRadiusInAnyDirection(
             [ValueSource(nameof(GroundedFlashCases))] (float distance, bool facingWitch, bool stuns) testCase)
         {
             var (distance, facingWitch, stuns) = testCase;
@@ -279,9 +288,22 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchForm.Grounded, controller.Decision.Form);
             Assert.IsTrue(agent.enabled && agent.isOnNavMesh);
             PlacePlayerNearWitch(distance, facingWitch);
+            if (!facingWitch) Assert.IsFalse(SoulLight.InCone(player.transform.position, player.transform.forward,
+                controller.transform.position, spot.range, spot.spotAngle * 0.5f));
+            controller.enabled = false;
+            agent.isStopped = true;
+            playerLight.Toggle();
+            float energy = soul.Energy.Current;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: carga");
             LogAssert.Expect(LogType.Log, stuns
-                ? $"{GameInfo.LogPrefix} Destello, la bruja queda aturdida" : $"{GameInfo.LogPrefix} Destello");
-            Assert.IsTrue(playerLight.TryFlash());
+                ? $"{GameInfo.LogPrefix} Destello: estallido, la bruja queda aturdida" : $"{GameInfo.LogPrefix} Destello: estallido");
+            GameInput.LightHeldOverride = true;
+            deadline = Time.time + FlashCharge.ChargeSeconds + 1f;
+            while (!playerLight.State.IsFlashing && Time.time < deadline) yield return null;
+            Assert.IsTrue(playerLight.State.IsFlashing);
+            Assert.AreEqual(energy - SoulCosts.Flash, soul.Energy.Current, 1e-4f);
+            GameInput.LightHeldOverride = false;
+            controller.enabled = true;
             deadline = Time.time + 0.5f;
             while (Time.time < deadline)
             {
@@ -290,6 +312,56 @@ namespace TiffanyGame.Tests
                 yield return null;
             }
             Assert.AreEqual(stuns, controller.Decision.State == WitchState.Stunned);
+        }
+
+        [UnityTest]
+        public IEnumerator ReleasingChargeAtOneAndAHalfSecondsCostsNothingAndLowersOnlyVisual()
+        {
+            player.SetActive(false);
+            CreatePlayer(canHide: true, withBody: true);
+            yield return null;
+            playerLight.Toggle();
+            float energy = soul.Energy.Current;
+            Vector3 rootPosition = player.transform.position;
+            Vector3 visualPosition = playerLight.visual.localPosition;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: carga");
+            GameInput.LightHeldOverride = true;
+            yield return new WaitForSeconds(1.5f);
+            Assert.IsTrue(playerLight.Charge.Charging);
+            Assert.AreEqual(FlashCharge.ChargeMoveScale, player.GetComponent<PlayerController>().speedScale);
+            Assert.Greater(playerLight.visual.localPosition.y, visualPosition.y);
+            Assert.AreEqual(rootPosition, player.transform.position);
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: cancelado");
+            GameInput.LightHeldOverride = false;
+            yield return null;
+            Assert.IsFalse(playerLight.State.IsFlashing || playerLight.State.IsOn);
+            Assert.AreEqual(energy, soul.Energy.Current);
+            Assert.AreEqual(1f, player.GetComponent<PlayerController>().speedScale);
+            yield return new WaitForSeconds(FlashCharge.PulseFade + 0.1f);
+            Assert.AreEqual(visualPosition, playerLight.visual.localPosition);
+        }
+
+        [UnityTest]
+        public IEnumerator BurstPulseRisesAndFadesWithoutRepeatingWhileHeld()
+        {
+            yield return null;
+            playerLight.Toggle();
+            float energy = soul.Energy.Current;
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: carga");
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: estallido");
+            GameInput.LightHeldOverride = true;
+            float deadline = Time.time + FlashCharge.ChargeSeconds + 1f;
+            while (!playerLight.State.IsFlashing && Time.time < deadline) yield return null;
+            Assert.IsTrue(playerLight.State.IsFlashing);
+            yield return new WaitForSeconds(FlashCharge.PulseRise);
+            Assert.IsTrue(playerLight.burstLight.enabled);
+            Assert.Greater(playerLight.burstLight.range, FlashCharge.BurstRadius * 0.8f);
+            yield return new WaitForSeconds(FlashCharge.PulseFade + FlashCharge.ChargeSeconds);
+            Assert.IsFalse(playerLight.burstLight.enabled || playerLight.State.IsFlashing);
+            Assert.AreEqual(energy - SoulCosts.Flash, soul.Energy.Current, 1e-4f);
+            GameInput.LightHeldOverride = false;
+            yield return null;
+            Assert.IsFalse(playerLight.State.IsOn);
         }
 
         [UnityTest]
@@ -306,7 +378,7 @@ namespace TiffanyGame.Tests
             var stage = stop.AddComponent<LightCaptureStage>();
             stage.energy = 8f;
             stage.flash = true;
-            if (!clearBeforeFlash) LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello");
+            if (!clearBeforeFlash) LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: estallido");
             stage.Apply(player.transform);
             Assert.IsTrue(soul.Powers.Has(Power.Light));
             Assert.AreEqual(8f, soul.Energy.Current);
@@ -350,8 +422,8 @@ namespace TiffanyGame.Tests
             var blocker = AddBox("Flash Blocker", middle, size);
             Physics.SyncTransforms();
             float energy = soul.Energy.Current;
-            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello");
-            Assert.IsTrue(playerLight.TryFlash());
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: estallido");
+            Assert.IsTrue(playerLight.TryBurst());
             Assert.AreEqual(energy - SoulCosts.Flash, soul.Energy.Current, 1e-4f);
             Assert.IsTrue(playerLight.State.IsFlashing);
             yield return null;
@@ -365,8 +437,8 @@ namespace TiffanyGame.Tests
             playerLight.occluderMask = ~(1 << 8);
             Physics.SyncTransforms();
             soul.Energy.ResetTo(SoulEnergy.Max);
-            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello, la bruja queda aturdida");
-            Assert.IsTrue(playerLight.TryFlash());
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: estallido, la bruja queda aturdida");
+            Assert.IsTrue(playerLight.TryBurst());
             deadline = Time.time + 0.5f;
             while (Time.time < deadline && controller.Decision.State != WitchState.Stunned) yield return null;
             Assert.AreEqual(WitchState.Stunned, controller.Decision.State);
@@ -396,7 +468,7 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(playerLight.State.Visible || controller.playerLightOn);
             playerLight.Toggle();
             Assert.IsFalse(playerLight.State.IsOn);
-            Assert.IsFalse(playerLight.TryFlash());
+            Assert.IsFalse(playerLight.TryBurst());
             Assert.IsFalse(playerLight.State.Visible || controller.playerLightOn);
             Assert.AreEqual(energy, soul.Energy.Current);
             hiding.Leave();
@@ -405,6 +477,30 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(playerLight.baseGlow.enabled);
             playerLight.bodyRenderers[0].GetPropertyBlock(properties);
             Assert.AreEqual(1.5f, properties.GetFloat("_RimIntensity"));
+        }
+
+        [UnityTest]
+        public IEnumerator PauseFreezesPartialChargeAndDefersReleaseUntilResumed()
+        {
+            yield return null;
+            playerLight.Toggle();
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: carga");
+            GameInput.LightHeldOverride = true;
+            yield return new WaitForSeconds(1f);
+            Assert.IsTrue(playerLight.Charge.Charging);
+            Time.timeScale = 0f;
+            float progress = playerLight.Charge.Progress;
+            float energy = soul.Energy.Current;
+            GameInput.LightHeldOverride = false;
+            yield return new WaitForSecondsRealtime(0.2f);
+            Assert.AreEqual(progress, playerLight.Charge.Progress);
+            Assert.AreEqual(energy, soul.Energy.Current);
+            Assert.IsFalse(playerLight.State.IsFlashing);
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: cancelado");
+            Time.timeScale = 1f;
+            yield return null;
+            Assert.IsFalse(playerLight.Charge.Charging || playerLight.State.IsFlashing);
+            Assert.AreEqual(energy, soul.Energy.Current);
         }
 
         [UnityTest]
@@ -424,9 +520,8 @@ namespace TiffanyGame.Tests
 
         private void PressLightInput()
         {
-            GameInput.LightToggleOverride = true;
-            GameInput.FlashOverride = true;
-            Assert.IsTrue(GameInput.LightTogglePressed && GameInput.FlashPressed);
+            GameInput.LightHeldOverride = true;
+            Assert.IsTrue(GameInput.LightHeld);
             playerLight.SendMessage("Update");
             GameInput.ClearOverrides();
         }

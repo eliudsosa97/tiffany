@@ -1,7 +1,6 @@
 using System;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
 namespace TiffanyGame
 {
@@ -17,16 +16,10 @@ namespace TiffanyGame
         public Camera viewCamera;
         public float searchRadius = 1.5f;
 
-        readonly MemoryEcho echo = new MemoryEcho();
         MemoryProgress progress;
         SphereCollider[] spotColliders;
-        UniversalAdditionalCameraData cameraData;
-        bool echoApplied;
-        bool previousPostProcessing;
-        float previousWeight;
-
         public EchoPlayer ActiveEcho { get; private set; }
-        public bool IsEchoActive => echo.Active;
+        public bool IsEchoActive => ActiveEcho != null;
         public MemoryProgress Progress => progress;
         public event Action<int> Collected;
 
@@ -45,7 +38,6 @@ namespace TiffanyGame
                 spotColliders[i] = spot.GetComponent<SphereCollider>();
             }
             progress = new MemoryProgress(order);
-            if (viewCamera != null) cameraData = viewCamera.GetComponent<UniversalAdditionalCameraData>();
         }
 
         void Start() => GuideTyler();
@@ -58,13 +50,7 @@ namespace TiffanyGame
 
         void LateUpdate()
         {
-            if (ActiveEcho != null)
-            {
-                if (!ActiveEcho.IsPlaying) StopEcho();
-                else echo.Tick(ActiveEcho.Elapsed - echo.Elapsed);
-            }
-            else echo.Tick(Time.deltaTime);
-            ApplyEcho(echo.Weight, echo.Active);
+            if (ActiveEcho != null && !ActiveEcho.IsPlaying) ActiveEcho = null;
         }
 
         void CollectNearby()
@@ -118,6 +104,7 @@ namespace TiffanyGame
             {
                 GuideTyler();
                 if (tyler != null) tyler.Appear(transform.position);
+                if (gameInterface != null) gameInterface.ShowTylerNotice();
                 Debug.Log($"{GameInfo.LogPrefix} Tyler aparece");
                 Collected?.Invoke(memoryId);
                 return true;
@@ -126,10 +113,9 @@ namespace TiffanyGame
             if (hasPower) soul.Powers.Unlock(PowerSet.ForMemory(memoryId));
             if (RouteProgress.StartsReturn(memoryId) && soul.TryGetComponent<PlayerRespawn>(out var respawn)
                 && respawn.witch != null) respawn.witch.BeginReturn();
-            if (!gameInterface.MemoryFound(memoryId) && hasPower)
+            gameInterface.MemoryFound(memoryId, false);
+            if (!PlayEcho(found, hasPower) && hasPower)
                 gameInterface.ShowPowerNotice(PowerSet.ForMemory(memoryId));
-            if (!PlayEcho(found)) echo.Start();
-            ApplyEcho(echo.Weight, echo.Active);
             GuideTyler();
             Debug.Log($"{GameInfo.LogPrefix} Recuerdo {memoryId} encontrado");
             Collected?.Invoke(memoryId);
@@ -150,13 +136,11 @@ namespace TiffanyGame
             GuideTyler();
         }
 
-        public bool PlayEcho(MemorySpot spot)
+        public bool PlayEcho(MemorySpot spot, bool notify = false)
         {
             StopEcho();
-            if (spot == null || spot.echoPlayer == null || !spot.echoPlayer.Play()) return false;
+            if (spot == null || !gameInterface.ShowMemory(spot.memoryId, spot.echoPlayer, notify)) return false;
             ActiveEcho = spot.echoPlayer;
-            echo.Start(ActiveEcho.Data.duration);
-            ApplyEcho(echo.Weight, echo.Active);
             return true;
         }
 
@@ -164,8 +148,7 @@ namespace TiffanyGame
         {
             if (ActiveEcho != null) ActiveEcho.Stop();
             ActiveEcho = null;
-            echo.Stop();
-            ApplyEcho(0f, false);
+            if (gameInterface != null) gameInterface.StopMemory();
         }
 
         void GuideTyler()
@@ -178,27 +161,6 @@ namespace TiffanyGame
                 if (spots[i] == null || spots[i].memoryId != id) continue;
                 tyler.nextMemory = spots[i].transform;
                 return;
-            }
-        }
-
-        void ApplyEcho(float weight, bool active)
-        {
-            if (active && !echoApplied)
-            {
-                previousWeight = echoVolume != null ? echoVolume.weight : 0f;
-                previousPostProcessing = cameraData != null && cameraData.renderPostProcessing;
-                echoApplied = true;
-            }
-            if (active)
-            {
-                if (echoVolume != null) echoVolume.weight = weight;
-                if (cameraData != null) cameraData.renderPostProcessing = true;
-            }
-            else if (echoApplied)
-            {
-                if (echoVolume != null) echoVolume.weight = previousWeight;
-                if (cameraData != null) cameraData.renderPostProcessing = previousPostProcessing;
-                echoApplied = false;
             }
         }
 

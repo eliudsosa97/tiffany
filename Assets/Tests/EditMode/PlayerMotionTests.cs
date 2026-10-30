@@ -5,23 +5,22 @@ namespace TiffanyGame.Tests
 {
     public class PlayerMotionTests
     {
-        [TestCase(Gait.Slow, 1.1f)]
-        [TestCase(Gait.Walk, 2.2f)]
-        [TestCase(Gait.Run, 4f)]
+        [TestCase(Gait.Slow, 1.4f)]
+        [TestCase(Gait.Walk, 4f)]
+        [TestCase(Gait.Run, 5.5f)]
         public void SpeedMatchesDesign(Gait gait, float expected)
         {
             Assert.AreEqual(expected, PlayerMotion.Speed(gait), 1e-4f);
         }
 
         [TestCase(0f, Gait.Slow)]
-        [TestCase(0.55f, Gait.Slow)]
-        [TestCase(1.1f, Gait.Slow)]
-        [TestCase(1.64f, Gait.Slow)]
-        [TestCase(1.66f, Gait.Walk)]
-        [TestCase(2.2f, Gait.Walk)]
-        [TestCase(3.09f, Gait.Walk)]
-        [TestCase(3.11f, Gait.Run)]
-        [TestCase(4f, Gait.Run)]
+        [TestCase(1.4f, Gait.Slow)]
+        [TestCase(2.69f, Gait.Slow)]
+        [TestCase(2.71f, Gait.Walk)]
+        [TestCase(4f, Gait.Walk)]
+        [TestCase(4.74f, Gait.Walk)]
+        [TestCase(4.76f, Gait.Run)]
+        [TestCase(5.5f, Gait.Run)]
         [TestCase(PlayerMotion.SlowWalkThreshold, Gait.Walk)]
         [TestCase(PlayerMotion.WalkRunThreshold, Gait.Run)]
         public void GaitForSpeedUsesSpeedMidpoints(float speed, Gait expected)
@@ -29,22 +28,22 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(expected, PlayerMotion.GaitForSpeed(speed));
         }
 
-        [TestCase(0f, Gait.Slow)]
-        [TestCase(1f, Gait.Slow)]
-        [TestCase(PlayerMotion.SlowWalkThreshold, Gait.Walk)]
-        [TestCase(2.2f, Gait.Walk)]
-        [TestCase(3.5f, Gait.Run)]
-        public void NoiseGaitUsesMeasuredSpeedWhileAcceleratingAndBraking(float speed, Gait expected)
+        [TestCase(false, false, 8f)]
+        [TestCase(true, false, 4f)]
+        [TestCase(false, true, 16f)]
+        [TestCase(true, true, 16f)]
+        public void RequestedModeDeterminesNoiseRadius(bool slow, bool run, float radius)
         {
-            Assert.AreEqual(expected, PlayerMotion.NoiseGait(speed));
+            var gait = PlayerMotion.ResolveGait(slow, run);
+            Assert.AreEqual(radius, NoiseModel.StepRadius(GroundType.Gravel, gait, false));
         }
 
-        [TestCase(Gait.Walk, 0.5f, 2.2f)]
-        [TestCase(Gait.Run, 0.5f, 2.2f)]
-        [TestCase(Gait.Run, 1f, 4f)]
-        [TestCase(Gait.Walk, 1f, 2.2f)]
-        [TestCase(Gait.Slow, 1f, 1.1f)]
-        [TestCase(Gait.Walk, 0.25f, 1.1f)]
+        [TestCase(Gait.Walk, 0.5f, 4f)]
+        [TestCase(Gait.Run, 0.5f, 4f)]
+        [TestCase(Gait.Run, 1f, 5.5f)]
+        [TestCase(Gait.Walk, 1f, 4f)]
+        [TestCase(Gait.Slow, 1f, 1.4f)]
+        [TestCase(Gait.Walk, 0.25f, 2f)]
         [TestCase(Gait.Run, 0f, 0f)]
         public void AnalogSpeedWalksAtHalfStickAndRequiresRunForFullSpeed(Gait gait, float amount, float expected)
         {
@@ -52,7 +51,18 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void ReleasingStopsBetween150And250MillisecondsWithoutRebound(
+        public void NavigationInputReproducesRequestedSpeedWithoutOvershooting(
+            [Values(Gait.Slow, Gait.Walk, Gait.Run)] Gait gait)
+        {
+            for (int i = 0; i <= 100; i++)
+            {
+                float speed = PlayerMotion.Speed(gait) * i / 100f;
+                Assert.AreEqual(speed, PlayerMotion.TargetSpeed(PlayerMotion.InputForSpeed(speed, gait), gait), 1e-5f);
+            }
+        }
+
+        [Test]
+        public void ReleasingStopsBetween150And270MillisecondsWithoutRebound(
             [Values(30, 60, 144)] int fps, [Values(Gait.Slow, Gait.Walk, Gait.Run)] Gait gait)
         {
             var state = new PlayerMotion.VelocityState();
@@ -67,7 +77,7 @@ namespace TiffanyGame.Tests
                 previous = velocity.z;
                 if (velocity == Vector3.zero && stoppedAt == 0f) stoppedAt = frame * dt;
             }
-            Assert.That(stoppedAt, Is.InRange(0.15f, 0.25f));
+            Assert.That(stoppedAt, Is.InRange(0.15f, 0.27f));
         }
 
         [Test]
@@ -77,7 +87,7 @@ namespace TiffanyGame.Tests
             const float dt = 1f / 60f;
             float first = state.Advance(Vector3.forward * PlayerMotion.WalkSpeed, dt).z;
             float second = state.Advance(Vector3.forward * PlayerMotion.WalkSpeed, dt).z - first;
-            Assert.That(first, Is.InRange(0.01f, 0.25f));
+            Assert.That(first, Is.InRange(0.01f, 0.4f));
             Assert.Greater(second, first);
             foreach (float target in new[] { PlayerMotion.WalkSpeed, PlayerMotion.RunSpeed, PlayerMotion.SlowSpeed })
             {

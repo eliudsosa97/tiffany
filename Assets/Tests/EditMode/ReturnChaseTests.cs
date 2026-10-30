@@ -25,7 +25,7 @@ namespace TiffanyGame.Tests
             var decision = Step(9f);
             Assert.AreEqual(WitchState.Stalking, decision.State);
             Assert.AreEqual(WitchForm.Grounded, decision.Form);
-            Assert.AreEqual(2.5f, decision.Speed);
+            Assert.AreEqual(profile.FollowSpeed, decision.Speed);
             Assert.AreEqual(perception.PlayerPosition, decision.MoveTarget);
             Assert.IsFalse(decision.FireLit);
             Assert.IsFalse(decision.VoiceLure);
@@ -69,7 +69,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchState.Recovering, Step(0.79f).State);
             var follow = Step(0.02f);
             Assert.AreEqual(WitchState.Stalking, follow.State);
-            Assert.AreEqual(2.5f, follow.Speed);
+            Assert.AreEqual(profile.FollowSpeed, follow.Speed);
             Assert.AreEqual(perception.PlayerPosition, follow.MoveTarget);
         }
 
@@ -87,7 +87,7 @@ namespace TiffanyGame.Tests
             var follow = Step(0.02f);
             Assert.AreEqual(WitchState.Stalking, follow.State);
             Assert.AreEqual(WitchForm.Grounded, follow.Form);
-            Assert.AreEqual(2.5f, follow.Speed);
+            Assert.AreEqual(profile.FollowSpeed, follow.Speed);
             Assert.AreEqual(WitchState.WindUp, Step(0f).State);
         }
 

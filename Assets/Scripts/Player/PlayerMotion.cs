@@ -5,9 +5,9 @@ namespace TiffanyGame
 {
     public static class PlayerMotion
     {
-        public const float SlowSpeed = 1.1f;
-        public const float WalkSpeed = 2.2f;
-        public const float RunSpeed = 4f;
+        public const float SlowSpeed = 1.4f;
+        public const float WalkSpeed = 4f;
+        public const float RunSpeed = 5.5f;
         public const float SlowWalkThreshold = (SlowSpeed + WalkSpeed) / 2f;
         public const float WalkRunThreshold = (WalkSpeed + RunSpeed) / 2f;
         public const float SmoothTime = 0.07f;
@@ -35,14 +35,20 @@ namespace TiffanyGame
             return speed < WalkRunThreshold ? Gait.Walk : Gait.Run;
         }
 
-        public static Gait NoiseGait(float currentSpeed) => GaitForSpeed(currentSpeed);
-
         public static float TargetSpeed(float inputMagnitude, Gait gait)
         {
             float amount = Mathf.Clamp01(inputMagnitude);
             if (gait == Gait.Slow) return SlowSpeed * amount;
             float walk = WalkSpeed * Mathf.Clamp01(amount * 2f);
             return gait == Gait.Run ? walk + (RunSpeed - WalkSpeed) * Mathf.Clamp01(amount * 2f - 1f) : walk;
+        }
+
+        public static float InputForSpeed(float speed, Gait gait)
+        {
+            speed = Mathf.Clamp(speed, 0f, Speed(gait));
+            if (gait == Gait.Slow) return speed / SlowSpeed;
+            return speed <= WalkSpeed ? speed / WalkSpeed * 0.5f
+                : 0.5f + (speed - WalkSpeed) / (RunSpeed - WalkSpeed) * 0.5f;
         }
 
         public struct VelocityState

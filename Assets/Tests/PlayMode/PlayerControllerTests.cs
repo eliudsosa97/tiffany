@@ -14,7 +14,6 @@ namespace TiffanyGame.Tests
         GameObject cameraObject;
         GameObject player;
         List<StepNoise> steps;
-        List<float> stepSpeeds;
         Animator animator;
         GameObject wall;
         int steppedCount;
@@ -50,7 +49,6 @@ namespace TiffanyGame.Tests
 #endif
 
             steps = new List<StepNoise>();
-            stepSpeeds = new List<float>();
             NoiseBus.Published += RecordStep;
             GameInput.MoveOverride = Vector2.up;
             GameInput.SlowOverride = false;
@@ -78,8 +76,8 @@ namespace TiffanyGame.Tests
 
             yield return new WaitForSeconds(2f);
 
-            AssertSteps(7, 9, 8f);
-            Assert.That(player.transform.position.z, Is.InRange(3.5f, 4.6f));
+            AssertSteps(13, 16, 8f);
+            Assert.That(player.transform.position.z, Is.InRange(7f, 8.2f));
         }
 
         [UnityTest]
@@ -103,7 +101,7 @@ namespace TiffanyGame.Tests
 
             yield return new WaitForSeconds(2f);
 
-            AssertSteps(7, 9, NoiseModel.GravelRadius);
+            AssertSteps(13, 16, NoiseModel.GravelRadius);
         }
 
         [UnityTest]
@@ -121,14 +119,14 @@ namespace TiffanyGame.Tests
 
             Assert.That(Vector3.Dot(player.transform.forward, aimDirection), Is.GreaterThan(0.95f));
             Assert.That(Vector3.ProjectOnPlane(body.velocity, Vector3.up).magnitude,
-                Is.EqualTo(0.7f * 2.2f).Within(0.15f));
+                Is.EqualTo(0.7f * PlayerMotion.WalkSpeed).Within(0.15f));
             GameInput.RunOverride = true;
 
             yield return new WaitForSeconds(1f);
 
             Assert.That(Vector3.Dot(player.transform.forward, moveDirection), Is.GreaterThan(0.95f));
             Assert.That(Vector3.ProjectOnPlane(body.velocity, Vector3.up).magnitude,
-                Is.EqualTo(4f).Within(0.15f));
+                Is.EqualTo(PlayerMotion.RunSpeed).Within(0.15f));
         }
 
         [UnityTest]
@@ -139,8 +137,8 @@ namespace TiffanyGame.Tests
 
             yield return new WaitForSeconds(2f);
 
-            AssertSteps(7, 9, 8f);
-            Assert.That(player.transform.position.z, Is.InRange(3.5f, 4.6f));
+            AssertSteps(13, 16, 8f);
+            Assert.That(player.transform.position.z, Is.InRange(7f, 8.2f));
         }
 
         [UnityTest]
@@ -151,11 +149,11 @@ namespace TiffanyGame.Tests
 
             yield return new WaitForSeconds(2f);
 
-            AssertSteps(7, 9, 8f);
+            AssertSteps(13, 16, 8f);
         }
 
         [UnityTest]
-        public IEnumerator ReleasingStickUsesBrakingSpeedThenStops()
+        public IEnumerator ReleasingStickPreservesRequestedNoiseModeThenStops()
         {
             GameInput.MoveOverride = new Vector2(0f, 0.9f);
             yield return new WaitForSeconds(0.5f);
@@ -165,7 +163,7 @@ namespace TiffanyGame.Tests
             GameInput.MoveOverride = Vector2.zero;
 
             yield return new WaitForSeconds(0.1f);
-            Assert.AreEqual(Gait.Slow, controller.CurrentGait);
+            Assert.AreEqual(Gait.Walk, controller.CurrentGait);
             Assert.Less(controller.HorizontalSpeed, PlayerMotion.SlowSpeed);
             yield return new WaitForSeconds(0.15f);
             Assert.AreEqual(0f, controller.HorizontalSpeed, 0.01f);
@@ -179,7 +177,26 @@ namespace TiffanyGame.Tests
 
             yield return new WaitForSeconds(1.5f);
 
-            AssertSteps(6, 8, 16f);
+            AssertSteps(9, 11, 16f);
+        }
+
+        [UnityTest]
+        public IEnumerator SlidingAlongWallKeepsRequestedNoiseMode([Values(Gait.Slow, Gait.Walk, Gait.Run)] Gait gait)
+        {
+            wall = new GameObject("Wall");
+            wall.transform.position = new Vector3(0f, 1f, 1.5f);
+            wall.AddComponent<BoxCollider>().size = new Vector3(60f, 3f, 0.2f);
+            Physics.SyncTransforms();
+            GameInput.MoveOverride = new Vector2(0.05f, 1f).normalized;
+            GameInput.SlowOverride = gait == Gait.Slow;
+            GameInput.RunOverride = gait == Gait.Run;
+            yield return new WaitForSeconds(3f);
+            var movement = player.GetComponent<PlayerController>();
+            Assert.Less(movement.HorizontalSpeed, PlayerMotion.SlowSpeed);
+            Assert.AreEqual(gait, movement.CurrentGait);
+            Assert.Greater(steps.Count, 0);
+            foreach (var step in steps)
+                Assert.AreEqual(NoiseModel.StepRadius(GroundType.Dirt, gait, false), step.Radius, 1e-4f);
         }
 
         [UnityTest]
@@ -189,7 +206,7 @@ namespace TiffanyGame.Tests
 
             yield return new WaitForSeconds(2f);
 
-            AssertSteps(5, 6, 1f);
+            AssertSteps(7, 8, 1f);
         }
 
         [UnityTest]
@@ -217,7 +234,7 @@ namespace TiffanyGame.Tests
 
             Assert.Greater(steps.Count, 0);
             for (int i = 0; i < steps.Count; i++)
-                Assert.AreEqual(NoiseModel.StepRadius(GroundType.Branches, PlayerMotion.NoiseGait(stepSpeeds[i]), false),
+                Assert.AreEqual(NoiseModel.StepRadius(GroundType.Branches, Gait.Walk, false),
                     steps[i].Radius, 1e-4f);
         }
 
@@ -228,7 +245,7 @@ namespace TiffanyGame.Tests
             animator.speed = 0f;
             yield return new WaitForSeconds(0.5f);
             Assert.Greater(player.transform.position.z, 0.5f);
-            AssertSteps(1, 2, 2f);
+            AssertSteps(2, 4, 2f);
             int before = steps.Count;
             animator.speed = 1f;
             yield return new WaitForSeconds(0.5f);
@@ -267,7 +284,7 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(steps.Count, gaits.Count);
                 for (int i = 0; i < steps.Count; i++)
                 {
-                    var gait = PlayerMotion.NoiseGait(stepSpeeds[i]);
+                    var gait = Gait.Walk;
                     Assert.AreEqual(NoiseModel.StepRadius(GroundType.Dirt, gait, false), steps[i].Radius);
                     Assert.AreEqual(gait, gaits[i]);
                 }
@@ -327,7 +344,6 @@ namespace TiffanyGame.Tests
         void RecordStep(StepNoise noise)
         {
             steps.Add(noise);
-            stepSpeeds.Add(player.GetComponent<PlayerController>().HorizontalSpeed);
         }
 
         void AssertSteps(int minimum, int maximum, float radius)

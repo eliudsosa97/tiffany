@@ -18,7 +18,7 @@ namespace TiffanyGame.Tests
         {
             Time.timeScale = 1f;
             GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
-            GameInput.RunOverride = GameInput.SlowOverride = GameInput.InteractOverride = GameInput.FlashOverride = false;
+            GameInput.RunOverride = GameInput.SlowOverride = GameInput.InteractOverride = GameInput.LightHeldOverride = false;
             yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Single);
             yield return null;
             Object.FindAnyObjectByType<GameInterface>().StartGame();
