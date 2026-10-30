@@ -38,10 +38,11 @@ namespace TiffanyGame.EditorTools
                 poster.transform.SetParent(root, false);
                 poster.transform.localPosition = anchor.Position;
                 poster.transform.localRotation = anchor.Rotation;
-                poster.transform.localScale = new Vector3(PosterLayout.Width, PosterLayout.Height, 1f);
                 GameObjectUtility.SetStaticEditorFlags(poster, StaticEditorFlags.BatchingStatic);
                 var renderer = poster.GetComponent<MeshRenderer>();
                 renderer.sharedMaterial = materials[i % materials.Count];
+                var texture = renderer.sharedMaterial.mainTexture;
+                poster.transform.localScale = new Vector3(PosterLayout.Height * texture.width / texture.height, PosterLayout.Height, 1f);
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
                 renderer.lightProbeUsage = LightProbeUsage.Off;

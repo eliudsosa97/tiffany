@@ -35,10 +35,11 @@ def make_materials(entries):
 
 
 class Mesh:
-    def __init__(self, name, recalculate_normals=True):
+    def __init__(self, name, recalculate_normals=True, smooth=False):
         self.name = name
         self.vertices, self.faces, self.materials = [], [], []
         self.recalculate_normals = recalculate_normals
+        self.smooth = smooth
 
     def vertex(self, point):
         self.vertices.append(Vector(point))
@@ -107,7 +108,7 @@ def finish(meshes, materials, pivot=None):
             mesh.materials.append(materials[name])
         for polygon, name in zip(mesh.polygons, source.materials):
             polygon.material_index = names.index(name)
-            polygon.use_smooth = False
+            polygon.use_smooth = source.smooth
         if source.recalculate_normals:
             bm = bmesh.new()
             bm.from_mesh(mesh)
