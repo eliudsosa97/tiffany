@@ -20,6 +20,10 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/river_loop.wav` | [Ambiance_River_Flow_Small_Loop_Stereo.wav](https://freesound.org/s/479321/) | Nox_Sound | CC0 |
 | `Assets/Audio/Sfx/lake_loop.wav` | [Water_Lapping_River.wav](https://freesound.org/s/318064/) | ceich93 | CC0 |
 | `Assets/Audio/Sfx/heartbeat.wav` | [Heart Beating](https://freesound.org/s/273150/) | michorvath | CC0 |
+| `Assets/Audio/Sfx/forest_knock_1.wav` | [hit - wooden - tree 01.wav](https://freesound.org/s/406282/) | Anthousai | CC0 |
+| `Assets/Audio/Sfx/forest_knock_2.wav` | [hit - wooden - tree 02.wav](https://freesound.org/s/406281/) | Anthousai | CC0 |
+| `Assets/Audio/Sfx/forest_knock_3.wav` | [Low Pitch Knocking 1.wav](https://freesound.org/s/457742/) | Osiruswaltz | CC0 |
+| `Assets/Audio/Sfx/witch_murmur.wav` | [Demonic Voice](https://freesound.org/s/585799/) | colorsCrimsonTears | CC0 |
 | `Assets/Audio/Sfx/growl_1.wav` | [Animal Dog Growl 01](https://freesound.org/s/625500/) | abhisheky948 | CC0 |
 | `Assets/Audio/Sfx/growl_2.wav` | [growl](https://freesound.org/s/13789/) | wingz | CC0 |
 | `Assets/Audio/Sfx/whine.wav` | [Dog Whining](https://freesound.org/s/155321/) | Jace | CC0 |

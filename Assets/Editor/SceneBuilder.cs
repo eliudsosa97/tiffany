@@ -15,9 +15,9 @@ namespace TiffanyGame.EditorTools
     {
         public const string ScenePath = "Assets/Scenes/Main.unity";
         public const float FireBallHeight = 1.5f;
-        public const float NightFogStartDistance = 40f;
-        public const float NightFogEndDistance = 76f;
-        public static readonly Color NightFogColor = new Color(0.018f, 0.028f, 0.052f);
+        public const float NightFogStartDistance = NightView.FogStartDistance;
+        public const float NightFogEndDistance = NightView.FogEndDistance;
+        public static readonly Color NightFogColor = NightLook.Default.FogColor;
         const float SlopeAngle = 8f;
         const float PatchHeight = 0.1f;
         const float PatchElevation = 0.03f;
@@ -86,7 +86,7 @@ namespace TiffanyGame.EditorTools
             caughtCapture.wait = CaughtSequence.FireDuration + CaughtSequence.FadeOutDuration + CaughtSequence.FadeInDuration * 0.5f;
             caughtStop.AddComponent<CaughtCaptureStage>().spot = firstCandle;
             BuildWitchVoice(playerLight.witch, tyler);
-            BuildWitchAudio(playerLight.witch, player.transform);
+            BuildWitchAudio(playerLight.witch, player.transform, viewCamera);
             var save = player.gameObject.AddComponent<SaveGame>();
             save.soul = player.GetComponent<PlayerSoul>();
             save.memories = player.GetComponent<MemoryCollector>();
@@ -96,7 +96,8 @@ namespace TiffanyGame.EditorTools
             save.ending = route.GetChild(7).GetComponentInChildren<EndingController>();
             save.candles = Array.FindAll(world.GetComponentsInChildren<CandleSpot>(true), candle => candle.kind == CandleKind.Family);
             save.initialCandle = route.GetChild(0).GetComponentInChildren<CandleSpot>();
-            BuildTrailTension(route.GetComponent<WitchChapterTracker>(), playerLight.witch, tyler);
+            var trailTension = BuildTrailTension(route.GetComponent<WitchChapterTracker>(), playerLight.witch, tyler);
+            BuildUnseenForest(route.GetComponent<WitchChapterTracker>(), playerLight.witch, trailTension, viewCamera.transform);
             GroundLitterBuilder.Scatter(world);
             CharacterSilhouetteBuilder.Add(player.transform);
             CharacterSilhouetteBuilder.Add(tyler.figure.transform);
@@ -126,7 +127,7 @@ namespace TiffanyGame.EditorTools
         {
             RenderSettings.skybox = null;
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.025f, 0.035f, 0.065f);
+            RenderSettings.ambientLight = NightLook.Default.AmbientColor;
             RenderSettings.reflectionIntensity = 0f;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
@@ -140,7 +141,7 @@ namespace TiffanyGame.EditorTools
             var moon = new GameObject("Moon").AddComponent<Light>();
             moon.type = LightType.Directional;
             moon.color = new Color(0.7f, 0.8f, 1f);
-            moon.intensity = 0.32f;
+            moon.intensity = NightLook.Default.MoonIntensity;
             moon.shadows = LightShadows.Soft;
             moon.transform.rotation = Quaternion.Euler(35f, -30f, 0f);
             RenderSettings.sun = moon;
@@ -399,7 +400,7 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static void BuildWitchAudio(WitchController witch, Transform player)
+        static void BuildWitchAudio(WitchController witch, Transform player, Camera view)
         {
             var audio = witch.gameObject.AddComponent<WitchAudio>();
             audio.witch = witch;
@@ -418,6 +419,14 @@ namespace TiffanyGame.EditorTools
             (audio.land, audio.crack, audio.whoosh) = (LoadClip("witch_land"), LoadClip("witch_crack"), LoadClip("witch_whoosh"));
             audio.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
             audio.cackles = new[] { LoadClip("cackle_1"), LoadClip("cackle_2"), LoadClip("cackle_3") };
+            var presence = witch.gameObject.AddComponent<WitchPresence>();
+            (presence.witch, presence.player, presence.view) = (witch, player, view);
+            presence.source = witch.gameObject.AddComponent<AudioSource>();
+            (presence.source.playOnAwake, presence.source.loop, presence.source.volume) = (false, true, 0f);
+            presence.source.spatialBlend = 0.9f;
+            presence.source.rolloffMode = AudioRolloffMode.Linear;
+            (presence.source.minDistance, presence.source.maxDistance, presence.source.dopplerLevel) = (36f, 80f, 0f);
+            presence.source.clip = LoadClip("witch_murmur");
         }
 
         static TensionMusic BuildTensionMusic(WitchController witch, Transform player)
@@ -466,7 +475,7 @@ namespace TiffanyGame.EditorTools
             return audio;
         }
 
-        static void BuildTrailTension(WitchChapterTracker tracker, WitchController witch, TylerController tyler)
+        static TrailTension BuildTrailTension(WitchChapterTracker tracker, WitchController witch, TylerController tyler)
         {
             var root = new GameObject("Trail Tension");
             var tension = root.AddComponent<TrailTension>();
@@ -489,6 +498,25 @@ namespace TiffanyGame.EditorTools
             renderer.receiveShadows = false;
             decoy.SetActive(false);
             tension.skyDecoy = decoy.transform;
+            return tension;
+        }
+
+        static void BuildUnseenForest(WitchChapterTracker tracker, WitchController witch, TrailTension trailTension, Transform view)
+        {
+            var root = new GameObject("Unseen Forest");
+            var forest = root.AddComponent<UnseenForest>();
+            (forest.tracker, forest.witch, forest.trailTension, forest.view) = (tracker, witch, trailTension, view);
+            var child = new GameObject("Unseen Forest Source");
+            child.transform.SetParent(root.transform, false);
+            forest.source = child.AddComponent<AudioSource>();
+            forest.source.playOnAwake = false;
+            forest.source.spatialBlend = 0.85f;
+            forest.source.rolloffMode = AudioRolloffMode.Linear;
+            (forest.source.minDistance, forest.source.maxDistance, forest.source.dopplerLevel) = (36f, 80f, 0f);
+            forest.branches = new[] { LoadClip("step_branches_1"), LoadClip("step_branches_2"), LoadClip("step_branches_3"), LoadClip("step_branches_4") };
+            forest.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
+            forest.whispers = new[] { LoadClip("whisper_1"), LoadClip("whisper_2"), LoadClip("whisper_3") };
+            forest.knocks = new[] { LoadClip("forest_knock_1"), LoadClip("forest_knock_2"), LoadClip("forest_knock_3") };
         }
 
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
@@ -674,10 +702,10 @@ namespace TiffanyGame.EditorTools
 
             var body = ModelLibrary.Instantiate("tiffany-provisional", player.transform);
             body.transform.localPosition = controller.center - Vector3.up * (controller.height * 0.5f);
-            player.AddComponent<PlayerSoul>().startingPowers = new[] { Power.Light };
+            player.AddComponent<PlayerSoul>().startingPowers = Array.Empty<Power>();
             var spot = new GameObject("Soul Light").AddComponent<Light>();
             spot.transform.SetParent(player.transform, false);
-            spot.transform.localPosition = new Vector3(0f, 3.2f, -0.4f);
+            spot.transform.localPosition = new Vector3(0f, 0.85f, 0.12f);
             spot.type = LightType.Spot;
             spot.color = new Color(1f, 0.78f, 0.52f);
             spot.spotAngle = 84f;
@@ -686,18 +714,22 @@ namespace TiffanyGame.EditorTools
             spot.intensity = 45f;
             spot.shadows = LightShadows.Soft;
             spot.renderMode = LightRenderMode.ForcePixel;
-            var glow = CreatePrimitive("Hand Glow", PrimitiveType.Sphere, player.transform,
-                new Vector3(0f, 0.72f, 0.3f), Vector3.one * 0.16f,
-                GeneratedMaterials.Get("TiffanyHandGlow", new Color(1f, 0.9f, 0.65f), true));
-            UnityEngine.Object.DestroyImmediate(glow.GetComponent<SphereCollider>());
-            var glowRenderer = glow.GetComponent<Renderer>();
-            glowRenderer.shadowCastingMode = ShadowCastingMode.Off;
-            glowRenderer.receiveShadows = false;
+            var baseGlow = new GameObject("Soul Glow").AddComponent<Light>();
+            baseGlow.transform.SetParent(player.transform, false);
+            baseGlow.transform.localPosition = new Vector3(0f, 0.8f, 0f);
+            baseGlow.type = LightType.Point;
+            baseGlow.range = 2.5f;
+            baseGlow.color = new Color(0.75f, 0.85f, 1f);
+            baseGlow.intensity = 1.2f;
+            baseGlow.shadows = LightShadows.None;
+            baseGlow.renderMode = LightRenderMode.Auto;
             playerLight = player.AddComponent<PlayerLight>();
             playerLight.spot = spot;
-            playerLight.glow = glow.transform;
+            playerLight.baseGlow = baseGlow;
+            playerLight.bodyRenderers = body.GetComponentsInChildren<Renderer>(true);
+            playerLight.bodyGlowBoost = 1.2f;
             playerLight.startOn = false;
-            playerLight.pitch = 42f;
+            playerLight.pitch = 28f;
             var movement = player.AddComponent<PlayerController>();
             var animation = player.AddComponent<TiffanyAnimator>();
             animation.animator = body.GetComponent<Animator>();
@@ -739,10 +771,12 @@ namespace TiffanyGame.EditorTools
             cameraObject.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = false;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = RenderSettings.fogColor;
-            camera.farClipPlane = 80f;
+            camera.farClipPlane = NightView.FarClipPlane;
             cameraObject.AddComponent<AudioListener>();
             var follow = cameraObject.AddComponent<FollowCamera>();
             follow.target = player.transform;
+            follow.distance = NightView.CameraDistance;
+            follow.lookAhead = 0f;
             camera.fieldOfView = follow.fieldOfView;
             follow.Snap();
             player.viewCamera = camera;

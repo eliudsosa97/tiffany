@@ -194,6 +194,18 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(challenge.Kind == ChallengeKind.Candles || challenge.Kind == ChallengeKind.Hut, challenge.Completed);
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void LightRestoresOnlyWithItsMemoryWhenStartingWithoutPowers(bool remembered)
+        {
+            var data = Valid();
+            data.memories = remembered ? new[] { 1 } : System.Array.Empty<int>();
+            var powers = new PowerSet();
+            SaveRules.Apply(data, new MemoryProgress(MemoryIds), powers, System.Array.Empty<Power>(),
+                new RespawnPoint(Vector3.zero), new Candle(CandleKind.Family, Vector3.zero), new SoulEnergy(), Challenges());
+            Assert.AreEqual(remembered, powers.Has(Power.Light));
+        }
+
         [TestCase("-playthrough", true)]
         [TestCase("-autocapture", true)]
         [TestCase("-echodemo", true)]

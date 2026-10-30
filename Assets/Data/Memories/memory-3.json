@@ -1,0 +1,19 @@
+{
+  "id": 3,
+  "title": "Muñeca",
+  "place": "Vías del tren",
+  "drawings": [
+    {
+      "image": "memory-3-1",
+      "phrase": "Seguí las vías porque de ahí venía el ladrido."
+    },
+    {
+      "image": "memory-3-2",
+      "phrase": "Dejé a mi muñeca para que cuide el camino."
+    },
+    {
+      "image": "memory-3-3",
+      "phrase": "El ladrido de Tyler se oye raro."
+    }
+  ]
+}

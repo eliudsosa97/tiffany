@@ -1,0 +1,19 @@
+{
+  "id": 4,
+  "title": "Zapato",
+  "place": "Establo",
+  "drawings": [
+    {
+      "image": "memory-4-1",
+      "phrase": "El ladrido venía de adentro del establo."
+    },
+    {
+      "image": "memory-4-2",
+      "phrase": "Se me quedó el zapato en el lodo."
+    },
+    {
+      "image": "memory-4-3",
+      "phrase": "Ya tengo miedo. Quiero ir a mi casa."
+    }
+  ]
+}
