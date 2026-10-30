@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.UI;
 
 namespace TiffanyGame
 {
@@ -12,6 +13,7 @@ namespace TiffanyGame
         public GameObject figure;
         public Transform head;
         public AudioSource voice;
+        public Text reactionIcon;
         public AudioClip barkClip;
         public AudioClip whineClip;
         public AudioClip growlClip;
@@ -47,6 +49,9 @@ namespace TiffanyGame
 
         private Tyler brain;
         private readonly TylerLightShare lightShare = new TylerLightShare();
+        private readonly TylerCatchUp catchUp = new TylerCatchUp();
+        private readonly TylerIcon icon = new TylerIcon();
+        private Camera view;
         private bool heardMimic, heardForest;
         private Vector3? forestPoint;
         private NavMeshAgent agent;
@@ -72,6 +77,9 @@ namespace TiffanyGame
             brain = new Tyler();
             agent = GetComponent<NavMeshAgent>();
             agent.enabled = false;
+            agent.acceleration = 30f;
+            agent.angularSpeed = 720f;
+            agent.autoBraking = false;
             speedParameterHash = Animator.StringToHash(TylerAnimation.SpeedParameter);
             idleHash = Animator.StringToHash(TylerAnimation.Idle);
             walkHash = Animator.StringToHash(TylerAnimation.Walk);
@@ -84,18 +92,24 @@ namespace TiffanyGame
         private void OnEnable()
         {
             hasAnimationState = false;
+            catchUp.Reset();
+            icon.Reset();
             if (player != null) previousPlayerPosition = player.position;
         }
 
         private void OnDisable()
         {
             if (agent != null) agent.enabled = false;
+            catchUp.Reset();
+            icon.Reset();
+            if (reactionIcon != null) reactionIcon.enabled = false;
             lightShare.Tick(0f, shareMode, false, false, false, 0f, out _);
             SetSharingLight(false);
         }
 
         private void Start()
         {
+            view = Camera.main;
             if (player == null)
             {
                 var found = GameObject.FindGameObjectWithTag("Player");
@@ -112,7 +126,11 @@ namespace TiffanyGame
             transform.position = near - forward * TylerMotion.FollowDistance;
             gameObject.SetActive(true);
             EnableAgent();
-            if (voice != null && barkClip != null) voice.PlayOneShot(barkClip);
+            if (voice != null && barkClip != null)
+            {
+                voice.PlayOneShot(barkClip);
+                icon.Bark();
+            }
         }
 
         public void HearMimic()
@@ -143,6 +161,8 @@ namespace TiffanyGame
                 return;
             }
             Vector3 playerPosition = player.position;
+            if (catchUp.Tick(Time.deltaTime, Vector3.Distance(transform.position, playerPosition),
+                isActiveAndEnabled, witch != null && witch.chapter == Chapter.Return)) Recover(playerPosition);
             var inputs = TylerInputs.None;
             inputs.HeardMimic = heardMimic;
             inputs.HeardForest = heardForest;
@@ -202,7 +222,7 @@ namespace TiffanyGame
                 : TylerMotion.FollowTarget(transform.position, playerPosition);
             Vector3 offset = target - transform.position;
             offset.y = 0f;
-            agent.speed = TylerMotion.MoveSpeed(offset.magnitude);
+            agent.speed = TylerMotion.MoveSpeed(Vector3.Distance(transform.position, playerPosition));
             agent.isStopped = offset.sqrMagnitude == 0f;
             if (agent.isStopped) return;
             if (!hasDestination || WitchMotion.ShouldRepath(lastDestination, target, repathThreshold))
@@ -218,6 +238,49 @@ namespace TiffanyGame
                 GameInfo.LogPrefix + " Tyler no encontró NavMesh cerca.", out bool repositioned);
             if (repositioned) hasDestination = false;
             return ready;
+        }
+
+        private void Recover(Vector3 playerPosition)
+        {
+            Vector3 fallback = default;
+            bool found = false;
+            for (int i = 0; i < 3; i++)
+            {
+                Vector3 direction = i == 0 ? -player.forward : i == 1 ? player.right : -player.right;
+                Vector3 candidate = playerPosition + direction * (TylerMotion.FollowDistance + 1f);
+                if (!NavMesh.SamplePosition(candidate, out var hit, 1f, agent.areaMask)) continue;
+                if (!found) fallback = hit.position;
+                found = true;
+                Vector3 screen = view != null ? view.WorldToViewportPoint(hit.position + Vector3.up * 0.5f) : default;
+                if (view != null && screen.z > 0f && screen.x >= 0f && screen.x <= 1f
+                    && screen.y >= 0f && screen.y <= 1f) continue;
+                fallback = hit.position;
+                break;
+            }
+            if (!found) return;
+            agent.enabled = false;
+            transform.position = fallback;
+            EnableAgent();
+            hasDestination = false;
+            catchUp.Reset();
+            icon.Reset();
+            if (voice != null) voice.Stop();
+        }
+
+        private void LateUpdate()
+        {
+            string symbol = icon.Tick(Time.deltaTime, Reaction);
+            if (reactionIcon == null) return;
+            reactionIcon.enabled = symbol.Length > 0;
+            if (!reactionIcon.enabled) return;
+            if (reactionIcon.text != symbol)
+            {
+                reactionIcon.text = symbol;
+                reactionIcon.color = TylerIcon.TintFor(symbol);
+            }
+            Transform canvas = reactionIcon.transform.parent;
+            canvas.position = (head != null ? head.position : transform.position) + Vector3.up * 0.6f;
+            if (view != null) canvas.rotation = view.transform.rotation;
         }
 
         public void ShowReaction(TylerReaction reaction, Vector3 witchPosition)

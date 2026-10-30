@@ -240,6 +240,12 @@ namespace TiffanyGame
             RefreshLines();
         }
 
+        public void ShowTylerNotice()
+        {
+            notice.Enqueue(InterfaceTexts.TylerNotice, InterfaceTexts.PowerNoticeSeconds);
+            RefreshLines();
+        }
+
         public void ShowSubtitle(string text, float seconds)
         {
             (showingEcho ? echoSubtitle : subtitle).Enqueue(text, seconds);

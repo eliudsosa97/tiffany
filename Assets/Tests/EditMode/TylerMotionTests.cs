@@ -61,12 +61,96 @@ namespace TiffanyGame.Tests
         }
 
         [TestCase(0f, PlayerMotion.WalkSpeed)]
+        [TestCase(2f, PlayerMotion.WalkSpeed)]
         [TestCase(3.99f, PlayerMotion.WalkSpeed)]
         [TestCase(4f, PlayerMotion.WalkSpeed)]
-        [TestCase(4.01f, PlayerMotion.RunSpeed + TylerMotion.SpeedMargin)]
-        public void SpeedCatchesRunningPlayerBeyondFourMeters(float distance, float expected)
+        [TestCase(4.01f, PlayerMotion.WalkSpeed + (PlayerMotion.RunSpeed + 2.5f - PlayerMotion.WalkSpeed) * (0.01f / 8f))]
+        [TestCase(8f, (PlayerMotion.WalkSpeed + PlayerMotion.RunSpeed + 2.5f) / 2f)]
+        [TestCase(12f, PlayerMotion.RunSpeed + 2.5f)]
+        [TestCase(20f, PlayerMotion.RunSpeed + 2.5f)]
+        public void SpeedScalesContinuouslyToCatchRunningPlayer(float distance, float expected)
         {
-            Assert.AreEqual(expected, TylerMotion.MoveSpeed(distance));
+            Assert.That(TylerMotion.MoveSpeed(distance), Is.EqualTo(expected).Within(0.0001f));
+        }
+
+        [TestCase(22.01f, true, false, true)]
+        [TestCase(22f, true, false, false)]
+        [TestCase(7f, true, false, false)]
+        [TestCase(30f, false, false, false)]
+        [TestCase(30f, true, true, false)]
+        public void CatchUpOnlyRecoversActiveTylerOutsideReturn(float distance, bool active, bool returning, bool expected)
+        {
+            Assert.AreEqual(expected, new TylerCatchUp().Tick(0f, distance, active, returning));
+        }
+
+        [Test]
+        public void CatchUpRecoversAfterThreeSecondsWithoutProgress()
+        {
+            var recovery = new TylerCatchUp();
+            Assert.IsFalse(recovery.Tick(0f, 12f, true, false));
+            Assert.IsFalse(recovery.Tick(2.9f, 12f, true, false));
+            Assert.IsTrue(recovery.Tick(0.1f, 12f, true, false));
+        }
+
+        [TestCase(8f, true, false, false)]
+        [TestCase(8.01f, true, false, true)]
+        [TestCase(12f, false, false, false)]
+        [TestCase(12f, true, true, false)]
+        public void CatchUpCountsOnlyEligibleStallTime(float distance, bool active, bool returning, bool expected)
+        {
+            Assert.AreEqual(expected, new TylerCatchUp().Tick(3f, distance, active, returning));
+        }
+
+        [Test]
+        public void CatchUpResetsTimerWhenClosingAfterLosingGround()
+        {
+            var recovery = new TylerCatchUp();
+            recovery.Tick(0f, 12f, true, false);
+            Assert.IsFalse(recovery.Tick(2f, 14f, true, false));
+            Assert.IsFalse(recovery.Tick(1f, 13f, true, false));
+            Assert.IsFalse(recovery.Tick(2f, 13f, true, false));
+            Assert.IsTrue(recovery.Tick(1f, 13f, true, false));
+        }
+
+        [TestCase(7f, true, false)]
+        [TestCase(8f, true, false)]
+        [TestCase(10f, true, false)]
+        [TestCase(12f, false, false)]
+        [TestCase(12f, true, true)]
+        public void CatchUpResetsStallOnProgressOrWhenUnavailable(float distance, bool active, bool returning)
+        {
+            var recovery = new TylerCatchUp();
+            recovery.Tick(0f, 12f, true, false);
+            recovery.Tick(2f, 12f, true, false);
+            Assert.IsFalse(recovery.Tick(1f, distance, active, returning));
+            Assert.IsFalse(recovery.Tick(1f, 12f, true, false));
+        }
+
+        [TestCase(TylerReaction.None, "")]
+        [TestCase(TylerReaction.Growl, "!!")]
+        [TestCase(TylerReaction.Whine, "...")]
+        [TestCase(TylerReaction.Guide, "↑")]
+        public void IconMatchesReactionAndBarkExpires(TylerReaction reaction, string expected)
+        {
+            var icon = new TylerIcon();
+            Assert.AreEqual(expected, icon.Tick(0f, reaction));
+            icon.Bark();
+            Assert.AreEqual("!", icon.Tick(0f, reaction));
+            Assert.AreEqual("!", icon.Tick(1.1f, reaction));
+            Assert.AreEqual(expected, icon.Tick(0.11f, reaction));
+        }
+
+        [Test]
+        public void IconUsesDistinctReactionColorsAndCanCancelBark()
+        {
+            Assert.AreEqual(Color.yellow, TylerIcon.TintFor("!"));
+            Assert.AreEqual(Color.red, TylerIcon.TintFor("!!"));
+            Assert.AreEqual(new Color(0.65f, 0.8f, 1f), TylerIcon.TintFor("..."));
+            Assert.AreEqual(Color.white, TylerIcon.TintFor("↑"));
+            var icon = new TylerIcon();
+            icon.Bark();
+            icon.Reset();
+            Assert.AreEqual("", icon.Tick(0f, TylerReaction.None));
         }
 
         [TestCase(TylerReaction.None, false, false, false, false)]
