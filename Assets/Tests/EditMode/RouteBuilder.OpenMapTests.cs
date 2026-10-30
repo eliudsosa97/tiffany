@@ -114,6 +114,7 @@ namespace TiffanyGame.Tests
         {
             var fill = route.Find("Landscape/Forest Fill");
             var terrain = new RouteTerrain();
+            Vector3 candle = terrain.RampCandle();
             float farthest = 0f;
             int trees = 0;
             foreach (var cell in fill.GetComponentsInChildren<ForestInstances>())
@@ -144,6 +145,8 @@ namespace TiffanyGame.Tests
                     Assert.Greater(solid.radius, 0.25f);
                     var foot = cell.transform.localPosition + solid.center - Vector3.up * (solid.height * 0.5f);
                     Assert.AreEqual(terrain.GroundHeight(foot.x, foot.z), foot.y, 0.001f);
+                    Assert.Greater(Vector2.Distance(new Vector2(foot.x, foot.z), new Vector2(candle.x, candle.z)),
+                        CandleSite.DefaultRadius + solid.radius);
                 }
                 foreach (var canopy in cover)
                 {
@@ -161,7 +164,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void FillTreesCrowdTheRouteMoreThanTheFarForest()
+        public void FillTreesCrowdTheTwoToTenMeterBandMoreThanTheFarForest()
         {
             var terrain = new RouteTerrain();
             int nearTrees = 0, farTrees = 0, nearArea = 0, farArea = 0;
@@ -172,18 +175,26 @@ namespace TiffanyGame.Tests
                 foreach (var matrix in batch.matrices)
                 {
                     Vector3 point = cell.transform.localPosition + matrix.MultiplyPoint3x4(Vector3.zero);
-                    if (terrain.DistanceToRoute(point.x, point.z) <= RouteTerrain.WallDistance) nearTrees++;
-                    else farTrees++;
+                    Assert.IsFalse(terrain.IsWalkable(point.x, point.z));
+                    Assert.IsFalse(terrain.InClearingSquare(point.x, point.z));
+                    float distance = terrain.DistanceToRoute(point.x, point.z);
+                    if (distance >= 2f && distance <= 10f) nearTrees++;
+                    else if (distance >= 25f) farTrees++;
                 }
             }
             for (float z = terrain.Bounds.yMin + 2f; z < terrain.Bounds.yMax; z += 4f)
             for (float x = terrain.Bounds.xMin + 2f; x < terrain.Bounds.xMax; x += 4f)
             {
                 float distance = terrain.DistanceToRoute(x, z);
-                if (distance <= 2f || terrain.InClearingSquare(x, z)) continue;
-                if (distance <= RouteTerrain.WallDistance) nearArea++;
-                else farArea++;
+                if (terrain.InClearingSquare(x, z) || terrain.IsWater(x, z)
+                    || terrain.Town.Contains(new Vector2(x, z))) continue;
+                if (distance >= 2f && distance <= 10f) nearArea++;
+                else if (distance >= 25f) farArea++;
             }
+            Assert.Greater(nearTrees, 0);
+            Assert.Greater(farTrees, 0);
+            Assert.Greater(nearArea, 0);
+            Assert.Greater(farArea, 0);
             Assert.Greater((float)nearTrees / nearArea, (float)farTrees / farArea * 3f);
         }
 
