@@ -682,8 +682,8 @@ namespace TiffanyGame.EditorTools
             spot.color = new Color(1f, 0.78f, 0.52f);
             spot.spotAngle = 84f;
             spot.innerSpotAngle = 56f;
-            spot.range = 13f;
-            spot.intensity = 45f;
+            spot.range = 18f;
+            spot.intensity = 140f;
             spot.shadows = LightShadows.Soft;
             spot.renderMode = LightRenderMode.ForcePixel;
             var baseGlow = new GameObject("Soul Glow").AddComponent<Light>();
@@ -701,7 +701,7 @@ namespace TiffanyGame.EditorTools
             playerLight.bodyRenderers = body.GetComponentsInChildren<Renderer>(true);
             playerLight.bodyGlowBoost = 1.2f;
             playerLight.startOn = false;
-            playerLight.pitch = 28f;
+            playerLight.pitch = 7f;
             var movement = player.AddComponent<PlayerController>();
             var animation = player.AddComponent<TiffanyAnimator>();
             animation.animator = body.GetComponent<Animator>();
