@@ -66,7 +66,7 @@ namespace TiffanyGame
 
         // Provisional: lo aprueba Eliud.
         public const string EndingStory = "Su familia la vio una última vez. Tiffany pudo descansar.";
-        public const string EndingCredits = "Gracias por jugar\n\nEliud Sosa y Claudia.\n\nTyler, el perro del juego, es un perro real.";
+        public const string EndingCredits = "Gracias por jugar\n\nEliud Sosa y Claudia Morales.\n\nTyler, el perro del juego, es un perro real.";
 
         public static string PowerNotice(Power power)
         {

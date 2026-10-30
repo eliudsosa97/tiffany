@@ -60,7 +60,7 @@ Tiffany recorre ocho claros.
 | 8 | Casa de Tiffany | | Llega a la veladora del final. |
 
 En el cementerio Tiffany también recoge la pelota. Con ella aparece Tyler.
-Al recoger un recuerdo, el juego se detiene y muestra sus tres dibujos, hechos a mano por Claudia.
+Al recoger un recuerdo, el juego se detiene y muestra sus tres dibujos, hechos a mano por Claudia Morales.
 Cada dibujo pasa en 4 segundos, o antes con Espacio o Cruz. Suena el ladrido de esa noche y una música baja.
 Al terminar aparece el aviso del poder. Los dibujos se vuelven a ver en el cuaderno (Tab).
 Antes de la lápida, Tiffany solo brilla tenue. La luz se gana en la lápida y cada poder con su recuerdo.
@@ -226,6 +226,6 @@ Conserva los recuerdos y los poderes que obtuvo.
 
 ## 14. Equipo
 
-Eliud Sosa y Claudia.
+Eliud Sosa y Claudia Morales.
 
 Uso de IA: [USO-DE-IA.md](../USO-DE-IA.md). Créditos: [CREDITS.md](../CREDITS.md).
