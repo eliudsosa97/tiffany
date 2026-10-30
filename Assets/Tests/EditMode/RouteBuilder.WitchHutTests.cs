@@ -31,19 +31,28 @@ namespace TiffanyGame.Tests
             var expected = new Vector3(96f, 0f, 41.5f);
             expected.y = terrain.Height(expected.x, expected.z) + TerrainBuilder.FloorOffset;
             Assert.Less(Vector3.Distance(route.TransformPoint(expected), challenge.transform.position), 0.001f);
+            Assert.Less(Quaternion.Angle(route.rotation, challenge.transform.rotation), 0.001f);
             Assert.AreEqual(-6f, challenge.checkpoint.transform.localPosition.z);
+            foreach (var (point, x, z) in new[] { (challenge.Entry, 96f, 41.2f), (challenge.Exit, 96f, 46.2f),
+                (challenge.post.position, 96f, 43.7f), (challenge.checkpoint.transform.position, 95.2f, 35.5f),
+                (challenge.lure.transform.position, 102f, 43.7f),
+                (challenge.candles[0].transform.position, 95f, 36.5f), (challenge.candles[1].transform.position, 95f, 39.5f) })
+            {
+                var local = route.InverseTransformPoint(point);
+                Assert.AreEqual(x, local.x, 0.001f);
+                Assert.AreEqual(z, local.z, 0.001f);
+            }
         }
 
         [Test]
         public void WitchHutDoorAndFenceGapAreWalkableFromTheTrailAndWallsBlockAtChestHeight()
         {
             var clearing = route.GetChild(4);
+            var trail = RouteLayout.Path(3);
+            AssertHutWalkable(route.TransformPoint(trail[trail.Length - 1]), clearing.TransformPoint(Vector3.back * 3f));
             foreach (float x in new[] { -1.5f, 0f, 1.5f })
-            {
-                Vector3 start = clearing.TransformPoint(new Vector3(x, 0.9f, -3f));
-                Assert.IsFalse(Physics.CapsuleCast(start, start + Vector3.up * 0.35f, 0.25f,
-                    clearing.forward, 6f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore));
-            }
+                AssertHutWalkable(clearing.TransformPoint(new Vector3(x, 0f, -3f)),
+                    clearing.TransformPoint(new Vector3(x, 0f, 3f)));
             var hut = clearing.Find("Hut/witch-hut");
             foreach (string part in new[] { "HutWalls", "HutFence" })
             {
@@ -85,6 +94,13 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(hut.position.y, hide.HidePoint.y, 0.001f);
             foreach (var collider in colliders) Assert.IsFalse(collider.isTrigger);
             Assert.IsTrue(top.Raycast(new Ray(trigger.bounds.center + Vector3.up * 2f, Vector3.down), out _, 3f));
+            for (int i = 1; i < colliders.Length; i++) Assert.IsFalse(trigger.bounds.Intersects(colliders[i].bounds));
+            var spec = ModelLibrary.LoadSpec("witch-hut");
+            Vector3 entry = hut.TransformPoint(new Vector3(spec.hideVolume.center.x, 0f, spec.hideVolume.center.z + 1.05f));
+            AssertHutWalkable(route.GetChild(4).TransformPoint(new Vector3(0f, 0f, 3f)), entry);
+            AssertHutWalkable(entry, hide.HidePoint);
+            CollectionAssert.Contains(Physics.OverlapSphere(entry, player.GetComponent<PlayerHiding>().searchRadius,
+                Physics.AllLayers, QueryTriggerInteraction.Collide), trigger);
         }
 
         [Test]
@@ -122,14 +138,76 @@ namespace TiffanyGame.Tests
             var camera = new GameObject("Hut Dither Camera").AddComponent<FollowCamera>();
             camera.transform.SetParent(root.transform, false);
             camera.target = player.transform;
-            player.transform.position = roof.parent.position;
-            camera.Snap();
-            Vector3 focus = player.transform.position + Vector3.up * FollowCamera.ChestHeight;
-            var ray = new Ray(camera.transform.position, focus - camera.transform.position);
-            Assert.IsTrue(collider.Raycast(ray, out var hit, 40f));
-            Assert.Less(OcclusionVolume.KeepFraction(hit.point, camera.transform.position, focus,
-                FollowCamera.OcclusionRadius, FollowCamera.OcclusionSoftness, FollowCamera.OcclusionFocusMargin,
-                FollowCamera.OcclusionMinimumKeep, FollowCamera.OcclusionNearMargin), 1f);
+            Assert.AreEqual(36f, camera.distance);
+            Assert.AreEqual(24f, camera.fieldOfView);
+            Assert.AreEqual(42f, camera.pitch);
+            foreach (var target in new[] { roof.parent.position,
+                route.GetChild(4).Find("Memory Point").position, roof.parent.Find("Hide Hut Table").GetComponent<HideVolume>().HidePoint })
+            {
+                int roofHits = 0;
+                for (int yaw = 0; yaw < 360; yaw += 90)
+                {
+                    player.transform.SetPositionAndRotation(target, Quaternion.Euler(0f, yaw, 0f));
+                    camera.Snap();
+                    Vector3 focus = target + Vector3.up * FollowCamera.ChestHeight;
+                    var ray = new Ray(camera.transform.position, focus - camera.transform.position);
+                    if (collider.Raycast(ray, out _, 40f)) roofHits++;
+                    foreach (var renderer in roof.parent.GetComponentsInChildren<Renderer>(true))
+                        AssertHutSightline(renderer, ray, Vector3.Distance(camera.transform.position, focus),
+                            camera.transform.position, focus);
+                }
+                Assert.Greater(roofHits, 0, $"El techo no se interpone ante {target}.");
+            }
+        }
+
+        static void AssertHutWalkable(Vector3 start, Vector3 end)
+        {
+            Vector3 bottom = start + Vector3.up * (TerrainBuilder.FloorOffset + 0.251f);
+            Vector3 top = start + Vector3.up * (TerrainBuilder.FloorOffset + 0.951f);
+            Assert.IsFalse(Physics.CheckCapsule(bottom, top, 0.25f,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore), $"Inicio bloqueado: {start}");
+            Vector3 direction = end - start;
+            Assert.IsFalse(Physics.CapsuleCast(bottom, top, 0.25f, direction.normalized, out var hit,
+                direction.magnitude, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore),
+                $"Paso bloqueado por {hit.collider}: {start} -> {end}");
+        }
+
+        static void AssertHutSightline(Renderer renderer, Ray ray, float distance, Vector3 camera, Vector3 focus)
+        {
+            var probe = new GameObject("Hut Sightline Probe");
+            probe.transform.SetParent(renderer.transform, false);
+            try
+            {
+                var mesh = renderer.GetComponent<MeshFilter>().sharedMesh;
+                var collider = probe.AddComponent<MeshCollider>();
+                collider.sharedMesh = mesh;
+                Physics.SyncTransforms();
+                while (distance > 0f && collider.Raycast(ray, out var hit, distance))
+                {
+                    Assert.GreaterOrEqual(hit.triangleIndex, 0);
+                    long triangles = 0;
+                    Material material = null;
+                    for (int i = 0; i < mesh.subMeshCount; i++)
+                    {
+                        triangles += mesh.GetIndexCount(i) / 3;
+                        if (hit.triangleIndex >= triangles) continue;
+                        material = renderer.sharedMaterials[i];
+                        break;
+                    }
+                    Assert.IsNotNull(material, renderer.name);
+                    Assert.AreEqual(GeneratedMaterials.OcclusionShader, material.shader.name, renderer.name + "/" + material.name);
+                    Assert.Less(OcclusionVolume.KeepFraction(hit.point, camera, focus,
+                        FollowCamera.OcclusionRadius, FollowCamera.OcclusionSoftness, FollowCamera.OcclusionFocusMargin,
+                        FollowCamera.OcclusionMinimumKeep, FollowCamera.OcclusionNearMargin), 1f, renderer.name);
+                    float advance = hit.distance + 0.001f;
+                    ray.origin += ray.direction * advance;
+                    distance -= advance;
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(probe);
+            }
         }
     }
 }

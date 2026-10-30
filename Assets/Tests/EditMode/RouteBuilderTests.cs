@@ -35,12 +35,20 @@ namespace TiffanyGame.Tests
             player = girl.AddComponent<PlayerController>();
             storm = new GameObject("Storm").AddComponent<Storm>();
             storm.transform.SetParent(root.transform, false);
-            route = RouteBuilder.BuildRoute(root.transform, player, storm, out var memories, out skyRoute);
-            FogBuilder.Build(root.transform, route.GetComponent<WitchChapterTracker>());
-            var gameInterface = new GameObject("Interface", typeof(RectTransform)).AddComponent<GameInterface>();
-            gameInterface.transform.SetParent(root.transform, false);
-            MemoryBuilder.Build(root.transform, player, gameInterface, null, null, memories, TempFolder + "/EchoVolumeProfile.asset");
-            Physics.SyncTransforms();
+            try
+            {
+                route = RouteBuilder.BuildRoute(root.transform, player, storm, out var memories, out skyRoute);
+                FogBuilder.Build(root.transform, route.GetComponent<WitchChapterTracker>());
+                var gameInterface = new GameObject("Interface", typeof(RectTransform)).AddComponent<GameInterface>();
+                gameInterface.transform.SetParent(root.transform, false);
+                MemoryBuilder.Build(root.transform, player, gameInterface, null, null, memories, TempFolder + "/EchoVolumeProfile.asset");
+                Physics.SyncTransforms();
+            }
+            catch
+            {
+                TearDown();
+                throw;
+            }
         }
 
         [TearDown]
@@ -1175,9 +1183,12 @@ namespace TiffanyGame.Tests
                     {
                         if (!renderer.enabled || renderer.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
                         if (spot != null && renderer.transform.IsChildOf(spot.transform)) continue;
-                        if (index == 4 && renderer.transform.IsChildOf(clearing.Find("Hut"))
-                            && System.Array.TrueForAll(renderer.sharedMaterials, material => material.shader.name == GeneratedMaterials.OcclusionShader
-                                || material.name == "WitchHutEmber")) continue;
+                        if (index == 4 && renderer.transform.IsChildOf(clearing.Find("Hut")))
+                        {
+                            AssertHutSightline(renderer, ray, direction.magnitude, camera.transform.position,
+                                player.transform.position + Vector3.up * FollowCamera.ChestHeight);
+                            continue;
+                        }
                         bool blocked = renderer.TryGetComponent<MeshCollider>(out var mesh)
                             ? mesh.Raycast(ray, out _, direction.magnitude)
                             : renderer.bounds.IntersectRay(ray, out float distance) && distance < direction.magnitude;
