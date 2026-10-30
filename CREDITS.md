@@ -2,7 +2,7 @@
 
 ## Equipo
 
-Eliud Sosa y Claudia.
+Eliud Sosa y Claudia Morales.
 
 Tyler, el perro del juego, es un perro real.
 

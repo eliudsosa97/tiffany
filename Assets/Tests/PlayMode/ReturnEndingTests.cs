@@ -321,7 +321,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(EndingStage.Credits, ending.Rules.Stage);
             Assert.AreEqual(InterfaceTexts.EndingCredits, ui.endingText.text);
             StringAssert.Contains("Gracias por jugar", ui.endingText.text);
-            StringAssert.Contains("Eliud Sosa y Claudia.", ui.endingText.text);
+            StringAssert.Contains("Eliud Sosa y Claudia Morales.", ui.endingText.text);
             Assert.IsTrue(ui.IsFrozen);
             Assert.IsFalse(witch.gameObject.activeSelf);
             LogAssert.NoUnexpectedReceived();
