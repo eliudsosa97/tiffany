@@ -75,7 +75,9 @@ namespace TiffanyGame.Tests
             {
                 string building = clearing == route.GetChild(3) ? "Barn" : clearing == route.GetChild(4) ? "Hut" : "House";
                 foreach (var renderer in clearing.Find(building).GetComponentsInChildren<Renderer>(true))
-                    Assert.AreEqual(GeneratedMaterials.OcclusionShader, renderer.sharedMaterial.shader.name, renderer.name);
+                foreach (var material in renderer.sharedMaterials)
+                    Assert.AreEqual(material.name == "WitchHutEmber" ? "Universal Render Pipeline/Unlit"
+                        : GeneratedMaterials.OcclusionShader, material.shader.name, renderer.name);
                 foreach (var renderer in clearing.Find("Forest").GetComponentsInChildren<Renderer>(true))
                     Assert.AreEqual(GeneratedMaterials.OcclusionShader, renderer.sharedMaterial.shader.name, renderer.name);
                 Assert.AreEqual("Universal Render Pipeline/Tiffany Forest Ground",
@@ -509,29 +511,34 @@ namespace TiffanyGame.Tests
             surface.voxelSize = 0.1f;
             surface.BuildNavMesh();
             navMeshData = surface.navMeshData;
-            Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
+            Assert.AreEqual(6, route.GetComponentsInChildren<HideVolume>().Length);
             var path = new NavMeshPath();
             for (int i = 0; i < 5; i++)
             {
                 var clearing = route.GetChild(i);
                 var hides = clearing.GetComponentsInChildren<HideVolume>();
-                Assert.AreEqual(1, hides.Length, clearing.name);
-                var hide = hides[0];
-                Assert.IsTrue(hide.GetComponent<Collider>().isTrigger, hide.name);
-                Assert.AreEqual(LayerMask.NameToLayer("Ignore Raycast"), hide.gameObject.layer);
+                Assert.AreEqual(i == 4 ? 2 : 1, hides.Length, clearing.name);
                 Assert.IsTrue(NavMesh.SamplePosition(ClearingEntry(i),
                     out var start, 0.5f, NavMesh.AllAreas), clearing.name);
-                foreach (var entry in new[] { hide.HidePoint, hide.HidePoint + Vector3.left * 1.2f })
+                foreach (var hide in hides)
                 {
-                    Assert.IsTrue(NavMesh.SamplePosition(entry, out var end, 0.5f, NavMesh.AllAreas), hide.name);
-                    Assert.IsTrue(NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path), hide.name);
-                    Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, hide.name);
+                    Assert.IsTrue(hide.GetComponent<Collider>().isTrigger, hide.name);
+                    Assert.AreEqual(LayerMask.NameToLayer("Ignore Raycast"), hide.gameObject.layer);
+                    var entries = hide.name == "Hide Hut Table"
+                        ? new[] { hide.HidePoint + Vector3.forward * 1.25f, hide.HidePoint + Vector3.back * 1.25f }
+                        : new[] { hide.HidePoint, hide.HidePoint + Vector3.left * 1.2f };
+                    foreach (var entry in entries)
+                    {
+                        Assert.IsTrue(NavMesh.SamplePosition(entry, out var end, 0.5f, NavMesh.AllAreas), hide.name);
+                        Assert.IsTrue(NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path), hide.name);
+                        Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, hide.name);
+                    }
                 }
             }
         }
 
         [Test]
-        public void RouteUsesFewStaticRenderersSavedUrpMaterialsAndOnlyCandleLights()
+        public void RouteUsesFewStaticRenderersSavedUrpMaterialsAndOnlyCandleOrHearthLights()
         {
             Assert.Less(route.GetComponentsInChildren<Transform>(true).Length, 7000);
             var renderers = route.GetComponentsInChildren<Renderer>(true);
@@ -560,10 +567,10 @@ namespace TiffanyGame.Tests
             var graveMaterial = route.GetChild(0).Find("Tiffany Gravestone").GetComponentInChildren<Renderer>().sharedMaterial;
             Assert.AreEqual("Assets/Art/Kenney/Graveyard/Models/Textures/colormap.png", AssetDatabase.GetAssetPath(graveMaterial.GetTexture("_BaseMap")));
             var lights = route.GetComponentsInChildren<Light>(true);
-            Assert.AreEqual(17, lights.Length, "Ocho veladoras originales, la de la rampa, cuatro de recarga y cuatro para encender.");
+            Assert.AreEqual(18, lights.Length, "Diecisiete veladoras y el fogón del jacal.");
             foreach (var light in lights)
             {
-                Assert.IsNotNull(light.GetComponentInParent<CandleSpot>());
+                Assert.IsTrue(light.GetComponentInParent<CandleSpot>() != null || light.name == "Hearth Light");
                 Assert.AreEqual(LightShadows.None, light.shadows);
             }
         }
@@ -1099,7 +1106,7 @@ namespace TiffanyGame.Tests
                 if (collider.name == "Roof") roofCount++;
                 if (collider.name.StartsWith("Tank ")) tankCount++;
             }
-            Assert.AreEqual(3, roofCount);
+            Assert.AreEqual(2, roofCount);
             Assert.AreEqual(2, tankCount);
             foreach (var ground in route.GetComponentsInChildren<GroundSurface>())
             {
@@ -1110,7 +1117,6 @@ namespace TiffanyGame.Tests
         }
 
         [TestCase(3, "Barn", 5f)]
-        [TestCase(4, "Hut", 3.5f)]
         [TestCase(7, "House", 4f)]
         public void SheltersKeepFullWallCollisionsAndLowCameraFacingWalls(int index, string name, float height)
         {
@@ -1169,6 +1175,9 @@ namespace TiffanyGame.Tests
                     {
                         if (!renderer.enabled || renderer.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
                         if (spot != null && renderer.transform.IsChildOf(spot.transform)) continue;
+                        if (index == 4 && renderer.transform.IsChildOf(clearing.Find("Hut"))
+                            && System.Array.TrueForAll(renderer.sharedMaterials, material => material.shader.name == GeneratedMaterials.OcclusionShader
+                                || material.name == "WitchHutEmber")) continue;
                         bool blocked = renderer.TryGetComponent<MeshCollider>(out var mesh)
                             ? mesh.Raycast(ray, out _, direction.magnitude)
                             : renderer.bounds.IntersectRay(ray, out float distance) && distance < direction.magnitude;

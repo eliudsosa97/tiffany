@@ -193,8 +193,8 @@ namespace TiffanyGame.EditorTools
                     HidingBuilder.BuildHideSpot(clearing, "Hide Stable Crate", new Vector3(-4.5f, 0f, 7f), structure, PrimitiveType.Cube);
                     return new Vector3(0f, 0f, 3f);
                 case 4:
-                    BuildShelter("Hut", clearing, 8f, 8f, 3.5f, building);
                     HidingBuilder.BuildHideSpot(clearing, "Hide Hut Bush", new Vector3(-6f, 0f, 3f), bush);
+                    WitchHutBuilder.Build(clearing);
                     return new Vector3(0f, 0f, 3f);
                 case 6:
                     Part("Asphalt", clearing, new Vector3(0f, 0.02f, 0f), new Vector3(35f, 0.04f, 8f), GroundMaterials.For(GroundType.Slab))

@@ -1,0 +1,45 @@
+{
+  "seed": 514,
+  "pivot": [0, 0, 0],
+  "materials": [
+    { "name": "WitchHutAdobe", "color": "#8E7254", "smoothness": 0 },
+    { "name": "WitchHutPatch", "color": "#BA956A", "smoothness": 0 },
+    { "name": "WitchHutCrack", "color": "#34291F", "smoothness": 0 },
+    { "name": "WitchHutWood", "color": "#473526", "smoothness": 0 },
+    { "name": "WitchHutPalm", "color": "#827043", "smoothness": 0 },
+    { "name": "WitchHutPalmDry", "color": "#B4A06A", "smoothness": 0 },
+    { "name": "WitchHutStone", "color": "#575453", "smoothness": 0 },
+    { "name": "WitchHutEmber", "color": "#FF6322", "smoothness": 0, "unlit": true },
+    { "name": "WitchHutJar", "color": "#688676", "smoothness": 0.3 },
+    { "name": "WitchHutHerbs", "color": "#58603B", "smoothness": 0 },
+    { "name": "WitchHutDress", "color": "#B18187", "smoothness": 0 },
+    { "name": "WitchHutSweater", "color": "#718A98", "smoothness": 0 },
+    { "name": "WitchHutBone", "color": "#C7BC97", "smoothness": 0 }
+  ],
+  "walls": [
+    { "center": { "x": -4, "y": 1.2, "z": 0 }, "size": { "x": 0.4, "y": 2.4, "z": 8 } },
+    { "center": { "x": 4, "y": 1.2, "z": 0 }, "size": { "x": 0.4, "y": 2.4, "z": 8 } },
+    { "center": { "x": 0, "y": 1.2, "z": -4 }, "size": { "x": 8.4, "y": 2.4, "z": 0.4 } },
+    { "center": { "x": -3.1, "y": 1.2, "z": 4 }, "size": { "x": 2.2, "y": 2.4, "z": 0.4 } },
+    { "center": { "x": 3.1, "y": 1.2, "z": 4 }, "size": { "x": 2.2, "y": 2.4, "z": 0.4 } }
+  ],
+  "fence": [
+    { "center": { "x": -5, "y": 0.7, "z": 0 }, "size": { "x": 0.45, "y": 1.4, "z": 10.4 } },
+    { "center": { "x": 5, "y": 0.7, "z": 0 }, "size": { "x": 0.45, "y": 1.4, "z": 10.4 } },
+    { "center": { "x": 0, "y": 0.7, "z": -5 }, "size": { "x": 10.4, "y": 1.4, "z": 0.45 } },
+    { "center": { "x": -3.6, "y": 0.7, "z": 5 }, "size": { "x": 3.2, "y": 1.4, "z": 0.45 } },
+    { "center": { "x": 3.6, "y": 0.7, "z": 5 }, "size": { "x": 3.2, "y": 1.4, "z": 0.45 } }
+  ],
+  "table": [
+    { "center": { "x": -2.1, "y": 1.35, "z": -0.3 }, "size": { "x": 2.2, "y": 0.16, "z": 1.6 } },
+    { "center": { "x": -3.06, "y": 0.635, "z": -0.94 }, "size": { "x": 0.18, "y": 1.27, "z": 0.18 } },
+    { "center": { "x": -1.14, "y": 0.635, "z": -0.94 }, "size": { "x": 0.18, "y": 1.27, "z": 0.18 } },
+    { "center": { "x": -3.06, "y": 0.635, "z": 0.34 }, "size": { "x": 0.18, "y": 1.27, "z": 0.18 } },
+    { "center": { "x": -1.14, "y": 0.635, "z": 0.34 }, "size": { "x": 0.18, "y": 1.27, "z": 0.18 } }
+  ],
+  "hideVolume": {
+    "center": { "x": -2.1, "y": 0.6, "z": -0.3 },
+    "size": { "x": 1.6, "y": 1.2, "z": 1.05 }
+  },
+  "lightOffset": { "x": 2.3, "y": 0.55, "z": -1.8 }
+}
