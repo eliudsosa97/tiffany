@@ -542,9 +542,9 @@ namespace TiffanyGame.Tests
                 renderer => renderer.GetComponentInParent<HideVolume>() != null).Length);
             foreach (var renderer in renderers)
             {
-                Assert.AreEqual(!ChallengeBuilder.IsMoving(renderer.transform),
+                Assert.AreEqual(!ChallengeBuilder.IsMoving(renderer.transform) && renderer.GetComponentInParent<TrailBird>() == null,
                     GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic), renderer.name);
-                if (renderer.GetComponentInParent<PowerChallenge>() == null)
+                if (renderer.GetComponentInParent<PowerChallenge>() == null && renderer.GetComponentInParent<TrailBird>() == null)
                     Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic), renderer.name);
                 Assert.AreEqual(ShadowCastingMode.Off, renderer.shadowCastingMode, renderer.name);
                 Assert.IsNotEmpty(renderer.sharedMaterials, renderer.name);

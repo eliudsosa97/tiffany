@@ -45,6 +45,8 @@ namespace TiffanyGame.EditorTools
             public MaterialSpec[] materials;
             public ClipSpec[] clips;
             public CapsuleSpec trunkCollider;
+            public Vector3 perchOffset;
+            public float[] heightScales;
             public BoxSpec hideVolume;
             public BoneSpec[] skeleton;
             public ControllerSpec controller;
