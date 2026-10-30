@@ -816,8 +816,10 @@ namespace TiffanyGame.EditorTools
                     new Vector2(0.50f, 0.63f), new Vector2(0.97f, 0.73f)),
                 InterfaceText("Respawn", ui.pausePanel.transform, font, InterfaceTexts.PauseRespawn, 32,
                     new Vector2(0.50f, 0.49f), new Vector2(0.97f, 0.59f)),
+                InterfaceText("Fullscreen", ui.pausePanel.transform, font, InterfaceTexts.PauseFullscreen, 32,
+                    new Vector2(0.50f, 0.35f), new Vector2(0.97f, 0.45f)),
                 InterfaceText("Restart", ui.pausePanel.transform, font, InterfaceTexts.PauseRestart, 32,
-                    new Vector2(0.50f, 0.35f), new Vector2(0.97f, 0.45f))
+                    new Vector2(0.50f, 0.21f), new Vector2(0.97f, 0.31f))
             };
             InterfaceText("Hint", ui.pausePanel.transform, font,
                 InterfaceTexts.ControllerText(InterfaceTexts.PauseHint, GameInterface.HasControllerSymbols(font)), 24,

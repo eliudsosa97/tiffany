@@ -203,5 +203,19 @@ namespace TiffanyGame.Tests
             Physics.SyncTransforms();
             character.enabled = true;
         }
+
+        [UnityTest]
+        public IEnumerator ReturningToTheCheckpointEndsVanish()
+        {
+            var vanish = soul.gameObject.AddComponent<VanishPower>();
+            vanish.witch = respawn.witch;
+            soul.Powers.Unlock(Power.Vanish);
+            yield return null;
+            Assert.IsTrue(vanish.TryStart());
+            respawn.ReturnToCheckpoint();
+            yield return null;
+            Assert.IsFalse(vanish.State.IsActive);
+            Assert.IsFalse(respawn.witch.playerVanished);
+        }
     }
 }

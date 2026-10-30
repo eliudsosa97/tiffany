@@ -1,5 +1,7 @@
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace TiffanyGame.Tests
 {
@@ -35,23 +37,55 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void NavigationWrapsAcrossAllThreeOptions()
+        public void NavigationWrapsAcrossAllFourOptions()
         {
             var menu = new PauseMenu();
             Assert.AreEqual(0, menu.Index);
             menu.Previous();
-            Assert.AreEqual(2, menu.Index);
-            menu.Next();
-            Assert.AreEqual(0, menu.Index);
-            menu.Next();
-            Assert.AreEqual(1, menu.Index);
-            menu.Next();
-            Assert.AreEqual(2, menu.Index);
+            Assert.AreEqual(3, menu.Index);
+            for (int i = 0; i < PauseMenu.OptionCount; i++)
+            {
+                menu.Next();
+                Assert.AreEqual(i, menu.Index);
+            }
+        }
+
+        [Test]
+        public void FullscreenSubmissionKeepsPauseOpenAndOptionsOrdered()
+        {
+            GameInterface ui = null;
+            Gamepad pad = null;
+            var devices = new DualSenseInputTests();
+            try
+            {
+                devices.SetUp();
+                pad = InputSystem.AddDevice<Gamepad>();
+                InputSystem.Update();
+                ui = (GameInterface)typeof(EditorTools.SceneBuilder).GetMethod("BuildInterface", BindingFlags.Static | BindingFlags.NonPublic)
+                    .Invoke(null, new object[] { null });
+                ui.SendMessage("Awake");
+                ui.StartGame();
+                ui.TogglePause();
+                CollectionAssert.AreEqual(new[] { InterfaceTexts.PauseResume, InterfaceTexts.PauseRespawn,
+                    InterfaceTexts.PauseFullscreen, InterfaceTexts.PauseRestart }, System.Array.ConvertAll(ui.pauseOptions, option => option.text));
+                var menu = (PauseMenu)typeof(GameInterface).GetField("pauseMenu", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ui);
+                menu.Select(2);
+                GameInputTests.Press(Keyboard.current.enterKey);
+                ui.SendMessage("Update");
+                Assert.AreEqual((InterfaceScreen.Paused, true, 0f, true), (ui.Screen, ui.IsFrozen, Time.timeScale, AudioListener.pause));
+            }
+            finally
+            {
+                if (ui != null) { ui.SendMessage("OnDisable"); Object.DestroyImmediate(ui.gameObject); }
+                if (pad != null) InputSystem.RemoveDevice(pad);
+                devices.TearDown();
+            }
         }
 
         [TestCase(0, PauseAction.Resume)]
         [TestCase(1, PauseAction.Respawn)]
-        public void ResumeAndRespawnSubmitImmediately(int index, PauseAction action)
+        [TestCase(2, PauseAction.ToggleFullscreen)]
+        public void NonRestartOptionsSubmitImmediately(int index, PauseAction action)
         {
             var menu = new PauseMenu();
             menu.Select(index);
@@ -63,10 +97,10 @@ namespace TiffanyGame.Tests
         public void RestartRequiresTwoSubmissionsEvenWhenHoverSelectsItAgain()
         {
             var menu = new PauseMenu();
-            menu.Select(2);
+            menu.Select(3);
             Assert.AreEqual(PauseAction.None, menu.Submit());
             Assert.IsTrue(menu.ConfirmingRestart);
-            menu.Select(2);
+            menu.Select(3);
             Assert.AreEqual(PauseAction.Restart, menu.Submit());
             Assert.IsFalse(menu.ConfirmingRestart);
         }
@@ -78,7 +112,7 @@ namespace TiffanyGame.Tests
         public void MovingOrClosingCancelsRestartConfirmation(string input)
         {
             var menu = new PauseMenu();
-            menu.Select(2);
+            menu.Select(3);
             menu.Submit();
             if (input == "next") menu.Next();
             else if (input == "previous") menu.Previous();
@@ -86,7 +120,7 @@ namespace TiffanyGame.Tests
             else menu.Reset();
             Assert.IsFalse(menu.ConfirmingRestart);
             if (input == "close") Assert.AreEqual(0, menu.Index);
-            menu.Select(2);
+            menu.Select(3);
             Assert.AreEqual(PauseAction.None, menu.Submit());
         }
     }

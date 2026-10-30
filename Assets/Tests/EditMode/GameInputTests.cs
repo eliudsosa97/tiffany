@@ -10,7 +10,7 @@ namespace TiffanyGame.Tests
     {
         const float Tolerance = 0.00001f;
 
-        static void Press(ButtonControl control)
+        internal static void Press(ButtonControl control)
         {
             using (StateEvent.From(control.device, out var eventPtr))
             {

@@ -12,9 +12,10 @@ namespace TiffanyGame.Tests
             sequence.Begin();
             sequence.Tick(elapsed);
             sequence.Cancel();
-            sequence.Tick(10f);
             Assert.IsFalse(sequence.Active || sequence.RespawnDue);
             Assert.AreEqual(0f, sequence.Overlay);
+            sequence.Tick(CaughtSequence.FireDuration + CaughtSequence.FadeOutDuration);
+            Assert.IsFalse(sequence.Active || sequence.RespawnDue);
         }
 
         [Test]

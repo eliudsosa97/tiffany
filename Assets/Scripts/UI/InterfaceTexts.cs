@@ -24,6 +24,7 @@ namespace TiffanyGame
         public const string PauseHint = "W/S, flechas o stick/cruceta: elegir\nEspacio / Enter / ✕ / clic: aceptar · Esc / P / Options: seguir";
         public const string PauseResume = "Seguir";
         public const string PauseRespawn = "Volver a la última veladora";
+        public const string PauseFullscreen = "Pantalla completa";
         public const string PauseRestart = "Reiniciar partida";
         public const string PauseConfirmRestart = "¿Reiniciar? Se pierde la partida";
         public const string NotebookEmpty = "Aún no recuerdas nada";

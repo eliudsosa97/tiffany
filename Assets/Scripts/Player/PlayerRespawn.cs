@@ -73,6 +73,7 @@ namespace TiffanyGame
         public void ReturnToCheckpoint()
         {
             sequence.Cancel();
+            if (TryGetComponent(out VanishPower vanish)) vanish.Cancel();
             if (hiding != null && hiding.Hidden) hiding.Leave();
             RespawnAtCheckpoint();
             if (movement != null) movement.enabled = true;

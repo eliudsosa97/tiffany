@@ -206,6 +206,7 @@ namespace TiffanyGame.Tests
         [TestCase("space", 2)]
         [TestCase("enter", 2)]
         [TestCase("buttonSouth", 2)]
+        [TestCase("leftButton", 2)]
         [TestCase("escape", 3)]
         [TestCase("p", 3)]
         [TestCase("start", 3)]
@@ -214,9 +215,27 @@ namespace TiffanyGame.Tests
             pad = InputSystem.AddDevice<Gamepad>();
             NextFrame();
             if (input.StartsWith("leftStick")) ChangeStick(pad.leftStick, input.EndsWith("up") ? Vector2.up : Vector2.down);
-            else InputState.Change(keyboard.TryGetChildControl<ButtonControl>(input) ?? pad.GetChildControl<ButtonControl>(input), 1f);
+            else GameInputTests.Press(keyboard.TryGetChildControl<ButtonControl>(input)
+                ?? pad.TryGetChildControl<ButtonControl>(input) ?? mouse.GetChildControl<ButtonControl>(input));
             Assert.IsTrue(action == 0 ? GameInput.TitlePreviousPressed : action == 1 ? GameInput.TitleNextPressed
                 : action == 2 ? GameInput.StartPressed : GameInput.PausePressed);
+        }
+
+        [TestCase(Key.LeftCommand, Key.F, true, false, false)]
+        [TestCase(Key.RightCommand, Key.F, true, false, false)]
+        [TestCase(Key.LeftAlt, Key.Enter, true, false, false)]
+        [TestCase(Key.RightAlt, Key.Enter, true, false, false)]
+        [TestCase(Key.None, Key.F, false, true, false)]
+        [TestCase(Key.None, Key.Enter, false, false, true)]
+        public void FullscreenShortcutsDoNotFlashOrSubmit(Key modifier, Key key, bool fullscreen, bool flash, bool submit)
+        {
+            pad = InputSystem.AddDevice<Gamepad>();
+            InputSystem.Update();
+            if (modifier != Key.None) GameInputTests.Press(keyboard[modifier]);
+            GameInputTests.Press(keyboard[key]);
+            Assert.AreEqual((fullscreen, flash, submit), (GameInput.FullscreenTogglePressed, GameInput.FlashPressed, GameInput.StartPressed));
+            InputSystem.Update();
+            Assert.IsFalse(GameInput.FullscreenTogglePressed || GameInput.FlashPressed || GameInput.StartPressed);
         }
 
         static bool ReadAction(int action) => action switch

@@ -163,7 +163,7 @@ namespace TiffanyGame
             {
                 bool clicked = Mouse.current?.leftButton.wasPressedThisFrame == true;
                 if (clicked) ConsumePointerPress();
-                return KeyPressed(Key.Space) || KeyPressed(Key.Enter) || clicked ||
+                return KeyPressed(Key.Space) || (KeyPressed(Key.Enter) && !FullscreenTogglePressed) || clicked ||
                     Gamepad.current?.startButton.wasPressedThisFrame == true ||
                     Gamepad.current?.buttonSouth.wasPressedThisFrame == true;
             }
@@ -187,6 +187,17 @@ namespace TiffanyGame
             || Gamepad.current?.leftStick.down.wasPressedThisFrame == true;
 
         public static bool NotebookPressed => KeyPressed(Key.Tab) || Gamepad.current?.selectButton.wasPressedThisFrame == true;
+
+        public static bool FullscreenTogglePressed
+        {
+            get
+            {
+                var keyboard = Keyboard.current;
+                return keyboard != null &&
+                    ((keyboard.fKey.wasPressedThisFrame && CommandHeld(keyboard)) ||
+                    (keyboard.enterKey.wasPressedThisFrame && (keyboard.leftAltKey.isPressed || keyboard.rightAltKey.isPressed)));
+            }
+        }
 
         public static bool PausePressed => KeyPressed(Key.Escape) || KeyPressed(Key.P) ||
             Gamepad.current?.startButton.wasPressedThisFrame == true;

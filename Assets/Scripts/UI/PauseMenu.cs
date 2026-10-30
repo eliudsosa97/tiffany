@@ -1,10 +1,10 @@
 namespace TiffanyGame
 {
-    public enum PauseAction { None, Resume, Respawn, Restart }
+    public enum PauseAction { None, Resume, Respawn, ToggleFullscreen, Restart }
 
     public sealed class PauseMenu
     {
-        public const int OptionCount = 3;
+        public const int OptionCount = 4;
         public int Index { get; private set; }
         public bool ConfirmingRestart { get; private set; }
 
@@ -28,6 +28,7 @@ namespace TiffanyGame
         {
             if (Index == 0) return PauseAction.Resume;
             if (Index == 1) return PauseAction.Respawn;
+            if (Index == 2) return PauseAction.ToggleFullscreen;
             ConfirmingRestart = !ConfirmingRestart;
             return ConfirmingRestart ? PauseAction.None : PauseAction.Restart;
         }

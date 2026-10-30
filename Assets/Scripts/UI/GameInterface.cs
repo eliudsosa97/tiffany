@@ -284,6 +284,7 @@ namespace TiffanyGame
             if (GameInput.StartPressed && (!clicked || hit))
             {
                 var action = pauseMenu.Submit();
+                if (action == PauseAction.ToggleFullscreen) UnityEngine.Screen.fullScreen = !UnityEngine.Screen.fullScreen;
                 if (action == PauseAction.Restart) { NewGame(); return; }
                 if (action == PauseAction.Respawn) playerRespawn.ReturnToCheckpoint();
                 if (action == PauseAction.Resume || action == PauseAction.Respawn)
@@ -300,7 +301,7 @@ namespace TiffanyGame
             for (int i = 0; i < pauseOptions.Length; i++)
                 pauseOptions[i].color = i == pauseMenu.Index ? new Color(1f, 0.87f, 0.63f) : Color.gray;
             if (pauseOptions.Length == PauseMenu.OptionCount)
-                pauseOptions[2].text = pauseMenu.ConfirmingRestart ? InterfaceTexts.PauseConfirmRestart : InterfaceTexts.PauseRestart;
+                pauseOptions[3].text = pauseMenu.ConfirmingRestart ? InterfaceTexts.PauseConfirmRestart : InterfaceTexts.PauseRestart;
         }
 
         public void TogglePause()
