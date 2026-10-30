@@ -92,7 +92,7 @@ namespace TiffanyGame
 
         public void PlaceAtCheckpoint()
         {
-            Vector3 position = respawn.Position + Vector3.back * sideOffset;
+            Vector3 position = respawn.ArrivalPosition(sideOffset);
             bool wasEnabled = character != null && character.enabled;
             if (character != null) character.enabled = false;
             if (Physics.Raycast(position + Vector3.up * 3f, Vector3.down, out var hit,

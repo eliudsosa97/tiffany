@@ -16,6 +16,15 @@ namespace TiffanyGame
             Position = start;
         }
 
+        public Vector3 ArrivalPosition(float sideOffset) => Position + Vector3.back * sideOffset;
+
+        public bool IsAtArrival(Vector3 position, float sideOffset, float radius)
+        {
+            Vector3 offset = position - ArrivalPosition(sideOffset);
+            offset.y = 0f;
+            return offset.sqrMagnitude < radius * radius;
+        }
+
         public void Touch(Candle candle, float radius = CandleSite.DefaultRadius)
         {
             if (candle != null && candle.Kind == CandleKind.Family)

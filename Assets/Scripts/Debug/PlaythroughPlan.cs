@@ -47,6 +47,7 @@ namespace TiffanyGame
         public const float StuckSeconds = 3f;
         public const float ProgressDistance = 1f;
         public const float ReturnDepartureClearance = 12f;
+        public const int MaxRespawnRestarts = 3;
         const float PressInterval = 0.3f;
         readonly PlaythroughMilestone[] milestones;
         readonly List<string> missingContent = new List<string>();
@@ -54,6 +55,7 @@ namespace TiffanyGame
         Vector3 progressPosition;
         float stalledSeconds, pressCooldown;
         bool trackingMovement, forceRequested, wasRespawning, repathAfterRespawn;
+        int respawnRestarts;
 
         public int CompletedCount { get; private set; }
         public int Count => milestones.Length;
@@ -119,24 +121,30 @@ namespace TiffanyGame
             MilestoneElapsed += dt;
             if (wasRespawning && !observation.Respawning)
             {
-                MilestoneElapsed = stalledSeconds = 0f;
+                if (respawnRestarts < MaxRespawnRestarts)
+                {
+                    MilestoneElapsed = 0f;
+                    respawnRestarts++;
+                }
+                stalledSeconds = 0f;
                 trackingMovement = false;
                 repathAfterRespawn = true;
             }
             wasRespawning = observation.Respawning;
             pressCooldown -= dt;
-            if (ChallengeIndex(Current) >= 0 && (observation.Respawning || observation.RetryChallenge))
-            {
-                int challenge = ChallengeIndex(Current);
-                while (CompletedCount > 0 && ChallengeIndex(milestones[CompletedCount - 1]) == challenge) CompletedCount--;
-                MilestoneElapsed = stalledSeconds = pressCooldown = 0f;
-                trackingMovement = false;
-                return default;
-            }
             float milestoneTimeout = Current == PlaythroughMilestone.LakeCandle ? LakeCandleTimeout : timeout;
             if (MilestoneElapsed >= milestoneTimeout)
             {
                 Fail("tiempo límite agotado");
+                return default;
+            }
+            if (ChallengeIndex(Current) >= 0 && (observation.Respawning || observation.RetryChallenge))
+            {
+                int challenge = ChallengeIndex(Current);
+                while (CompletedCount > 0 && ChallengeIndex(milestones[CompletedCount - 1]) == challenge) CompletedCount--;
+                if (!observation.Respawning && respawnRestarts < MaxRespawnRestarts) MilestoneElapsed = 0f;
+                stalledSeconds = pressCooldown = 0f;
+                trackingMovement = false;
                 return default;
             }
             if (observation.MissingContent != null || Satisfied(in observation))
@@ -153,6 +161,7 @@ namespace TiffanyGame
                 }
                 MilestoneElapsed = stalledSeconds = pressCooldown = 0f;
                 trackingMovement = forceRequested = repathAfterRespawn = false;
+                respawnRestarts = 0;
                 return default;
             }
 
