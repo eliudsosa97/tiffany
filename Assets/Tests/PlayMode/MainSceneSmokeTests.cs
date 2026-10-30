@@ -371,8 +371,8 @@ namespace TiffanyGame.Tests
             light.Toggle();
             yield return new WaitForSeconds(0.3f);
             Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Empty"));
-            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello");
-            Assert.IsTrue(light.TryFlash());
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: estallido");
+            Assert.IsTrue(light.TryBurst());
             yield return new WaitForSeconds(0.15f);
             Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Flash"));
             yield return new WaitForSeconds(animation.flashDuration + TiffanyAnimation.CarryLightBlend);

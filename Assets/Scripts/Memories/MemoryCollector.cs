@@ -104,6 +104,7 @@ namespace TiffanyGame
             {
                 GuideTyler();
                 if (tyler != null) tyler.Appear(transform.position);
+                if (gameInterface != null) gameInterface.ShowTylerNotice();
                 Debug.Log($"{GameInfo.LogPrefix} Tyler aparece");
                 Collected?.Invoke(memoryId);
                 return true;
