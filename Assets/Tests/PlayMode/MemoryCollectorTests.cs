@@ -38,6 +38,86 @@ namespace TiffanyGame.Tests
             yield return new WaitForSeconds(0.2f);
             Assert.IsEmpty(collector.gameInterface.subtitleText.text);
         }
+#if UNITY_EDITOR
+        [UnityTest] public IEnumerator DrawingsFreezeTheGameAndDelayThePowerNoticeUntilTheReturnFade()
+        {
+            var ui = collector.gameInterface;
+            const string folder = "Assets/Tests/Fixtures/Memories/";
+            ui.LoadMemories(new[] { UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "memory-2.json") },
+                new[] { UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(folder + "memory-test-2-1.png"),
+                    UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(folder + "memory-test-2-2.png") });
+            Assert.IsTrue(collector.Collect(2));
+            Assert.AreEqual(InterfaceScreen.Memory, ui.Screen);
+            Assert.AreEqual(0f, Time.timeScale);
+            Assert.IsTrue(AudioListener.pause);
+            Assert.IsEmpty(ui.noticeText.text);
+            Assert.IsFalse(ui.drawingImage.gameObject.activeSelf);
+            ui.TogglePause();
+            ui.ToggleNotebook();
+            Assert.AreEqual(InterfaceScreen.Memory, ui.Screen);
+            yield return new WaitForSecondsRealtime(0.5f);
+            Assert.AreEqual(1f, ui.notebookBackground.color.a);
+            Assert.AreEqual("Listón", ui.notebookTitle.text);
+            Assert.AreEqual("Dibujo de prueba 3", ui.notebookPhrase.text);
+            Assert.AreEqual("memory-test-2-1", ui.drawingImage.texture.name);
+            Assert.AreEqual(InterfaceTexts.MemoryHint, ui.notebookHint.text);
+            Assert.IsFalse(ui.subtitleText.gameObject.activeSelf);
+            Assert.Greater(collector.ActiveEcho.Elapsed, 0f);
+            Assert.AreEqual(0f, collector.echoVolume.weight);
+            GameInput.InteractOverride = true;
+            yield return null;
+            GameInput.InteractOverride = false;
+            Assert.AreEqual("memory-test-2-2", ui.drawingImage.texture.name);
+            Assert.AreEqual("Dibujo de prueba 4", ui.notebookPhrase.text);
+            yield return null;
+            GameInput.InteractOverride = true;
+            yield return null;
+            GameInput.InteractOverride = false;
+            Assert.IsFalse(ui.drawingImage.gameObject.activeSelf);
+            Assert.IsEmpty(ui.noticeText.text);
+            Assert.IsTrue(ui.IsFrozen);
+            yield return new WaitForSecondsRealtime(0.5f);
+            Assert.AreEqual(InterfaceScreen.Playing, ui.Screen);
+            Assert.AreEqual(1f, Time.timeScale);
+            Assert.IsFalse(AudioListener.pause);
+            Assert.AreEqual(InterfaceTexts.ControllerText(InterfaceTexts.PowerNotice(Power.Candles),
+                GameInterface.HasControllerSymbols(ui.noticeText.font)), ui.noticeText.text);
+            Assert.IsFalse(collector.spots[2].echoPlayer.IsPlaying);
+            ui.ToggleNotebook();
+            Assert.AreEqual("memory-test-2-1", ui.drawingImage.texture.name);
+            Assert.AreEqual(InterfaceTexts.NotebookHint, ui.notebookHint.text);
+            ui.ToggleNotebook();
+        }
+#endif
+        [UnityTest] public IEnumerator MemoryWithoutDrawingsNotifiesImmediatelyWithoutEcho()
+        {
+            var ui = collector.gameInterface;
+            var asset = new TextAsset("{\"id\":1,\"title\":\"Prueba\",\"drawings\":[]}");
+            ui.LoadMemories(new[] { asset }, System.Array.Empty<Texture2D>());
+            Assert.IsTrue(collector.Collect(1));
+            Object.Destroy(asset);
+            Assert.AreEqual(InterfaceScreen.Playing, ui.Screen);
+            Assert.IsNull(collector.ActiveEcho);
+            Assert.IsFalse(collector.spots[0].echoPlayer.IsPlaying);
+            Assert.IsNotEmpty(ui.noticeText.text);
+            yield return null;
+            Assert.AreEqual(1f, Time.timeScale);
+            Assert.IsFalse(AudioListener.pause);
+        }
+
+        [UnityTest] public IEnumerator DisablingInterfaceDuringMemoryRestoresTimeAndStopsAudio()
+        {
+            var ui = collector.gameInterface;
+            Assert.IsTrue(collector.Collect(1));
+            yield return null;
+            Assert.AreEqual(InterfaceScreen.Memory, ui.Screen);
+            ui.enabled = false;
+            Assert.AreEqual(1f, Time.timeScale);
+            Assert.IsFalse(AudioListener.pause);
+            Assert.IsFalse(collector.spots[0].echoPlayer.IsPlaying);
+            ui.enabled = true;
+            Assert.AreEqual(InterfaceScreen.Playing, ui.Screen);
+        }
         [UnityTest] public IEnumerator BallRevealsTylerOnceWithoutPowerNoticeNotebookOrEcho()
         {
             var tyler = collector.tyler;
@@ -133,13 +213,11 @@ namespace TiffanyGame.Tests
             Assert.AreSame(collector.spots[1].transform, collector.tyler.nextMemory);
             Assert.IsFalse(collector.spots[0].visual.activeSelf);
             Assert.AreEqual(6, collector.spots.Length);
-            Assert.AreSame(collector.spots[0].echoPlayer, collector.ActiveEcho);
-            Assert.IsTrue(collector.ActiveEcho.IsPlaying);
-            Assert.IsTrue(collector.ActiveEcho.stageRoot.activeSelf);
-            Assert.IsFalse(ui.noticeText.gameObject.activeSelf);
+            Assert.IsNull(collector.ActiveEcho);
+            Assert.IsTrue(ui.noticeText.gameObject.activeSelf);
             yield return new WaitForSeconds(1f);
-            Assert.Greater(collector.echoVolume.weight, 0f);
-            Assert.IsTrue(cameraData.renderPostProcessing);
+            Assert.AreEqual(0f, collector.echoVolume.weight);
+            Assert.IsFalse(cameraData.renderPostProcessing);
             int powersBeforeBall = collector.soul.Powers.Count;
             float echoBeforeBall = collector.echoVolume.weight;
             Assert.IsTrue(collector.Collect(MemoryProgress.BallId));
@@ -148,8 +226,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(InterfaceTexts.ControllerText(InterfaceTexts.PowerNotice(Power.Light),
                 GameInterface.HasControllerSymbols(ui.noticeText.font)), ui.noticeText.text);
             Assert.AreEqual(echoBeforeBall, collector.echoVolume.weight);
-            Assert.AreSame(collector.spots[0].echoPlayer, collector.ActiveEcho);
-            Assert.IsTrue(collector.ActiveEcho.IsPlaying);
+            Assert.IsNull(collector.ActiveEcho);
             Assert.AreSame(collector.spots[2].transform, collector.tyler.nextMemory);
 #if UNITY_EDITOR
             const string folder = "Assets/Tests/Fixtures/Memories/";
@@ -173,9 +250,12 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(collector.spots[2].visual.activeSelf);
             Assert.AreSame(collector.spots[3].transform, collector.tyler.nextMemory);
             Assert.IsFalse(collector.spots[0].echoPlayer.IsPlaying);
-            Assert.AreSame(collector.spots[2].echoPlayer, collector.ActiveEcho);
 #if UNITY_EDITOR
-            Assert.AreEqual(InterfaceTexts.PowerNotice(Power.Candles), ui.noticeText.text);
+            Assert.AreSame(collector.spots[2].echoPlayer, collector.ActiveEcho);
+            Assert.AreEqual(InterfaceScreen.Memory, ui.Screen);
+            Assert.IsFalse(ui.noticeText.gameObject.activeSelf);
+            collector.StopEcho();
+            yield return null;
             Assert.IsEmpty(ui.subtitleText.text);
             ui.ToggleNotebook();
             Assert.AreEqual("Listón", ui.notebookTitle.text);
@@ -198,7 +278,7 @@ namespace TiffanyGame.Tests
             collector.enabled = false;
             Assert.AreEqual(0f, collector.echoVolume.weight);
             Assert.IsFalse(cameraData.renderPostProcessing);
-            Assert.IsFalse(collector.spots[2].echoPlayer.stageRoot.activeSelf);
+            Assert.IsFalse(collector.spots[2].echoPlayer.IsPlaying);
             Assert.IsTrue(ui.noticeText.gameObject.activeSelf);
         }
 
@@ -229,19 +309,7 @@ namespace TiffanyGame.Tests
                 Assert.AreSame(System.Array.Find(collector.spots, spot => spot.memoryId == stage.spot.memoryId), stage.spot);
                 Assert.AreEqual(MemorySpotKind.Memory, stage.spot.kind);
                 Assert.IsTrue(stage.spot.transform.IsChildOf(clearing));
-                Assert.AreSame(echoes, stage.spot.echoPlayer.stageRoot.transform.parent);
-                Assert.IsNotNull(stage.spot.echoPlayer.ground);
-                Assert.IsTrue(stage.spot.echoPlayer.ground.transform.IsChildOf(clearing));
-                var echo = stage.spot.echoPlayer;
-                Assert.AreSame(echo.stageRoot.transform, echo.tyler.parent);
-                var animators = echo.tyler.GetComponentsInChildren<Animator>(true);
-                Assert.AreEqual(1, animators.Length);
-                Assert.AreSame(echo.tyler, animators[0].transform.parent);
-                Assert.AreSame(collector.tyler.animator.runtimeAnimatorController, animators[0].runtimeAnimatorController);
-                Assert.AreEqual(AnimatorCullingMode.CullUpdateTransforms, animators[0].cullingMode);
-                Assert.IsEmpty(echo.tyler.GetComponentsInChildren<Collider>(true));
-                for (int i = 0; i < echo.props.Length; i++)
-                    if (echo.Data.props[i].parent == "tyler") Assert.AreSame(echo.tyler, echo.props[i].parent);
+                Assert.IsEmpty(echoes.GetComponentsInChildren<Renderer>(true));
                 Vector3 offset = stage.spot.transform.InverseTransformPoint(stage.transform.position);
                 Assert.AreEqual(-3f, offset.x, 0.001f);
                 Assert.AreEqual(-4f, offset.z, 0.001f);
@@ -249,6 +317,8 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(stage.spot.echoPlayer.Data.duration * 0.5f, stage.GetComponent<CaptureStop>().wait);
                 foreach (var source in stage.spot.echoPlayer.sources)
                 {
+                    Assert.AreSame(echoes, source.transform.parent.parent);
+                    Assert.IsTrue(source.ignoreListenerPause);
                     Assert.AreEqual(0f, source.spatialBlend);
                     Assert.IsFalse(source.playOnAwake);
                     Assert.IsFalse(source.loop);
@@ -258,12 +328,12 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(stage.Apply());
                 Assert.AreEqual(stage.transform.position, collector.transform.position);
                 Assert.AreEqual(stage.GetComponent<CaptureStop>().cameraPosition, collector.viewCamera.transform.position);
-                yield return new WaitForSeconds(0.1f);
+                yield return new WaitForSecondsRealtime(0.1f);
                 Assert.IsTrue(stage.spot.echoPlayer.IsPlaying);
                 Assert.IsFalse(stage.spot.visual.activeSelf);
                 stage.Clear();
-                Assert.IsFalse(stage.spot.echoPlayer.stageRoot.activeSelf);
-                Assert.IsFalse(stage.spot.echoPlayer.blackout.gameObject.activeSelf);
+                Assert.IsFalse(stage.spot.echoPlayer.IsPlaying);
+                Assert.AreEqual(InterfaceScreen.Playing, collector.gameInterface.Screen);
                 foreach (var source in stage.spot.echoPlayer.sources) Assert.IsFalse(source.isPlaying);
                 Assert.IsTrue(stage.spot.visual.activeSelf);
                 Assert.AreEqual(hadPower, collector.soul.Powers.Has(power));
