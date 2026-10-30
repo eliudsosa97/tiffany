@@ -1186,7 +1186,7 @@ namespace TiffanyGame.Tests
             echo.Tick(stage.GetComponent<CaptureStop>().wait);
             Assert.IsTrue(echo.Active);
             Assert.Greater(echo.Weight, 0f);
-            echo.Tick(route.GetChild(0).GetComponentInChildren<CaptureStop>().wait);
+            echo.Tick(route.GetChild(0).Find("Route 1 Cemetery").GetComponent<CaptureStop>().wait);
             Assert.IsFalse(echo.Active);
             Assert.AreEqual(0f, echo.Weight);
         }

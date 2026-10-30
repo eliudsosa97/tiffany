@@ -46,9 +46,9 @@ namespace TiffanyGame.EditorTools
                     Vector3 player = focus - direction * 3f;
                     player.y = terrain.Height(player.x, player.z);
                     Vector3 position = path.TransformPoint(player - origin);
-                    Capture("Bird 1 Trail", group, position, bird.transform.position,
+                    Capture("Trail Bird 1", group, position, bird.transform.position,
                         path.rotation * Quaternion.Euler(FollowCamera.DefaultPitch, FollowCamera.DefaultYaw, 0f), FollowCamera.DefaultDistance);
-                    Capture("Bird 2 Close", group, position, bird.transform.position,
+                    Capture("Trail Bird 2", group, position, bird.transform.position,
                         path.rotation * Quaternion.Euler(15f, FollowCamera.DefaultYaw, 0f), 4f);
                 }
             }

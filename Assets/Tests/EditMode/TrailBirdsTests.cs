@@ -183,7 +183,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(index == 0 ? 2 : 0, captures.Length);
             if (index != 0) return;
 
-            CollectionAssert.AreEquivalent(new[] { "Bird 1 Trail", "Bird 2 Close" }, Array.ConvertAll(captures, capture => capture.name));
+            CollectionAssert.AreEquivalent(new[] { "Trail Bird 1", "Trail Bird 2" }, Array.ConvertAll(captures, capture => capture.name));
             var bird = path.Find("Trail Bird 1/trail-bird");
             foreach (var capture in captures)
             {
@@ -194,7 +194,7 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(SoulEnergy.Max, light.energy);
                 Vector3 toBird = bird.position - capture.cameraPosition;
                 Assert.Greater(Vector3.Dot(capture.cameraRotation * Vector3.forward, toBird.normalized), 0.9999f);
-                Assert.AreEqual(capture.name == "Bird 1 Trail" ? 36f : 4f, toBird.magnitude, 0.001f);
+                Assert.AreEqual(capture.name == "Trail Bird 1" ? 36f : 4f, toBird.magnitude, 0.001f);
                 Vector3 facing = Vector3.ProjectOnPlane(bird.position - capture.transform.position, Vector3.up);
                 Assert.AreEqual(3f, facing.magnitude, 0.001f);
                 Assert.Greater(Vector3.Dot(capture.transform.forward, facing.normalized), 0.9999f);
@@ -205,7 +205,7 @@ namespace TiffanyGame.Tests
                 Assert.LessOrEqual(RouteTerrain.SegmentDistance(new Vector2(player.x, player.z),
                     new Vector2(polyline[0].x, polyline[0].z), new Vector2(polyline[1].x, polyline[1].z)), RouteLayout.PathWidth * 0.5f);
             }
-            var trail = Array.Find(captures, capture => capture.name == "Bird 1 Trail");
+            var trail = Array.Find(captures, capture => capture.name == "Trail Bird 1");
             Assert.Less(Quaternion.Angle(root.transform.rotation * Quaternion.Euler(42f, 45f, 0f), trail.cameraRotation), 0.1f);
         }
 
@@ -230,6 +230,19 @@ namespace TiffanyGame.Tests
 
     public sealed partial class RouteBuilderTests
     {
+        [Test]
+        public void TrailBirdCapturesFollowAllRouteAndMemoryEchoCaptures()
+        {
+            var birds = route.GetChild(0).Find("Path to Next Clearing").GetComponentsInChildren<CaptureStop>();
+            Assert.AreEqual(2, birds.Length);
+            var captures = root.GetComponentsInChildren<CaptureStop>();
+            foreach (var bird in birds)
+                foreach (var capture in captures)
+                    if (capture.name.StartsWith("Route ") || capture.GetComponent<EchoCaptureStage>() != null)
+                        Assert.Greater(AutoCapture.CompareStops(bird, capture), 0, $"{bird.name}, {capture.name}");
+            Assert.Less(AutoCapture.CompareStops(birds[0], birds[1]), 0);
+        }
+
         [Test]
         public void TrailBirdsFitClearingRendererGeometryAndSurroundingForestBudgets()
         {
