@@ -8,6 +8,7 @@ namespace TiffanyGame
         public PlayerHiding hiding;
         public WitchController witch;
         public TylerController tyler;
+        public TensionMusic music;
         public AudioSource cueSource;
         public AudioClip[] fakeSteps;
         public AudioClip[] whispers;
@@ -52,6 +53,7 @@ namespace TiffanyGame
             }
             PanicCues cues = effects.Tick(dt, stage, Time.time, hiding != null && hiding.Hidden);
             if (playerLight != null) playerLight.intensityScale = cues.LightScale;
+            if (music != null && music.Silence > 0f) return;
             if (cues.FakeStep)
             {
                 PlayCue(fakeSteps, Random.Range(-0.8f, 0.8f));
