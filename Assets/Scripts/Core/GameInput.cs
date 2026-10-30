@@ -6,6 +6,8 @@ namespace TiffanyGame
     public static class GameInput
     {
         public const float StickDeadzone = 0.2f;
+        public const string InteractBinding = "Espacio / Equis";
+        public const string KindleBinding = "Q / Cuadrado";
 
         public static Vector2? MoveOverride;
         public static bool? SlowOverride;
@@ -19,6 +21,7 @@ namespace TiffanyGame
         public static bool? FadeOverride;
 
         static bool commandWasPressed;
+        static int pointerConsumedThroughFrame = -1;
         static FocusClickFilter focusClickFilter = new FocusClickFilter(true, float.NegativeInfinity, false);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -26,6 +29,7 @@ namespace TiffanyGame
         {
             ClearOverrides();
             commandWasPressed = false;
+            pointerConsumedThroughFrame = -1;
 #if UNITY_WEBGL && !UNITY_EDITOR
             const bool consumeFirstClick = true;
 #else
@@ -136,12 +140,12 @@ namespace TiffanyGame
             }
         }
 
-        public static bool LightTogglePressed => LightToggleOverride ?? (KeyPressed(Key.F) ||
-            Mouse.current?.rightButton.wasPressedThisFrame == true || Gamepad.current?.buttonNorth.wasPressedThisFrame == true);
+        public static bool LightTogglePressed => LightToggleOverride ??
+            ((Time.frameCount > pointerConsumedThroughFrame && focusClickFilter.Accept(PointerPressed, Time.realtimeSinceStartup)) ||
+            Gamepad.current?.buttonNorth.wasPressedThisFrame == true);
 
         public static bool FlashPressed => FlashOverride ??
-            (focusClickFilter.Accept(Mouse.current?.leftButton.wasPressedThisFrame == true, Time.realtimeSinceStartup) ||
-            Gamepad.current?.rightTrigger.wasPressedThisFrame == true);
+            (KeyPressed(Key.F) || Gamepad.current?.rightTrigger.wasPressedThisFrame == true);
 
         public static bool KindlePressed => KindleOverride ??
             (KeyPressed(Key.Q) || Gamepad.current?.buttonWest.wasPressedThisFrame == true);
@@ -160,15 +164,24 @@ namespace TiffanyGame
             get
             {
                 bool clicked = Mouse.current?.leftButton.wasPressedThisFrame == true;
-                // El clic de inicio también cuenta como primer clic de foco en WebGL.
-                if (clicked) focusClickFilter.Accept(true, Time.realtimeSinceStartup);
-                return KeyPressed(Key.Space) || KeyPressed(Key.Enter) || clicked ||
+                if (clicked) ConsumePointerPress();
+                return KeyPressed(Key.Space) || (KeyPressed(Key.Enter) && !FullscreenTogglePressed) || clicked ||
                     Gamepad.current?.startButton.wasPressedThisFrame == true ||
                     Gamepad.current?.buttonSouth.wasPressedThisFrame == true;
             }
         }
 
         public static bool PointerPressed => Mouse.current?.leftButton.wasPressedThisFrame == true;
+
+        public static bool StoryAdvancePressed => PointerPressed || KeyPressed(Key.Enter)
+            || Gamepad.current?.startButton.wasPressedThisFrame == true;
+
+        public static void ConsumePointerPress()
+        {
+            if (!PointerPressed) return;
+            focusClickFilter.Accept(true, Time.realtimeSinceStartup);
+            pointerConsumedThroughFrame = Time.frameCount + 1;
+        }
 
         public static bool TitlePreviousPressed => KeyPressed(Key.W) || KeyPressed(Key.UpArrow)
             || Gamepad.current?.dpad.up.wasPressedThisFrame == true
@@ -179,6 +192,17 @@ namespace TiffanyGame
             || Gamepad.current?.leftStick.down.wasPressedThisFrame == true;
 
         public static bool NotebookPressed => KeyPressed(Key.Tab) || Gamepad.current?.selectButton.wasPressedThisFrame == true;
+
+        public static bool FullscreenTogglePressed
+        {
+            get
+            {
+                var keyboard = Keyboard.current;
+                return keyboard != null &&
+                    ((keyboard.fKey.wasPressedThisFrame && CommandHeld(keyboard)) ||
+                    (keyboard.enterKey.wasPressedThisFrame && (keyboard.leftAltKey.isPressed || keyboard.rightAltKey.isPressed)));
+            }
+        }
 
         public static bool PausePressed => KeyPressed(Key.Escape) || KeyPressed(Key.P) ||
             Gamepad.current?.startButton.wasPressedThisFrame == true;

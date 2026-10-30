@@ -39,7 +39,7 @@ namespace TiffanyGame
         {
             if (player == null) return;
             int clearing = RouteChapters.FindClearing(player.position, bounds);
-            if (clearing < 0) return;
+            if (!RouteChapters.CanVisitClearing(LastVisitedClearingIndex, clearing)) return;
             LastVisitedClearingIndex = clearing;
             if (witch != null && witch.chapter != Chapter.Return)
                 witch.SetChapter(RouteChapters.Resolve(witch.chapter, clearing + 1));

@@ -41,6 +41,24 @@ namespace TiffanyGame.Tests
             site.Tick(1f, false, Vector3.zero, new SoulEnergy(10f), null);
         }
 
+        [TestCase(0f)]
+        [TestCase(1f)]
+        [TestCase(2.5f)]
+        public void RespawnArrivalFollowsTheLatestFamilyCandleAndSideOffset(float sideOffset)
+        {
+            var respawn = new RespawnPoint(Vector3.zero);
+            var ramp = new CandleSite(new Candle(CandleKind.Family, new Vector3(230f, 2f, 72f)), 3f);
+            var lake = new CandleSite(new Candle(CandleKind.Family, new Vector3(190f, 0f, 76f)), 3f);
+            ramp.Tick(0f, true, ramp.Candle.Position, null, respawn);
+            Vector3 rampArrival = respawn.ArrivalPosition(sideOffset);
+            lake.Tick(0f, true, lake.Candle.Position, null, respawn);
+            Vector3 arrival = lake.Candle.Position + Vector3.back * sideOffset;
+            Assert.AreEqual(arrival, respawn.ArrivalPosition(sideOffset));
+            Assert.IsTrue(respawn.IsAtArrival(arrival + Vector3.up * 0.2f, sideOffset, 0.35f));
+            Assert.IsFalse(respawn.IsAtArrival(rampArrival, sideOffset, 0.35f), "El checkpoint de la rampa ya fue reemplazado.");
+            Assert.IsFalse(respawn.IsAtArrival(arrival + Vector3.right * 0.36f, sideOffset, 0.35f));
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void KindledOnlyProvidesSafetyWhileLit(bool lit)

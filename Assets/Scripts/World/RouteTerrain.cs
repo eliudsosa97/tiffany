@@ -15,8 +15,8 @@ namespace TiffanyGame
         public const float ForestCost = 4f;
         public const int LakeSegments = 192;
         const float WestBoundary = -118f;
-        public static readonly Vector2 LakeCenter = new Vector2(-48f, 44f);
-        public static readonly Vector2 LakeRadius = new Vector2(82f, 50f);
+        public static readonly Vector2 LakeCenter = new Vector2(-30f, 52f);
+        public static readonly Vector2 LakeRadius = new Vector2(50f, 34f);
         public static readonly Vector2 CliffFoot = new Vector2(75f, 94f);
         public static readonly Vector2 Plateau = new Vector2(77f, 94f);
 
@@ -26,7 +26,6 @@ namespace TiffanyGame
         public Rect Bounds { get; }
         public Rect Town { get; }
         public Rect Road { get; }
-        public float RoadBendEnd => RouteLayout.Clearing(0).x - RouteLayout.ClearingSizeOf(0) * 0.5f;
         public Vector2 FenceStart { get; }
         public Vector2 FenceEnd { get; }
         public Vector3 Crossing { get; }
@@ -48,16 +47,16 @@ namespace TiffanyGame
         {
             RouteLayout.RiverSpan(out var start, out var end);
             Crossing = (start + end) * 0.5f;
-            Town = Rect.MinMaxRect(86f, 160f, 146f, 216f);
+            Town = Rect.MinMaxRect(-73f, 160f, 146f, 242f);
             Bounds = Rect.MinMaxRect(WestBoundary,
-                RouteLayout.Clearing(2).z - RouteLayout.ClearingSizeOf(2) * 0.5f - Margin, 218f, 262f);
+                RouteLayout.Clearing(2).z - RouteLayout.ClearingSizeOf(2) * 0.5f - Margin, 218f, Town.yMax + Margin);
             Road = Rect.MinMaxRect(Bounds.xMin, RouteLayout.Clearing(6).z - RoadWidth * 0.5f,
-                Bounds.xMax, RouteLayout.Clearing(6).z + RoadWidth * 0.5f);
+                150f, RouteLayout.Clearing(6).z + RoadWidth * 0.5f);
             river = new[] { new Vector2(150f, 116f), new Vector2(120f, 121f),
                 new Vector2(80f, Crossing.z), new Vector2(20f, Crossing.z),
                 new Vector2(-40f, 112f), new Vector2(Bounds.xMin, 108f) };
             FenceStart = river[0];
-            FenceEnd = new Vector2(FenceStart.x, Road.yMax);
+            FenceEnd = new Vector2(FenceStart.x, Bounds.yMax);
             for (int i = 0; i < paths.Length; i++) paths[i] = RouteLayout.Path(i);
             for (int i = 0; i < openings.Length; i++) openings[i] = RouteLayout.Openings(i);
         }
@@ -70,15 +69,6 @@ namespace TiffanyGame
         }
 
         public bool IsWalkable(float x, float z) => WalkableDistance(x, z) <= 0f;
-
-        public float RoadCenterZ(float x)
-        {
-            float north = RouteLayout.Clearing(0).z + RouteLayout.ClearingSizeOf(0) * 0.5f + RoadWidth * 0.5f + 10f;
-            return Mathf.Lerp(Road.center.y, north, Mathf.InverseLerp(FenceStart.x, RoadBendEnd, x));
-        }
-
-        public float RoadDistance(float x, float z) => RectangleDistance(
-            new Vector2(x, z - RoadCenterZ(x) + Road.center.y), Road);
 
         public GroundType ForestGround(float x, float z)
         {
@@ -98,16 +88,18 @@ namespace TiffanyGame
 
         public float ForestDensity(float x, float z)
         {
+            float lakeside = 0.2f * (1f - Smooth(LakeDistance(x, z) / (LakeRadius.y * 1.5f)));
             uint hole = unchecked((uint)(Mathf.FloorToInt(x / 6f) * 73856093)
                 ^ (uint)(Mathf.FloorToInt(z / 6f) * 19349663));
             hole = unchecked((hole ^ (hole >> 13)) * 1274126177u);
-            if (hole % 7 == 0) return 0f;
+            if (hole % 7 == 0) return lakeside;
             float patch = 0.5f + 0.25f * Mathf.Sin(x * 0.23f + Mathf.Sin(z * 0.07f))
                 + 0.25f * Mathf.Cos(z * 0.22f - x * 0.05f);
             bool haunted = IsHauntedForest(x, z);
             float clusters = Smooth((patch - (haunted ? 0.58f : 0.64f)) / 0.2f) * (haunted ? 0.95f : 0.35f);
             float wall = 1f - Smooth((DistanceToRoute(x, z) - WallFullDistance) / (WallDistance - WallFullDistance));
-            return Mathf.Max(clusters * (haunted ? 1f : Mathf.Lerp(0.5f, 1f, wall)), wall * (haunted ? 0.95f : 0.7f));
+            float density = Mathf.Max(clusters * (haunted ? 1f : Mathf.Lerp(0.5f, 1f, wall)), wall * (haunted ? 0.95f : 0.7f));
+            return Mathf.Max(density, lakeside);
         }
 
         public float TrainDistance(float x, float z) => SegmentDistance(new Vector2(x, z),
@@ -138,7 +130,7 @@ namespace TiffanyGame
         public float DistanceToRoute(float x, float z, bool includeRoad = true)
         {
             var point = new Vector2(x, z);
-            float distance = includeRoad ? RoadDistance(x, z) : float.PositiveInfinity;
+            float distance = includeRoad ? RectangleDistance(point, Road) : float.PositiveInfinity;
             for (int i = 0; i < RouteLayout.Count; i++)
             {
                 Vector3 center = RouteLayout.Clearing(i);
@@ -250,7 +242,7 @@ namespace TiffanyGame
                 if (distance <= 0f) { nearest = 0f; return center.y; }
                 Accumulate(distance, center.y, ref nearest, ref sum, ref weight);
             }
-            float roadDistance = RoadDistance(x, z);
+            float roadDistance = RectangleDistance(point, Road);
             if (roadDistance <= 0f) { nearest = 0f; return RouteLayout.Clearing(6).y; }
             Accumulate(roadDistance, RouteLayout.Clearing(6).y, ref nearest, ref sum, ref weight);
             for (int from = 0; from < paths.Length; from++)

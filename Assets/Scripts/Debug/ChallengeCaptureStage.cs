@@ -20,8 +20,7 @@ namespace TiffanyGame
         float timeScale;
         VanishPower vanish;
         bool[] figureEnabled;
-        Light playerSpot;
-        GameObject glow;
+        Light playerSpot, glow;
         bool spotEnabled, glowActive;
 
 #if UNITY_EDITOR
@@ -160,9 +159,9 @@ namespace TiffanyGame
                 if (vanish.playerLight != null)
                 {
                     playerSpot = vanish.playerLight.spot;
-                    glow = vanish.playerLight.glow.gameObject;
+                    glow = vanish.playerLight.baseGlow;
                     spotEnabled = playerSpot.enabled;
-                    glowActive = glow.activeSelf;
+                    glowActive = glow != null && glow.enabled;
                 }
             }
             var tracker = challenge.tracker;
@@ -242,7 +241,7 @@ namespace TiffanyGame
             if (vanish != null)
                 for (int i = 0; i < figureEnabled.Length; i++) vanish.figure[i].enabled = figureEnabled[i];
             if (playerSpot != null) playerSpot.enabled = spotEnabled;
-            if (glow != null) glow.SetActive(glowActive);
+            if (glow != null) glow.enabled = glowActive;
             for (int i = 0; i < gateActive.Length; i++) challenge.darkness[i].SetActive(gateActive[i]);
             if (body != null)
             {
@@ -288,7 +287,7 @@ namespace TiffanyGame
             if (!applied || !after || vanish == null || !challenge.Rules.NeedsVanish) return;
             for (int i = 0; i < vanish.figure.Length; i++) vanish.figure[i].enabled = false;
             if (playerSpot != null) playerSpot.enabled = false;
-            if (glow != null) glow.SetActive(false);
+            if (glow != null) glow.enabled = false;
         }
     }
 }

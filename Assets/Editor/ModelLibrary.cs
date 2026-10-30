@@ -45,6 +45,8 @@ namespace TiffanyGame.EditorTools
             public MaterialSpec[] materials;
             public ClipSpec[] clips;
             public CapsuleSpec trunkCollider;
+            public Vector3 perchOffset;
+            public float[] heightScales;
             public Vector3 lightOffset;
             public BoxSpec hideVolume;
             public BoneSpec[] skeleton;
@@ -108,6 +110,7 @@ namespace TiffanyGame.EditorTools
             public string name;
             public string clip;
             public float blend;
+            public bool reverse;
             public BlendTreeSpec blendTree;
         }
 

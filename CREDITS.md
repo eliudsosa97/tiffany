@@ -20,6 +20,10 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/river_loop.wav` | [Ambiance_River_Flow_Small_Loop_Stereo.wav](https://freesound.org/s/479321/) | Nox_Sound | CC0 |
 | `Assets/Audio/Sfx/lake_loop.wav` | [Water_Lapping_River.wav](https://freesound.org/s/318064/) | ceich93 | CC0 |
 | `Assets/Audio/Sfx/heartbeat.wav` | [Heart Beating](https://freesound.org/s/273150/) | michorvath | CC0 |
+| `Assets/Audio/Sfx/forest_knock_1.wav` | [hit - wooden - tree 01.wav](https://freesound.org/s/406282/) | Anthousai | CC0 |
+| `Assets/Audio/Sfx/forest_knock_2.wav` | [hit - wooden - tree 02.wav](https://freesound.org/s/406281/) | Anthousai | CC0 |
+| `Assets/Audio/Sfx/forest_knock_3.wav` | [Low Pitch Knocking 1.wav](https://freesound.org/s/457742/) | Osiruswaltz | CC0 |
+| `Assets/Audio/Sfx/witch_murmur.wav` | [Demonic Voice](https://freesound.org/s/585799/) | colorsCrimsonTears | CC0 |
 | `Assets/Audio/Sfx/growl_1.wav` | [Animal Dog Growl 01](https://freesound.org/s/625500/) | abhisheky948 | CC0 |
 | `Assets/Audio/Sfx/growl_2.wav` | [growl](https://freesound.org/s/13789/) | wingz | CC0 |
 | `Assets/Audio/Sfx/whine.wav` | [Dog Whining](https://freesound.org/s/155321/) | Jace | CC0 |
@@ -37,6 +41,7 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/step_gravel_1.wav` a `step_gravel_4.wav` | [Footsteps Dirt Gravel](https://freesound.org/s/352870/) | PotatokingXII | CC0 |
 | `Assets/Audio/Sfx/step_leaves_1.wav` a `step_leaves_4.wav` | [Forest dry leaves walk.](https://freesound.org/s/274833/) | rempen | CC0 |
 | `Assets/Audio/Sfx/step_branches_1.wav` a `step_branches_4.wav` | [Foot on branches and twigs](https://freesound.org/s/610126/) | xkeril | CC0 |
+| `Assets/Audio/Sfx/branch_snap_1.wav` a `branch_snap_4.wav` | [Foot on branches and twigs](https://freesound.org/s/610126/), más fuertes | xkeril | CC0 |
 | `Assets/Audio/Sfx/monster_step_1.wav` | [Monster Footsteps 01](https://freesound.org/s/339439/) | juansua990 | CC0 |
 | `Assets/Audio/Sfx/fireball.wav` | [Fireball](https://freesound.org/s/683179/) | NearTheAtmoshphere | CC0 |
 | `Assets/Audio/Sfx/cackle_1.wav` | [Witch's Laugh](https://freesound.org/s/348142/) | NikoMyth | CC0 |

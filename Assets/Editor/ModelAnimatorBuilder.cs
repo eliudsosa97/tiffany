@@ -84,13 +84,14 @@ namespace TiffanyGame.EditorTools
                 SetArray(machine, machine.behaviours, Array.Empty<StateMachineBehaviour>(), v => machine.behaviours = v);
                 var previous = machine.states;
                 var states = new ChildAnimatorState[layer.states.Length];
+                var sharedTrees = new Dictionary<string, BlendTree>();
                 for (int j = 0; j < layer.states.Length; j++)
                 {
                     var entry = layer.states[j];
                     var oldState = Array.Find(previous, s => s.state != null && s.state.name == entry.name);
                     var state = Reuse(oldState.state, entry.name, controller, assets, owned);
                     states[j] = new ChildAnimatorState { state = state, position = oldState.state != null ? oldState.position : new Vector3(300f, 60f * j) };
-                    Set(state, state.speed, 1f, v => state.speed = v);
+                    Set(state, state.speed, entry.reverse ? -1f : 1f, v => state.speed = v);
                     Set(state, state.writeDefaultValues, layer.writeDefaultValues, v => state.writeDefaultValues = v);
                     Set(state, state.cycleOffset, 0f, v => state.cycleOffset = v);
                     Set(state, state.cycleOffsetParameterActive, false, v => state.cycleOffsetParameterActive = v);
@@ -102,7 +103,12 @@ namespace TiffanyGame.EditorTools
                     bool blend = entry.blendTree?.children != null;
                     bool turn = Array.Exists(spec.clips, clip => clip.name == entry.clip && clip.turnSpeed > 0f);
                     Set(state, state.speedParameterActive, turn || (blend && entry.blendTree.normalizeSpeed), v => state.speedParameterActive = v);
-                    if (blend)
+                    if (blend && sharedTrees.TryGetValue(entry.blendTree.name, out var shared))
+                    {
+                        Set<Motion>(state, state.motion, shared, v => state.motion = v);
+                        Set(state, state.speedParameter, speed, v => state.speedParameter = v);
+                    }
+                    else if (blend)
                     {
                         var tree = Reuse(state.motion as BlendTree, entry.blendTree.name, controller, assets, owned);
                         ConfigureTree(tree, speed);
@@ -126,6 +132,7 @@ namespace TiffanyGame.EditorTools
                             motions[k] = new ChildMotion { motion = motion, threshold = child.threshold, timeScale = child.threshold / natural };
                         }
                         SetChildren(tree, motions);
+                        sharedTrees.Add(entry.blendTree.name, tree);
                         Set<Motion>(state, state.motion, tree, v => state.motion = v);
                         Set(state, state.speedParameter, speed, v => state.speedParameter = v);
                     }

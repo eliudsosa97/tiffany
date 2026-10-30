@@ -111,7 +111,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(RouteLayout.Count + 1, route.childCount);
             Assert.IsNotNull(route.Find("Landscape/Terrain"));
             var captures = route.GetComponentsInChildren<CaptureStop>();
-            Assert.AreEqual(19, captures.Length, "Ocho claros, interior del jacal, dos vistas del agua y dos vistas por cada uno de los cuatro retos.");
+            Assert.AreEqual(21, captures.Length, "Ocho claros, interior del jacal, dos vistas del agua, dos de los pájaros y dos por cada uno de los cuatro retos.");
             captures = System.Array.FindAll(captures, capture => capture.name.StartsWith("Route "));
             System.Array.Sort(captures, (a, b) => string.CompareOrdinal(a.name, b.name));
             for (int i = 0; i < names.Length; i++)
@@ -122,7 +122,7 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(captures[i].transform.IsChildOf(clearing));
                 Assert.IsFalse(captures[i].overrideCamera);
                 int challenges = i == 3 ? 2 : i == 1 || i == 2 ? 1 : 0;
-                Assert.AreEqual((i == 5 ? 3 : i == 4 ? 2 : 1) + challenges * 2,
+                Assert.AreEqual((i == 0 || i == 5 ? 3 : i == 4 ? 2 : 1) + challenges * 2,
                     clearing.GetComponentsInChildren<CaptureStop>().Length);
                 Assert.AreEqual(RouteLayout.Clearing(i), clearing.localPosition);
                 Assert.AreEqual(Quaternion.identity, clearing.localRotation);
@@ -256,6 +256,35 @@ namespace TiffanyGame.Tests
                 Assert.LessOrEqual(draws, 150, clearing.name);
                 Assert.LessOrEqual(triangles, 150000, clearing.name);
             }
+        }
+
+        [Test]
+        public void PendingMemoriesShareASavedCoolEmissiveMaterialWithoutLights()
+        {
+            var collector = player.GetComponent<MemoryCollector>();
+            var material = collector.spots[0].visual.GetComponent<Renderer>().sharedMaterial;
+            Assert.AreEqual(GeneratedMaterials.folder + "/MemoryCandle.mat", AssetDatabase.GetAssetPath(material));
+            Assert.IsTrue(material.IsKeywordEnabled("_EMISSION"));
+            Color emission = material.GetColor("_EmissionColor");
+            Assert.GreaterOrEqual(emission.maxColorComponent, 1f);
+            Assert.Greater(emission.b, emission.g);
+            Assert.Greater(emission.g, emission.r);
+            foreach (var spot in collector.spots)
+            {
+                if (spot.kind != MemorySpotKind.Memory) continue;
+                Assert.IsTrue(spot.visual.activeSelf);
+                Assert.AreSame(material, spot.visual.GetComponent<Renderer>().sharedMaterial);
+                Assert.IsEmpty(spot.GetComponentsInChildren<Light>(true));
+            }
+        }
+
+        [Test]
+        public void GraveAndBallHaveSeparateInteractionRanges()
+        {
+            var collector = player.GetComponent<MemoryCollector>();
+            Assert.AreEqual(1.5f, collector.searchRadius);
+            Assert.Greater(Vector3.Distance(collector.spots[0].transform.position, collector.spots[1].transform.position),
+                collector.searchRadius * 2f);
         }
 
         [Test]
@@ -520,13 +549,14 @@ namespace TiffanyGame.Tests
             surface.voxelSize = 0.1f;
             surface.BuildNavMesh();
             navMeshData = surface.navMeshData;
-            Assert.AreEqual(6, route.GetComponentsInChildren<HideVolume>().Length);
+            Assert.AreEqual(6 + TrailPatches.Count, route.GetComponentsInChildren<HideVolume>().Length);
             var path = new NavMeshPath();
             for (int i = 0; i < 5; i++)
             {
                 var clearing = route.GetChild(i);
                 var hides = clearing.GetComponentsInChildren<HideVolume>();
-                Assert.AreEqual(i == 4 ? 2 : 1, hides.Length, clearing.name);
+                Assert.AreEqual((i == 4 ? 2 : 1) + TrailPatches.CountForPath(i), hides.Length, clearing.name);
+                Assert.AreEqual(1, System.Array.FindAll(hides, hide => hide.transform.parent == clearing).Length, clearing.name);
                 Assert.IsTrue(NavMesh.SamplePosition(ClearingEntry(i),
                     out var start, 0.5f, NavMesh.AllAreas), clearing.name);
                 foreach (var hide in hides)
@@ -554,13 +584,13 @@ namespace TiffanyGame.Tests
             Assert.IsNotEmpty(renderers);
             for (int i = 0; i < RouteLayout.Count; i++)
                 Assert.LessOrEqual(route.GetChild(i).GetComponentsInChildren<Renderer>(true).Length, 200, route.GetChild(i).name);
-            Assert.AreEqual(4, System.Array.FindAll(renderers,
+            Assert.AreEqual(4 + TrailPatches.Count, System.Array.FindAll(renderers,
                 renderer => renderer.GetComponentInParent<HideVolume>() != null).Length);
             foreach (var renderer in renderers)
             {
-                Assert.AreEqual(!ChallengeBuilder.IsMoving(renderer.transform),
+                Assert.AreEqual(!ChallengeBuilder.IsMoving(renderer.transform) && renderer.GetComponentInParent<TrailBird>() == null,
                     GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic), renderer.name);
-                if (renderer.GetComponentInParent<PowerChallenge>() == null)
+                if (renderer.GetComponentInParent<PowerChallenge>() == null && renderer.GetComponentInParent<TrailBird>() == null)
                     Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic), renderer.name);
                 Assert.AreEqual(ShadowCastingMode.Off, renderer.shadowCastingMode, renderer.name);
                 Assert.IsNotEmpty(renderer.sharedMaterials, renderer.name);
@@ -591,9 +621,9 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(fog);
             Assert.IsFalse(fog.transform.IsChildOf(route));
             Assert.AreSame(player.transform, fog.player);
-            Assert.AreEqual(108, fog.layers.Length, "16 de claros, 54 del sendero, 8 del bosque embrujado y 30 de agua.");
-            Assert.AreEqual(108, fog.GetComponentsInChildren<Renderer>().Length);
-            Assert.AreEqual(30, System.Array.FindAll(fog.layers, layer => layer.water).Length);
+            Assert.AreEqual(100, fog.layers.Length, "16 de claros, 54 del sendero, 8 del bosque embrujado y 22 de agua.");
+            Assert.AreEqual(100, fog.GetComponentsInChildren<Renderer>().Length);
+            Assert.AreEqual(22, System.Array.FindAll(fog.layers, layer => layer.water).Length);
             Assert.IsEmpty(fog.GetComponentsInChildren<Collider>());
             Assert.IsEmpty(fog.GetComponentsInChildren<Light>());
             foreach (var layer in fog.layers)
@@ -857,17 +887,14 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, RouteDetails("Casa -> spawn", last, start.position, path));
             float length = 0f;
             var corners = path.corners;
-            var barriers = route.Find("Landscape/Fence").GetComponentsInChildren<Collider>();
             for (int i = 1; i < corners.Length; i++)
             {
                 Vector3 delta = corners[i] - corners[i - 1];
                 length += delta.magnitude;
-                foreach (var barrier in barriers)
-                    Assert.IsFalse(barrier.Raycast(new Ray(corners[i - 1] + Vector3.up * 0.6f, delta.normalized),
-                        out _, delta.magnitude), $"Esquina {i}: atraviesa {barrier.name}. {RouteDetails("Casa -> spawn", last, start.position, path)}");
+                Assert.IsFalse(gate.GetComponent<Collider>().Raycast(new Ray(corners[i - 1] + Vector3.up * 0.6f, delta.normalized),
+                    out _, delta.magnitude), $"Esquina {i}: atraviesa la puerta. {RouteDetails("Casa -> spawn", last, start.position, path)}");
             }
-            Assert.Greater(corners.Length, 2, "El regreso debe rodear la cerca acortada.");
-            Assert.Greater(length, Vector3.Distance(last, start.position),
+            Assert.Greater(length, Vector3.Distance(last, start.position) * 2f,
                 $"El regreso de {length:F3} m debe rodear la cerca. {RouteDetails("Casa -> spawn", last, start.position, path)}");
             var terrain = new RouteTerrain();
             int forest = NavMesh.GetAreaFromName(RouteTerrain.ForestArea);
@@ -935,7 +962,7 @@ namespace TiffanyGame.Tests
             var water = lake.Find("Water");
             Assert.IsNull(water.GetComponent<Collider>());
             Assert.Greater(water.GetComponent<Renderer>().bounds.size.x, 100f);
-            Assert.Greater(water.GetComponent<Renderer>().bounds.size.z, 90f);
+            Assert.Greater(water.GetComponent<Renderer>().bounds.size.z, 60f);
             Assert.IsTrue(HitsRoute(water.position + Vector3.up * 2f, Vector3.down, 7f));
             var terrain = new RouteTerrain();
             var mesh = water.GetComponent<MeshFilter>().sharedMesh;
@@ -1073,6 +1100,12 @@ namespace TiffanyGame.Tests
             }
             var lakeStop = route.GetChild(5).Find("Water 1 Lake");
             Assert.Less(Vector3.Distance(lakeStop.GetComponent<CaptureStop>().cameraPosition, lake.position), 80f);
+            var capture = lakeStop.GetComponent<CaptureStop>();
+            var view = new Ray(capture.cameraPosition, capture.cameraRotation * Vector3.forward);
+            Assert.IsTrue(new Plane(Vector3.up, lake.position).Raycast(view, out float distance));
+            Vector3 focus = route.InverseTransformPoint(view.GetPoint(distance));
+            Assert.Less(new RouteTerrain().LakeDistance(focus.x, focus.z), 0f, "La cámara fija encuadra el agua.");
+            Assert.IsTrue(HitsRoute(lakeStop.position + Vector3.up, Vector3.down, 1.1f));
             var riverStop = river.parent.Find("Water 2 Crossing");
             foreach (var stop in new[] { lakeStop, riverStop })
             {
@@ -1211,7 +1244,7 @@ namespace TiffanyGame.Tests
             echo.Tick(stage.GetComponent<CaptureStop>().wait);
             Assert.IsTrue(echo.Active);
             Assert.Greater(echo.Weight, 0f);
-            echo.Tick(route.GetChild(0).GetComponentInChildren<CaptureStop>().wait);
+            echo.Tick(route.GetChild(0).Find("Route 1 Cemetery").GetComponent<CaptureStop>().wait);
             Assert.IsFalse(echo.Active);
             Assert.AreEqual(0f, echo.Weight);
         }

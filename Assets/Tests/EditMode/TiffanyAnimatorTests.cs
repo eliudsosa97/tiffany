@@ -75,8 +75,24 @@ namespace TiffanyGame.Tests
                 }
                 if (clip.name == TiffanyAnimation.Flash) Assert.AreEqual(clip.frames / (float)spec.fps, driver.flashDuration);
             }
-            Assert.IsNotNull(player.GetComponent<PlayerLight>().spot);
-            Assert.IsNotNull(player.GetComponent<PlayerLight>().glow);
+            var light = player.GetComponent<PlayerLight>();
+            Assert.AreEqual(new Vector3(0f, 0.85f, 0.12f), light.spot.transform.localPosition);
+            Assert.AreEqual(7f, light.pitch);
+            Assert.AreEqual(18f, light.spot.range);
+            Assert.AreEqual(140f, light.spot.intensity);
+            Assert.AreEqual(1.2f, light.bodyGlowBoost);
+            CollectionAssert.AreEqual(driver.animator.GetComponentsInChildren<Renderer>(true), light.bodyRenderers);
+            Assert.IsNull(player.transform.Find("Hand Glow"));
+            Assert.IsEmpty(player.GetComponent<PlayerSoul>().startingPowers);
+            Assert.AreEqual("Soul Glow", light.baseGlow.name);
+            Assert.AreSame(player.transform, light.baseGlow.transform.parent);
+            Assert.AreEqual(new Vector3(0f, 0.8f, 0f), light.baseGlow.transform.localPosition);
+            Assert.AreEqual(LightType.Point, light.baseGlow.type);
+            Assert.AreEqual(2.5f, light.baseGlow.range);
+            Assert.AreEqual(new Color(0.75f, 0.85f, 1f), light.baseGlow.color);
+            Assert.AreEqual(1.2f, light.baseGlow.intensity);
+            Assert.AreEqual(LightShadows.None, light.baseGlow.shadows);
+            Assert.AreEqual(LightRenderMode.Auto, light.baseGlow.renderMode);
             Assert.IsNotNull(player.GetComponent<PlayerFootsteps>().source);
         }
     }

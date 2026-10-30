@@ -34,6 +34,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(4, challenges.Length, "Regenera Main con ChallengeBuilder antes de correr PlayMode.");
             player = Object.FindAnyObjectByType<PlayerController>();
             soul = player.GetComponent<PlayerSoul>();
+            soul.Powers.Unlock(Power.Light);
             respawn = player.GetComponent<PlayerRespawn>();
             kindler = player.GetComponent<CandleKindler>();
             vanish = player.GetComponent<VanishPower>();
