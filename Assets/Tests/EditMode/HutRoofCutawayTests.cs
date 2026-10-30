@@ -45,7 +45,7 @@ namespace TiffanyGame.Tests
                 player.transform.position = hut.transform.TransformPoint(Vector3.zero);
                 cutaway.Refresh();
                 Assert.IsFalse(renderer.enabled);
-                cutaway.SendMessage("OnDisable");
+                typeof(HutRoofCutaway).GetMethod("OnDisable", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)?.Invoke(cutaway, null);
                 Assert.IsTrue(renderer.enabled && palm.enabled);
                 cutaway.Refresh();
                 Assert.IsFalse(renderer.enabled);
