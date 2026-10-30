@@ -24,6 +24,15 @@ namespace TiffanyGame
         public const string WakeHint = "Sigue a los pájaros amarillos.";
         public const string RouteReminder = "Los pájaros amarillos marcan el camino.";
         public const string StoryHint = "Clic, Enter u Options para seguir";
+        public const string GraveObjective = "Toca tu lápida (" + GameInput.InteractBinding + ")";
+        public const string BallObjective = "Busca la pelota";
+        public const string BirdsObjective = "Sigue a los pájaros amarillos";
+        public const string TouchPrompt = GameInput.InteractBinding + ": recordar";
+        public const string CollectPrompt = GameInput.InteractBinding + ": recoger";
+        public const string HidePrompt = GameInput.InteractBinding + ": esconderte";
+        public const string LeavePrompt = GameInput.InteractBinding + ": salir";
+        public const string KindlePrompt = GameInput.KindleBinding + ": encender";
+        public const string RechargePrompt = "Recargar energía (automático)";
 
         public static string StoryLine(int index) => index switch
         {

@@ -6,6 +6,8 @@ namespace TiffanyGame
     public static class GameInput
     {
         public const float StickDeadzone = 0.2f;
+        public const string InteractBinding = "Espacio / Equis";
+        public const string KindleBinding = "Q / Cuadrado";
 
         public static Vector2? MoveOverride;
         public static bool? SlowOverride;

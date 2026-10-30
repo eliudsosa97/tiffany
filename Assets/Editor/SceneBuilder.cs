@@ -762,6 +762,17 @@ namespace TiffanyGame.EditorTools
             scaler.matchWidthOrHeight = 0.5f;
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var ui = root.AddComponent<GameInterface>();
+            var hud = root.AddComponent<GameplayHud>();
+            hud.gameInterface = ui;
+            hud.objectiveText = InterfaceText("Objective", root.transform, font, InterfaceTexts.GraveObjective, 26,
+                new Vector2(0.1f, 0.91f), new Vector2(0.9f, 0.96f));
+            hud.interactionText = InterfaceText("Interaction", root.transform, font, "", 26,
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            hud.interactionText.rectTransform.sizeDelta = new Vector2(600f, 48f);
+            hud.objectiveText.gameObject.AddComponent<Shadow>().effectDistance = new Vector2(2f, -2f);
+            hud.interactionText.gameObject.AddComponent<Shadow>().effectDistance = new Vector2(2f, -2f);
+            hud.objectiveText.gameObject.SetActive(false);
+            hud.interactionText.gameObject.SetActive(false);
 
             caughtFade = InterfacePanel("Caught Fade", root.transform, 1f).GetComponent<Image>();
             caughtFade.gameObject.SetActive(false);

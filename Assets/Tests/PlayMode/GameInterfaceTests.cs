@@ -136,6 +136,33 @@ namespace TiffanyGame.Tests
             Assert.That(gameInterface.soulPanel.activeSelf, Is.True);
             Assert.That(gameInterface.noticeText.text, Is.Empty);
         }
+
+        [Test] public void ObjectiveStartsVisibleAndRefreshesRestoredProgressWithoutCollectionEvents()
+        {
+            var hud = Object.FindAnyObjectByType<GameplayHud>();
+            Assert.That(hud, Is.Not.Null);
+            Assert.That(hud.objectiveText.gameObject.activeInHierarchy, Is.True);
+            Assert.That(hud.objectiveText.text, Is.EqualTo(InterfaceTexts.GraveObjective));
+            Assert.That(hud.objectiveText.font, Is.SameAs(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")));
+            var progress = gameInterface.memories.Progress;
+            progress.MarkFound(1);
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.objectiveText.text, Is.EqualTo(InterfaceTexts.BallObjective));
+            progress.MarkFound(MemoryProgress.BallId);
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.objectiveText.text, Is.EqualTo(InterfaceTexts.BirdsObjective));
+            gameInterface.BeginEcho();
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.objectiveText.gameObject.activeInHierarchy, Is.True);
+            gameInterface.ToggleNotebook();
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.objectiveText.gameObject.activeSelf, Is.False);
+            Assert.That(hud.interactionText.gameObject.activeSelf, Is.False);
+            gameInterface.ToggleNotebook();
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.objectiveText.gameObject.activeInHierarchy, Is.True);
+            Assert.That(hud.objectiveText.text, Is.EqualTo(InterfaceTexts.BirdsObjective));
+        }
         void AssertScreen(InterfaceScreen screen)
         {
             bool frozen = screen != InterfaceScreen.Playing;

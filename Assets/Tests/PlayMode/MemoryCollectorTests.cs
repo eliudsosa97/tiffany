@@ -280,5 +280,118 @@ namespace TiffanyGame.Tests
             }
             Assert.IsTrue(collector.Collect(1));
         }
+
+        [TestCase(1)]
+        [TestCase(MemoryProgress.BallId)]
+        public void NearbyQueryUsesDistanceToCenterAndRejectsFoundMemories(int memoryId)
+        {
+            var spot = System.Array.Find(collector.spots, candidate => candidate.memoryId == memoryId);
+            foreach (var other in collector.spots)
+                if (other != spot) other.GetComponent<SphereCollider>().enabled = false;
+            var sphere = spot.GetComponent<SphereCollider>();
+            Vector3 center = sphere.transform.TransformPoint(sphere.center);
+            var character = collector.GetComponent<CharacterController>();
+            character.enabled = false;
+            collector.transform.position = center + Vector3.right * (collector.searchRadius + 0.05f);
+            Physics.SyncTransforms();
+            Assert.That(collector.FindNearby(out _), Is.Null);
+            collector.transform.position -= Vector3.right * 0.1f;
+            Physics.SyncTransforms();
+            Assert.That(collector.FindNearby(out float distance), Is.SameAs(spot));
+            Assert.That(distance, Is.EqualTo(Mathf.Pow(collector.searchRadius - 0.05f, 2f)).Within(0.001f));
+            collector.Progress.MarkFound(memoryId);
+            Assert.That(collector.FindNearby(out _), Is.Null);
+            character.enabled = true;
+        }
+
+        [UnityTest] public IEnumerator InteractAtOnePointTwoMetresFromGraveShowsPromptAndCollectsMemory()
+        {
+            var memory = collector.spots[0];
+            var hud = Object.FindAnyObjectByType<GameplayHud>();
+            Assert.IsNotNull(hud);
+            collector.GetComponent<PlayerController>().enabled = false;
+            var character = collector.GetComponent<CharacterController>();
+            character.enabled = false;
+            collector.transform.position = memory.transform.position + Vector3.right * 1.55f;
+            Physics.SyncTransforms();
+            hud.SendMessage("LateUpdate");
+            Assert.That(collector.FindNearby(out _), Is.Null);
+            Assert.That(hud.interactionText.gameObject.activeSelf, Is.False);
+            collector.transform.position = memory.transform.position + Vector3.right * 1.2f;
+            Physics.SyncTransforms();
+            Assert.That(collector.FindNearby(out float distance), Is.SameAs(memory));
+            Assert.That(distance, Is.EqualTo(1.2f * 1.2f).Within(0.001f));
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.interactionText.gameObject.activeSelf, Is.True);
+            Assert.That(hud.interactionText.text, Is.EqualTo("Espacio / Equis: recordar"));
+            GameInput.InteractOverride = true;
+            yield return null;
+            GameInput.InteractOverride = false;
+            Assert.That(collector.IsFound(1), Is.True);
+            Assert.That(collector.IsFound(MemoryProgress.BallId), Is.False);
+            Assert.That(memory.visual.activeSelf, Is.False);
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.interactionText.gameObject.activeSelf, Is.False);
+        }
+
+        [UnityTest] public IEnumerator InteractChoosesCloserBallWhenPickupSpheresOverlap()
+        {
+            var memory = collector.spots[0];
+            var ball = collector.spots[1];
+            collector.GetComponent<PlayerController>().enabled = false;
+            collector.GetComponent<CharacterController>().enabled = false;
+            collector.transform.position = memory.transform.position + Vector3.right * 0.9f;
+            ball.transform.position = collector.transform.position + Vector3.right * 0.3f;
+            Physics.SyncTransforms();
+            Assert.That(memory.GetComponent<SphereCollider>().ClosestPoint(collector.transform.position),
+                Is.EqualTo(collector.transform.position));
+            Assert.That(ball.GetComponent<SphereCollider>().ClosestPoint(collector.transform.position),
+                Is.EqualTo(collector.transform.position));
+            Assert.That(collector.FindNearby(out _), Is.SameAs(ball));
+            GameInput.InteractOverride = true;
+            yield return null;
+            GameInput.InteractOverride = false;
+            Assert.That(collector.IsFound(MemoryProgress.BallId), Is.True);
+            Assert.That(collector.IsFound(1), Is.False);
+            Assert.That(ball.visual.activeSelf, Is.False);
+            Assert.That(memory.visual.activeSelf, Is.True);
+            Assert.That(collector.FindNearby(out _), Is.SameAs(memory));
+        }
+
+        [UnityTest] public IEnumerator InteractChoosesCloserMemoryBeforeHideAndDoesNotCollectWhenLeaving()
+        {
+            var hide = Object.FindAnyObjectByType<HideVolume>();
+            var hideCollider = hide.GetComponent<BoxCollider>();
+            var memory = collector.spots[0];
+            foreach (var other in Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None))
+                if (other != hide) other.GetComponent<Collider>().enabled = false;
+            foreach (var other in collector.spots)
+                if (other != memory) other.GetComponent<SphereCollider>().enabled = false;
+            var character = collector.GetComponent<CharacterController>();
+            character.enabled = false;
+            collector.transform.position = memory.transform.position;
+            character.enabled = true;
+            collector.GetComponent<PlayerController>().enabled = false;
+            hideCollider.center = Vector3.zero;
+            hideCollider.size = Vector3.one * 0.1f;
+            hide.transform.position = collector.transform.position + Vector3.right * 0.3f;
+            Physics.SyncTransforms();
+            Assert.That(collector.FindNearby(out float memoryDistance), Is.SameAs(memory));
+            Assert.That(collector.hiding.FindNearby(out float hideDistance), Is.Not.Null);
+            Assert.That(memoryDistance, Is.LessThan(hideDistance));
+            GameInput.InteractOverride = true;
+            yield return null;
+            GameInput.InteractOverride = false;
+            Assert.That(collector.IsFound(1), Is.True);
+            Assert.That(collector.hiding.Hidden, Is.False);
+            yield return null;
+            collector.Progress.Clear();
+            collector.hiding.Hide(hide);
+            GameInput.InteractOverride = true;
+            yield return null;
+            GameInput.InteractOverride = false;
+            Assert.That(collector.hiding.Hidden, Is.False);
+            Assert.That(collector.IsFound(1), Is.False);
+        }
     }
 }
