@@ -34,19 +34,20 @@ namespace TiffanyGame.Tests
             Assert.That(Vector3.Distance(Vector3.forward * 10.8f, sprint.MoveTarget), Is.LessThan(1e-4f));
         }
 
-        [Test]
-        public void SprintKeepsItsEndpointAndMissesLateralMovement()
+        [TestCase(PlayerMotion.WalkSpeed)]
+        [TestCase(PlayerMotion.RunSpeed)]
+        public void SprintKeepsItsEndpointAndMissesLateralMovement(float playerSpeed)
         {
             Vector3 endpoint = Sprint().MoveTarget;
             for (int i = 0; i < 59; i++)
             {
-                p.PlayerPosition += Vector3.forward * (4f * 0.02f);
+                p.PlayerPosition += Vector3.forward * (playerSpeed * 0.02f);
                 Assert.AreEqual(endpoint, Step(0.02f, WitchState.Sprinting, 9f).MoveTarget);
             }
-            p.PlayerPosition += Vector3.forward * 0.04f;
+            p.PlayerPosition += Vector3.forward * (playerSpeed * 0.01f);
             Assert.AreEqual(endpoint, Step(0.01f, WitchState.Sprinting, 9f).MoveTarget);
             Assert.Greater(p.WitchPosition.x, p.PlayerPosition.x);
-            p.PlayerPosition += Vector3.forward * 0.08f;
+            p.PlayerPosition += Vector3.forward * (playerSpeed * 0.02f);
             Step(0.02f, WitchState.Recovering);
         }
 
@@ -71,8 +72,8 @@ namespace TiffanyGame.Tests
             Vector3 anchor = p.WitchPosition;
             Assert.AreEqual(anchor, Step(0.79f, WitchState.Recovering).MoveTarget);
             Assert.AreEqual(anchor, p.WitchPosition);
-            Assert.AreEqual(p.PlayerPosition, Step(0.02f, WitchState.Stalking, 2.5f).MoveTarget);
-            Step(0f, WitchState.Stalking, 2.5f);
+            Assert.AreEqual(p.PlayerPosition, Step(0.02f, WitchState.Stalking, profile.FollowSpeed).MoveTarget);
+            Step(0f, WitchState.Stalking, profile.FollowSpeed);
             p.SmellsPlayer = false;
             p.WitchPosition = p.PlayerPosition;
             Step(0f, WitchState.Stalking, voice: true);
@@ -83,9 +84,9 @@ namespace TiffanyGame.Tests
         public void LandingAfterChaseRestoresSlowStalkingAndVoice(bool raining)
         {
             Recover();
-            Step(0.81f, WitchState.Stalking, 2.5f);
+            Step(0.81f, WitchState.Stalking, profile.FollowSpeed);
             p.SmellsPlayer = false;
-            Step(7.99f, WitchState.Stalking, 2.5f);
+            Step(7.99f, WitchState.Stalking, profile.FollowSpeed);
             Step(0.02f, WitchState.TakingOff);
             p.Raining = raining;
             if (!raining)
@@ -111,7 +112,7 @@ namespace TiffanyGame.Tests
             p.PlayerPosition = Vector3.right * 0.5f;
             Step(0f, WitchState.WindUp);
             Recover();
-            Step(0.81f, WitchState.Stalking, 2.5f);
+            Step(0.81f, WitchState.Stalking, profile.FollowSpeed);
             p.PlayerPosition = p.WitchPosition + Vector3.right * 0.5f;
             Step(0f, WitchState.Caught);
         }
@@ -220,7 +221,7 @@ namespace TiffanyGame.Tests
         public void VanishingStopsFollowingAndPreventsSprintCapture()
         {
             Recover();
-            Step(0.81f, WitchState.Stalking, 2.5f);
+            Step(0.81f, WitchState.Stalking, profile.FollowSpeed);
             p.PlayerVanished = true;
             Assert.AreEqual(p.WitchPosition, Step(0f, WitchState.Stalking, voice: true).MoveTarget);
             SetUp();
@@ -330,7 +331,7 @@ namespace TiffanyGame.Tests
         public void EightSecondsWithoutPerceptionAfterLosingPlayerTriggersTakeOff()
         {
             Recover();
-            Step(0.81f, WitchState.Stalking, 2.5f);
+            Step(0.81f, WitchState.Stalking, profile.FollowSpeed);
             p.PlayerVanished = true;
             Step(0f, WitchState.Stalking, voice: true);
             Step(7.99f, WitchState.Stalking, voice: true);

@@ -8,7 +8,7 @@ namespace TiffanyGame
         public const float StepsThreshold = 0.5f;
         public const float FalseFiresThreshold = 0.75f;
         public const float ChildrenThreshold = 0.9f;
-        public const float DarknessRise = 0.012f;
+        public const float DarknessRise = 0.024f;
         public const float WitchRiseMax = 0.06f;
         public const float WitchRadius = 20f;
         public const float WhispersRise = 0.03f;

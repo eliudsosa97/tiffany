@@ -44,7 +44,7 @@ namespace TiffanyGame
         {
             GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
             GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = false;
-            GameInput.LightToggleOverride = GameInput.FlashOverride = GameInput.KindleOverride = false;
+            GameInput.LightHeldOverride = GameInput.KindleOverride = false;
             GameInput.PoltergeistOverride = GameInput.FadeOverride = false;
             var gameInterface = FindAnyObjectByType<GameInterface>();
             if (gameInterface != null) gameInterface.StartGame();

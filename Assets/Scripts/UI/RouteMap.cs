@@ -31,7 +31,7 @@ namespace TiffanyGame
 
         void LateUpdate()
         {
-            SetAvailability(gameInterface.Screen, gameInterface.memories != null && gameInterface.memories.IsEchoActive);
+            SetAvailability(gameInterface.Screen, gameInterface.Screen == InterfaceScreen.Memory);
             if (!rules.IsOpen) return;
             var route = gameInterface.route;
             Place(playerMarker, rules.Project(route.transform.InverseTransformPoint(route.player.position)));

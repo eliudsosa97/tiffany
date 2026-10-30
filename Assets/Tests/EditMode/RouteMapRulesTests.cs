@@ -111,6 +111,7 @@ namespace TiffanyGame.Tests
         [TestCase(InterfaceScreen.Paused)]
         [TestCase(InterfaceScreen.Notebook)]
         [TestCase(InterfaceScreen.Story)]
+        [TestCase(InterfaceScreen.Memory)]
         [TestCase(InterfaceScreen.Ending)]
         public void CannotOpenOutsidePlayingAndClosesOnScreenChange(InterfaceScreen screen)
         {

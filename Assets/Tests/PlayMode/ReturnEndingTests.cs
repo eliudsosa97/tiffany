@@ -24,7 +24,7 @@ namespace TiffanyGame.Tests
             Time.timeScale = 1f;
             AudioListener.pause = false;
             GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
-            GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = GameInput.FlashOverride = false;
+            GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = GameInput.LightHeldOverride = false;
             yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Single);
             yield return null;
             // Heartbeat registra cada cambio de ritmo y estos tests no admiten logs inesperados.
@@ -42,6 +42,7 @@ namespace TiffanyGame.Tests
             respawn = soul.GetComponent<PlayerRespawn>();
             witch = collector.tyler.witch;
             ui = collector.gameInterface;
+            ui.LoadMemories(System.Array.Empty<TextAsset>(), System.Array.Empty<Texture2D>());
             route = GameObject.Find("Route").transform;
             Assert.IsNotNull(respawn);
             Assert.AreSame(witch, respawn.witch);
@@ -103,7 +104,7 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(storm.raining);
                 Assert.AreEqual(WitchForm.Grounded, witch.Decision.Form);
                 Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
-                Assert.AreEqual(2.5f, witch.Decision.Speed);
+                Assert.AreEqual(witch.Profile.FollowSpeed, witch.Decision.Speed);
                 Vector3 offset = witch.Decision.MoveTarget - soul.transform.position;
                 // El NavMesh sigue al terreno y la jugadora se apoya en el piso visible más el skin del CharacterController.
                 Assert.Less(Mathf.Abs(offset.y), 0.2f);
@@ -229,7 +230,7 @@ namespace TiffanyGame.Tests
             while (witch.Decision.State != WitchState.WindUp && Time.realtimeSinceStartup < deadline)
             {
                 Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
-                Assert.AreEqual(2.5f, witch.Decision.Speed);
+                Assert.AreEqual(witch.Profile.FollowSpeed, witch.Decision.Speed);
                 yield return null;
             }
             Assert.AreEqual(WitchState.WindUp, witch.Decision.State);

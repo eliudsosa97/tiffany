@@ -1,9 +1,7 @@
-using System;
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace TiffanyGame.Tests
@@ -11,209 +9,78 @@ namespace TiffanyGame.Tests
     public sealed class EchoPlayerTests
     {
         GameObject root;
-        GameInterface ui;
         EchoPlayer player;
         TextAsset asset;
+        AudioClip clip;
+        AudioSource source;
 
         [SetUp] public void SetUp()
         {
             Time.timeScale = 1f;
             AudioListener.pause = false;
-            GameInput.ClearOverrides();
-            GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
-            GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = false;
-            root = new GameObject("Echo Test");
+            root = new GameObject("Echo Audio Test");
             root.SetActive(false);
-            var canvas = Child("Interface", root.transform, typeof(RectTransform), typeof(Canvas));
-            ui = canvas.AddComponent<GameInterface>();
-            ui.pausePanel = Child("Pause", canvas.transform);
-            ui.notebookPanel = Child("Notebook", canvas.transform);
-            ui.noticeText = Text("Notice", canvas.transform);
-            ui.subtitleText = Text("Subtitle", canvas.transform);
-            var owner = Child("Echo", root.transform);
-            player = owner.AddComponent<EchoPlayer>();
-            player.gameInterface = ui;
-            player.blackout = Child("Blackout", canvas.transform, typeof(RectTransform), typeof(Image)).GetComponent<Image>();
-            player.stageRoot = Child("Stage", owner.transform);
-            player.girl = Child("Girl", player.stageRoot.transform).transform;
-            player.tyler = Child("Tyler", player.stageRoot.transform).transform;
-            player.props = new[]
-            {
-                Child("Ball", player.stageRoot.transform).transform,
-                Child("Ribbon", player.girl).transform
-            };
+            root.AddComponent<AudioListener>();
+            player = root.AddComponent<EchoPlayer>();
+            clip = AudioClip.Create("test-audio", 44100, 1, 44100, false);
+            source = root.AddComponent<AudioSource>();
+            source.playOnAwake = false;
             var data = new EchoData
             {
-                id = 1,
-                duration = 10f,
-                girl = new EchoTrack
-                {
-                    disappear = 10f,
-                    points = new[] { new EchoPoint(), new EchoPoint { time = 10f, position = Vector3.right * 10f } }
-                },
-                tyler = new EchoTrack { disappear = 10f },
-                subtitles = new[] { new EchoSubtitle { time = 0.1f, duration = 8f, text = "¡Tyler!" } },
-                sounds = Array.Empty<EchoSound>(),
-                props = new[]
-                {
-                    new EchoProp { type = "ball", position = new Vector3(1f, 0.2f, 1f), disappear = 10f },
-                    new EchoProp { type = "ribbon", parent = "girl", position = new Vector3(0.2f, 0.7f, 0f), disappear = 10f }
-                },
-                blackout = new EchoBlackout { time = 1f, duration = 0.1f }
+                id = 1, duration = 10f,
+                girl = new EchoTrack { disappear = 10f }, tyler = new EchoTrack { disappear = 10f },
+                subtitles = new[] { new EchoSubtitle { time = 0f, duration = 1f, text = "Ignorado" } },
+                sounds = new[] { new EchoSound { clip = clip.name, time = 0f, duration = 1f, pitch = 1.5f, volume = 0.6f } }
             };
-            asset = new TextAsset(JsonUtility.ToJson(data)) { name = "test-echo" };
+            asset = new TextAsset(JsonUtility.ToJson(data));
             player.echoAsset = asset;
+            player.clips = new[] { clip };
+            player.sources = new[] { source };
             root.SetActive(true);
-            ui.ReplaceSubtitle("Anterior", 20f);
         }
 
         [UnityTearDown] public IEnumerator TearDown()
         {
             Object.Destroy(root);
             Object.Destroy(asset);
+            Object.Destroy(clip);
             Time.timeScale = 1f;
             AudioListener.pause = false;
-            GameInput.ClearOverrides();
             yield return null;
         }
 
-        [UnityTest] public IEnumerator PlaysMovesSubtitlesBlackoutAndHidesEverythingAtEnd()
+        [UnityTest] public IEnumerator AudioPlaysWhileTimeAndListenerArePausedAndStopsAtSlideshowEnd()
         {
-            Assert.IsFalse(player.stageRoot.activeSelf);
-            Assert.IsTrue(player.Play());
-            Assert.IsTrue(player.stageRoot.activeSelf);
-            Assert.IsEmpty(ui.subtitleText.text);
-            Assert.IsFalse(ui.noticeText.gameObject.activeSelf);
-            Time.timeScale = 10f;
-            yield return new WaitForSeconds(2f);
-            Assert.Greater(player.girl.localPosition.x, 0f);
-            Assert.AreEqual("¡Tyler!", ui.subtitleText.text);
-            Assert.IsTrue(player.blackout.gameObject.activeSelf);
-            Assert.AreEqual(1f, player.blackout.color.a);
-            yield return new WaitForSeconds(9f);
-            Assert.IsFalse(player.IsPlaying);
-            Assert.IsFalse(player.stageRoot.activeSelf);
-            Assert.IsFalse(player.girl.gameObject.activeInHierarchy);
-            Assert.IsFalse(player.tyler.gameObject.activeInHierarchy);
-            Assert.IsFalse(player.blackout.gameObject.activeSelf);
-            Assert.AreEqual("Anterior", ui.subtitleText.text);
-            Assert.IsTrue(ui.noticeText.gameObject.activeSelf);
-        }
-
-        [UnityTest] public IEnumerator PauseFreezesTheEchoAndDisableCleansUpImmediately()
-        {
-            Assert.IsTrue(player.Play());
-            yield return new WaitForSeconds(0.2f);
-            ui.TogglePause();
-            float time = player.Elapsed;
-            Vector3 position = player.girl.localPosition;
+            Time.timeScale = 0f;
+            AudioListener.pause = true;
+            var show = Presentation();
+            player.Play(show);
+            Assert.IsTrue(player.IsPlaying);
+            Assert.IsTrue(source.ignoreListenerPause);
+            Assert.AreSame(clip, source.clip);
+            Assert.AreEqual(1.5f, source.pitch);
+            Assert.AreEqual(0.6f, source.volume);
             yield return new WaitForSecondsRealtime(0.1f);
-            Assert.AreEqual(time, player.Elapsed);
-            Assert.AreEqual(position, player.girl.localPosition);
-            ui.TogglePause();
+            Assert.IsTrue(source.isPlaying);
+            Assert.Greater(source.time, 0f);
+            show.Tick(5f);
+            player.ApplyAudio();
+            Assert.IsFalse(player.IsPlaying);
+            Assert.IsFalse(source.isPlaying);
+        }
+
+        [UnityTest] public IEnumerator ReplayAndDisableStopTheAudioImmediately()
+        {
+            player.Play(Presentation());
+            yield return null;
+            player.Play(Presentation());
+            Assert.AreEqual(0f, player.Elapsed);
             player.enabled = false;
             Assert.IsFalse(player.IsPlaying);
-            Assert.IsFalse(player.stageRoot.activeSelf);
-            Assert.IsFalse(player.blackout.gameObject.activeSelf);
-            Assert.AreEqual("Anterior", ui.subtitleText.text);
+            Assert.IsFalse(source.isPlaying);
         }
 
-        [UnityTest] public IEnumerator MovingFiguresAndWorldPropsFollowTheGroundWhileHeldPropsKeepTheirOffsets()
-        {
-            root.transform.SetPositionAndRotation(new Vector3(108f, 7f, 168f), Quaternion.Euler(0f, 35f, 0f));
-            var ground = Child("Ground", root.transform, typeof(BoxCollider));
-            ground.transform.localPosition = Vector3.down;
-            ground.transform.localRotation = Quaternion.Euler(8f, 0f, -6f);
-            ground.transform.localScale = new Vector3(40f, 1f, 40f);
-            player.ground = ground.GetComponent<Collider>();
-            var roof = Child("Roof", root.transform, typeof(BoxCollider));
-            roof.transform.localPosition = Vector3.up * 3f;
-            roof.transform.localScale = new Vector3(40f, 0.5f, 40f);
-            Physics.SyncTransforms();
-            var surface = new Plane(ground.transform.up, ground.transform.TransformPoint(Vector3.up * 0.5f));
-            Assert.IsTrue(player.Play());
-            for (int i = 0; i < 2; i++)
-            {
-                AssertOnGround(player.girl, EchoEvaluator.Pose(player.Data.girl, player.Elapsed).Position.y, surface);
-                AssertOnGround(player.tyler, 0f, surface);
-                AssertOnGround(player.props[0], player.Data.props[0].position.y, surface);
-                Assert.AreEqual(player.Data.props[1].position, player.props[1].localPosition);
-                yield return new WaitForSeconds(0.2f);
-            }
-            Assert.Greater(player.girl.localPosition.x, 0f);
-        }
-
-        static void AssertOnGround(Transform target, float offset, Plane surface)
-        {
-            Vector3 position = target.position;
-            float height = -(surface.normal.x * position.x + surface.normal.z * position.z + surface.distance) / surface.normal.y;
-            Assert.AreEqual(height + offset, position.y, 0.001f, target.name);
-        }
-
-#if UNITY_EDITOR
-        [UnityTest] public IEnumerator FirstEchoAnimatesTylerWhileMovingAndResetsSpeedOnReplay()
-        {
-            root.SetActive(false);
-            player.enabled = false;
-            var echo = Child("First Echo", root.transform).AddComponent<EchoPlayer>();
-            echo.gameInterface = ui;
-            echo.blackout = player.blackout;
-            echo.stageRoot = Child("First Stage", echo.transform);
-            echo.girl = Child("Girl", echo.stageRoot.transform).transform;
-            echo.tyler = Child("Tyler", echo.stageRoot.transform).transform;
-            echo.echoAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Data/Echoes/echo-1.json");
-            Assert.IsTrue(EchoData.TryLoad(echo.echoAsset.text, out var data, out string error), error);
-            echo.props = new Transform[data.props.Length];
-            for (int i = 0; i < data.props.Length; i++)
-            {
-                var prop = data.props[i];
-                var parent = prop.parent == "girl" ? echo.girl : prop.parent == "tyler" ? echo.tyler : echo.stageRoot.transform;
-                echo.props[i] = Child(prop.type, parent).transform;
-            }
-            echo.clips = new AudioClip[data.sounds.Length];
-            for (int i = 0; i < data.sounds.Length; i++)
-                echo.clips[i] = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"Assets/Audio/Sfx/{data.sounds[i].clip}.wav");
-            var source = Child("Voice", echo.stageRoot.transform).AddComponent<AudioSource>();
-            source.playOnAwake = false;
-            echo.sources = new[] { source };
-            var model = Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Models/tyler.fbx"), echo.tyler, false);
-            var animator = model.GetComponent<Animator>() ?? model.AddComponent<Animator>();
-            animator.runtimeAnimatorController = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Art/Models/Tyler.controller");
-            animator.applyRootMotion = false;
-            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-            root.SetActive(true);
-            ui.StartGame();
-            yield return null;
-            Assert.IsTrue(echo.Play());
-            Time.timeScale = 4f;
-            bool animatedWalk = false;
-            float deadline = Time.realtimeSinceStartup + 10f;
-            while (echo.Elapsed < 7.2f && Time.realtimeSinceStartup < deadline)
-            {
-                yield return null;
-                if (echo.Elapsed <= 4.4f || echo.Elapsed >= 7.2f) continue;
-                animatedWalk |= animator.GetFloat(TylerAnimation.SpeedParameter) > TylerMotion.StillSpeed
-                    && (animator.GetCurrentAnimatorStateInfo(0).IsName(TylerAnimation.Walk)
-                        || animator.GetNextAnimatorStateInfo(0).IsName(TylerAnimation.Walk));
-            }
-            Assert.IsTrue(animatedWalk, "Tyler debe caminar mientras el eco 1 lo desplaza entre 4.4 y 7.2 s");
-            Assert.IsTrue(echo.Play());
-            Assert.AreEqual(0f, animator.GetFloat(TylerAnimation.SpeedParameter));
-        }
-#endif
-
-        static GameObject Child(string name, Transform parent, params Type[] components)
-        {
-            var child = new GameObject(name, components);
-            child.transform.SetParent(parent, false);
-            return child;
-        }
-
-        static Text Text(string name, Transform parent)
-        {
-            var text = Child(name, parent, typeof(RectTransform), typeof(Text)).GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            return text;
-        }
+        MemorySlideshow Presentation() => new MemorySlideshow(
+            new MemoryData { id = 1, drawings = new[] { new MemoryDrawing() } }, player.PrepareAudio());
     }
 }
