@@ -43,6 +43,7 @@ namespace TiffanyGame
             if (rules.Cue == cue) return;
             cue = rules.Cue;
             Debug.Log(cue == BackgroundCue.Title ? GameInfo.LogPrefix + " Música de fondo: inicio"
+                : cue == BackgroundCue.Pause ? GameInfo.LogPrefix + " Música de fondo: pausa"
                 : cue == BackgroundCue.Memory ? GameInfo.LogPrefix + " Música de fondo: recuerdo"
                 : cue == BackgroundCue.Ending ? GameInfo.LogPrefix + " Música de fondo: final" : GameInfo.LogPrefix + " Música de fondo: silencio");
         }
