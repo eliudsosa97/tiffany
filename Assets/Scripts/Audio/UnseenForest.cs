@@ -10,13 +10,13 @@ namespace TiffanyGame
         public TrailTension trailTension;
         public Transform view;
         public AudioSource source;
-        public AudioClip[] branches, steps, whispers, knocks;
+        public AudioClip[] branches, steps, whispers, knocks, names;
         public int seed = 18;
         private UnseenForestRules rules;
         private RouteTerrain terrain;
         private Vector3[][] paths;
         private static readonly WaitForSeconds StepPause = new WaitForSeconds(0.45f);
-        private int branch, step, whisper, knock;
+        private int branch, step, whisper, knock, nameIndex;
         private bool paused, wasChasing;
         private void Start()
         {
@@ -43,7 +43,11 @@ namespace TiffanyGame
             Vector3 player = tracker.player.position;
             UnseenZone zone = Zone(player);
             float sinceScare = trailTension != null ? Time.time - trailTension.LastEventTime : float.PositiveInfinity;
-            if (!rules.Tick(Time.deltaTime, zone, chasing, sinceScare)) return;
+            bool nameAvailable = false;
+            if (names != null)
+                for (int i = 0; i < names.Length; i++)
+                    if (names[i] != null) { nameAvailable = true; break; }
+            if (!rules.Tick(Time.deltaTime, zone, chasing, sinceScare, nameAvailable)) return;
             Vector3 forward = view.forward;
             forward.y = 0f;
             forward = forward.sqrMagnitude > 0f ? forward.normalized : Vector3.forward;
@@ -56,6 +60,7 @@ namespace TiffanyGame
                 case UnseenSound.Steps: StartCoroutine(PlaySteps()); break;
                 case UnseenSound.Whisper: Play(whispers, ref whisper); break;
                 case UnseenSound.Knock: Play(knocks, ref knock); break;
+                case UnseenSound.Name: Play(names, ref nameIndex); break;
             }
             Debug.Log($"{GameInfo.LogPrefix} Bosque: {rules.Sound} a {rules.Distance:0} m, {rules.Angle:0}°, zona {zone}");
         }
@@ -78,7 +83,14 @@ namespace TiffanyGame
         }
         private void Play(AudioClip[] clips, ref int index)
         {
-            if (clips != null && clips.Length > 0) source.PlayOneShot(clips[index++ % clips.Length]);
+            if (clips == null) return;
+            for (int i = 0; i < clips.Length; i++)
+            {
+                AudioClip clip = clips[index++ % clips.Length];
+                if (clip == null) continue;
+                source.PlayOneShot(clip);
+                return;
+            }
         }
         private void OnDisable() => StopEffects();
         private void StopEffects()

@@ -63,6 +63,7 @@ namespace TiffanyGame.EditorTools
             PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler);
             var ambience = BuildForestAmbience(player.transform, route, playerLight.witch);
             ambience.music = BuildTensionMusic(playerLight.witch, player.transform);
+            ambience.panic.music = ambience.music;
             BuildBackgroundMusic(gameInterface, route.GetComponent<WitchChapterTracker>(), ambience.music, playerLight.witch);
             var heartbeat = player.gameObject.AddComponent<Heartbeat>();
             heartbeat.panic = player.GetComponent<PanicController>();
@@ -521,6 +522,15 @@ namespace TiffanyGame.EditorTools
             forest.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
             forest.whispers = new[] { LoadClip("whisper_1"), LoadClip("whisper_2"), LoadClip("whisper_3") };
             forest.knocks = new[] { LoadClip("forest_knock_1"), LoadClip("forest_knock_2"), LoadClip("forest_knock_3") };
+            var names = new AudioClip[4];
+            int count = 0;
+            for (int i = 1; i <= names.Length; i++)
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>($"Assets/Audio/Sfx/tiffany_whisper_{i}.wav");
+                if (clip != null) names[count++] = clip;
+            }
+            Array.Resize(ref names, count);
+            forest.names = names;
         }
 
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
