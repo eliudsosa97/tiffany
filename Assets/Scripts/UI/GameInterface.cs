@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace TiffanyGame
@@ -17,6 +18,9 @@ namespace TiffanyGame
         public Text continueOption;
         public Text newGameOption;
         public GameObject pausePanel;
+        public Text pauseControls;
+        public Text[] pauseOptions = Array.Empty<Text>();
+        public PlayerRespawn playerRespawn;
         public GameObject notebookPanel;
         public RawImage drawingImage;
         public AspectRatioFitter drawingFitter;
@@ -45,6 +49,7 @@ namespace TiffanyGame
         int subtitleVersion = -1;
         int startFrame = -1;
         SaveGame saveGame;
+        readonly PauseMenu pauseMenu = new PauseMenu();
 
         public InterfaceScreen Screen => flow.Screen;
         public bool IsFrozen => flow.IsFrozen || Time.frameCount == startFrame;
@@ -55,6 +60,8 @@ namespace TiffanyGame
 
         void Start()
         {
+            if (pauseControls != null)
+                pauseControls.text = InterfaceTexts.ControllerText(InterfaceTexts.Controls, HasControllerSymbols(pauseControls.font));
             var controls = titlePanel != null ? titlePanel.transform.Find("Controls")?.GetComponent<Text>() : null;
             if (controls == null) return;
             controls.text = InterfaceTexts.ControllerText(InterfaceTexts.Controls, HasControllerSymbols(controls.font));
@@ -99,6 +106,11 @@ namespace TiffanyGame
             if (Screen == InterfaceScreen.Title)
             {
                 UpdateTitle();
+            }
+            else if (Screen == InterfaceScreen.Paused)
+            {
+                if (GameInput.PausePressed) flow.PressPause();
+                else UpdatePause();
             }
             else if (Time.frameCount != startFrame)
             {
@@ -204,6 +216,13 @@ namespace TiffanyGame
 
         public void NewGame()
         {
+            if (Screen == InterfaceScreen.Paused)
+            {
+                saveGame?.Delete();
+                SkipTitle = false;
+                SceneManager.LoadScene(gameObject.scene.name);
+                return;
+            }
             if (Screen != InterfaceScreen.Title) return;
             flow.SelectTitleOption(false);
             StartGame();
@@ -244,6 +263,44 @@ namespace TiffanyGame
             var highlight = new Color(1f, 0.87f, 0.63f);
             if (continueOption != null) continueOption.color = flow.ContinueSelected ? highlight : Color.gray;
             if (newGameOption != null) newGameOption.color = flow.ContinueSelected ? Color.gray : highlight;
+        }
+
+        void UpdatePause()
+        {
+            int previous = pauseMenu.Index;
+            bool confirming = pauseMenu.ConfirmingRestart;
+            if (GameInput.TitlePreviousPressed) pauseMenu.Previous();
+            if (GameInput.TitleNextPressed) pauseMenu.Next();
+            bool clicked = GameInput.PointerPressed;
+            bool hit = false;
+            if (GameInput.PointerMoved || clicked)
+                for (int i = 0; i < pauseOptions.Length; i++)
+                    if (RectTransformUtility.RectangleContainsScreenPoint(pauseOptions[i].rectTransform, GameInput.PointerPosition))
+                    {
+                        pauseMenu.Select(i);
+                        hit = true;
+                        break;
+                    }
+            if (GameInput.StartPressed && (!clicked || hit))
+            {
+                var action = pauseMenu.Submit();
+                if (action == PauseAction.Restart) { NewGame(); return; }
+                if (action == PauseAction.Respawn) playerRespawn.ReturnToCheckpoint();
+                if (action == PauseAction.Resume || action == PauseAction.Respawn)
+                {
+                    startFrame = Time.frameCount;
+                    flow.PressPause();
+                }
+            }
+            if (previous != pauseMenu.Index || confirming != pauseMenu.ConfirmingRestart) RefreshPauseSelection();
+        }
+
+        void RefreshPauseSelection()
+        {
+            for (int i = 0; i < pauseOptions.Length; i++)
+                pauseOptions[i].color = i == pauseMenu.Index ? new Color(1f, 0.87f, 0.63f) : Color.gray;
+            if (pauseOptions.Length == PauseMenu.OptionCount)
+                pauseOptions[2].text = pauseMenu.ConfirmingRestart ? InterfaceTexts.PauseConfirmRestart : InterfaceTexts.PauseRestart;
         }
 
         public void TogglePause()
@@ -296,6 +353,8 @@ namespace TiffanyGame
                 appliedFrozen = IsFrozen;
             }
             if (appliedScreen == Screen) return;
+            pauseMenu.Reset();
+            if (Screen == InterfaceScreen.Paused) RefreshPauseSelection();
             if (titlePanel != null) titlePanel.SetActive(Screen == InterfaceScreen.Title);
             pausePanel.SetActive(Screen == InterfaceScreen.Paused);
             notebookPanel.SetActive(Screen == InterfaceScreen.Notebook);

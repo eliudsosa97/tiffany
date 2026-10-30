@@ -21,7 +21,11 @@ namespace TiffanyGame
             + "Tab / botón Create  cuaderno\n"
             + "Esc o P / Options  pausa";
         public const string PauseTitle = "Pausa";
-        public const string PauseHint = "Esc o P para seguir";
+        public const string PauseHint = "W/S, flechas o stick/cruceta: elegir\nEspacio / Enter / ✕ / clic: aceptar · Esc / P / Options: seguir";
+        public const string PauseResume = "Seguir";
+        public const string PauseRespawn = "Volver a la última veladora";
+        public const string PauseRestart = "Reiniciar partida";
+        public const string PauseConfirmRestart = "¿Reiniciar? Se pierde la partida";
         public const string NotebookEmpty = "Aún no recuerdas nada";
         public const string NotebookHint = "A / D para pasar de página · Tab para cerrar";
         public const float PowerNoticeSeconds = 3f;

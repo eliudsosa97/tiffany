@@ -195,6 +195,30 @@ namespace TiffanyGame.Tests
             pad.MakeCurrent();
         }
 
+        [TestCase("w", 0)]
+        [TestCase("upArrow", 0)]
+        [TestCase("s", 1)]
+        [TestCase("downArrow", 1)]
+        [TestCase("dpad/up", 0)]
+        [TestCase("dpad/down", 1)]
+        [TestCase("leftStick/up", 0)]
+        [TestCase("leftStick/down", 1)]
+        [TestCase("space", 2)]
+        [TestCase("enter", 2)]
+        [TestCase("buttonSouth", 2)]
+        [TestCase("escape", 3)]
+        [TestCase("p", 3)]
+        [TestCase("start", 3)]
+        public void PauseUsesExistingNavigationSubmitAndCloseInputs(string input, int action)
+        {
+            pad = InputSystem.AddDevice<Gamepad>();
+            NextFrame();
+            if (input.StartsWith("leftStick")) ChangeStick(pad.leftStick, input.EndsWith("up") ? Vector2.up : Vector2.down);
+            else InputState.Change(keyboard.TryGetChildControl<ButtonControl>(input) ?? pad.GetChildControl<ButtonControl>(input), 1f);
+            Assert.IsTrue(action == 0 ? GameInput.TitlePreviousPressed : action == 1 ? GameInput.TitleNextPressed
+                : action == 2 ? GameInput.StartPressed : GameInput.PausePressed);
+        }
+
         static bool ReadAction(int action) => action switch
         {
             0 => GameInput.Slow,
