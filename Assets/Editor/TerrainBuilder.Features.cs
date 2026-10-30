@@ -50,17 +50,9 @@ namespace TiffanyGame.EditorTools
             while (start < terrain.Road.xMax)
             {
                 float end = Mathf.Min(start + 32f, terrain.Road.xMax);
-                if (start < terrain.FenceStart.x) end = Mathf.Min(end, terrain.FenceStart.x);
-                else if (start < terrain.RoadBendEnd) end = Mathf.Min(end, terrain.RoadBendEnd);
-                float half = RouteTerrain.RoadWidth * 0.5f;
-                var vertices = new[] { new Vector3(start, 0.04f, terrain.RoadCenterZ(start) - half),
-                    new Vector3(start, 0.04f, terrain.RoadCenterZ(start) + half),
-                    new Vector3(end, 0.04f, terrain.RoadCenterZ(end) - half),
-                    new Vector3(end, 0.04f, terrain.RoadCenterZ(end) + half) };
-                var mesh = SaveMesh($"Road {start}", vertices, new[] { 0, 1, 2, 2, 1, 3 },
-                    new[] { Vector2.zero, Vector2.up, Vector2.right, Vector2.one });
-                var part = MeshObject("Asphalt", parent, mesh, asphalt);
-                part.AddComponent<MeshCollider>().sharedMesh = mesh;
+                var part = SceneBuilder.CreatePrimitive("Asphalt", PrimitiveType.Cube, parent,
+                    new Vector3((start + end) * 0.5f, 0.02f, terrain.Road.center.y),
+                    new Vector3(end - start, 0.04f, RouteTerrain.RoadWidth), asphalt);
                 part.AddComponent<GroundSurface>().type = GroundType.Slab;
                 part.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild = true;
                 start = end;
@@ -69,9 +61,7 @@ namespace TiffanyGame.EditorTools
             {
                 if (Mathf.Abs(x - RouteLayout.Clearing(6).x) < 18f) continue;
                 var marking = SceneBuilder.CreatePrimitive("Marking", PrimitiveType.Cube, parent,
-                    new Vector3(x, 0.05f, terrain.RoadCenterZ(x)), new Vector3(4f, 0.02f, 0.15f), stripe);
-                float dz = terrain.RoadCenterZ(x + 0.1f) - terrain.RoadCenterZ(x - 0.1f);
-                marking.transform.localRotation = Quaternion.Euler(0f, -Mathf.Atan2(dz, 0.2f) * Mathf.Rad2Deg, 0f);
+                    new Vector3(x, 0.05f, terrain.Road.center.y), new Vector3(4f, 0.02f, 0.15f), stripe);
                 Object.DestroyImmediate(marking.GetComponent<Collider>());
             }
         }
@@ -79,15 +69,13 @@ namespace TiffanyGame.EditorTools
         static void BuildTown(Transform parent, RouteTerrain terrain, Material material)
         {
             var building = GeneratedMaterials.Get("RouteBuilding", new Color(0.4f, 0.4f, 0.4f), occluder: true);
-            var town = terrain.Town;
-            var lots = new[] { new Vector2(town.xMin + 8f, town.yMin + 16f),
-                new Vector2(town.xMin + 8f, town.yMin + 32f), new Vector2(town.xMin + 14f, town.yMax - 10f),
-                new Vector2(town.xMin + 34f, town.yMax - 10f), new Vector2(town.xMax - 6f, town.yMax - 10f) };
-            for (int i = 0; i < lots.Length; i++)
+            for (int row = 0; row < 4; row++)
+            for (int column = 0; column < 6; column++)
             {
-                float x = lots[i].x, z = lots[i].y;
-                float width = 6f + i % 3 * 2f, height = 4f + i % 4;
-                var house = SceneBuilder.CreatePrimitive($"House {i + 1}", PrimitiveType.Cube, parent,
+                float x = -56f + column * 36f, z = 174f + row * 20f;
+                if (terrain.InClearingSquare(x, z, 8f) || terrain.DistanceToRoute(x, z) < 8f) continue;
+                float width = 6f + (column + row) % 3 * 2f, height = 4f + (column * 3 + row) % 4;
+                var house = SceneBuilder.CreatePrimitive($"House {row} {column}", PrimitiveType.Cube, parent,
                     new Vector3(x, terrain.GroundHeight(x, z) + height * 0.5f, z), new Vector3(width, height, 8f), building);
                 BlockNavigation(house);
             }
@@ -125,8 +113,11 @@ namespace TiffanyGame.EditorTools
                 Visual("Bar", entrance, new Vector3(0f, 1.5f, -gateWidth * 0.5f + i * 0.5f), new Vector3(0.12f, 3f, 0.12f));
             for (int i = 0; i < 2; i++) Visual("Rail", entrance, new Vector3(0f, 0.6f + i * 1.8f, 0f), new Vector3(0.15f, 0.15f, gateWidth));
             var town = terrain.Town;
+            var road = RouteLayout.Clearing(6);
             var house = RouteLayout.Clearing(7);
-            var perimeter = new[] { new Vector2(town.xMin, town.yMin + 6f), new Vector2(house.x - 18f, town.yMin + 6f),
+            var perimeter = new[] { town.min, new Vector2(road.x - 18f, town.yMin),
+                new Vector2(road.x - 18f, road.z + 18f), new Vector2(road.x + 18f, road.z + 18f),
+                new Vector2(road.x + 18f, town.yMin + 6f), new Vector2(house.x - 18f, town.yMin + 6f),
                 new Vector2(house.x - 18f, house.z + 18f), new Vector2(house.x + 18f, house.z + 18f),
                 new Vector2(house.x + 18f, town.yMin), new Vector2(town.xMax, town.yMin),
                 town.max, new Vector2(town.xMin, town.yMax) };
@@ -135,7 +126,6 @@ namespace TiffanyGame.EditorTools
                 FenceSection(boundary, terrain, perimeter[i], perimeter[(i + 1) % perimeter.Length], material);
             void FenceRun(string name, float start, float end)
             {
-                if (end <= start) return;
                 int count = Mathf.CeilToInt((end - start) / 4f);
                 for (int i = 0; i <= count; i++)
                 {

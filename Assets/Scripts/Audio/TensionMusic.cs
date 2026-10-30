@@ -9,6 +9,7 @@ namespace TiffanyGame
         public AudioSource drone, pulse;
         public float maxVolume = 0.55f;
         public float Level => rules.Level;
+        public float Silence => rules.Silence;
         private readonly TensionMusicRules rules = new TensionMusicRules();
         private bool paused;
         private int dominant;

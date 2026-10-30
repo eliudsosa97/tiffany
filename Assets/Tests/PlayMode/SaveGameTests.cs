@@ -101,7 +101,9 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(ui.continueOption.gameObject.activeInHierarchy && ui.newGameOption.gameObject.activeInHierarchy);
             Assert.IsFalse(ui.startHint.gameObject.activeSelf);
             Assert.IsFalse(save.memories.IsFound(5));
+            Assert.IsFalse(ui.soulPanel.activeSelf);
             ui.StartGame();
+            Assert.IsTrue(ui.soulPanel.activeSelf);
             var candle = System.Array.Find(save.candles, candidate => candidate.saveId == CheckpointId);
             Assert.AreEqual(candle.Candle.Position, save.soul.Respawn.Position);
             Assert.Less(Vector3.Distance(save.soul.transform.position, candle.transform.position), candle.radius);
@@ -286,9 +288,9 @@ namespace TiffanyGame.Tests
             GameInput.InteractOverride = true;
             yield return null;
             GameInput.InteractOverride = false;
-            Assert.AreEqual(EndingStage.Fade, save.ending.Rules.Stage);
+            Assert.AreEqual(EndingStage.Approach, save.ending.Rules.Stage);
             Assert.IsTrue(PlayerPrefs.HasKey(SaveKey));
-            save.ending.Rules.Tick(EndingRules.FadeSeconds + EndingRules.TextSeconds);
+            save.ending.Rules.Tick(EndingRules.ApproachSeconds + EndingRules.FadeSeconds + EndingRules.TextSeconds);
             yield return null;
             Assert.AreEqual(EndingStage.Credits, save.ending.Rules.Stage);
             Assert.IsFalse(PlayerPrefs.HasKey(SaveKey));

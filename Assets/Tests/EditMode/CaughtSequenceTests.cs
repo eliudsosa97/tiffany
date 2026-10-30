@@ -4,6 +4,20 @@ namespace TiffanyGame.Tests
 {
     public sealed class CaughtSequenceTests
     {
+        [TestCase(0f)]
+        [TestCase(1.2f)]
+        public void CancelStopsCaptureWithoutAnotherRespawn(float elapsed)
+        {
+            var sequence = new CaughtSequence();
+            sequence.Begin();
+            sequence.Tick(elapsed);
+            sequence.Cancel();
+            Assert.IsFalse(sequence.Active || sequence.RespawnDue);
+            Assert.AreEqual(0f, sequence.Overlay);
+            sequence.Tick(CaughtSequence.FireDuration + CaughtSequence.FadeOutDuration);
+            Assert.IsFalse(sequence.Active || sequence.RespawnDue);
+        }
+
         [Test]
         public void BeginRunsFireFadeOutFadeInAndIdleAtTheirDurations()
         {
