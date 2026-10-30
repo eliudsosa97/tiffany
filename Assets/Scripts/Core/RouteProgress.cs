@@ -6,8 +6,8 @@ namespace TiffanyGame
 
         public static bool CanCollectMemory(int memoryId, int completedChallenges)
         {
-            int required = memoryId == 3 ? 1 : memoryId == 4 ? 3 : memoryId == 5 ? 15 : 0;
-            return (completedChallenges & required) == required;
+            // Los retos son opcionales: ningún recuerdo queda bloqueado.
+            return true;
         }
     }
 }
