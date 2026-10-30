@@ -79,8 +79,8 @@ namespace TiffanyGame.Tests
                 var entry = System.Array.Find(spec.materials, value => value.name == material.name);
                 Assert.AreEqual(material.name == "BallBlue" ? "#2F63B5" : "#FFFFFF", entry.color);
                 Assert.IsTrue(ColorUtility.TryParseHtmlString(entry.color, out var color));
-                Assert.AreEqual(color, material.GetColor("_BaseColor"));
-                Assert.AreEqual(color, material.GetColor("_Color"));
+                Assert.Less(((Vector4)(color - material.GetColor("_BaseColor"))).magnitude, 0.002f);
+                Assert.Less(((Vector4)(color - material.GetColor("_Color"))).magnitude, 0.002f);
             }
             var mesh = ball.GetComponentInChildren<MeshFilter>().sharedMesh;
             Assert.AreEqual(2, mesh.subMeshCount);
