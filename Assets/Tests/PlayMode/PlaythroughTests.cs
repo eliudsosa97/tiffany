@@ -159,7 +159,7 @@ namespace TiffanyGame.Tests
             scene.Select(PlaythroughMilestone.MoveObject);
             var originalObject = originalObjects.Find(item => item.transform.IsChildOf(route.GetChild(0)));
             Assert.AreEqual(originalObject.transform.position + Vector3.back * 2f, scene.Target);
-            var navigation = new PlaythroughNavigation();
+            var navigation = new PlaythroughNavigation(scene.ClearingCenters);
             var targets = new[]
             {
                 PlaythroughMilestone.Hide, PlaythroughMilestone.Memory2, PlaythroughMilestone.Kindle, PlaythroughMilestone.Memory3,
@@ -170,7 +170,83 @@ namespace TiffanyGame.Tests
             {
                 scene.Select(target);
                 Assert.IsTrue(navigation.Calculate(scene.Position, scene.Target), target.ToString());
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, navigation.Status, target.ToString());
             }
+        }
+
+        [UnityTest]
+        public IEnumerator LongNavigationVisitsEveryIntermediateClearingInBothDirections()
+        {
+            using (var scene = new PlaythroughScene())
+            {
+                var centers = scene.ClearingCenters;
+                var navigation = new PlaythroughNavigation(centers);
+                var corners = new Vector3[256 * RouteLayout.Count];
+                var filter = PlaythroughNavigation.CreateFilter();
+                foreach (bool reverse in new[] { false, true })
+                {
+                    int first = reverse ? centers.Length - 1 : 0;
+                    int last = reverse ? 0 : centers.Length - 1;
+                    int step = reverse ? -1 : 1;
+                    Assert.IsTrue(navigation.Calculate(centers[first], centers[last]));
+                    Assert.AreEqual(NavMeshPathStatus.PathComplete, navigation.Status);
+                    int count = navigation.GetCorners(corners);
+                    int cursor = 0;
+                    for (int i = first + step; i != last; i += step)
+                    {
+                        Vector3 center = centers[i];
+                        if (SafeZones.Contains(center)) Assert.IsTrue(SafeZones.TryPushOut(center, 0.5f, out center));
+                        Assert.IsTrue(NavMesh.SamplePosition(center, out var hit, 5f, filter));
+                        int index = System.Array.FindIndex(corners, cursor, count - cursor,
+                            point => Vector3.Distance(point, hit.position) < 0.01f);
+                        Assert.GreaterOrEqual(index, cursor, $"Claro {i + 1}, regreso: {reverse}");
+                        cursor = index + 1;
+                    }
+                    for (int i = 0; i < count; i++) navigation.Move(corners[i], 0f, 0.02f, out _);
+                    Assert.Less(navigation.Move(centers[last], 0f, 0.02f, out _).sqrMagnitude, 0.001f);
+                }
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator LongNavigationRejectsAPartialIntermediateSegment()
+        {
+            var island = new Vector3(10000f, 0f, 10000f);
+            var sources = new List<NavMeshBuildSource>
+            {
+                new NavMeshBuildSource
+                {
+                    shape = NavMeshBuildSourceShape.Box,
+                    size = new Vector3(10f, 0.2f, 10f),
+                    transform = Matrix4x4.TRS(island - Vector3.up * 0.1f, Quaternion.identity, Vector3.one)
+                }
+            };
+            var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), sources,
+                new Bounds(island, Vector3.one * 20f), Vector3.zero, Quaternion.identity);
+            Assert.IsNotNull(data);
+            var instance = NavMesh.AddNavMeshData(data);
+            try
+            {
+                using (var scene = new PlaythroughScene())
+                {
+                    var centers = (Vector3[])scene.ClearingCenters.Clone();
+                    var navigation = new PlaythroughNavigation(centers);
+                    Assert.IsTrue(navigation.Calculate(centers[0], centers[1]));
+                    centers[1] = island;
+                    Assert.IsTrue(NavMesh.SamplePosition(island, out _, 1f, NavMesh.AllAreas));
+                    navigation = new PlaythroughNavigation(centers);
+                    Assert.IsFalse(navigation.Calculate(centers[0], centers[centers.Length - 1]));
+                    Assert.AreEqual(NavMeshPathStatus.PathPartial, navigation.Status);
+                    Assert.AreEqual(0, navigation.GetCorners(new Vector3[256]));
+                }
+            }
+            finally
+            {
+                instance.Remove();
+                Object.Destroy(data);
+            }
+            yield return null;
         }
 
         [UnityTest]

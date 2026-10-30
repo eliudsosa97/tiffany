@@ -504,14 +504,18 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(NavMesh.SamplePosition(testZone.Find("Spawn").position, out _, 1f, NavMesh.AllAreas));
             Assert.IsTrue(NavMesh.SamplePosition(player.transform.position, out var from, 1f, NavMesh.AllAreas));
             var path = new NavMeshPath();
-            for (int i = 1; i < 8; i++)
+            for (int i = 0; i < RouteLayout.Count; i++)
             {
-                Assert.IsTrue(NavMesh.SamplePosition(route.GetChild(i).position, out var to, 1f, NavMesh.AllAreas));
-                Assert.IsTrue(NavMesh.CalculatePath(from.position, to.position, NavMesh.AllAreas, path));
+                Assert.IsTrue(NavMesh.SamplePosition(route.GetChild(i).position, out var to, 1f, NavMesh.AllAreas), route.GetChild(i).name);
+                Assert.IsTrue(NavMesh.CalculatePath(from.position, to.position, NavMesh.AllAreas, path), route.GetChild(i).name);
                 Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, route.GetChild(i).name);
+                from = to;
             }
             foreach (var hide in route.GetComponentsInChildren<HideVolume>())
             {
+                var clearing = hide.transform;
+                while (clearing.parent != route) clearing = clearing.parent;
+                Assert.IsTrue(NavMesh.SamplePosition(clearing.position, out from, 1f, NavMesh.AllAreas), clearing.name);
                 Assert.IsTrue(NavMesh.SamplePosition(hide.HidePoint, out var entry, 0.5f, NavMesh.AllAreas), hide.name);
                 Assert.IsTrue(NavMesh.CalculatePath(from.position, entry.position, NavMesh.AllAreas, path), hide.name);
                 Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, hide.name);
@@ -524,6 +528,7 @@ namespace TiffanyGame.Tests
             var logTop = new Vector3(logBounds.center.x, logBounds.max.y, logBounds.center.z);
             // El NavMesh sigue la superficie elevada del tronco, no el origen del río.
             Assert.IsTrue(NavMesh.SamplePosition(logTop, out var crossing, 0.3f, NavMesh.AllAreas));
+            Assert.IsTrue(NavMesh.SamplePosition(route.GetChild(5).position, out from, 1f, NavMesh.AllAreas));
             Assert.IsTrue(NavMesh.CalculatePath(from.position, crossing.position, NavMesh.AllAreas, path));
             Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
             yield return null;
