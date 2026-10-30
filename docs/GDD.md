@@ -67,6 +67,7 @@ Antes de la lápida, Tiffany solo brilla tenue. La luz se gana en la lápida y c
 Con el quinto recuerdo se inician el regreso y la tormenta.
 
 Pájaros amarillos marcan el camino entre claros.
+El cementerio tiene una reja de hierro con una sola salida, al sur, hacia la planta de agua.
 La planta de agua tiene un tanque elevado oxidado y las vías tienen rieles y durmientes.
 El establo es un granero viejo con paja, abrevadero y lodo. El jacal de la bruja tiene techo de paja.
 
@@ -77,8 +78,7 @@ El establo es un granero viejo con paja, abrevadero y lodo. El jacal de la bruja
 3. Se recarga en las veladoras.
 4. Recoge el recuerdo, gana su poder y supera el reto.
 
-Antes de recoger el brazalete, Tiffany necesita completar los cuatro retos del camino.
-En el último combina encender veladoras, distraer a la bruja y desvanecerse.
+Los retos del camino son opcionales. Cualquier recuerdo se recoge sin completarlos.
 
 ## 6. Controles
 
@@ -168,7 +168,8 @@ La cobertura sobre Tiffany evita que la bruja la vea desde el aire.
 
 ## 10. La bruja
 
-En vuelo, la bruja es una bola de fuego. Puede detectar la luz de Tiffany a distancia.
+En vuelo, la bruja es una bola de fuego silenciosa. Puede detectar la luz de Tiffany a distancia.
+En el suelo, sus pasos suenan como los de Tiffany, según el suelo que pisa.
 Si pasa cerca y Tiffany está descubierta, puede verla aunque ella apague la luz.
 En el suelo la detecta por vista, oído y olfato.
 Un anillo en el suelo marca hasta dónde ve: 15 metros si Tiffany lleva la luz encendida y 3 metros si va a oscuras.
