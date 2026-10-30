@@ -11,6 +11,34 @@ namespace TiffanyGame.Tests
             target.GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.Invoke(target, null);
 
         [Test]
+        public void PauseTableKeepsColumnsAndControllerFallbackAfterStart()
+        {
+            GameInterface ui = null;
+            try
+            {
+                ui = (GameInterface)typeof(EditorTools.SceneBuilder).GetMethod("BuildInterface", BindingFlags.Static | BindingFlags.NonPublic)
+                    .Invoke(null, new object[] { null });
+                Call(ui, "Start");
+                var table = ui.pausePanel.transform.Find("Controls");
+                var background = table.GetComponent<UnityEngine.UI.Image>();
+                Assert.AreEqual(new Color(0f, 0f, 0f, 0.6f), background.color);
+                Assert.IsNull(background.sprite);
+                var columns = table.GetComponentsInChildren<UnityEngine.UI.Text>(true);
+                Assert.AreEqual(3, columns.Length);
+                var headers = new[] { "Acción", "Teclado", "Mando" };
+                var values = new[] { InterfaceTexts.PauseActions, InterfaceTexts.PauseKeyboard, InterfaceTexts.PauseController };
+                for (int i = 0; i < columns.Length; i++)
+                {
+                    string expected = "<color=#999999>" + headers[i] + "</color>\n" + values[i];
+                    Assert.AreEqual(InterfaceTexts.ControllerText(expected, GameInterface.HasControllerSymbols(columns[i].font)), columns[i].text);
+                    Assert.AreEqual(13, columns[i].text.Split('\n').Length);
+                }
+                Assert.AreSame(columns[2], ui.pauseControls);
+            }
+            finally { if (ui != null) Object.DestroyImmediate(ui.gameObject); }
+        }
+
+        [Test]
         public void ReturnToCheckpointCancelsCaptureAndPreservesMemoriesAndPowers()
         {
             var player = new GameObject("Pause Respawn Test");

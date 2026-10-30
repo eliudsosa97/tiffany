@@ -899,18 +899,35 @@ namespace TiffanyGame.EditorTools
             ui.pausePanel = InterfacePanel("Pause", root.transform, 0.6f);
             InterfaceText("Title", ui.pausePanel.transform, font, InterfaceTexts.PauseTitle, 76,
                 new Vector2(0.1f, 0.80f), new Vector2(0.9f, 0.94f));
-            ui.pauseControls = InterfaceText("Controls", ui.pausePanel.transform, font, InterfaceTexts.Controls, 24,
-                new Vector2(0.06f, 0.22f), new Vector2(0.49f, 0.78f));
+            var controlsTable = InterfaceRect("Controls", ui.pausePanel.transform,
+                new Vector2(0.04f, 0.22f), new Vector2(0.56f, 0.78f));
+            var controlsBackground = controlsTable.gameObject.AddComponent<Image>();
+            controlsBackground.color = new Color(0f, 0f, 0f, 0.6f);
+            controlsBackground.raycastTarget = false;
+            var headers = new[] { "Acción", "Teclado", "Mando" };
+            var columns = new[] { InterfaceTexts.PauseActions, InterfaceTexts.PauseKeyboard, InterfaceTexts.PauseController };
+            var columnMin = new[] { 0.04f, 0.60f, 0.80f };
+            var columnMax = new[] { 0.58f, 0.78f, 0.98f };
+            for (int i = 0; i < columns.Length; i++)
+            {
+                var column = InterfaceText(headers[i], controlsTable, font,
+                    "<color=#999999>" + headers[i] + "</color>\n" + columns[i], 22,
+                    new Vector2(columnMin[i], 0.04f), new Vector2(columnMax[i], 0.96f));
+                column.alignment = TextAnchor.UpperLeft;
+                column.lineSpacing = 1.6f;
+                column.horizontalOverflow = HorizontalWrapMode.Overflow;
+                if (i == 2) ui.pauseControls = column;
+            }
             ui.pauseOptions = new[]
             {
                 InterfaceText("Resume", ui.pausePanel.transform, font, InterfaceTexts.PauseResume, 32,
-                    new Vector2(0.50f, 0.63f), new Vector2(0.97f, 0.73f)),
+                    new Vector2(0.58f, 0.63f), new Vector2(0.97f, 0.73f)),
                 InterfaceText("Respawn", ui.pausePanel.transform, font, InterfaceTexts.PauseRespawn, 32,
-                    new Vector2(0.50f, 0.49f), new Vector2(0.97f, 0.59f)),
+                    new Vector2(0.58f, 0.49f), new Vector2(0.97f, 0.59f)),
                 InterfaceText("Fullscreen", ui.pausePanel.transform, font, InterfaceTexts.PauseFullscreen, 32,
-                    new Vector2(0.50f, 0.35f), new Vector2(0.97f, 0.45f)),
+                    new Vector2(0.58f, 0.35f), new Vector2(0.97f, 0.45f)),
                 InterfaceText("Restart", ui.pausePanel.transform, font, InterfaceTexts.PauseRestart, 32,
-                    new Vector2(0.50f, 0.21f), new Vector2(0.97f, 0.31f))
+                    new Vector2(0.58f, 0.21f), new Vector2(0.97f, 0.31f))
             };
             InterfaceText("Hint", ui.pausePanel.transform, font,
                 InterfaceTexts.ControllerText(InterfaceTexts.PauseHint, GameInterface.HasControllerSymbols(font)), 24,
