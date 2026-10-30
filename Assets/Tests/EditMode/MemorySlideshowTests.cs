@@ -6,6 +6,18 @@ namespace TiffanyGame.Tests
     {
         static MemoryData Memory(int count = 3) => new MemoryData { id = 1, drawings = new MemoryDrawing[count] };
 
+        [TestCase(1024, 768, "memory-1-1", false)]
+        [TestCase(0, 0, null, true)]
+        [TestCase(1, 1, "memory-1-1", true)]
+        [TestCase(1, 768, "memory-1-1", true)]
+        [TestCase(1024, 1, "memory-1-1", true)]
+        [TestCase(640, 480, "memory-placeholder", true)]
+        [TestCase(640, 480, "Placeholder-1", true)]
+        public void PhraseIsOnlyShownWhenDrawingIsMissingOrPlaceholder(int width, int height, string name, bool expected)
+        {
+            Assert.AreEqual(expected, MemorySlideshow.ShouldShowPhrase(width, height, name));
+        }
+
         [Test] public void FadesToBlackBeforeShowingPagesAndBackBeforeFinishing()
         {
             var show = new MemorySlideshow(Memory(1));
