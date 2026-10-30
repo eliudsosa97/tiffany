@@ -22,6 +22,7 @@ namespace TiffanyGame
         public Text storyText;
         public PlayerSoul soul;
         public WitchChapterTracker route;
+        public RouteMap routeMap;
         public MemoryCollector memories;
         public GameObject soulPanel;
         public Image soulFill;
@@ -131,6 +132,7 @@ namespace TiffanyGame
 
         void Update()
         {
+            bool mapClosed = routeMap != null && routeMap.ReadInput(Screen, Screen == InterfaceScreen.Memory);
             if (Screen == InterfaceScreen.Title)
             {
                 UpdateTitle();
@@ -143,7 +145,7 @@ namespace TiffanyGame
             else if (Screen == InterfaceScreen.Story) UpdateStory();
             else if (Time.frameCount != startFrame)
             {
-                if (GameInput.PausePressed) flow.PressPause();
+                if (GameInput.PausePressed && !mapClosed) flow.PressPause();
                 if (GameInput.NotebookPressed) flow.PressNotebook();
             }
             ApplyScreen();
@@ -472,6 +474,7 @@ namespace TiffanyGame
 
         void ApplyScreen()
         {
+            if (routeMap != null) routeMap.SetAvailability(Screen, Screen == InterfaceScreen.Memory);
             if (IsFrozen || appliedFrozen == true) GameInput.ConsumePointerPress();
             if (appliedFrozen != IsFrozen)
             {

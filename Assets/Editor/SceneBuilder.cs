@@ -62,6 +62,7 @@ namespace TiffanyGame.EditorTools
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories, ball: ball);
             gameInterface.route = route.GetComponent<WitchChapterTracker>();
             gameInterface.memories = player.GetComponent<MemoryCollector>();
+            RouteMapBuilder.Build(gameInterface);
             PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler, gameInterface.transform);
             var ambience = BuildForestAmbience(player.transform, route, playerLight.witch);
             ambience.music = BuildTensionMusic(playerLight.witch, player.transform);
@@ -338,6 +339,7 @@ namespace TiffanyGame.EditorTools
             controller.fireLight = WitchBuilder.BuildFireBall(witch.transform, out var ball);
             ball.transform.localPosition = Vector3.up * FireBallHeight;
             controller.fireBall = ball;
+            WitchBuilder.BuildSightRing(controller);
             var viewDirection = Quaternion.Euler(0f, followCamera.yaw, 0f) * Vector3.forward;
             var flyingOffset = Vector3.forward * followCamera.lookAhead - viewDirection * 2f
                 + Vector3.up * RouteBuilder.SkyHeight;
@@ -880,6 +882,20 @@ namespace TiffanyGame.EditorTools
                 new Vector2(0f, 0.25f), Vector2.one).color = new Color(1f, 0.87f, 0.63f);
             ui.soulPanel.SetActive(false);
 
+            var chargeRect = InterfaceRect("Flash Charge", root.transform, Vector2.one * 0.5f, Vector2.one * 0.5f);
+            chargeRect.sizeDelta = new Vector2(64f, 64f);
+            hud.chargeRing = chargeRect.gameObject.AddComponent<FlashChargeRing>();
+            hud.chargeRing.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            hud.chargeRing.type = Image.Type.Filled;
+            hud.chargeRing.fillMethod = Image.FillMethod.Radial360;
+            hud.chargeRing.fillOrigin = (int)Image.Origin360.Top;
+            hud.chargeRing.fillAmount = 0f;
+            hud.chargeRing.raycastTarget = false;
+            var chargeOutline = chargeRect.gameObject.AddComponent<Outline>();
+            chargeOutline.effectColor = new Color(0.1f, 0.07f, 0.04f, 0.25f);
+            chargeOutline.effectDistance = Vector2.one;
+            chargeRect.gameObject.SetActive(false);
+
             ui.pausePanel = InterfacePanel("Pause", root.transform, 0.6f);
             InterfaceText("Title", ui.pausePanel.transform, font, InterfaceTexts.PauseTitle, 76,
                 new Vector2(0.1f, 0.80f), new Vector2(0.9f, 0.94f));
@@ -981,7 +997,7 @@ namespace TiffanyGame.EditorTools
             return assets;
         }
 
-        static RectTransform InterfaceRect(string name, Transform parent, Vector2 min, Vector2 max)
+        internal static RectTransform InterfaceRect(string name, Transform parent, Vector2 min, Vector2 max)
         {
             var rect = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
             rect.SetParent(parent, false);
@@ -1001,7 +1017,7 @@ namespace TiffanyGame.EditorTools
             return rect.gameObject;
         }
 
-        static Text InterfaceText(string name, Transform parent, Font font, string value, int size,
+        internal static Text InterfaceText(string name, Transform parent, Font font, string value, int size,
             Vector2 min, Vector2 max)
         {
             var text = InterfaceRect(name, parent, min, max).gameObject.AddComponent<Text>();
