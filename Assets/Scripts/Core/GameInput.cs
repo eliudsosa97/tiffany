@@ -217,6 +217,9 @@ namespace TiffanyGame
 
         public static bool NotebookPressed => KeyPressed(Key.Tab) || Gamepad.current?.selectButton.wasPressedThisFrame == true;
 
+        public static bool MapPressed => KeyPressed(Key.M) || Gamepad.current?.leftShoulder.wasPressedThisFrame == true;
+        public static bool MapClosePressed => KeyPressed(Key.Escape);
+
         public static bool FullscreenTogglePressed
         {
             get

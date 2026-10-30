@@ -62,6 +62,7 @@ namespace TiffanyGame.EditorTools
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories, ball: ball);
             gameInterface.route = route.GetComponent<WitchChapterTracker>();
             gameInterface.memories = player.GetComponent<MemoryCollector>();
+            RouteMapBuilder.Build(gameInterface);
             PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler, gameInterface.transform);
             var ambience = BuildForestAmbience(player.transform, route, playerLight.witch);
             ambience.music = BuildTensionMusic(playerLight.witch, player.transform);
@@ -981,7 +982,7 @@ namespace TiffanyGame.EditorTools
             return assets;
         }
 
-        static RectTransform InterfaceRect(string name, Transform parent, Vector2 min, Vector2 max)
+        internal static RectTransform InterfaceRect(string name, Transform parent, Vector2 min, Vector2 max)
         {
             var rect = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
             rect.SetParent(parent, false);
@@ -1001,7 +1002,7 @@ namespace TiffanyGame.EditorTools
             return rect.gameObject;
         }
 
-        static Text InterfaceText(string name, Transform parent, Font font, string value, int size,
+        internal static Text InterfaceText(string name, Transform parent, Font font, string value, int size,
             Vector2 min, Vector2 max)
         {
             var text = InterfaceRect(name, parent, min, max).gameObject.AddComponent<Text>();
