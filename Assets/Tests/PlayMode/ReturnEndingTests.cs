@@ -103,7 +103,7 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(storm.raining);
                 Assert.AreEqual(WitchForm.Grounded, witch.Decision.Form);
                 Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
-                Assert.AreEqual(2.5f, witch.Decision.Speed);
+                Assert.AreEqual(witch.Profile.FollowSpeed, witch.Decision.Speed);
                 Vector3 offset = witch.Decision.MoveTarget - soul.transform.position;
                 // El NavMesh sigue al terreno y la jugadora se apoya en el piso visible más el skin del CharacterController.
                 Assert.Less(Mathf.Abs(offset.y), 0.2f);
@@ -229,7 +229,7 @@ namespace TiffanyGame.Tests
             while (witch.Decision.State != WitchState.WindUp && Time.realtimeSinceStartup < deadline)
             {
                 Assert.AreEqual(WitchState.Stalking, witch.Decision.State);
-                Assert.AreEqual(2.5f, witch.Decision.Speed);
+                Assert.AreEqual(witch.Profile.FollowSpeed, witch.Decision.Speed);
                 yield return null;
             }
             Assert.AreEqual(WitchState.WindUp, witch.Decision.State);
