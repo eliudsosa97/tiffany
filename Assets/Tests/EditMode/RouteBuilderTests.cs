@@ -750,7 +750,16 @@ namespace TiffanyGame.Tests
             {
                 var path = RouteLayout.Path(from);
                 var pathRoot = route.GetChild(from).Find("Path to Next Clearing");
-                var floors = pathRoot.GetComponentsInChildren<GroundSurface>();
+                var surfaces = pathRoot.GetComponentsInChildren<GroundSurface>();
+                var floors = new Collider[surfaces.Length];
+                var bounds = new Bounds[surfaces.Length];
+                for (int i = 0; i < surfaces.Length; i++)
+                {
+                    floors[i] = surfaces[i].GetComponent<Collider>();
+                    Assert.IsNotNull(floors[i], surfaces[i].name);
+                    bounds[i] = floors[i].bounds;
+                    bounds[i].Expand(0.002f);
+                }
                 for (int i = 1; i < path.Length; i++)
                 {
                     Vector3 a = path[i - 1], b = path[i];
@@ -762,27 +771,30 @@ namespace TiffanyGame.Tests
                     {
                         if (river) continue;
                         Vector3 point = route.TransformPoint(Vector3.Lerp(a, b, (float)sample / samples) + side * (lane * 2f));
-                        Assert.IsTrue(FloorHeights(floors, point, out _, out _), $"Hueco en sendero {from}, tramo {i}, {point}");
+                        Assert.IsTrue(FloorHeights(floors, bounds, point, out _, out _), $"Hueco en sendero {from}, tramo {i}, {point}");
                     }
                     if (i == path.Length - 1) continue;
                     for (float x = -3f; x <= 3f; x += 0.25f)
                     for (float z = -3f; z <= 3f; z += 0.25f)
                     {
                         Vector3 point = route.TransformPoint(b + new Vector3(x, 0f, z));
-                        if (FloorHeights(floors, point, out float low, out float high))
+                        if (FloorHeights(floors, bounds, point, out float low, out float high))
                             Assert.LessOrEqual(high - low, 0.15f + 0.001f, $"Unión {from}/{i}, {point}");
                     }
                 }
             }
         }
 
-        static bool FloorHeights(GroundSurface[] floors, Vector3 point, out float low, out float high)
+        static bool FloorHeights(Collider[] floors, Bounds[] bounds, Vector3 point, out float low, out float high)
         {
             low = float.PositiveInfinity;
             high = float.NegativeInfinity;
-            foreach (var floor in floors)
-                if (floor.GetComponent<Collider>().Raycast(new Ray(point + Vector3.up * 2f, Vector3.down), out var hit, 4f)
-                    && hit.normal.y >= Mathf.Cos(RouteLayout.CliffPathMaxSlopeDegrees * Mathf.Deg2Rad) - 0.001f)
+            var ray = new Ray(point + Vector3.up * 2f, Vector3.down);
+            float minimumNormal = Mathf.Cos(RouteLayout.CliffPathMaxSlopeDegrees * Mathf.Deg2Rad) - 0.001f;
+            for (int i = 0; i < floors.Length; i++)
+                if (bounds[i].IntersectRay(ray, out float distance) && distance <= 4f
+                    && floors[i].Raycast(ray, out var hit, 4f)
+                    && hit.normal.y >= minimumNormal)
                 {
                     low = Mathf.Min(low, hit.point.y);
                     high = Mathf.Max(high, hit.point.y);

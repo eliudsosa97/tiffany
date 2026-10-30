@@ -150,11 +150,15 @@ namespace TiffanyGame.Tests
         [Test]
         public void CliffTrailRemainsWalkableFromEndToEnd()
         {
-            BakeRouteNavMesh();
             var points = RouteLayout.Path(4);
+            var bounds = new Bounds(points[0], Vector3.zero);
+            foreach (var point in points) bounds.Encapsulate(point);
+            bounds.Expand(20f);
+            BakeRouteNavMesh(bounds: bounds);
             var terrain = new RouteTerrain();
             int walkable = 1 << NavMesh.GetAreaFromName("Walkable");
             Vector3 previous = route.TransformPoint(points[0]);
+            var path = new NavMeshPath();
             for (int segment = 1; segment < points.Length; segment++)
             {
                 int samples = Mathf.CeilToInt(Vector3.Distance(points[segment - 1], points[segment]));
@@ -166,7 +170,6 @@ namespace TiffanyGame.Tests
                     string label = $"Rampa choza -> lago, tramo {segment}, muestra {i}";
                     Assert.IsTrue(NavMesh.SamplePosition(point, out var hit, 0.3f, walkable),
                         $"Rampa sin Walkable. {RouteDetails(label, previous, point)}");
-                    var path = new NavMeshPath();
                     Assert.IsTrue(NavMesh.CalculatePath(previous, hit.position, walkable, path), RouteDetails(label, previous, hit.position, path));
                     Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, RouteDetails(label, previous, hit.position, path));
                     Assert.IsFalse(NavMesh.Raycast(previous, hit.position, out var edge, walkable),
@@ -176,10 +179,15 @@ namespace TiffanyGame.Tests
             }
         }
 
-        void BakeRouteNavMesh(Transform source = null)
+        void BakeRouteNavMesh(Transform source = null, Bounds? bounds = null)
         {
             var surface = (source != null ? source : route).gameObject.AddComponent<NavMeshSurface>();
-            surface.collectObjects = CollectObjects.Children;
+            surface.collectObjects = bounds.HasValue ? CollectObjects.Volume : CollectObjects.Children;
+            if (bounds.HasValue)
+            {
+                surface.center = bounds.Value.center;
+                surface.size = bounds.Value.size;
+            }
             surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
             surface.overrideVoxelSize = true;
             surface.voxelSize = 0.1f;
