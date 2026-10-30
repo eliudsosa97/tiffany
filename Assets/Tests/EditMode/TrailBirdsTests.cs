@@ -143,7 +143,7 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(spec.trunkCollider.height, capsule.height);
                 Assert.AreEqual(spec.trunkCollider.center, capsule.center);
                 Assert.AreEqual(Vector3.Scale(spec.perchOffset, perch.localScale), bird.localPosition);
-                Assert.AreEqual(Vector3.one, bird.localScale);
+                Assert.AreEqual(Vector3.one * TrailBirds.BirdScale, bird.localScale);
                 if (i + 1 < points.Count)
                 {
                     Vector3 direction = root.transform.TransformDirection(points[i + 1].Position - points[i].Position);
@@ -158,6 +158,22 @@ namespace TiffanyGame.Tests
                     Assert.AreEqual(ShadowCastingMode.Off, renderer.shadowCastingMode);
                     Assert.IsFalse(renderer.receiveShadows);
                 }
+            }
+        }
+
+        [Test]
+        public void PlacedBirdsHaveUniformScaleAndQuarterMeterHeightWithFeetAtThePerch()
+        {
+            TrailBirds.Place(root.transform, 0, new RouteTerrain(), 713);
+            var birds = root.GetComponentsInChildren<TrailBird>();
+            Assert.IsNotEmpty(birds);
+            Assert.AreEqual(1.8f, TrailBirds.BirdScale);
+            foreach (var bird in birds)
+            {
+                Assert.AreEqual(Vector3.one * 1.8f, bird.transform.localScale);
+                var bounds = bird.GetComponentInChildren<Renderer>().bounds;
+                Assert.AreEqual(0.25f, bounds.size.y, 0.02f);
+                Assert.AreEqual(bird.transform.position.y, bounds.min.y, 0.001f);
             }
         }
 
@@ -209,11 +225,13 @@ namespace TiffanyGame.Tests
             Assert.Less(Quaternion.Angle(root.transform.rotation * Quaternion.Euler(42f, 45f, 0f), trail.cameraRotation), 0.1f);
         }
 
-        [Test]
-        public void ApplyMatchesTheSeededLogicRelativeToTheRestPoseWithoutDrift()
+        [TestCase(1f)]
+        [TestCase(TrailBirds.BirdScale)]
+        public void ApplyMatchesTheSeededLogicRelativeToTheRestPoseWithoutDrift(float scale)
         {
             var bird = ModelLibrary.Instantiate("trail-bird", root.transform).AddComponent<TrailBird>();
             bird.seed = 713;
+            bird.transform.localScale = Vector3.one * scale;
             Vector3 rest = new Vector3(2f, 1.5f, -3f);
             Quaternion rotation = Quaternion.Euler(0f, 73f, 0f);
             bird.transform.SetLocalPositionAndRotation(rest, rotation);
@@ -224,6 +242,9 @@ namespace TiffanyGame.Tests
                 bird.Apply(1f / 60f);
                 Assert.Less(Vector3.Distance(rest + rotation * pose.Offset, bird.transform.localPosition), 0.00001f);
                 Assert.Less(Quaternion.Angle(rotation * pose.Rotation, bird.transform.localRotation), 0.1f);
+                Assert.Less(Vector3.Distance(rest, bird.transform.localPosition), 0.03f);
+                Assert.Less(Quaternion.Angle(rotation, bird.transform.localRotation), 25f);
+                Assert.AreEqual(Vector3.one * scale, bird.transform.localScale);
             }
         }
     }

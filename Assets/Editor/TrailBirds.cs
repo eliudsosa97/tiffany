@@ -6,6 +6,8 @@ namespace TiffanyGame.EditorTools
 {
     public static class TrailBirds
     {
+        public const float BirdScale = 1.8f;
+
         public static void Place(Transform path, int index, RouteTerrain terrain, int seed)
         {
             var polyline = RouteLayout.Path(index);
@@ -30,6 +32,7 @@ namespace TiffanyGame.EditorTools
                 foreach (var node in perch.GetComponentsInChildren<Transform>(true))
                     GameObjectUtility.SetStaticEditorFlags(node.gameObject, StaticEditorFlags.BatchingStatic);
                 var bird = ModelLibrary.Instantiate("trail-bird", group);
+                bird.transform.localScale = Vector3.one * BirdScale;
                 bird.transform.localPosition = Vector3.Scale(spec.perchOffset, perch.transform.localScale);
                 bird.AddComponent<TrailBird>().seed = unchecked(seed * 397 ^ i);
                 foreach (var node in bird.GetComponentsInChildren<Transform>(true))
