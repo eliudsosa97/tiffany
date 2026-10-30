@@ -35,6 +35,8 @@ namespace TiffanyGame
         public const string StoryHint = "Clic, Enter u Options para seguir";
         public const string GraveObjective = "Toca tu lápida (" + GameInput.InteractBinding + ")";
         public const string BallObjective = "Busca la pelota";
+        public const string TylerNotice = "Tyler te sigue. Si te detienes, te lleva al siguiente recuerdo.\n"
+            + "Gruñe cuando la bruja anda cerca. Junto a él tienes menos miedo y te presta su luz.";
         public const string BirdsObjective = "Sigue a los pájaros amarillos";
         public const string TouchPrompt = GameInput.InteractBinding + ": recordar";
         public const string CollectPrompt = GameInput.InteractBinding + ": recoger";
