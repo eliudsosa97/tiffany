@@ -99,7 +99,7 @@ namespace TiffanyGame
             {
                 scene = new PlaythroughScene();
                 scene.Prepare(Plan, LogMilestone);
-                navigation = new PlaythroughNavigation();
+                navigation = new PlaythroughNavigation(scene.ClearingCenters);
                 dodge = new PlaythroughDodge((from, direction) =>
                     PlaythroughNavigation.CanMove(from, direction, PlayerMotion.RunSpeed * PlaythroughDodge.Duration));
                 CacheClearings();

@@ -298,20 +298,99 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void ForestDensityBuildsAWallBesideTheRouteAndThinsTheFarForest()
+        public void ForestDensityRaisesTheTwoToTenMeterBandAndPreservesTheFarForest()
         {
-            float near = 0f, far = 0f;
+            float near = 0f, previousNear = 0f, far = 0f;
             int nearSamples = 0, farSamples = 0;
             for (float z = terrain.Bounds.yMin + 1f; z < terrain.Bounds.yMax; z += 3f)
             for (float x = terrain.Bounds.xMin + 1f; x < terrain.Bounds.xMax; x += 3f)
             {
-                if (terrain.IsHauntedForest(x, z)) continue;
+                if (terrain.IsWater(x, z) || terrain.Town.Contains(new Vector2(x, z))) continue;
                 float distance = terrain.DistanceToRoute(x, z);
-                if (distance > 1f && distance < 6f) { near += terrain.ForestDensity(x, z); nearSamples++; }
-                else if (distance > RouteTerrain.WallDistance) { far += terrain.ForestDensity(x, z); farSamples++; }
+                float density = terrain.ForestDensity(x, z);
+                if (distance >= 2f && distance <= 10f)
+                {
+                    near += density;
+                    previousNear += PreviousForestDensity(x, z);
+                    nearSamples++;
+                }
+                else if (distance >= 25f)
+                {
+                    Assert.AreEqual(PreviousForestDensity(x, z), density, $"Bosque lejano en {x}, {z}");
+                    far += density;
+                    farSamples++;
+                }
             }
-            Assert.Greater(near / nearSamples, 0.5f);
+            Assert.Greater(nearSamples, 0);
+            Assert.Greater(farSamples, 0);
+            Assert.Greater(near / nearSamples, previousNear / nearSamples * 1.35f);
+            Assert.Greater(near / nearSamples, far / farSamples * 3f);
             Assert.Less(far / farSamples, 0.12f);
+            TestContext.WriteLine($"Densidad de 2 a 10 m: {previousNear / nearSamples:F3} -> {near / nearSamples:F3}. Lejos: {far / farSamples:F3}.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(5)]
+        public void ForestDensityFlanksBothSidesOfForestTrails(int trail)
+        {
+            var path = RouteLayout.Path(trail);
+            for (int sign = -1; sign <= 1; sign += 2)
+            {
+                int samples = 0;
+                for (int i = 1; i < path.Length; i++)
+                {
+                    Vector3 middle = (path[i - 1] + path[i]) * 0.5f;
+                    Vector3 along = path[i] - path[i - 1];
+                    var side = new Vector2(along.z, -along.x).normalized * sign;
+                    for (float offset = 2f; offset <= 10f; offset += 2f)
+                    {
+                        var point = new Vector2(middle.x, middle.z) + side * (RouteLayout.PathWidth * 0.5f + offset);
+                        float distance = terrain.DistanceToRoute(point.x, point.y);
+                        if (distance < 2f || distance > 10f || terrain.IsWater(point.x, point.y)
+                            || terrain.Town.Contains(point) || terrain.InClearingSquare(point.x, point.y)) continue;
+                        Assert.GreaterOrEqual(terrain.ForestDensity(point.x, point.y), RouteTerrain.DenseForestDensity,
+                            $"Sendero {trail}, lado {sign}, distancia {offset}");
+                        samples++;
+                    }
+                }
+                Assert.Greater(samples, 0, $"Sendero {trail}, lado {sign}");
+            }
+        }
+
+        [Test]
+        public void ForestDensityTapersFromTenToTwentyFiveMeters()
+        {
+            float previous = 1f;
+            for (float distance = 10f; distance <= 25f; distance += 5f)
+            {
+                float x = 105f, z = -62.5f - distance;
+                Assert.AreEqual(distance, terrain.DistanceToRoute(x, z), 0.001f);
+                float density = terrain.ForestDensity(x, z);
+                Assert.Less(density, previous);
+                previous = density;
+            }
+            Assert.AreEqual(PreviousForestDensity(105f, -87.5f), previous);
+        }
+
+        float PreviousForestDensity(float x, float z)
+        {
+            float Smooth(float value) => Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(value));
+            float lakeside = 0.2f * (1f - Smooth(terrain.LakeDistance(x, z) / (RouteTerrain.LakeRadius.y * 1.5f)));
+            uint hole = unchecked((uint)(Mathf.FloorToInt(x / 6f) * 73856093)
+                ^ (uint)(Mathf.FloorToInt(z / 6f) * 19349663));
+            hole = unchecked((hole ^ (hole >> 13)) * 1274126177u);
+            if (hole % 7 == 0) return lakeside;
+            float patch = 0.5f + 0.25f * Mathf.Sin(x * 0.23f + Mathf.Sin(z * 0.07f))
+                + 0.25f * Mathf.Cos(z * 0.22f - x * 0.05f);
+            bool haunted = terrain.IsHauntedForest(x, z);
+            float clusters = Smooth((patch - (haunted ? 0.58f : 0.64f)) / 0.2f) * (haunted ? 0.95f : 0.35f);
+            float wall = 1f - Smooth((terrain.DistanceToRoute(x, z) - 6f) / 19f);
+            float density = Mathf.Max(clusters * (haunted ? 1f : Mathf.Lerp(0.5f, 1f, wall)), wall * (haunted ? 0.95f : 0.7f));
+            return Mathf.Max(density, lakeside);
         }
 
         [Test]

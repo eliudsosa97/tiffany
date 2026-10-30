@@ -48,12 +48,22 @@ namespace TiffanyGame.EditorTools
                 Quaternion.Euler(FollowCamera.DefaultPitch, FollowCamera.DefaultYaw, 0f) * Vector3.forward);
             var used = new long[RouteLayout.Count];
             var trunks = parent.parent.GetComponentsInChildren<CapsuleCollider>();
+            Vector3 candle = terrain.RampCandle();
+            var candlePoint = new Vector2(candle.x, candle.z);
             for (int i = 0; i < used.Length; i++) used[i] = TriangleCount(parent.parent.GetChild(i).Find("Forest"));
             var cells = new SortedDictionary<Vector2Int, FillCell>(Comparer<Vector2Int>.Create((a, b) =>
                 a.y == b.y ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y)));
             float Range(float min, float max) => min + (float)random.NextDouble() * (max - min);
             bool Free(Vector2 point, float radius)
             {
+                if (!terrain.Bounds.Contains(point)
+                    || terrain.DistanceToRoute(point.x, point.y) <= radius + 0.5f
+                    || terrain.InClearingSquare(point.x, point.y, radius)
+                    || RouteTerrain.RectangleDistance(point, terrain.Town) <= radius
+                    || terrain.LakeDistance(point.x, point.y) <= radius + 1f
+                    || terrain.RiverDistance(point.x, point.y) <= RouteTerrain.RiverWidth * 0.5f + radius
+                    || terrain.TrainDistance(point.x, point.y) <= RouteLayout.TrainWidth * 0.5f + radius + 0.5f
+                    || Vector2.Distance(point, candlePoint) <= CandleSite.DefaultRadius + radius) return false;
                 if (TrailPatches.Reserves(point, radius)) return false;
                 if (ChallengeBuilder.Reserves(new Vector3(point.x, terrain.Height(point.x, point.y), point.y), radius)) return false;
                 foreach (var trunk in trunks)
@@ -62,13 +72,7 @@ namespace TiffanyGame.EditorTools
                     if (Vector2.Distance(point, new Vector2(position.x, position.z))
                         < trunk.radius * trunk.transform.lossyScale.x + 0.9f) return false;
                 }
-                return terrain.Bounds.Contains(point)
-                    && terrain.DistanceToRoute(point.x, point.y) > radius + 0.5f
-                    && !terrain.InClearingSquare(point.x, point.y, radius)
-                    && RouteTerrain.RectangleDistance(point, terrain.Town) > radius
-                    && terrain.LakeDistance(point.x, point.y) > radius + 1f
-                    && terrain.RiverDistance(point.x, point.y) > RouteTerrain.RiverWidth * 0.5f + radius
-                    && terrain.TrainDistance(point.x, point.y) > RouteLayout.TrainWidth * 0.5f + radius + 0.5f;
+                return true;
             }
             var candidates = new List<(Vector2 point, float distance, double roll, int pick, float height, float yaw)>();
             for (float z = terrain.Bounds.yMin + 3f; z < terrain.Bounds.yMax - 3f; z += FillTreeSpacing)
@@ -85,8 +89,8 @@ namespace TiffanyGame.EditorTools
                 ? candidates[a].distance.CompareTo(candidates[b].distance) : a.CompareTo(b));
             foreach (int index in order)
             {
-                var (point, _, roll, pick, heightRoll, yaw) = candidates[index];
-                if (roll >= terrain.ForestDensity(point.x, point.y)) continue;
+                var (point, distance, roll, pick, heightRoll, yaw) = candidates[index];
+                if (distance <= 0.5f || roll >= terrain.ForestDensity(point.x, point.y)) continue;
                 bool haunted = terrain.IsHauntedForest(point.x, point.y);
                 int model = haunted ? (pick % 4 == 0 ? 2 : 4) : pick % 3 * 2;
                 float height = haunted ? Mathf.Lerp(1.25f, 1.4f, heightRoll) : Mathf.Lerp(1.05f, 1.2f, heightRoll);
