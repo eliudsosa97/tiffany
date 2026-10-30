@@ -14,6 +14,7 @@ namespace TiffanyGame
         private readonly System.Random random;
         private readonly Func<Vector3, Vector3> resolveGroundTarget;
         private readonly WitchTactics tactics;
+        private readonly WitchHarass harass;
         private readonly WitchCatchUp catchUp = new WitchCatchUp();
         private WitchDecision tacticDecision;
         private bool hasTacticDecision;
@@ -55,6 +56,7 @@ namespace TiffanyGame
         {
             Watch = new WitchWatch(post, requiresVanish);
             tactics.Forget();
+            harass.Cancel();
             hasTarget = chasing = warned = targetIsPlayer = roaming = false;
             hasNoiseTarget = hasHideTarget = inspectingNoise = retreatingNoise = false;
             timeWithoutPerception = 0f;
@@ -76,6 +78,7 @@ namespace TiffanyGame
             this.random = random ?? new System.Random();
             this.resolveGroundTarget = resolveGroundTarget;
             tactics = new WitchTactics(this.random, resolveGroundTarget);
+            harass = new WitchHarass(this.random, resolveGroundTarget);
             roamDelay = NextRoamDelay();
             if (profile.GroundChase) state = WitchState.Stalking;
             route = new Vector3[skyRoute?.Count ?? 0];
@@ -88,6 +91,7 @@ namespace TiffanyGame
         public WitchDecision Tick(float dt, in WitchPerception p)
         {
             dt = dt < 0f || float.IsNaN(dt) || float.IsInfinity(dt) ? 0f : dt;
+            harass.AdvanceClock(dt);
             catchUp.AdvanceRespawn(dt, profile, p.PlayerPosition);
             if (returnGraceRemaining > 0f)
             {
@@ -162,12 +166,18 @@ namespace TiffanyGame
             {
                 if (lostEdge)
                 {
+                    harass.Cancel();
                     if (chasing || targetIsPlayer) hasTarget = false;
                     chasing = warned = false;
                 }
-                if (p.PlayerInSafeZone) chasing = warned = false;
+                if (p.PlayerInSafeZone)
+                {
+                    harass.Cancel();
+                    chasing = warned = false;
+                }
                 if (p.Flashed)
                 {
+                    harass.Cancel();
                     if (detected) TargetPlayer(in p);
                     Enter(WitchState.Stunned, p.WitchPosition);
                     return Decide(in p);
@@ -293,11 +303,26 @@ namespace TiffanyGame
         public void SetProfile(WitchProfile next)
         {
             profile = next ?? throw new ArgumentNullException(nameof(next));
+            if (profile.GroundChase) harass.Cancel();
             if (roamDelay < profile.RoamMinDelay || roamDelay > profile.RoamMaxDelay) roamDelay = NextRoamDelay();
         }
 
         private void Advance(float dt, in WitchPerception p, bool trackable, bool detected, bool newLight)
         {
+            if (harass.Active && !detected && !harass.SeekingCover && TryTactic(dt, in p))
+            {
+                harass.Cancel();
+                return;
+            }
+            if (state == WitchState.Stalking && Watch == null && !profile.GroundChase && !warned
+                && trackable && (detected || harass.Active))
+            {
+                tactics.Cancel();
+                chasing = false;
+                if (harass.Tick(dt, profile, in p, out tacticDecision)) hasTacticDecision = true;
+                else Enter(WitchState.WindUp, p.WitchPosition);
+                return;
+            }
             if (TryTactic(dt, in p)) return;
             switch (state)
             {
@@ -389,6 +414,13 @@ namespace TiffanyGame
                     }
                     else if (stateTime >= profile.WindUpDuration)
                     {
+                        if (Watch == null && !profile.GroundChase) harass.CompleteWarning(profile);
+                        if (!profile.CanSprint && Watch == null)
+                        {
+                            chasing = false;
+                            Enter(WitchState.Stalking, p.WitchPosition);
+                            break;
+                        }
                         Vector3 direction = p.PlayerPosition - p.WitchPosition;
                         direction.y = 0f;
                         if (direction.sqrMagnitude < 1e-6f)

@@ -47,6 +47,7 @@ namespace TiffanyGame
         private WitchBrain brain;
         private WitchChapterTracker chapterTracker;
         private RespawnPoint respawn;
+        private PlayerLight playerLamp;
         private Vector3[] hidePoints;
         private RaycastHit[] hits;
         private Action<StepNoise> noiseHandler;
@@ -136,6 +137,7 @@ namespace TiffanyGame
             }
             chapterTracker = FindAnyObjectByType<WitchChapterTracker>();
             if (player != null && player.TryGetComponent<PlayerSoul>(out var soul)) respawn = soul.Respawn;
+            if (player != null) player.TryGetComponent(out playerLamp);
         }
 
         public void Flash() => flashed = true;
@@ -387,6 +389,12 @@ namespace TiffanyGame
             WitchIntent previousIntent = Decision.Intent;
             bool wasInspectingHide = Decision.InspectingHide;
             var perception = witchSenses.Sense(in inputs);
+            perception.PlayerLightTouchesWitch = playerLightOn && lineOfSight && !playerHidden && !playerVanished
+                && playerLamp != null && playerLamp.spot != null
+                && SoulLight.InCone(playerPosition, player.forward, position, playerLamp.spot.range,
+                    playerLamp.spot.spotAngle * 0.5f);
+            if (Decision.Intent == WitchIntent.Harass && perception.PlayerLightTouchesWitch)
+                FindHarassCover(ref perception);
             if (WatchPassage != null)
             {
                 Vector3 local = WatchPassage.InverseTransformPoint(playerPosition);
@@ -503,6 +511,25 @@ namespace TiffanyGame
             return Vector3.positiveInfinity;
         }
 
+        private void FindHarassCover(ref WitchPerception perception)
+        {
+            float nearest = float.PositiveInfinity;
+            for (int i = 0; hidePoints != null && i < hidePoints.Length; i++)
+            {
+                Vector3 point = ResolveGroundTarget(hidePoints[i]);
+                float distance = (point - perception.WitchPosition).sqrMagnitude;
+                if (distance >= nearest || WitchTargets.Distance(point, perception.PlayerPosition) < profile.HarassCloseDistance)
+                    continue;
+                Vector3 origin = perception.PlayerPosition + Vector3.up;
+                Vector3 ray = point + Vector3.up * 1.6f - origin;
+                int count = Physics.RaycastNonAlloc(origin, ray, hits, ray.magnitude, coverMask, QueryTriggerInteraction.Ignore);
+                if (!ClosestWorldHit(count, out _)) continue;
+                nearest = distance;
+                perception.HasCover = true;
+                perception.CoverPosition = point;
+            }
+        }
+
         private static string IntentDescription(WitchIntent intent)
         {
             return intent switch
@@ -512,6 +539,7 @@ namespace TiffanyGame
                 WitchIntent.CandleWatch => "ronda la veladora",
                 WitchIntent.BarkLure => "prepara el ladrido desde el bosque",
                 WitchIntent.LastSeen => "va al último punto visto",
+                WitchIntent.Harass => "la acosa",
                 _ => "retoma su conducta habitual"
             };
         }
@@ -522,7 +550,16 @@ namespace TiffanyGame
             float speed = EffectiveSpeed;
             if (speed <= 0f && !agent.isStopped) agent.velocity = Vector3.zero;
             agent.isStopped = speed <= 0f;
-            if (Decision.Speed <= 0f) return;
+            if (Decision.Speed <= 0f)
+            {
+                if (Decision.Intent == WitchIntent.Harass)
+                {
+                    Vector3 facing = Decision.MoveTarget - transform.position;
+                    facing.y = 0f;
+                    if (facing.sqrMagnitude > 0f) transform.rotation = Quaternion.LookRotation(facing);
+                }
+                return;
+            }
             if (!agent.isStopped) agent.speed = speed;
             Vector3 destination = Decision.MoveTarget;
             if (!hasDestination || WitchMotion.ShouldRepath(lastDestination, destination, repathThreshold))
