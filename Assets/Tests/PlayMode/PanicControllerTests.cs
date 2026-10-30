@@ -19,6 +19,7 @@ namespace TiffanyGame.Tests
             GameInput.SlowOverride = GameInput.RunOverride = false;
             yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Single);
             panic = Object.FindAnyObjectByType<PanicController>();
+            panic.GetComponent<PlayerSoul>().Powers.Unlock(Power.Light);
             Assert.IsNotNull(panic);
             Assert.IsNotNull(panic.hiding);
             panic.GetComponent<PlayerController>().enabled = false;

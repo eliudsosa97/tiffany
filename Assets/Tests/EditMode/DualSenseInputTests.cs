@@ -115,7 +115,7 @@ namespace TiffanyGame.Tests
 
         [TestCase("DualSenseGamepadHID")]
         [TestCase("WebGLGamepad")]
-        public void ButtonsMatchTheGddThroughNativeAndBrowserLayouts(string layout)
+        public void ButtonsUseTriangleForLightAndR2ForFlashThroughNativeAndBrowserLayouts(string layout)
         {
             pad = (Gamepad)InputSystem.AddDevice(layout);
             var buttons = new ButtonControl[] { pad.leftTrigger, pad.leftStickButton, pad.buttonNorth,

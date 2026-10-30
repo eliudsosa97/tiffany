@@ -16,7 +16,6 @@ namespace TiffanyGame.EditorTools
                 throw new InvalidOperationException($"{GameInfo.LogPrefix} Falta el shader de visibilidad.");
             var silhouette = GeneratedMaterials.GetSilhouette();
             var renderers = figure.GetComponentsInChildren<Renderer>(true);
-            var light = figure.GetComponentInParent<PlayerLight>(true);
             int count = 0;
             foreach (var renderer in renderers)
             {
@@ -24,8 +23,7 @@ namespace TiffanyGame.EditorTools
                 var skin = renderer as SkinnedMeshRenderer;
                 if (skin == null && (!(renderer is MeshRenderer) || !renderer.TryGetComponent(out filter))) continue;
                 if (renderer.GetComponentInParent<ParticleSystem>(true) != null
-                    || renderer.GetComponentInParent<Light>(true) != null
-                    || (light != null && light.glow != null && renderer.transform.IsChildOf(light.glow))) continue;
+                    || renderer.GetComponentInParent<Light>(true) != null) continue;
                 var mesh = skin != null ? skin.sharedMesh : filter.sharedMesh;
                 if (mesh == null) continue;
                 count++;

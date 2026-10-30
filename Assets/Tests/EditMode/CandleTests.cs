@@ -24,9 +24,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(float.PositiveInfinity, candle.Remaining);
         }
 
-        [TestCase(false, 89.9f)]
-        [TestCase(true, 44.9f)]
-        public void KindledCandlesExpireAndCanBeRelit(bool raining, float beforeExpiry)
+        [Test]
+        public void KindledCandlesExpireAndCanBeRelitInDryWeather()
         {
             var candle = new Candle(CandleKind.Kindled, Vector3.zero);
             Assert.IsFalse(candle.IsLit);
@@ -34,13 +33,13 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(0f, candle.Remaining);
             Assert.IsTrue(candle.TryLight());
             Assert.AreEqual(90f, candle.Remaining);
-            candle.Tick(beforeExpiry, raining);
+            candle.Tick(89.9f, false);
             Assert.IsTrue(candle.IsLit);
             Assert.IsTrue(candle.IsSafeZone);
             float remaining = candle.Remaining;
             Assert.IsFalse(candle.TryLight());
             Assert.AreEqual(remaining, candle.Remaining);
-            candle.Tick(0.2f, raining);
+            candle.Tick(0.2f, false);
             Assert.IsFalse(candle.IsLit);
             Assert.IsFalse(candle.IsSafeZone);
             Assert.AreEqual(0f, candle.Remaining);
@@ -52,19 +51,35 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(candle.IsLit);
         }
 
-        [Test]
-        public void InitiallyLitCandleBurnsFasterWhenRainStarts()
+        [TestCase(0f)]
+        [TestCase(0.01f)]
+        public void RainImmediatelyExtinguishesKindledCandlesButNotFamilyCandles(float dt)
         {
             var candle = new Candle(CandleKind.Kindled, Vector3.zero, true);
             Assert.IsTrue(candle.IsLit);
             Assert.AreEqual(90f, candle.Remaining);
             candle.Tick(30f, false);
             Assert.AreEqual(60f, candle.Remaining);
-            candle.Tick(29.9f, true);
-            Assert.IsTrue(candle.IsLit);
-            candle.Tick(0.2f, true);
+            var family = new Candle(CandleKind.Family, Vector3.one);
+            candle.Tick(dt, true);
+            family.Tick(dt, true);
             Assert.AreEqual(0f, candle.Remaining);
             Assert.IsFalse(candle.IsLit);
+            Assert.IsFalse(candle.IsSafeZone);
+            Assert.IsTrue(family.IsLit);
+            Assert.IsTrue(family.IsSafeZone);
+            Assert.AreEqual(float.PositiveInfinity, family.Remaining);
+        }
+
+        [Test]
+        public void CannotLightInRainAndCanLightOnceItStops()
+        {
+            var candle = new Candle(CandleKind.Kindled, Vector3.zero);
+            Assert.IsFalse(candle.TryLight(true));
+            Assert.IsFalse(candle.IsLit);
+            Assert.AreEqual(0f, candle.Remaining);
+            Assert.IsTrue(candle.TryLight(false));
+            Assert.AreEqual(Candle.LitDuration, candle.Remaining);
         }
 
         [TestCase(CandleKind.Kindled, false, 0f)]
@@ -88,7 +103,6 @@ namespace TiffanyGame.Tests
         {
             var candle = new Candle(CandleKind.Kindled, Vector3.zero, true);
             candle.Tick(dt, false);
-            candle.Tick(dt, true);
             Assert.AreEqual(90f, candle.Remaining);
         }
 

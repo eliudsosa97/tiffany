@@ -63,6 +63,9 @@ namespace TiffanyGame
 
         public static float Size(float energy) => Mathf.Lerp(MinSize, 1f, energy / LowEnergy);
 
+        public static float BodyGlow(bool hidden, bool visible, bool flashing, float size, float boost, float flashBoost) =>
+            hidden ? 0f : visible ? 1f + boost * size * (flashing ? flashBoost : 1f) : 1f;
+
         public static float Flicker(float energy, float time)
         {
             if (energy >= LowEnergy) return 1f;

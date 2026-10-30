@@ -91,13 +91,33 @@ namespace TiffanyGame.Tests
             Assert.That(flow.IsFrozen, Is.EqualTo(frozen));
         }
 
-        [TestCase(Power.Light, "Tu luz te obedece · F prende y apaga, clic para el destello")]
+        [TestCase(Power.Light, "Tu luz te obedece · clic o △ prende y apaga, F o R2 para el destello")]
         [TestCase(Power.Candles, "Puedes encender veladoras · Q")]
         [TestCase(Power.Poltergeist, "Puedes mover cosas · E")]
         [TestCase(Power.Vanish, "Puedes desvanecerte · R")]
         [TestCase(Power.Manifest, "Tu familia puede verte")]
         public void PowerNoticeMatchesPower(Power power, string expected) =>
             Assert.That(InterfaceTexts.PowerNotice(power), Is.EqualTo(expected));
+
+        [TestCase("WASD / stick izq.  mover")]
+        [TestCase("Ratón / stick der.  apuntar")]
+        [TestCase("Shift / L3  correr")]
+        [TestCase("Ctrl / L2  despacio")]
+        [TestCase("Clic / △  prender la luz")]
+        [TestCase("F / R2  destello")]
+        [TestCase("Q / □  encender veladora")]
+        [TestCase("E / ○  mover objeto")]
+        [TestCase("R / R1  desvanecerse")]
+        [TestCase("Espacio / ✕  esconderse y recoger")]
+        [TestCase("Tab / botón Create  cuaderno")]
+        [TestCase("Esc o P / Options  pausa")]
+        public void ControlsDescribeEachKeyboardAndDualSenseAction(string line) =>
+            CollectionAssert.Contains(InterfaceTexts.Controls.Split('\n'), line);
+
+        [TestCase(true, "△ □ ○ ✕")]
+        [TestCase(false, "Triángulo Cuadrado Círculo Equis")]
+        public void UnsupportedControllerSymbolsUseNames(bool hasSymbols, string expected) =>
+            Assert.AreEqual(expected, InterfaceTexts.ControllerText("△ □ ○ ✕", hasSymbols));
 
         [Test]
         public void PowerNoticeLastsThreeSeconds() =>

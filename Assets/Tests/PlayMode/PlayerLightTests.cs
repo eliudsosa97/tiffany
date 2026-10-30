@@ -25,7 +25,6 @@ namespace TiffanyGame.Tests
         private PlayerSoul soul;
         private PlayerLight playerLight;
         private Light spot;
-        private Transform glow;
         private NavMeshSurface surface;
         private WitchController controller;
         private NavMeshAgent agent;
@@ -41,13 +40,13 @@ namespace TiffanyGame.Tests
             CreatePlayer();
         }
 
-        private void CreatePlayer(bool canHide = false)
+        private void CreatePlayer(bool canHide = false, bool withBody = false, bool unlocked = true)
         {
             player = new GameObject("Player") { tag = "Player" };
             player.SetActive(false);
             player.transform.SetParent(world.transform, false);
             soul = player.AddComponent<PlayerSoul>();
-            soul.startingPowers = new[] { Power.Light };
+            soul.startingPowers = unlocked ? new[] { Power.Light } : System.Array.Empty<Power>();
             if (canHide)
             {
                 player.AddComponent<PlayerController>().enabled = false;
@@ -61,13 +60,19 @@ namespace TiffanyGame.Tests
             spot.innerSpotAngle = 40f;
             spot.range = 11f;
             spot.intensity = 18f;
-            glow = new GameObject("Hand Glow").transform;
-            glow.SetParent(player.transform, false);
-            glow.localPosition = new Vector3(0f, 0.72f, 0.3f);
-            glow.localScale = Vector3.one * 0.11f;
             playerLight = player.AddComponent<PlayerLight>();
             playerLight.spot = spot;
-            playerLight.glow = glow;
+            playerLight.baseGlow = new GameObject("Soul Glow").AddComponent<Light>();
+            playerLight.baseGlow.transform.SetParent(player.transform, false);
+            if (withBody)
+            {
+                var body = new GameObject("Body", typeof(MeshRenderer));
+                body.transform.SetParent(player.transform, false);
+                var renderer = body.GetComponent<Renderer>();
+                renderer.sharedMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Models/Materials/TiffanySkin.mat");
+                playerLight.bodyRenderers = new[] { renderer };
+                playerLight.bodyGlowBoost = 1.2f;
+            }
             playerLight.startOn = true;
             player.SetActive(true);
             Physics.SyncTransforms();
@@ -96,7 +101,6 @@ namespace TiffanyGame.Tests
             yield return new WaitForSeconds(1f);
             Assert.That(initialEnergy - soul.Energy.Current, Is.InRange(0.8f, 1.5f));
             Assert.IsTrue(spot.enabled);
-            Assert.IsTrue(glow.gameObject.activeSelf);
             Assert.AreEqual(0f, playerLight.LitPoint.y, 0.01f);
             Vector3 offset = playerLight.LitPoint - player.transform.position;
             offset.y = 0f;
@@ -105,14 +109,67 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator EmptyEnergyTurnsOffSpotAndHandGlow()
+        public IEnumerator BodyGlowSmoothsToBoostAndBackWithoutChangingSharedMaterial()
+        {
+            player.SetActive(false);
+            CreatePlayer(withBody: true);
+            var renderer = playerLight.bodyRenderers[0];
+            var material = renderer.sharedMaterial;
+            var properties = new MaterialPropertyBlock();
+            yield return new WaitForSeconds(0.05f);
+            renderer.GetPropertyBlock(properties);
+            Assert.That(properties.GetFloat("_RimIntensity"), Is.GreaterThan(1.5f).And.LessThan(3.3f));
+            yield return new WaitForSeconds(0.8f);
+            renderer.GetPropertyBlock(properties);
+            Assert.AreEqual(3.3f, properties.GetFloat("_RimIntensity"), 0.02f);
+            Time.timeScale = 0f;
+            yield return null;
+            Time.timeScale = 1f;
+            playerLight.Toggle();
+            yield return new WaitForSeconds(0.8f);
+            renderer.GetPropertyBlock(properties);
+            Assert.AreEqual(1.5f, properties.GetFloat("_RimIntensity"), 0.02f);
+            Assert.AreSame(material, renderer.sharedMaterial);
+            Assert.AreEqual(1.5f, material.GetFloat("_RimIntensity"));
+        }
+
+        [UnityTest]
+        public IEnumerator EmptyEnergyTurnsOffSpotAndKeepsBaseGlow()
         {
             yield return null;
             soul.Energy.ResetTo(0.5f);
             yield return new WaitForSeconds(1f);
             Assert.AreEqual(0f, soul.Energy.Current);
             Assert.IsFalse(spot.enabled);
-            Assert.IsFalse(glow.gameObject.activeSelf);
+            Assert.IsTrue(playerLight.baseGlow.enabled);
+        }
+
+        [UnityTest]
+        public IEnumerator BaseGlowNeedsNeitherPowerNorEnergy()
+        {
+            player.SetActive(false);
+            CreatePlayer(unlocked: false);
+            soul.Energy.ResetTo(0f);
+            yield return null;
+            Assert.IsFalse(soul.Powers.Has(Power.Light) || spot.enabled);
+            Assert.IsTrue(playerLight.baseGlow.enabled);
+            soul.Energy.ResetTo(SoulEnergy.Max);
+            yield return null;
+            Assert.IsFalse(spot.enabled);
+            Assert.IsTrue(playerLight.baseGlow.enabled);
+        }
+
+        [UnityTest]
+        public IEnumerator MotionDemoUnlocksLightBeforeItsFirstToggle()
+        {
+            yield return null;
+            playerLight.Toggle();
+            soul.Powers.Clear();
+            world.AddComponent<MotionDemo>();
+            yield return null;
+            Assert.IsTrue(soul.Powers.Has(Power.Light) && playerLight.State.IsOn);
+            yield return null;
+            Assert.IsTrue(playerLight.State.IsOn);
         }
 
         [UnityTest]
@@ -149,21 +206,19 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator LowEnergyShrinksSpotAndGlowAndRechargeRestoresBaseValues()
+        public IEnumerator LowEnergyShrinksSpotAndRechargeRestoresBaseValues()
         {
             yield return null;
             soul.Energy.ResetTo(8f);
             yield return null;
             Assert.Less(spot.range, 11f);
             Assert.Less(spot.spotAngle, 70f);
-            Assert.Less(glow.localScale.x, 0.11f);
             Assert.That(spot.intensity, Is.InRange(18f * SoulLight.MinFlicker, 18f));
             soul.Energy.ResetTo(SoulEnergy.Max);
             yield return null;
             Assert.AreEqual(11f, spot.range);
             Assert.AreEqual(70f, spot.spotAngle);
             Assert.AreEqual(18f, spot.intensity);
-            Assert.AreEqual(Vector3.one * 0.11f, glow.localScale);
         }
 
         [UnityTest]
@@ -176,11 +231,9 @@ namespace TiffanyGame.Tests
             yield return null;
             Assert.IsFalse(playerLight.State.IsOn);
             Assert.IsTrue(spot.enabled);
-            Assert.IsTrue(glow.gameObject.activeSelf);
             Assert.AreEqual(18f * playerLight.flashBoost, spot.intensity);
             yield return new WaitForSeconds(SoulLight.FlashDuration);
             Assert.IsFalse(spot.enabled);
-            Assert.IsFalse(glow.gameObject.activeSelf);
         }
 
         [UnityTest]
@@ -246,6 +299,7 @@ namespace TiffanyGame.Tests
             CreateWitch(Chapter.Cemetery);
             yield return null;
             playerLight.Toggle();
+            soul.Powers.Clear();
             var stop = new GameObject("Light Capture");
             stop.transform.SetParent(world.transform);
             stop.AddComponent<CaptureStop>().wait = 0.4f;
@@ -254,6 +308,7 @@ namespace TiffanyGame.Tests
             stage.flash = true;
             if (!clearBeforeFlash) LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello");
             stage.Apply(player.transform);
+            Assert.IsTrue(soul.Powers.Has(Power.Light));
             Assert.AreEqual(8f, soul.Energy.Current);
             Assert.IsTrue(playerLight.State.IsOn);
             Assert.IsFalse(controller.gameObject.activeSelf);
@@ -300,7 +355,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(energy - SoulCosts.Flash, soul.Energy.Current, 1e-4f);
             Assert.IsTrue(playerLight.State.IsFlashing);
             yield return null;
-            Assert.IsTrue(spot.enabled && glow.gameObject.activeSelf);
+            Assert.IsTrue(spot.enabled);
             Assert.AreNotEqual(WitchState.Stunned, controller.Decision.State);
             blocker.enabled = false;
             AddBox("Own Collider", middle, size).transform.SetParent(player.transform, true);
@@ -321,7 +376,7 @@ namespace TiffanyGame.Tests
         public IEnumerator HidingExtinguishesLightAndBlocksToggleAndFlash()
         {
             player.SetActive(false);
-            CreatePlayer(true);
+            CreatePlayer(true, withBody: true);
             CreateWitch(Chapter.Cemetery);
             yield return null;
             Assert.IsTrue(playerLight.State.IsOn && controller.playerLightOn);
@@ -331,7 +386,11 @@ namespace TiffanyGame.Tests
             var hiding = player.GetComponent<PlayerHiding>();
             hiding.Hide(volume);
             yield return null;
-            Assert.IsFalse(controller.playerLightOn || playerLight.State.IsOn || spot.enabled || glow.gameObject.activeSelf);
+            Assert.IsFalse(controller.playerLightOn || playerLight.State.IsOn || spot.enabled);
+            Assert.IsFalse(playerLight.baseGlow.enabled);
+            var properties = new MaterialPropertyBlock();
+            playerLight.bodyRenderers[0].GetPropertyBlock(properties);
+            Assert.AreEqual(0f, properties.GetFloat("_RimIntensity"));
             float energy = soul.Energy.Current;
             PressLightInput();
             Assert.IsFalse(playerLight.State.Visible || controller.playerLightOn);
@@ -343,6 +402,9 @@ namespace TiffanyGame.Tests
             hiding.Leave();
             yield return null;
             Assert.IsFalse(playerLight.State.IsOn || controller.playerLightOn);
+            Assert.IsTrue(playerLight.baseGlow.enabled);
+            playerLight.bodyRenderers[0].GetPropertyBlock(properties);
+            Assert.AreEqual(1.5f, properties.GetFloat("_RimIntensity"));
         }
 
         [UnityTest]

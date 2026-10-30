@@ -1,0 +1,47 @@
+using System;
+namespace TiffanyGame
+{
+    public enum UnseenZone { Forest, Trail, Town }
+    public enum UnseenSound { Branch, Steps, Whisper, Knock }
+    public sealed class UnseenForestRules
+    {
+        public const float ForestMinInterval = 25f, ForestMaxInterval = 40f;
+        public const float TrailMinInterval = 40f, TrailMaxInterval = 60f;
+        public const float TownMinInterval = 45f, TownMaxInterval = 60f;
+        public const float ChaseCooldown = 12f, OtherScareGap = 8f;
+        public const float MinDistance = 15f, MaxDistance = 30f, FrontHalfAngle = 70f, HalfTurn = 180f;
+        public const int SoundCount = 4;
+        public UnseenSound Sound { get; private set; }
+        public float Distance { get; private set; }
+        public float Angle { get; private set; }
+        public float Remaining { get; private set; }
+        private readonly Random random;
+        private UnseenZone zone;
+        private bool started;
+        private int last = -1;
+        private float cooldown;
+        public UnseenForestRules(int seed) => random = new Random(seed);
+        public bool Tick(float dt, UnseenZone zone, bool chasing, float secondsSinceOtherScare)
+        {
+            if (dt <= 0f || float.IsNaN(dt) || float.IsInfinity(dt)) return false;
+            float min = zone == UnseenZone.Forest ? ForestMinInterval : zone == UnseenZone.Trail ? TrailMinInterval : TownMinInterval;
+            float max = zone == UnseenZone.Forest ? ForestMaxInterval : zone == UnseenZone.Trail ? TrailMaxInterval : TownMaxInterval;
+            if (!started) { Remaining = Range(min, max); started = true; }
+            else if (this.zone != zone) Remaining = Math.Min(Remaining, max);
+            this.zone = zone;
+            if (chasing) { cooldown = ChaseCooldown; return false; }
+            cooldown = Math.Max(0f, cooldown - dt);
+            Remaining = Math.Max(0f, Remaining - dt);
+            if (Remaining > 0f || cooldown > 0f || secondsSinceOtherScare < OtherScareGap) return false;
+            int next = random.Next(last < 0 ? SoundCount : SoundCount - 1);
+            if (last >= 0 && next >= last) next++;
+            Sound = (UnseenSound)(last = next);
+            Distance = Range(MinDistance, MaxDistance);
+            Angle = Range(FrontHalfAngle, HalfTurn * 2f - FrontHalfAngle);
+            if (Angle > HalfTurn) Angle -= HalfTurn * 2f;
+            Remaining = Range(min, max);
+            return true;
+        }
+        private float Range(float min, float max) => min + (float)random.NextDouble() * (max - min);
+    }
+}

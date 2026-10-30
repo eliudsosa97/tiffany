@@ -15,8 +15,8 @@ namespace TiffanyGame
         public const float ForestCost = 4f;
         public const int LakeSegments = 192;
         const float WestBoundary = -118f;
-        public static readonly Vector2 LakeCenter = new Vector2(-48f, 44f);
-        public static readonly Vector2 LakeRadius = new Vector2(82f, 50f);
+        public static readonly Vector2 LakeCenter = new Vector2(-30f, 52f);
+        public static readonly Vector2 LakeRadius = new Vector2(50f, 34f);
         public static readonly Vector2 CliffFoot = new Vector2(75f, 94f);
         public static readonly Vector2 Plateau = new Vector2(77f, 94f);
 
@@ -88,16 +88,18 @@ namespace TiffanyGame
 
         public float ForestDensity(float x, float z)
         {
+            float lakeside = 0.2f * (1f - Smooth(LakeDistance(x, z) / (LakeRadius.y * 1.5f)));
             uint hole = unchecked((uint)(Mathf.FloorToInt(x / 6f) * 73856093)
                 ^ (uint)(Mathf.FloorToInt(z / 6f) * 19349663));
             hole = unchecked((hole ^ (hole >> 13)) * 1274126177u);
-            if (hole % 7 == 0) return 0f;
+            if (hole % 7 == 0) return lakeside;
             float patch = 0.5f + 0.25f * Mathf.Sin(x * 0.23f + Mathf.Sin(z * 0.07f))
                 + 0.25f * Mathf.Cos(z * 0.22f - x * 0.05f);
             bool haunted = IsHauntedForest(x, z);
             float clusters = Smooth((patch - (haunted ? 0.58f : 0.64f)) / 0.2f) * (haunted ? 0.95f : 0.35f);
             float wall = 1f - Smooth((DistanceToRoute(x, z) - WallFullDistance) / (WallDistance - WallFullDistance));
-            return Mathf.Max(clusters * (haunted ? 1f : Mathf.Lerp(0.5f, 1f, wall)), wall * (haunted ? 0.95f : 0.7f));
+            float density = Mathf.Max(clusters * (haunted ? 1f : Mathf.Lerp(0.5f, 1f, wall)), wall * (haunted ? 0.95f : 0.7f));
+            return Mathf.Max(density, lakeside);
         }
 
         public float TrainDistance(float x, float z) => SegmentDistance(new Vector2(x, z),

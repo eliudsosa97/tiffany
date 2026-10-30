@@ -4,6 +4,13 @@ namespace TiffanyGame.Tests
 {
     public sealed class HeartbeatRateTests
     {
+        [TestCase(true, WitchForm.Grounded, 4f)]
+        [TestCase(true, WitchForm.Flying, float.PositiveInfinity)]
+        [TestCase(false, WitchForm.Grounded, float.PositiveInfinity)]
+        [TestCase(false, WitchForm.Flying, float.PositiveInfinity)]
+        public void OnlyActiveGroundedWitchContributesDistance(bool active, WitchForm form, float expected) =>
+            Assert.AreEqual(expected, HeartbeatRate.WitchDistance(active, form, 4f));
+
         [TestCase(0f, 40f, 0f, 0f, 0f)]
         [TestCase(0f, PanicModel.WitchRadius, 0f, 0f, 0f)]
         [TestCase(0f, float.PositiveInfinity, 0f, 0f, 0f)]

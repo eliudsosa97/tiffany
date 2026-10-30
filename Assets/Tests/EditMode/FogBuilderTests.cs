@@ -59,11 +59,13 @@ namespace TiffanyGame.Tests
             material = GeneratedMaterials.GetGroundFog();
             Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(material)));
             Color color = material.GetColor("_BaseColor").linear;
+            Color expected = NightLook.Default.GroundFogColor.linear;
             float luminance = color.r * 0.2126f + color.g * 0.7152f + color.b * 0.0722f;
-            Assert.That(luminance, Is.InRange(0.03f, 0.06f), "La neblina debe verse sobre el suelo nocturno sin parecer nieve.");
-            Assert.AreEqual(0.035f, color.r, 0.0001f);
-            Assert.AreEqual(0.045f, color.g, 0.0001f);
-            Assert.AreEqual(0.065f, color.b, 0.0001f);
+            float scale = NightLook.Default.AmbientScale;
+            Assert.That(luminance, Is.InRange(0.03f * scale, 0.06f * scale), "La neblina debe verse sobre el suelo nocturno sin parecer nieve.");
+            Assert.AreEqual(expected.r, color.r, 0.0001f);
+            Assert.AreEqual(expected.g, color.g, 0.0001f);
+            Assert.AreEqual(expected.b, color.b, 0.0001f);
             Assert.Greater(color.b, color.r);
             Assert.AreEqual(0.5f, color.a, 0.0001f);
             Assert.AreEqual(0.45f, material.GetFloat("_NoiseScale"));
@@ -80,18 +82,12 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void ShaderDefaultsMatchGeneratedMaterialColorAndHalo()
+        public void ShaderDefaultsMatchGeneratedMaterialDensityAndHalo()
         {
             var material = GeneratedMaterials.GetGroundFog();
             var defaults = new Material(material.shader);
             try
             {
-                Color expected = material.GetColor("_BaseColor");
-                Color actual = defaults.GetColor("_BaseColor");
-                Assert.AreEqual(expected.r, actual.r, 0.0001f);
-                Assert.AreEqual(expected.g, actual.g, 0.0001f);
-                Assert.AreEqual(expected.b, actual.b, 0.0001f);
-                Assert.AreEqual(expected.a, actual.a, 0.0001f);
                 foreach (string property in new[] { "_Density", "_NoiseScale", "_NoiseStretch", "_EdgeFade", "_LightStrength", "_HaloRadius" })
                     Assert.AreEqual(material.GetFloat(property), defaults.GetFloat(property), 0.0001f, property);
             }

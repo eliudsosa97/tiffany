@@ -40,6 +40,19 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(defaults.PlayerNoiseMatch, profile.PlayerNoiseMatch);
         }
 
+        [TestCase(Chapter.Cemetery, 45f, 60f)]
+        [TestCase(Chapter.WaterPlant, 45f, 60f)]
+        [TestCase(Chapter.TrainTracks, 45f, 60f)]
+        [TestCase(Chapter.Stable, 25f, 35f)]
+        [TestCase(Chapter.WitchHut, 25f, 35f)]
+        [TestCase(Chapter.Return, 45f, 60f)]
+        public void RoamDelayShortensOnlyInStableAndWitchHut(Chapter chapter, float minimum, float maximum)
+        {
+            WitchProfile profile = WitchProfiles.For(chapter);
+            Assert.AreEqual(minimum, profile.RoamMinDelay, "En Establo y Jacal la ronda debe empezar antes de que termine un cruce de unos 35 s. Los demás capítulos conservan 45 a 60 s.");
+            Assert.AreEqual(maximum, profile.RoamMaxDelay, "En Establo y Jacal la ronda debe empezar antes de que termine un cruce de unos 35 s. Los demás capítulos conservan 45 a 60 s.");
+        }
+
         [Test]
         public void ForReturnsIndependentProfiles([Values] Chapter chapter)
         {

@@ -14,6 +14,9 @@ namespace TiffanyGame
         public const int LogBpmChange = 10;
         float remaining;
 
+        public static float WitchDistance(bool active, WitchForm form, float horizontalDistance) =>
+            active && form == WitchForm.Grounded ? horizontalDistance : float.PositiveInfinity;
+
         public static float Intensity(float panicLevel, float witchDistance) =>
             Mathf.Max(Mathf.Clamp01(panicLevel), Mathf.InverseLerp(PanicModel.WitchRadius, NearDistance, witchDistance));
 

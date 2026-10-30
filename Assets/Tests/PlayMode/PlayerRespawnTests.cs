@@ -51,8 +51,6 @@ namespace TiffanyGame.Tests
             light = player.AddComponent<PlayerLight>();
             light.spot = new GameObject("Soul Light").AddComponent<Light>();
             light.spot.transform.SetParent(player.transform, false);
-            light.glow = new GameObject("Glow").transform;
-            light.glow.SetParent(player.transform, false);
             light.startOn = true;
             var witch = new GameObject("Witch");
             witch.transform.SetParent(world.transform);

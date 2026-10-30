@@ -35,8 +35,6 @@ namespace TiffanyGame.Tests
             light = player.AddComponent<PlayerLight>();
             light.spot = new GameObject("Light").AddComponent<Light>();
             light.spot.transform.SetParent(player.transform, false);
-            light.glow = new GameObject("Glow").transform;
-            light.glow.SetParent(player.transform, false);
             light.startOn = true;
             panic = player.AddComponent<PanicController>();
             panic.playerLight = light;
@@ -47,7 +45,7 @@ namespace TiffanyGame.Tests
             heartbeat.source = player.AddComponent<AudioSource>();
             heartbeat.source.playOnAwake = false;
             heartbeat.source.spatialBlend = 0f;
-            heartbeat.clip = AudioClip.Create("Heartbeat", 4410, 1, 44100, false);
+            heartbeat.clip = AudioClip.Create("Heartbeat", 27342, 1, 44100, false);
         }
 
         [UnityTearDown]
@@ -65,16 +63,41 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator OnlyNearbyWitchProducesBeatsWithLightOn([ValueSource(nameof(Distances))] float distance)
         {
-            witch.transform.position = new Vector3(distance, 100f, 0f);
+            witch.BeginWatch(player.transform, new Vector3(distance, 100f, 0f), false);
+            witch.enabled = true;
             Time.timeScale = 0f;
             player.SetActive(true);
             yield return null;
+            Assert.IsTrue(witch.isActiveAndEnabled);
+            Assert.AreEqual(WitchForm.Grounded, witch.Decision.Form);
             Assert.AreEqual(0, heartbeat.Beats);
             Time.timeScale = 1f;
             yield return new WaitForSeconds(2f);
             Assert.IsTrue(light.State.Visible);
             if (distance < PanicModel.WitchRadius) Assert.GreaterOrEqual(heartbeat.Beats, 3);
             else Assert.AreEqual(0, heartbeat.Beats);
+        }
+
+        [UnityTest]
+        public IEnumerator FlyingWitchDirectlyAboveCalmPlayerProducesNoBeats()
+        {
+            witch.transform.position = player.transform.position + Vector3.up * 7.9f;
+            witch.enabled = true;
+            panic.enabled = false;
+            panic.Model.ResetTo(0f);
+            player.SetActive(true);
+            yield return null;
+            Assert.IsTrue(witch.isActiveAndEnabled);
+            Assert.AreEqual(WitchForm.Flying, witch.Decision.Form);
+            Assert.AreEqual(0, heartbeat.Beats);
+            yield return new WaitForSeconds(2f);
+            Vector3 offset = witch.transform.position - player.transform.position;
+            offset.y = 0f;
+            Assert.Less(offset.magnitude, 0.01f);
+            Assert.IsTrue(witch.isActiveAndEnabled);
+            Assert.AreEqual(WitchForm.Flying, witch.Decision.Form);
+            Assert.AreEqual(0f, panic.Level);
+            Assert.AreEqual(0, heartbeat.Beats);
         }
 
         [UnityTest]
@@ -88,6 +111,8 @@ namespace TiffanyGame.Tests
             panic.Model.ResetTo(HeartbeatRate.Audible);
             yield return null;
             Assert.AreEqual(1, heartbeat.Beats);
+            Assert.AreSame(heartbeat.clip, heartbeat.source.clip);
+            Assert.AreEqual(HeartbeatRate.MinVolume, heartbeat.source.volume, 1e-4f);
         }
 
         [UnityTest]
