@@ -22,8 +22,8 @@ namespace TiffanyGame
             sounds = new FootstepSounds(counts, slowVolume, walkVolume, runVolume);
         }
 
-        void OnEnable() => player.Stepped += Play;
-        void OnDisable() => player.Stepped -= Play;
+        void OnEnable() => player.SoundStepped += Play;
+        void OnDisable() => player.SoundStepped -= Play;
 
         void Play(GroundType ground, Gait gait)
         {

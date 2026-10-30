@@ -19,7 +19,7 @@ namespace TiffanyGame.EditorTools
             steps.branches = LoadSteps("step_branches");
         }
 
-        static AudioClip[] LoadSteps(string name) => new[]
+        public static AudioClip[] LoadSteps(string name) => new[]
             { LoadClip($"{name}_1"), LoadClip($"{name}_2"), LoadClip($"{name}_3"), LoadClip($"{name}_4") };
 
         public static AudioClip LoadClip(string name)

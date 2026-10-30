@@ -10,13 +10,13 @@ namespace TiffanyGame
         public TrailTension trailTension;
         public Transform view;
         public AudioSource source;
-        public AudioClip[] branches, steps, whispers, knocks, names;
+        public AudioClip[] branches, steps, whispers, names;
         public int seed = 18;
         private UnseenForestRules rules;
         private RouteTerrain terrain;
         private Vector3[][] paths;
         private static readonly WaitForSeconds StepPause = new WaitForSeconds(0.45f);
-        private int branch, step, whisper, knock, nameIndex;
+        private int branch, step, whisper, nameIndex;
         private bool paused, wasChasing;
         private void Start()
         {
@@ -59,7 +59,6 @@ namespace TiffanyGame
                 case UnseenSound.Branch: Play(branches, ref branch); break;
                 case UnseenSound.Steps: StartCoroutine(PlaySteps()); break;
                 case UnseenSound.Whisper: Play(whispers, ref whisper); break;
-                case UnseenSound.Knock: Play(knocks, ref knock); break;
                 case UnseenSound.Name: Play(names, ref nameIndex); break;
             }
             Debug.Log($"{GameInfo.LogPrefix} Bosque: {rules.Sound} a {rules.Distance:0} m, {rules.Angle:0}°, zona {zone}");

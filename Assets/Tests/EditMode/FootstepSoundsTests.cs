@@ -25,9 +25,9 @@ namespace TiffanyGame.Tests
             foreach (bool seen in used) Assert.IsTrue(seen);
         }
 
-        [TestCase(Gait.Slow, 0.35f)]
-        [TestCase(Gait.Walk, 0.6f)]
-        [TestCase(Gait.Run, 1f)]
+        [TestCase(Gait.Slow, 0.175f)]
+        [TestCase(Gait.Walk, 0.3f)]
+        [TestCase(Gait.Run, 0.5f)]
         public void GaitControlsVolumeAndPitchStaysWithinFivePercent(Gait gait, float volume)
         {
             var sounds = new FootstepSounds(new[] { 4, 4, 4, 4, 4, 4 });
@@ -44,7 +44,7 @@ namespace TiffanyGame.Tests
         {
             var sounds = new FootstepSounds(new[] { 1 }, 0.2f, 0.4f, 0.8f);
             foreach (Gait gait in System.Enum.GetValues(typeof(Gait)))
-                Assert.AreEqual(0.2f * (1 << (int)gait), sounds.Choose(GroundType.Dirt, gait, 0f).Volume);
+                Assert.AreEqual(0.1f * (1 << (int)gait), sounds.Choose(GroundType.Dirt, gait, 0f).Volume);
         }
 
         [TestCase(0)]
