@@ -68,6 +68,8 @@ namespace TiffanyGame
         public float ReturnGraceDuration = 8f;
         public float CatchUpDistance = 20f;
         public float CatchUpDelay = 6f;
+        public float CatchUpRespawnDistance = 20f;
+        public float CatchUpRespawnDuration = 30f;
         public float CatchUpReappearDistance = 14f;
         public float CatchUpReappearMaxDistance = 18f;
 

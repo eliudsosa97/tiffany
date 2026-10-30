@@ -461,8 +461,8 @@ namespace TiffanyGame.Tests
                 "58 paradas de main (48 de escena, una vista previa, cinco ecos, dos de la pelota " +
                 "y dos vistas del agua), Witch Suspicious, seis comparaciones de neblina, ocho vistas de los retos, seis de cobertura y dos de los pájaros.");
             Assert.AreEqual(31, route.GetComponentsInChildren<CaptureStop>().Length, "21 paradas previas, ocho vistas de los retos y dos de los pájaros.");
-            Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
-            Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
+            Assert.AreEqual(11, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length, "Seis escondites previos y cinco junto a los parches del sendero.");
+            Assert.AreEqual(10, route.GetComponentsInChildren<HideVolume>().Length, "Cinco de los claros y cinco de los parches.");
             Assert.AreEqual(21, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length,
                 "Doce originales, la de la rampa, cuatro de recarga y cuatro para encender en los retos.");
             foreach (var movable in MovableObject.Active)

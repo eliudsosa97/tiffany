@@ -63,7 +63,11 @@ namespace TiffanyGame
 
         public bool Chasing => chasing;
 
-        public void StartGrace() => returnGraceRemaining = profile.GroundChase ? profile.ReturnGraceDuration : 0f;
+        public void StartGrace(Vector3 respawnPosition)
+        {
+            returnGraceRemaining = profile.GroundChase ? profile.ReturnGraceDuration : 0f;
+            if (profile.GroundChase) catchUp.AfterRespawn(respawnPosition);
+        }
 
         public WitchBrain(WitchProfile profile, IReadOnlyList<Vector3> skyRoute, System.Random random = null,
             Func<Vector3, Vector3> resolveGroundTarget = null)
@@ -84,6 +88,7 @@ namespace TiffanyGame
         public WitchDecision Tick(float dt, in WitchPerception p)
         {
             dt = dt < 0f || float.IsNaN(dt) || float.IsInfinity(dt) ? 0f : dt;
+            catchUp.AdvanceRespawn(dt, profile, p.PlayerPosition);
             if (returnGraceRemaining > 0f)
             {
                 float graceTime = Mathf.Min(dt, returnGraceRemaining);

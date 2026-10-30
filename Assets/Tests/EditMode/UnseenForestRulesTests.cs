@@ -6,8 +6,9 @@ namespace TiffanyGame.Tests
         private const float Delta = 0.1f;
         private UnseenForestRules rules;
         [SetUp] public void SetUp() => rules = new UnseenForestRules(18);
-        private bool Tick(float dt, UnseenZone zone = UnseenZone.Forest, bool chasing = false, float sinceScare = float.PositiveInfinity) =>
-            rules.Tick(dt, zone, chasing, sinceScare);
+        private bool Tick(float dt, UnseenZone zone = UnseenZone.Forest, bool chasing = false,
+            float sinceScare = float.PositiveInfinity, bool nameAvailable = false) =>
+            rules.Tick(dt, zone, chasing, sinceScare, nameAvailable);
         private float Next(UnseenZone zone = UnseenZone.Forest)
         {
             for (int frame = 1; frame <= 601; frame++)
@@ -24,7 +25,7 @@ namespace TiffanyGame.Tests
                 UnseenZone zone = (UnseenZone)((frame / 100) % 3);
                 bool chasing = frame % 1000 < 50;
                 bool sounded = Tick(Delta, zone, chasing, frame % 20);
-                Assert.AreEqual(sounded, other.Tick(Delta, zone, chasing, frame % 20));
+                Assert.AreEqual(sounded, other.Tick(Delta, zone, chasing, frame % 20, false));
                 if (!sounded) continue;
                 sounds++;
                 Assert.AreEqual((rules.Sound, rules.Distance, rules.Angle), (other.Sound, other.Distance, other.Angle));
@@ -81,6 +82,34 @@ namespace TiffanyGame.Tests
             }
             CollectionAssert.AreEqual(new[] { true, true, true, true }, seen);
         }
+        [Test] public void FiveHundredSoundsWithoutNameClipsNeverSelectName()
+        {
+            for (int i = 0; i < 500; i++)
+            {
+                Assert.IsTrue(Tick(UnseenForestRules.ForestMaxInterval, nameAvailable: false));
+                Assert.AreNotEqual(UnseenSound.Name, rules.Sound);
+            }
+        }
+        [TestCase(1f)] [TestCase(UnseenForestRules.ForestMaxInterval)]
+        public void AvailableNamesRespectCooldownAndNoSoundRepeats(float dt)
+        {
+            int sounds = 0, names = 0, previous = -1;
+            float lastName = float.NegativeInfinity;
+            for (int frame = 1; sounds < 500 && frame <= 20000; frame++)
+            {
+                if (!Tick(dt, nameAvailable: true)) continue;
+                sounds++;
+                Assert.AreNotEqual(previous, (int)rules.Sound);
+                previous = (int)rules.Sound;
+                if (rules.Sound != UnseenSound.Name) continue;
+                float time = frame * dt;
+                Assert.GreaterOrEqual(time - lastName, UnseenForestRules.NameCooldown);
+                lastName = time;
+                names++;
+            }
+            Assert.AreEqual(500, sounds);
+            Assert.Greater(names, 1);
+        }
         [Test] public void ForestToTownKeepsThirtyFiveSecondsInsteadOfExtendingInterval()
         {
             for (int seed = 0; seed < 1000; seed++)
@@ -113,7 +142,7 @@ namespace TiffanyGame.Tests
             var other = new UnseenForestRules(18);
             Assert.IsFalse(Tick(dt, UnseenZone.Town, chasing: true));
             Assert.IsFalse(Tick(1f));
-            Assert.IsFalse(other.Tick(1f, UnseenZone.Forest, false, float.PositiveInfinity));
+            Assert.IsFalse(other.Tick(1f, UnseenZone.Forest, false, float.PositiveInfinity, false));
             float remaining = rules.Remaining;
             Assert.IsFalse(Tick(dt, UnseenZone.Town, chasing: true));
             Assert.AreEqual(remaining, rules.Remaining);
@@ -121,7 +150,7 @@ namespace TiffanyGame.Tests
             {
                 Assert.IsTrue(Tick(i == 0 ? remaining : UnseenForestRules.ForestMaxInterval));
                 Assert.IsTrue(other.Tick(i == 0 ? remaining : UnseenForestRules.ForestMaxInterval,
-                    UnseenZone.Forest, false, float.PositiveInfinity));
+                    UnseenZone.Forest, false, float.PositiveInfinity, false));
                 Assert.AreEqual((other.Sound, other.Distance, other.Angle, other.Remaining),
                     (rules.Sound, rules.Distance, rules.Angle, rules.Remaining));
             }

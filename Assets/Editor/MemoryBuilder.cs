@@ -145,7 +145,7 @@ namespace TiffanyGame.EditorTools
             Object.DestroyImmediate(visual.GetComponent<Collider>());
             var material = GeneratedMaterials.Get("MemoryCandle", new Color(0.95f, 0.9f, 0.75f));
             material.EnableKeyword("_EMISSION");
-            material.SetColor("_EmissionColor", new Color(1f, 0.85f, 0.6f) * 0.2f);
+            material.SetColor("_EmissionColor", new Color(0.45f, 0.8f, 1f) * 1.2f);
             material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             EditorUtility.SetDirty(material);
             var renderer = visual.GetComponent<Renderer>();

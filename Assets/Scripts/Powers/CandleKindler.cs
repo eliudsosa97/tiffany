@@ -25,20 +25,25 @@ namespace TiffanyGame
 
         public bool TryKindle()
         {
+            var chosen = FindTarget();
+            if (chosen == null || !PowerRules.TryLightCandle(soul.Powers, soul.Energy, chosen.Candle,
+                chosen.storm != null && chosen.storm.raining)) return false;
+            Debug.Log($"{GameInfo.LogPrefix} Tiffany enciende una veladora");
+            return true;
+        }
+
+        public CandleSpot FindTarget()
+        {
             for (int i = 0; i < candles.Length; i++)
             {
                 CandleSpot spot = candles[i];
-                eligible[i] = spot != null && spot.Candle.Kind == CandleKind.Kindled && !spot.Candle.IsLit;
+                eligible[i] = spot != null && spot.isActiveAndEnabled && PowerRules.CanLightCandle(
+                    soul.Powers, soul.Energy, spot.Candle, spot.storm != null && spot.storm.raining);
                 if (eligible[i]) positions[i] = spot.transform.position;
             }
 
             int target = KindleTargeting.Nearest(transform.position, positions, eligible, PowerRules.KindleRange);
-            if (target < 0) return false;
-            var chosen = candles[target];
-            if (!PowerRules.TryLightCandle(soul.Powers, soul.Energy, chosen.Candle,
-                chosen.storm != null && chosen.storm.raining)) return false;
-            Debug.Log($"{GameInfo.LogPrefix} Tiffany enciende una veladora");
-            return true;
+            return target < 0 ? null : candles[target];
         }
     }
 }

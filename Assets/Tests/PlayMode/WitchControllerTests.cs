@@ -582,6 +582,79 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator FrozenSprintDoesNotMoveOrCatchPlayerUntilResumed()
+        {
+            Object.Destroy(witch);
+            yield return null;
+
+            var root = new GameObject("Interface");
+            root.SetActive(false);
+            root.transform.SetParent(world.transform);
+            var gameInterface = root.AddComponent<GameInterface>();
+            gameInterface.pausePanel = Child("Pause");
+            gameInterface.notebookPanel = Child("Notebook");
+            gameInterface.noticeText = Child("Notice").AddComponent<UnityEngine.UI.Text>();
+            gameInterface.subtitleText = Child("Subtitle").AddComponent<UnityEngine.UI.Text>();
+            bool skipTitle = GameInterface.SkipTitle;
+            try
+            {
+                GameInterface.SkipTitle = true;
+                root.SetActive(true);
+            }
+            finally
+            {
+                GameInterface.SkipTitle = skipTitle;
+            }
+
+            CreateWitch();
+            witch.transform.position = Vector3.zero;
+            LightPlayerAt(Vector3.right * 6f);
+            int caughtCount = 0;
+            controller.Caught += () => caughtCount++;
+            yield return WaitForState(WitchState.Sprinting, 8f);
+            Assert.AreEqual(0, caughtCount);
+            Assert.IsFalse(gameInterface.IsFrozen);
+
+            gameInterface.TogglePause();
+            try
+            {
+                Assert.IsTrue(gameInterface.IsFrozen);
+                Assert.AreEqual(0f, Time.timeScale);
+                Vector3 position = witch.transform.position;
+                Quaternion rotation = witch.transform.rotation;
+                LightPlayerAt(position);
+                for (int i = 0; i < 3; i++)
+                {
+                    yield return null;
+                    Assert.IsTrue(gameInterface.IsFrozen);
+                    Assert.AreEqual(0f, Time.timeScale);
+                    Assert.AreEqual(0, caughtCount);
+                    Assert.AreEqual(WitchState.Sprinting, controller.Decision.State);
+                    Assert.AreEqual(position, witch.transform.position);
+                    Assert.AreEqual(rotation, witch.transform.rotation);
+                }
+            }
+            finally
+            {
+                gameInterface.TogglePause();
+            }
+
+            Assert.IsFalse(gameInterface.IsFrozen);
+            Assert.AreEqual(1f, Time.timeScale);
+            yield return WaitForState(WitchState.Caught, 1f);
+            Assert.AreEqual(1, caughtCount);
+            for (int i = 0; i < 3; i++) yield return null;
+            Assert.AreEqual(1, caughtCount);
+
+            GameObject Child(string name)
+            {
+                var child = new GameObject(name);
+                child.transform.SetParent(root.transform, false);
+                return child;
+            }
+        }
+
+        [UnityTest]
         public IEnumerator SprintCatchesPlayerOnceDespiteOwnSightCollider()
         {
             witch.transform.position = Vector3.zero;
