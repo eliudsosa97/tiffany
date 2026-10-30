@@ -7,6 +7,9 @@ namespace TiffanyGame.Tests
 {
     public sealed class PauseMenuTests
     {
+        static void Call(Component target, string method) =>
+            target.GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.Invoke(target, null);
+
         [Test]
         public void ReturnToCheckpointCancelsCaptureAndPreservesMemoriesAndPowers()
         {
@@ -18,16 +21,16 @@ namespace TiffanyGame.Tests
                 spot.memoryId = 1;
                 var memories = player.AddComponent<MemoryCollector>();
                 memories.spots = new[] { spot };
-                memories.SendMessage("Awake");
+                Call(memories, "Awake");
                 memories.Progress.MarkFound(1);
                 soul.Powers.Unlock(Power.Manifest);
                 soul.Respawn.Touch(new Candle(CandleKind.Family, Vector3.right * 6f));
                 var respawn = player.AddComponent<PlayerRespawn>();
-                respawn.SendMessage("Awake");
+                Call(respawn, "Awake");
                 respawn.groundMask = 0;
                 respawn.Trigger();
                 respawn.ReturnToCheckpoint();
-                respawn.SendMessage("Update");
+                Call(respawn, "Update");
                 Assert.IsFalse(respawn.Active);
                 Assert.AreEqual(Vector3.right * 6f + Vector3.back * respawn.sideOffset, player.transform.position);
                 Assert.AreEqual(50f, soul.Energy.Current);
@@ -63,7 +66,7 @@ namespace TiffanyGame.Tests
                 InputSystem.Update();
                 ui = (GameInterface)typeof(EditorTools.SceneBuilder).GetMethod("BuildInterface", BindingFlags.Static | BindingFlags.NonPublic)
                     .Invoke(null, new object[] { null });
-                ui.SendMessage("Awake");
+                Call(ui, "Awake");
                 ui.StartGame();
                 ui.TogglePause();
                 CollectionAssert.AreEqual(new[] { InterfaceTexts.PauseResume, InterfaceTexts.PauseRespawn,
@@ -71,12 +74,12 @@ namespace TiffanyGame.Tests
                 var menu = (PauseMenu)typeof(GameInterface).GetField("pauseMenu", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ui);
                 menu.Select(2);
                 GameInputTests.Press(Keyboard.current.enterKey);
-                ui.SendMessage("Update");
+                Call(ui, "Update");
                 Assert.AreEqual((InterfaceScreen.Paused, true, 0f, true), (ui.Screen, ui.IsFrozen, Time.timeScale, AudioListener.pause));
             }
             finally
             {
-                if (ui != null) { ui.SendMessage("OnDisable"); Object.DestroyImmediate(ui.gameObject); }
+                if (ui != null) { Call(ui, "OnDisable"); Object.DestroyImmediate(ui.gameObject); }
                 if (pad != null) InputSystem.RemoveDevice(pad);
                 devices.TearDown();
             }
