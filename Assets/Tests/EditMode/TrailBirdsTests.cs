@@ -161,6 +161,54 @@ namespace TiffanyGame.Tests
             }
         }
 
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(5)]
+        [TestCase(6)]
+        public void OnlyFirstTrailHasLitCapturesFacingItsFirstBird(int index)
+        {
+            root.transform.SetPositionAndRotation(new Vector3(9f, 1000f, -2f), Quaternion.Euler(0f, 37f, 0f));
+            var clearing = new GameObject("Clearing").transform;
+            clearing.SetParent(root.transform, false);
+            clearing.localPosition = RouteLayout.Clearing(index);
+            var path = new GameObject("Path to Next Clearing").transform;
+            path.SetParent(clearing, false);
+            path.localPosition = new Vector3(7f, 0.5f, -9f);
+            var terrain = new RouteTerrain();
+            TrailBirds.Place(path, index, terrain, 713 + index);
+            var captures = path.GetComponentsInChildren<CaptureStop>();
+            Assert.AreEqual(index == 0 ? 2 : 0, captures.Length);
+            if (index != 0) return;
+
+            CollectionAssert.AreEquivalent(new[] { "Bird 1 Trail", "Bird 2 Close" }, Array.ConvertAll(captures, capture => capture.name));
+            var bird = path.Find("Trail Bird 1/trail-bird");
+            foreach (var capture in captures)
+            {
+                Assert.AreSame(bird.parent, capture.transform.parent);
+                Assert.IsTrue(capture.overrideCamera);
+                var light = capture.GetComponent<LightCaptureStage>();
+                Assert.IsNotNull(light);
+                Assert.AreEqual(SoulEnergy.Max, light.energy);
+                Vector3 toBird = bird.position - capture.cameraPosition;
+                Assert.Greater(Vector3.Dot(capture.cameraRotation * Vector3.forward, toBird.normalized), 0.9999f);
+                Assert.AreEqual(capture.name == "Bird 1 Trail" ? 36f : 4f, toBird.magnitude, 0.001f);
+                Vector3 facing = Vector3.ProjectOnPlane(bird.position - capture.transform.position, Vector3.up);
+                Assert.AreEqual(3f, facing.magnitude, 0.001f);
+                Assert.Greater(Vector3.Dot(capture.transform.forward, facing.normalized), 0.9999f);
+                Vector3 player = root.transform.InverseTransformPoint(capture.transform.position);
+                Assert.IsTrue(terrain.IsWalkable(player.x, player.z));
+                Assert.AreEqual(terrain.Height(player.x, player.z), player.y, 0.001f);
+                var polyline = RouteLayout.Path(0);
+                Assert.LessOrEqual(RouteTerrain.SegmentDistance(new Vector2(player.x, player.z),
+                    new Vector2(polyline[0].x, polyline[0].z), new Vector2(polyline[1].x, polyline[1].z)), RouteLayout.PathWidth * 0.5f);
+            }
+            var trail = Array.Find(captures, capture => capture.name == "Bird 1 Trail");
+            Assert.Less(Quaternion.Angle(root.transform.rotation * Quaternion.Euler(42f, 45f, 0f), trail.cameraRotation), 0.1f);
+        }
+
         [Test]
         public void ApplyMatchesTheSeededLogicRelativeToTheRestPoseWithoutDrift()
         {

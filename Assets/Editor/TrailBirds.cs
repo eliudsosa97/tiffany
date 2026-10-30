@@ -39,7 +39,31 @@ namespace TiffanyGame.EditorTools
                     renderer.shadowCastingMode = ShadowCastingMode.Off;
                     renderer.receiveShadows = false;
                 }
+                if (index == 0 && i == 0)
+                {
+                    Vector3 focus = points[i].Position + group.localRotation * bird.transform.localPosition;
+                    Vector3 direction = Vector3.ProjectOnPlane(focus - polyline[0], Vector3.up).normalized;
+                    Vector3 player = focus - direction * 3f;
+                    player.y = terrain.Height(player.x, player.z);
+                    Vector3 position = path.TransformPoint(player - origin);
+                    Capture("Bird 1 Trail", group, position, bird.transform.position,
+                        path.rotation * Quaternion.Euler(FollowCamera.DefaultPitch, FollowCamera.DefaultYaw, 0f), FollowCamera.DefaultDistance);
+                    Capture("Bird 2 Close", group, position, bird.transform.position,
+                        path.rotation * Quaternion.Euler(15f, FollowCamera.DefaultYaw, 0f), 4f);
+                }
             }
+        }
+
+        static void Capture(string name, Transform parent, Vector3 player, Vector3 focus, Quaternion rotation, float distance)
+        {
+            var stop = new GameObject(name);
+            stop.transform.SetParent(parent, false);
+            stop.transform.SetPositionAndRotation(player, Quaternion.LookRotation(Vector3.ProjectOnPlane(focus - player, Vector3.up)));
+            var capture = stop.AddComponent<CaptureStop>();
+            capture.overrideCamera = true;
+            capture.cameraPosition = focus - rotation * Vector3.forward * distance;
+            capture.cameraRotation = rotation;
+            stop.AddComponent<LightCaptureStage>();
         }
     }
 }
