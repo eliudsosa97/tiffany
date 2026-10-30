@@ -100,6 +100,15 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(rules.Completed);
         }
 
+        [TestCase(PlayerMotion.WalkSpeed)]
+        [TestCase(PlayerMotion.RunSpeed)]
+        public void CrossingFitsInsideVanishAndDistractionWindows(float speed)
+        {
+            float crossingSeconds = (ChallengeRules.PassageLength + 0.6f) / speed + 0.27f;
+            Assert.Less(crossingSeconds, Vanish.Duration);
+            Assert.Less(crossingSeconds, WitchWatch.SearchSeconds);
+        }
+
         [Test]
         public void LureRetryWaitsForTheSoundToBeProcessedAndForPlayerToReturn()
         {

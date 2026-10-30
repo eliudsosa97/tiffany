@@ -75,25 +75,79 @@ namespace TiffanyGame.Tests
             rules.Tick(1f, InterfaceScreen.Playing);
             Assert.AreEqual((BackgroundCue.Silent, 0f), (rules.Cue, rules.Volume));
         }
-        [TestCase(InterfaceScreen.Paused)] [TestCase(InterfaceScreen.Notebook)]
-        public void PauseFreezesMemoryFadeAndResumesWithoutChangingTracks(InterfaceScreen screen)
+        [Test]
+        public void NotebookFreezesMemoryFadeAndResumesWithoutChangingTracks()
         {
             rules.PlayMemory();
             rules.Tick(0.25f, InterfaceScreen.Playing);
-            rules.Tick(10f, screen);
+            rules.Tick(10f, InterfaceScreen.Notebook);
             Assert.AreEqual((true, BackgroundCue.Memory, BackgroundTrack.Memory, 0.5f),
                 (rules.Paused, rules.Cue, rules.Track, rules.Volume));
             rules.Tick(0.25f, InterfaceScreen.Playing);
             Assert.AreEqual((false, BackgroundCue.Memory, 1f), (rules.Paused, rules.Cue, rules.Volume));
         }
-        [TestCase(InterfaceScreen.Paused)] [TestCase(InterfaceScreen.Notebook)]
-        public void PauseDuringGameplayNeverStartsMusic(InterfaceScreen screen)
+        [Test]
+        public void NotebookDuringGameplayNeverStartsMusic()
         {
             rules.Tick(3f, InterfaceScreen.Title);
             rules.Tick(0.1f, InterfaceScreen.Playing);
-            rules.Tick(10f, screen);
+            rules.Tick(10f, InterfaceScreen.Notebook);
+            Assert.AreEqual((true, BackgroundCue.Silent, 0f), (rules.Paused, rules.Cue, rules.Volume));
             rules.Tick(10f, InterfaceScreen.Playing);
             Assert.AreEqual((BackgroundCue.Silent, 0f), (rules.Cue, rules.Volume));
+        }
+        [Test]
+        public void PauseFadesThemeInOverHalfASecond()
+        {
+            rules.Tick(0.1f, InterfaceScreen.Playing);
+            rules.Tick(0.25f, InterfaceScreen.Paused);
+            Assert.AreEqual((false, BackgroundCue.Pause, BackgroundTrack.Theme, 0.5f),
+                (rules.Paused, rules.Cue, rules.Track, rules.Volume));
+            rules.Tick(0.25f, InterfaceScreen.Paused);
+            Assert.AreEqual(1f, rules.Volume);
+        }
+        [Test]
+        public void ResumingGameplayFadesPauseThemeOutOverHalfASecondThenStaysSilent()
+        {
+            rules.Tick(0.5f, InterfaceScreen.Paused);
+            rules.Tick(0.25f, InterfaceScreen.Playing);
+            Assert.AreEqual((false, BackgroundCue.Silent, BackgroundTrack.Theme, 0.5f),
+                (rules.Paused, rules.Cue, rules.Track, rules.Volume));
+            rules.Tick(0.25f, InterfaceScreen.Playing);
+            Assert.AreEqual(0f, rules.Volume);
+            rules.Tick(100f, InterfaceScreen.Playing);
+            Assert.AreEqual((BackgroundCue.Silent, 0f), (rules.Cue, rules.Volume));
+        }
+        [Test]
+        public void NotebookFreezesPauseThemeFade()
+        {
+            rules.Tick(0.25f, InterfaceScreen.Paused);
+            rules.Tick(10f, InterfaceScreen.Notebook);
+            Assert.AreEqual((true, BackgroundCue.Pause, BackgroundTrack.Theme, 0.5f),
+                (rules.Paused, rules.Cue, rules.Track, rules.Volume));
+            rules.Tick(0.25f, InterfaceScreen.Paused);
+            Assert.AreEqual((false, 1f), (rules.Paused, rules.Volume));
+        }
+        [Test]
+        public void ActiveMemorySurvivesPausingAndResuming()
+        {
+            rules.PlayMemory();
+            rules.Tick(0.5f, InterfaceScreen.Playing);
+            rules.Tick(0.25f, InterfaceScreen.Paused);
+            Assert.AreEqual((BackgroundCue.Pause, BackgroundTrack.Memory, 0.5f),
+                (rules.Cue, rules.Track, rules.Volume));
+            rules.Tick(0.25f, InterfaceScreen.Paused);
+            Assert.AreEqual((BackgroundTrack.Theme, 0f), (rules.Track, rules.Volume));
+            rules.Tick(0.5f, InterfaceScreen.Paused);
+            Assert.AreEqual((BackgroundTrack.Theme, 1f), (rules.Track, rules.Volume));
+            rules.Tick(0.25f, InterfaceScreen.Playing);
+            Assert.AreEqual((BackgroundCue.Memory, BackgroundTrack.Theme, 0.5f),
+                (rules.Cue, rules.Track, rules.Volume));
+            rules.Tick(0.25f, InterfaceScreen.Playing);
+            Assert.AreEqual((BackgroundTrack.Memory, 0f), (rules.Track, rules.Volume));
+            rules.Tick(0.5f, InterfaceScreen.Playing);
+            Assert.AreEqual((false, BackgroundCue.Memory, BackgroundTrack.Memory, 1f),
+                (rules.Paused, rules.Cue, rules.Track, rules.Volume));
         }
         [TestCase(0f)] [TestCase(-1f)] [TestCase(float.NaN)]
         [TestCase(float.PositiveInfinity)] [TestCase(float.NegativeInfinity)]
@@ -102,6 +156,9 @@ namespace TiffanyGame.Tests
             rules.Tick(1.5f, InterfaceScreen.Title);
             rules.Tick(dt, InterfaceScreen.Ending);
             Assert.AreEqual((BackgroundCue.Ending, BackgroundTrack.Theme, 0.5f), (rules.Cue, rules.Track, rules.Volume));
+            rules.Tick(dt, InterfaceScreen.Paused);
+            Assert.AreEqual((false, BackgroundCue.Pause, BackgroundTrack.Theme, 0.5f),
+                (rules.Paused, rules.Cue, rules.Track, rules.Volume));
             rules.Tick(dt, InterfaceScreen.Notebook);
             Assert.IsTrue(rules.Paused);
             rules.Tick(0.1f, InterfaceScreen.Playing);

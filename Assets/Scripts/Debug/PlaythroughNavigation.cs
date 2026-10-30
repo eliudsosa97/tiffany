@@ -44,8 +44,8 @@ namespace TiffanyGame
             offset.y = 0f;
             float distance = offset.magnitude;
             run = forceRun || distance > 2f;
-            float speed = run ? PlayerMotion.RunSpeed : PlayerMotion.WalkSpeed;
-            float strength = Mathf.Clamp01(distance / (speed * Mathf.Max(dt, 0.05f)));
+            float strength = PlayerMotion.InputForSpeed(distance / Mathf.Max(dt, PlayerMotion.SmoothTime),
+                run ? Gait.Run : Gait.Walk);
             return CameraInput(offset.normalized * strength, yaw);
         }
 

@@ -103,17 +103,17 @@
           { "name": "Walk", "blend": 0.2, "blendTree": {
             "name": "Locomotion", "normalizeSpeed": true,
             "children": [
-              { "clip": "Slow", "threshold": 1.1 },
-              { "clip": "Walk", "threshold": 2.2 },
-              { "clip": "Run", "threshold": 4.0 }
+              { "clip": "Slow", "threshold": 1.4 },
+              { "clip": "Walk", "threshold": 4.0 },
+              { "clip": "Run", "threshold": 5.5 }
             ]
           } },
           { "name": "WalkBack", "blend": 0.2, "reverse": true, "blendTree": {
             "name": "Locomotion", "normalizeSpeed": true,
             "children": [
-              { "clip": "Slow", "threshold": 1.1 },
-              { "clip": "Walk", "threshold": 2.2 },
-              { "clip": "Run", "threshold": 4.0 }
+              { "clip": "Slow", "threshold": 1.4 },
+              { "clip": "Walk", "threshold": 4.0 },
+              { "clip": "Run", "threshold": 5.5 }
             ]
           } },
           { "name": "TurnLeft", "clip": "TurnLeft", "blend": 0.15 },
