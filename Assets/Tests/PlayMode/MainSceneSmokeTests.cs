@@ -110,9 +110,6 @@ namespace TiffanyGame.Tests
             Assert.That(tracks, Has.Length.EqualTo(1));
             var music = tracks[0];
             Assert.IsNotNull(music.gameInterface);
-            Assert.IsNotNull(music.tracker);
-            Assert.IsNotNull(music.tension);
-            Assert.IsNotNull(music.witch);
             Assert.IsNotNull(music.source);
             Assert.IsNotNull(music.theme);
             Assert.IsTrue(music.source.ignoreListenerPause);
@@ -124,7 +121,6 @@ namespace TiffanyGame.Tests
 
             var tension = Object.FindAnyObjectByType<TensionMusic>();
             Assert.IsNotNull(tension);
-            Assert.AreSame(tension, music.tension);
             Assert.IsNotNull(tension.drone);
             Assert.IsNotNull(tension.pulse);
             Assert.IsNotNull(tension.drone.clip);

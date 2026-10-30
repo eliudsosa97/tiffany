@@ -56,7 +56,7 @@ namespace TiffanyGame
             if (music != null && music.Silence > 0f) return;
             if (cues.FakeStep)
             {
-                PlayCue(fakeSteps, Random.Range(-0.8f, 0.8f));
+                PlayCue(fakeSteps, Random.Range(-0.8f, 0.8f), 0.7f);
                 Debug.Log(GameInfo.LogPrefix + " Paso falso");
             }
             if (cues.Whisper)
@@ -72,13 +72,13 @@ namespace TiffanyGame
             }
         }
 
-        private void PlayCue(AudioClip[] clips, float pan)
+        private void PlayCue(AudioClip[] clips, float pan, float volumeScale = 1f)
         {
             if (cueSource == null || clips == null || clips.Length == 0) return;
             AudioClip clip = clips[Random.Range(0, clips.Length)];
             if (clip == null) return;
             cueSource.panStereo = pan;
-            cueSource.PlayOneShot(clip, PanicEffects.CueVolume);
+            cueSource.PlayOneShot(clip, PanicEffects.CueVolume * volumeScale);
         }
 
         private void OnDisable()

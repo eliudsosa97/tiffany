@@ -5,9 +5,9 @@ namespace TiffanyGame
     public enum UnseenSound { Branch, Steps, Whisper, Knock, Name }
     public sealed class UnseenForestRules
     {
-        public const float ForestMinInterval = 25f, ForestMaxInterval = 40f;
-        public const float TrailMinInterval = 40f, TrailMaxInterval = 60f;
-        public const float TownMinInterval = 45f, TownMaxInterval = 60f;
+        public const float ForestMinInterval = 50f, ForestMaxInterval = 80f;
+        public const float TrailMinInterval = 80f, TrailMaxInterval = 120f;
+        public const float TownMinInterval = 90f, TownMaxInterval = 120f;
         public const float ChaseCooldown = 12f, OtherScareGap = 8f;
         public const float NameCooldown = 150f;
         public const float MinDistance = 15f, MaxDistance = 30f, FrontHalfAngle = 70f, HalfTurn = 180f;
