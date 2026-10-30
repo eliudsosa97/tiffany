@@ -8,8 +8,27 @@ namespace TiffanyGame
         public const float PlacementSlack = 3f;
         public const float MaxPlacementAngle = 20f;
         private float farTime;
+        private Vector3 respawnPosition;
+        private float respawnTime;
+        private bool waitingAfterRespawn;
 
         public bool Hunting { get; private set; }
+
+        public void AfterRespawn(Vector3 position)
+        {
+            respawnPosition = position;
+            respawnTime = 0f;
+            waitingAfterRespawn = true;
+        }
+
+        public void AdvanceRespawn(float dt, WitchProfile profile, Vector3 playerPosition)
+        {
+            if (!waitingAfterRespawn) return;
+            respawnTime += dt;
+            if (respawnTime >= profile.CatchUpRespawnDuration
+                || WitchTargets.Distance(playerPosition, respawnPosition) >= profile.CatchUpRespawnDistance)
+                waitingAfterRespawn = false;
+        }
 
         public bool Tick(float dt, WitchProfile profile, in WitchPerception p, WitchState state)
         {
@@ -18,7 +37,7 @@ namespace TiffanyGame
             bool far = profile.GroundChase && state == WitchState.Stalking && !protectedPlayer
                 && WitchTargets.Distance(p.WitchPosition, p.PlayerPosition) > profile.CatchUpDistance;
             farTime = far ? farTime + dt : 0f;
-            return farTime >= profile.CatchUpDelay;
+            return !waitingAfterRespawn && farTime >= profile.CatchUpDelay;
         }
 
         public void Placed()

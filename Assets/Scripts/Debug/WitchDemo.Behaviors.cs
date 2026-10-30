@@ -35,8 +35,9 @@ namespace TiffanyGame
             }
             Vector3 origin = candle != null
                 ? candle.transform.position + Vector3.back * (candle.radius + 3f) : stop + Vector3.back * 12f;
+            float encounterDistance = mode == "harass" ? witch.Profile.HarassMinRadius : 15f;
             Vector3 witchOrigin = candle != null
-                ? candle.transform.position + Vector3.back * (candle.radius + 15f) : origin + Vector3.right * 15f;
+                ? candle.transform.position + Vector3.back * (candle.radius + 15f) : origin + Vector3.right * encounterDistance;
             if (!NavMeshPlacement.TrySample(origin, 4f, NavMesh.AllAreas, out var playerPoint)
                 || !NavMeshPlacement.TrySample(witchOrigin, 4f, NavMesh.AllAreas, out var witchPoint)
                 || SafeZones.Contains(playerPoint.position) || SafeZones.Contains(witchPoint.position))
@@ -87,6 +88,16 @@ namespace TiffanyGame
             profile.CandleWatchRetreatDuration = 3f;
             profile.BarkLureMinDelay = profile.BarkLureMaxDelay = 0.5f;
             profile.BarkLureTravelLimit = 5f;
+            if (mode == "harass")
+            {
+                profile.CanSprint = true;
+                profile.StalkSpeed = originalProfile.StalkSpeed;
+                profile.FollowSpeed = originalProfile.FollowSpeed;
+                profile.HarassMinLookDuration = profile.HarassMaxLookDuration = 2f;
+                profile.HarassMinArc = profile.HarassMaxArc = 90f;
+                profile.HarassMinRadius = profile.HarassMaxRadius = 10f;
+                profile.HarassAngleStep = 10f;
+            }
             if (mode == "lightsoff") profile.LandingDistance = 1f;
             witch.SetProfile(profile);
             bool airborne = mode == "ambush" || mode == "lightsoff";
@@ -116,6 +127,11 @@ namespace TiffanyGame
                     yield break;
                 }
                 Debug.Log($"{GameInfo.LogPrefix} WitchDemo {mode}: bruja en el suelo, sin lluvia.");
+            }
+            if (mode == "harass")
+            {
+                yield return RunHarass(player, witch, light);
+                yield break;
             }
             if (mode == "search")
             {
@@ -212,6 +228,56 @@ namespace TiffanyGame
                     Debug.Log($"{GameInfo.LogPrefix} WitchDemo ambush: Tiffany no llegó y la bruja despega.");
                 else Debug.LogError($"{GameInfo.LogPrefix} WitchDemo ambush: no abandonó la espera.");
             }
+        }
+
+        private IEnumerator RunHarass(PlayerController player, WitchController witch, PlayerLight light)
+        {
+            float deadline = Time.time + 19f;
+            NoiseBus.Publish(new StepNoise(player.transform.position, 30f));
+            yield return null;
+            NoiseBus.Publish(new StepNoise(player.transform.position, 30f));
+            while (witch.Decision.Intent != WitchIntent.Harass && Time.time < deadline) yield return null;
+            if (witch.Decision.Intent != WitchIntent.Harass)
+            {
+                Debug.LogError($"{GameInfo.LogPrefix} WitchDemo harass: no comenzó el acoso.");
+                yield break;
+            }
+            Debug.Log($"{GameInfo.LogPrefix} WitchDemo harass: se detiene y mira a Tiffany.");
+            while (witch.Decision.Intent == WitchIntent.Harass && witch.Decision.Speed == 0f && Time.time < deadline)
+                yield return null;
+            if (witch.Decision.Intent != WitchIntent.Harass || witch.Decision.Speed <= 0f)
+            {
+                Debug.LogError($"{GameInfo.LogPrefix} WitchDemo harass: no empezó a rodear a Tiffany.");
+                yield break;
+            }
+            Debug.Log($"{GameInfo.LogPrefix} WitchDemo harass: empieza a rodearla.");
+            yield return new WaitForSeconds(0.5f);
+            if (!light.State.IsOn) light.Toggle();
+            bool lit = false, hid = false;
+            while (witch.Decision.Intent == WitchIntent.Harass && Time.time < deadline)
+            {
+                Vector3 facing = witch.transform.position - player.transform.position;
+                facing.y = 0f;
+                GameInput.AimOverride = PlaythroughNavigation.CameraInput(facing, view.transform.eulerAngles.y);
+                lit |= witch.Perception.PlayerLightTouchesWitch;
+                if (!hid && lit && witch.Decision.Speed == 0f)
+                {
+                    hid = true;
+                    light.Toggle();
+                    Debug.Log($"{GameInfo.LogPrefix} WitchDemo harass: se esconde y espera sin moverse.");
+                }
+                yield return null;
+            }
+            if (!hid || witch.Decision.State != WitchState.WindUp)
+            {
+                Debug.LogError($"{GameInfo.LogPrefix} WitchDemo harass: no mostró escondite y aviso.");
+                yield break;
+            }
+            Debug.Log($"{GameInfo.LogPrefix} WitchDemo harass: avisa antes de embestir.");
+            while (witch.Decision.State == WitchState.WindUp && Time.time < deadline) yield return null;
+            if (witch.Decision.State == WitchState.Sprinting)
+                Debug.Log($"{GameInfo.LogPrefix} WitchDemo harass: embiste después del acoso.");
+            else Debug.LogError($"{GameInfo.LogPrefix} WitchDemo harass: no llegó a la embestida a tiempo.");
         }
 
         private static CandleSpot NearestFamilyCandle(Vector3 origin)

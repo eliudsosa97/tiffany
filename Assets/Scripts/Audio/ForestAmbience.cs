@@ -40,12 +40,12 @@ namespace TiffanyGame
                 var source = loops[i];
                 if (source == null) continue;
                 float previous = source.volume, volume = mix.Volume((AmbienceLayer)i)
-                    * (music != null ? TensionMusicRules.AmbienceDuck(music.Level) : 1f);
+                    * (music != null ? TensionMusicRules.AmbienceDuck(music.Level) * (1f - music.Silence) : 1f);
                 source.volume = volume;
                 if (volume > 0f && previous <= 0f) source.Play();
                 else if (volume <= 0f && previous > 0f) source.Stop();
             }
-            if (!mix.Call || calls == null) return;
+            if (!mix.Call || calls == null || (music != null && music.Silence > 0f)) return;
             AudioClip clip = mix.CallKind switch
             {
                 AmbienceCall.Owl => owl, AmbienceCall.BarnOwl => barnOwl, AmbienceCall.Coyote => coyote,

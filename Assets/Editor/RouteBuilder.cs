@@ -44,8 +44,9 @@ namespace TiffanyGame.EditorTools
                 else Ground("Ground", clearing, Vector3.zero, new Vector2(size, size), ClearingGrounds[i], floor);
                 BuildEdges(clearing, i, terrain);
                 if (i < names.Length - 1) BuildPath(clearing, i, pathFloor, terrain);
-                Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush);
+                Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush, player.transform);
                 if (i < memories.Length) memories[i] = Root("Memory Point", clearing, memoryPosition);
+                BuildTrailPatches(clearing, i, terrain, bush);
 
                 var stop = Root(clearing.name, clearing, new Vector3(0f, 0f, -8f));
                 var capture = stop.gameObject.AddComponent<CaptureStop>();
@@ -66,7 +67,8 @@ namespace TiffanyGame.EditorTools
             spawn.rotation = Quaternion.LookRotation(memories[0].position - spawn.position);
             player.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
             foreach (var node in route.GetComponentsInChildren<Transform>(true))
-                if (!ChallengeBuilder.IsMoving(node)) GameObjectUtility.SetStaticEditorFlags(node.gameObject, StaticEditorFlags.BatchingStatic);
+                if (!ChallengeBuilder.IsMoving(node) && node.GetComponentInParent<TrailBird>() == null)
+                    GameObjectUtility.SetStaticEditorFlags(node.gameObject, StaticEditorFlags.BatchingStatic);
             foreach (var renderer in route.GetComponentsInChildren<Renderer>(true))
             {
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -113,6 +115,7 @@ namespace TiffanyGame.EditorTools
                 }
                 else TerrainBuilder.PathFloor(path, $"Ground {i}", a, b, center, terrain, floor);
             }
+            TrailBirds.Place(path, index, terrain, 713 + index);
         }
 
         static Vector3 PathMidpoint(Vector3[] points)
@@ -127,6 +130,23 @@ namespace TiffanyGame.EditorTools
                 distance -= length;
             }
             return points[points.Length - 1];
+        }
+
+        static void BuildTrailPatches(Transform clearing, int index, RouteTerrain terrain, Material bush)
+        {
+            if (TrailPatches.CountForPath(index) == 0) return;
+            var patches = Root("Trail Patches", clearing, Vector3.zero);
+            Vector3 origin = RouteLayout.Clearing(index);
+            for (int i = 0; i < TrailPatches.Count; i++)
+            {
+                var patch = TrailPatches.Get(i);
+                if (patch.From != index) continue;
+                TerrainBuilder.PathFloor(patches, $"Trail Patch {i + 1}", patch.Start, patch.End, origin,
+                    terrain, GroundMaterials.For(patch.Type), patch.Type, TrailPatches.FloorLift);
+                Vector3 hide = patch.HidePosition;
+                hide.y = terrain.Height(hide.x, hide.z);
+                HidingBuilder.BuildHideSpot(patches, $"Hide Trail Patch {i + 1}", hide - origin, bush);
+            }
         }
 
         static Vector3[] BuildSkyRoute(Transform route, Transform[] clearings)
@@ -157,7 +177,7 @@ namespace TiffanyGame.EditorTools
             return points.ToArray();
         }
 
-        static Vector3 BuildLandmark(int index, Transform clearing, Material structure, Material dark, Material bush)
+        static Vector3 BuildLandmark(int index, Transform clearing, Material structure, Material dark, Material bush, Transform player)
         {
             var building = GeneratedMaterials.Get("RouteBuilding", new Color(0.4f, 0.4f, 0.4f), occluder: true);
             switch (index)
@@ -193,8 +213,8 @@ namespace TiffanyGame.EditorTools
                     HidingBuilder.BuildHideSpot(clearing, "Hide Stable Crate", new Vector3(-4.5f, 0f, 7f), structure, PrimitiveType.Cube);
                     return new Vector3(0f, 0f, 3f);
                 case 4:
-                    BuildShelter("Hut", clearing, 8f, 8f, 3.5f, building);
                     HidingBuilder.BuildHideSpot(clearing, "Hide Hut Bush", new Vector3(-6f, 0f, 3f), bush);
+                    WitchHutBuilder.Build(clearing, player);
                     return new Vector3(0f, 0f, 3f);
                 case 6:
                     Part("Asphalt", clearing, new Vector3(0f, 0.02f, 0f), new Vector3(35f, 0.04f, 8f), GroundMaterials.For(GroundType.Slab))

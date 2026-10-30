@@ -83,7 +83,7 @@ namespace TiffanyGame.Tests
             Check(Step(0f), WitchState.Flying, abovePlayer, 6f);
             p.WitchPosition = abovePlayer + Vector3.left * 12f;
             Check(Step(0f), WitchState.Landing, p.WitchPosition);
-            Check(Step(1.51f), WitchState.Stalking, p.PlayerPosition, 1.2f);
+            Check(Step(1.51f), WitchState.Stalking, p.PlayerPosition, 0.9f);
         }
 
         [Test]
@@ -120,7 +120,7 @@ namespace TiffanyGame.Tests
             Check(Step(float.NaN), WitchState.Landing, anchor);
             Check(Step(1.49f), WitchState.Landing, anchor);
             p.WitchPosition.y = 0f;
-            Check(Step(0.02f), WitchState.Stalking, light, 1.2f);
+            Check(Step(0.02f), WitchState.Stalking, light, 0.9f);
         }
 
         [Test]
@@ -134,7 +134,7 @@ namespace TiffanyGame.Tests
             p.SeesPlayerLight = false;
             p.PlayerLightPosition = Vector3.zero;
             Check(Step(0f), WitchState.Landing, p.WitchPosition);
-            Check(Step(1.51f), WitchState.Stalking, light, 1.2f);
+            Check(Step(1.51f), WitchState.Stalking, light, 0.9f);
         }
 
         [Test]
@@ -186,11 +186,11 @@ namespace TiffanyGame.Tests
             Vector3 noise = p.NoisePosition;
             Assert.AreEqual(WitchState.Suspicious, Step(1f).State);
             p.HeardNoise = false;
-            Check(Step(profile.SuspicionDuration), WitchState.Stalking, noise, 1.2f);
-            Check(Step(1f), WitchState.Stalking, noise, 1.2f);
+            Check(Step(profile.SuspicionDuration), WitchState.Stalking, noise, 0.9f);
+            Check(Step(1f), WitchState.Stalking, noise, 0.9f);
             p.HeardNoise = p.HearingMuted = true;
             p.NoisePosition = Vector3.right * 48f;
-            Check(Step(1f), WitchState.Stalking, noise, 1.2f);
+            Check(Step(1f), WitchState.Stalking, noise, 0.9f);
             p.WitchPosition = new Vector3(23f, 100f, 0f);
             Check(Step(0f), WitchState.Stalking, noise);
             profile.UsesVoiceLure = false;
@@ -222,7 +222,7 @@ namespace TiffanyGame.Tests
             p.HeardNoise = true;
             Assert.AreEqual(WitchState.Suspicious, Step(20f).State);
             p.HeardNoise = false;
-            Check(Step(profile.SuspicionDuration), WitchState.Stalking, p.NoisePosition, 1.2f);
+            Check(Step(profile.SuspicionDuration), WitchState.Stalking, p.NoisePosition, 0.9f);
             p.WitchPosition = p.NoisePosition;
             Check(Step(7.9f), WitchState.Stalking, p.WitchPosition);
             Check(Step(profile.HideInspectionDuration - 0.1f), WitchState.Stalking, p.WitchPosition);
@@ -294,7 +294,8 @@ namespace TiffanyGame.Tests
             Ground();
             p.PlayerPosition = p.WitchPosition + Vector3.forward * 5f;
             p.SeesPlayer = true;
-            Assert.AreEqual(WitchState.WindUp, Step(0f).State);
+            Assert.AreEqual(WitchState.WindUp, WitchSim.BeginWarning(brain, profile, ref p).State,
+                "El perfil cambia después del acoso y de su aviso completo.");
             Assert.AreEqual(WitchState.Sprinting, Step(0.81f).State);
             p.PlayerPosition = Vector3.left * 30f;
             WitchDecision sprint = Step(0.4f);

@@ -1,0 +1,9 @@
+{
+  "seed": 713,
+  "pivot": [0, 0, 0],
+  "materials": [
+    {"name": "TrailBirdYellow", "color": "#E8B820", "smoothness": 0.12},
+    {"name": "TrailBirdWing", "color": "#AD871C", "smoothness": 0.08},
+    {"name": "TrailBirdBeak", "color": "#30271F", "smoothness": 0.06}
+  ]
+}

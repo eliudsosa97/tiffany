@@ -60,11 +60,7 @@ namespace TiffanyGame
             }
             if (sequence.RespawnDue)
             {
-                respawn.Respawn(soul.Energy);
-                PlaceAtCheckpoint();
-                if (witch != null) witch.ResetBrain(afterCapture: true);
-                Respawned?.Invoke();
-                if (playerLight != null && playerLight.State != null && playerLight.State.IsOn) playerLight.Toggle();
+                RespawnAtCheckpoint();
                 Debug.Log($"{GameInfo.LogPrefix} Atrapada: regreso a la veladora");
             }
             if (wasActive && !Active)
@@ -74,9 +70,29 @@ namespace TiffanyGame
             }
         }
 
+        public void ReturnToCheckpoint()
+        {
+            sequence.Cancel();
+            if (TryGetComponent(out VanishPower vanish)) vanish.Cancel();
+            if (hiding != null && hiding.Hidden) hiding.Leave();
+            RespawnAtCheckpoint();
+            if (movement != null) movement.enabled = true;
+            if (hiding != null) hiding.enabled = true;
+            if (overlay != null) overlay.gameObject.SetActive(false);
+        }
+
+        void RespawnAtCheckpoint()
+        {
+            respawn.Respawn(soul.Energy);
+            PlaceAtCheckpoint();
+            if (witch != null) witch.ResetBrain(afterCapture: true);
+            Respawned?.Invoke();
+            if (playerLight != null && playerLight.State != null && playerLight.State.IsOn) playerLight.Toggle();
+        }
+
         public void PlaceAtCheckpoint()
         {
-            Vector3 position = respawn.Position + Vector3.back * sideOffset;
+            Vector3 position = respawn.ArrivalPosition(sideOffset);
             bool wasEnabled = character != null && character.enabled;
             if (character != null) character.enabled = false;
             if (Physics.Raycast(position + Vector3.up * 3f, Vector3.down, out var hit,

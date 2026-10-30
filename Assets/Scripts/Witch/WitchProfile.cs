@@ -39,7 +39,19 @@ namespace TiffanyGame
         public float LastSeenDuration = 20f;
         public float FlySpeed = 6f;
         public float FlightHeightOffset;
-        public float StalkSpeed = 1.2f;
+        public float StalkSpeed = 0.9f;
+        public float HarassMinLookDuration = 1.5f;
+        public float HarassMaxLookDuration = 2.5f;
+        public float HarassCloseDistance = 6f;
+        public float HarassRetreatDistance = 8f;
+        public float HarassMinArc = 90f;
+        public float HarassMaxArc = 180f;
+        public float HarassAngleStep = 30f;
+        public float HarassMinRadius = 10f;
+        public float HarassMaxRadius = 15f;
+        public float HarassHideDuration = 2f;
+        public float HarassTimeLimit = 12f;
+        public float HarassCooldown = 20f;
         public float FollowSpeed = 2.5f;
         public float SprintSpeed = 9f;
         public float SprintDuration = 1.2f;
@@ -68,6 +80,8 @@ namespace TiffanyGame
         public float ReturnGraceDuration = 8f;
         public float CatchUpDistance = 20f;
         public float CatchUpDelay = 6f;
+        public float CatchUpRespawnDistance = 20f;
+        public float CatchUpRespawnDuration = 30f;
         public float CatchUpReappearDistance = 14f;
         public float CatchUpReappearMaxDistance = 18f;
 

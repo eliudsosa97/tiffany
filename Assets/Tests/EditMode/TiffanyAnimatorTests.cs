@@ -77,7 +77,9 @@ namespace TiffanyGame.Tests
             }
             var light = player.GetComponent<PlayerLight>();
             Assert.AreEqual(new Vector3(0f, 0.85f, 0.12f), light.spot.transform.localPosition);
-            Assert.AreEqual(28f, light.pitch);
+            Assert.AreEqual(7f, light.pitch);
+            Assert.AreEqual(18f, light.spot.range);
+            Assert.AreEqual(140f, light.spot.intensity);
             Assert.AreEqual(1.2f, light.bodyGlowBoost);
             CollectionAssert.AreEqual(driver.animator.GetComponentsInChildren<Renderer>(true), light.bodyRenderers);
             Assert.IsNull(player.transform.Find("Hand Glow"));

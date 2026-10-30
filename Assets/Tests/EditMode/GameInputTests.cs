@@ -10,6 +10,8 @@ namespace TiffanyGame.Tests
     {
         const float Tolerance = 0.00001f;
 
+        internal static void Press(ButtonControl control) => Change(control, 1f);
+
         static void Change(ButtonControl control, float value)
         {
             using (StateEvent.From(control.device, out var eventPtr))
@@ -21,6 +23,8 @@ namespace TiffanyGame.Tests
         }
 
         [TestCase("left", true, false)]
+        [TestCase("consumed", false, false)]
+        [TestCase("submit", false, false)]
         [TestCase("f", true, false)]
         [TestCase("right", false, false)]
         [TestCase("north", true, false)]
@@ -35,8 +39,10 @@ namespace TiffanyGame.Tests
                     var keyboard = Keyboard.current;
                     var mouse = Mouse.current;
                     ButtonControl button = input == "f" ? keyboard.fKey : input == "north" ? pad.buttonNorth
-                        : input == "r2" ? pad.rightTrigger : input == "left" ? mouse.leftButton : mouse.rightButton;
+                        : input == "r2" ? pad.rightTrigger : input == "right" ? mouse.rightButton : mouse.leftButton;
                     Change(button, 1f);
+                    if (input == "consumed") GameInput.ConsumePointerPress();
+                    if (input == "submit") Assert.IsTrue(GameInput.StartPressed);
                     Assert.AreEqual(held, GameInput.LightHeld);
                     Assert.AreEqual(run, GameInput.Run);
                     InputSystem.Update();
@@ -93,6 +99,11 @@ namespace TiffanyGame.Tests
                 consumed.SetValue(null, -1);
                 held.SetValue(null, false);
                 invalid.SetValue(null, false);
+                var keyboard = Keyboard.current;
+                var mouse = Mouse.current;
+                InputSystem.Update();
+                keyboard.MakeCurrent();
+                mouse.MakeCurrent();
                 test();
             }
             finally

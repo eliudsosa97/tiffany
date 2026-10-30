@@ -54,12 +54,16 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator WaterPlantThenStableThenCemeteryKeepsStable()
+        public IEnumerator SequentialVisitsThenCemeteryKeepStable()
         {
             Vector3 position = witch.transform.position;
             WitchDecision decision = witch.Decision;
             yield return MoveToClearing(2);
             Assert.AreEqual(Chapter.WaterPlant, witch.chapter);
+            yield return MoveToClearing(4);
+            Assert.AreEqual(Chapter.WaterPlant, witch.chapter, "Un salto omite las vías y no debe adelantar el capítulo.");
+            Assert.AreEqual(1, tracker.LastVisitedClearingIndex);
+            yield return MoveToClearing(3);
             yield return MoveToClearing(4);
             Assert.AreEqual(Chapter.Stable, witch.chapter);
             yield return MoveToClearing(1);
@@ -89,9 +93,9 @@ namespace TiffanyGame.Tests
             Vector3 testZone = GameObject.Find("Test Zone").transform.Find("Spawn").position;
             yield return MovePlayer(testZone);
             Assert.AreEqual(Chapter.Cemetery, witch.chapter);
-            yield return MoveToClearing(4);
+            for (int clearing = 2; clearing <= 4; clearing++) yield return MoveToClearing(clearing);
             yield return MovePlayer(route.GetChild(1).Find("Path to Next Clearing").position);
-            Assert.AreEqual(Chapter.Stable, witch.chapter);
+            Assert.AreEqual(Chapter.Stable, witch.chapter, "El establo requiere visitar antes los claros intermedios.");
             yield return MovePlayer(testZone);
             Assert.AreEqual(Chapter.Stable, witch.chapter);
             LogAssert.NoUnexpectedReceived();
@@ -145,8 +149,8 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(witch.Perception.HasFamilyCandle && witch.Perception.PlayerAtFamilyCandle);
             Assert.AreEqual(respawn.Position, witch.Perception.FamilyCandlePosition);
             Assert.AreEqual(family.radius, witch.Perception.FamilyCandleRadius);
-            yield return MoveToClearing(8);
-            Assert.IsFalse(tracker.HasNextClearing);
+            for (int clearing = 1; clearing <= 8; clearing++) yield return MoveToClearing(clearing);
+            Assert.IsFalse(tracker.HasNextClearing, "La visita a casa requiere recorrer antes los claros intermedios.");
             Assert.IsFalse(witch.Perception.HasNextClearing);
         }
 

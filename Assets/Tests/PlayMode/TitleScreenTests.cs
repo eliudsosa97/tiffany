@@ -46,6 +46,8 @@ namespace TiffanyGame.Tests
                 controls.rectTransform.rect.height * controls.pixelsPerUnit);
             Assert.IsTrue(GameInterface.HasControllerSymbols(controls.font) || !controls.text.Contains("△"));
             Assert.That(ui.titlePanel.activeInHierarchy, Is.True);
+            Assert.That(ui.storyPanel.activeSelf, Is.False);
+            Assert.That(ui.soulPanel.activeSelf, Is.False);
             Assert.That(ui.endingPanel.gameObject.activeSelf, Is.False);
             Assert.That(ui.pausePanel.activeSelf, Is.False);
             Assert.That(ui.notebookPanel.activeSelf, Is.False);
@@ -75,6 +77,9 @@ namespace TiffanyGame.Tests
             yield return null;
 
             Assert.That(ui.Screen, Is.EqualTo(InterfaceScreen.Playing));
+            Assert.That(ui.storyPanel.activeSelf, Is.False);
+            Assert.That(ui.soulPanel.activeSelf, Is.False);
+            Assert.That(ui.noticeText.text, Is.Empty);
             Assert.That(ui.titlePanel.activeSelf, Is.False);
             Assert.That(ui.endingPanel.gameObject.activeSelf, Is.False);
             Assert.That(ui.noticeText.gameObject.activeSelf, Is.True);
@@ -111,6 +116,31 @@ namespace TiffanyGame.Tests
             InputState.Change(mouse.leftButton, 0f);
             light.SendMessage("Update");
             Assert.IsTrue(light.State.IsOn);
+        }
+
+        [UnityTest]
+        public IEnumerator FinishingStoryStartsAtTheGraveWithoutBirdGuidance()
+        {
+            GameInterface.SkipTitle = false;
+            GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
+            GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = false;
+            yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Single);
+            yield return null;
+            var ui = Object.FindAnyObjectByType<GameInterface>();
+            ui.ConfigureSave(null, false);
+            typeof(GameInterface).GetField("skipStory", System.Reflection.BindingFlags.Instance
+                | System.Reflection.BindingFlags.NonPublic).SetValue(ui, false);
+            ui.StartGame();
+            Assert.That(ui.Screen, Is.EqualTo(InterfaceScreen.Story));
+            var story = (StorySequence)typeof(GameInterface).GetField("story", System.Reflection.BindingFlags.Instance
+                | System.Reflection.BindingFlags.NonPublic).GetValue(ui);
+            story.Tick(StorySequence.LineSeconds * StorySequence.LineCount);
+            ui.SendMessage("Update");
+            yield return null;
+            Assert.That(ui.Screen, Is.EqualTo(InterfaceScreen.Playing));
+            Assert.That(ui.noticeText.text, Is.Empty);
+            var hud = Object.FindAnyObjectByType<GameplayHud>();
+            Assert.That(hud.objectiveText.text, Is.EqualTo(InterfaceTexts.GraveObjective));
         }
     }
 }

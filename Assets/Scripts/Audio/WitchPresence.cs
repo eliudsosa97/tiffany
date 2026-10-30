@@ -32,7 +32,7 @@ namespace TiffanyGame
             rules.Tick(Time.deltaTime, witch.isActiveAndEnabled ? witch.Decision.Form : WitchForm.Flying,
                 witch.Decision.State, distance, onScreen);
             float previous = source.volume;
-            source.volume = rules.Volume * maxVolume;
+            source.volume = rules.Volume * maxVolume * 0.7f;
             if (source.volume > 0f && previous <= 0f)
             {
                 source.Play();

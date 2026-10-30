@@ -82,7 +82,7 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual(ground.type, Read(RouteLayout.Clearing(i) + Vector3.back * 13f), $"Claro {i}");
                 if (i == RouteLayout.Count - 1) continue;
                 var points = RouteLayout.Path(i);
-                Vector3 point = (points[0] + points[1]) * 0.5f;
+                Vector3 point = (points[points.Length - 2] + points[points.Length - 1]) * 0.5f;
                 point.y = terrain.Height(point.x, point.z);
                 Assert.AreEqual(GroundType.Dirt, Read(point), $"Sendero {i}");
             }
