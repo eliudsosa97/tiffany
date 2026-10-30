@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -16,18 +15,18 @@ namespace TiffanyGame
         public PowerChallenge[] challenges = Array.Empty<PowerChallenge>();
         public Volume echoVolume;
         public Camera viewCamera;
-        public float searchRadius = 0.6f;
+        public float searchRadius = 1.5f;
 
         readonly MemoryEcho echo = new MemoryEcho();
         MemoryProgress progress;
-        Dictionary<Collider, MemorySpot> spotsByCollider;
-        Collider[] overlaps;
+        SphereCollider[] spotColliders;
         UniversalAdditionalCameraData cameraData;
         bool echoApplied;
         bool previousPostProcessing;
         float previousWeight;
 
         public EchoPlayer ActiveEcho { get; private set; }
+        public bool IsEchoActive => echo.Active;
         public MemoryProgress Progress => progress;
         public event Action<int> Collected;
 
@@ -37,14 +36,13 @@ namespace TiffanyGame
         {
             if (progress != null) return;
             var order = new int[spots.Length];
-            spotsByCollider = new Dictionary<Collider, MemorySpot>(spots.Length);
-            overlaps = new Collider[32];
+            spotColliders = new SphereCollider[spots.Length];
             for (int i = 0; i < spots.Length; i++)
             {
                 var spot = spots[i];
                 if (spot == null) continue;
                 order[i] = spot.memoryId;
-                spotsByCollider[spot.GetComponent<SphereCollider>()] = spot;
+                spotColliders[i] = spot.GetComponent<SphereCollider>();
             }
             progress = new MemoryProgress(order);
             if (viewCamera != null) cameraData = viewCamera.GetComponent<UniversalAdditionalCameraData>();
@@ -54,7 +52,8 @@ namespace TiffanyGame
 
         void Update()
         {
-            if (GameInput.InteractPressed && !gameInterface.IsFrozen && !hiding.Hidden) CollectNearby();
+            if (GameInput.InteractPressed && !gameInterface.IsFrozen && !hiding.Hidden
+                && !hiding.UsedInteractThisFrame) CollectNearby();
         }
 
         void LateUpdate()
@@ -70,19 +69,43 @@ namespace TiffanyGame
 
         void CollectNearby()
         {
-            int count = Physics.OverlapSphereNonAlloc(transform.position, searchRadius, overlaps,
-                Physics.AllLayers, QueryTriggerInteraction.Collide);
-            for (int i = 0; i < count; i++)
-                if (spotsByCollider.TryGetValue(overlaps[i], out var spot) && Collect(spot.memoryId)) return;
+            var spot = FindNearby(out _);
+            if (spot != null) Collect(spot.memoryId);
+        }
+
+        public MemorySpot FindNearby(out float distanceSquared)
+        {
+            MemorySpot nearest = null;
+            distanceSquared = float.PositiveInfinity;
+            if (!isActiveAndEnabled) return null;
+            float radiusSquared = searchRadius * searchRadius;
+            for (int i = 0; i < spots.Length; i++)
+            {
+                var spot = spots[i];
+                var collider = spotColliders[i];
+                if (spot == null || !spot.isActiveAndEnabled || collider == null || !collider.enabled
+                    || !CanCollect(spot.memoryId)) continue;
+                Vector3 center = collider.transform.TransformPoint(collider.center);
+                float distance = (center - transform.position).sqrMagnitude;
+                if (distance > radiusSquared || distance >= distanceSquared) continue;
+                nearest = spot;
+                distanceSquared = distance;
+            }
+            return nearest;
+        }
+
+        public bool CanCollect(int memoryId)
+        {
+            if (progress.IsFound(memoryId)) return false;
+            int completed = 0;
+            for (int i = 0; i < challenges.Length; i++)
+                if (challenges[i] != null && challenges[i].Rules.Completed) completed |= 1 << (int)challenges[i].kind;
+            return challenges.Length == 0 || RouteProgress.CanCollectMemory(memoryId, completed);
         }
 
         public bool Collect(int memoryId)
         {
-            int completed = 0;
-            for (int i = 0; i < challenges.Length; i++)
-                if (challenges[i] != null && challenges[i].Rules.Completed) completed |= 1 << (int)challenges[i].kind;
-            if (challenges.Length > 0 && !RouteProgress.CanCollectMemory(memoryId, completed)) return false;
-            if (!progress.MarkFound(memoryId)) return false;
+            if (!CanCollect(memoryId) || !progress.MarkFound(memoryId)) return false;
             MemorySpot found = null;
             for (int i = 0; i < spots.Length; i++)
             {

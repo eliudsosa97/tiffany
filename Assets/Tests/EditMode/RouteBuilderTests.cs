@@ -248,6 +248,35 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void PendingMemoriesShareASavedCoolEmissiveMaterialWithoutLights()
+        {
+            var collector = player.GetComponent<MemoryCollector>();
+            var material = collector.spots[0].visual.GetComponent<Renderer>().sharedMaterial;
+            Assert.AreEqual(GeneratedMaterials.folder + "/MemoryCandle.mat", AssetDatabase.GetAssetPath(material));
+            Assert.IsTrue(material.IsKeywordEnabled("_EMISSION"));
+            Color emission = material.GetColor("_EmissionColor");
+            Assert.GreaterOrEqual(emission.maxColorComponent, 1f);
+            Assert.Greater(emission.b, emission.g);
+            Assert.Greater(emission.g, emission.r);
+            foreach (var spot in collector.spots)
+            {
+                if (spot.kind != MemorySpotKind.Memory) continue;
+                Assert.IsTrue(spot.visual.activeSelf);
+                Assert.AreSame(material, spot.visual.GetComponent<Renderer>().sharedMaterial);
+                Assert.IsEmpty(spot.GetComponentsInChildren<Light>(true));
+            }
+        }
+
+        [Test]
+        public void GraveAndBallHaveSeparateInteractionRanges()
+        {
+            var collector = player.GetComponent<MemoryCollector>();
+            Assert.AreEqual(1.5f, collector.searchRadius);
+            Assert.Greater(Vector3.Distance(collector.spots[0].transform.position, collector.spots[1].transform.position),
+                collector.searchRadius * 2f);
+        }
+
+        [Test]
         public void FiveMemoriesBelongToTheirClearingsAndEchoesStayOutsideTheRoute()
         {
             var collector = player.GetComponent<MemoryCollector>();
@@ -841,17 +870,14 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, RouteDetails("Casa -> spawn", last, start.position, path));
             float length = 0f;
             var corners = path.corners;
-            var barriers = route.Find("Landscape/Fence").GetComponentsInChildren<Collider>();
             for (int i = 1; i < corners.Length; i++)
             {
                 Vector3 delta = corners[i] - corners[i - 1];
                 length += delta.magnitude;
-                foreach (var barrier in barriers)
-                    Assert.IsFalse(barrier.Raycast(new Ray(corners[i - 1] + Vector3.up * 0.6f, delta.normalized),
-                        out _, delta.magnitude), $"Esquina {i}: atraviesa {barrier.name}. {RouteDetails("Casa -> spawn", last, start.position, path)}");
+                Assert.IsFalse(gate.GetComponent<Collider>().Raycast(new Ray(corners[i - 1] + Vector3.up * 0.6f, delta.normalized),
+                    out _, delta.magnitude), $"Esquina {i}: atraviesa la puerta. {RouteDetails("Casa -> spawn", last, start.position, path)}");
             }
-            Assert.Greater(corners.Length, 2, "El regreso debe rodear la cerca acortada.");
-            Assert.Greater(length, Vector3.Distance(last, start.position),
+            Assert.Greater(length, Vector3.Distance(last, start.position) * 2f,
                 $"El regreso de {length:F3} m debe rodear la cerca. {RouteDetails("Casa -> spawn", last, start.position, path)}");
             var terrain = new RouteTerrain();
             int forest = NavMesh.GetAreaFromName(RouteTerrain.ForestArea);

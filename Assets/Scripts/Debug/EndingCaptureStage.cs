@@ -20,7 +20,8 @@ namespace TiffanyGame
             ending.witch.gameObject.SetActive(false);
             var preview = new EndingRules();
             preview.TryManifest(true, 0f, true);
-            preview.Tick(credits ? EndingRules.FadeSeconds + EndingRules.TextSeconds : EndingRules.FadeSeconds * 0.5f);
+            preview.Tick(EndingRules.ApproachSeconds
+                + (credits ? EndingRules.FadeSeconds + EndingRules.TextSeconds : EndingRules.FadeSeconds * 0.5f));
             ending.gameInterface.ShowEnding(preview);
         }
 
