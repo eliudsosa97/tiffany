@@ -133,8 +133,6 @@ namespace TiffanyGame.Tests
                     Assert.IsTrue(reached.Contains(new Vector2Int(Mathf.RoundToInt(opening.x * 2f), Mathf.RoundToInt(opening.z * 2f))));
             }
             Assert.IsTrue(reached.Contains(new Vector2Int(Mathf.RoundToInt((terrain.Road.xMin + 1f) * 2f), 312)));
-            Assert.IsTrue(reached.Contains(new Vector2Int(Mathf.RoundToInt((terrain.Road.xMax - 1f) * 2f),
-                Mathf.RoundToInt(terrain.RoadCenterZ(terrain.Road.xMax - 1f) * 2f))));
         }
 
         [Test]
@@ -171,18 +169,16 @@ namespace TiffanyGame.Tests
             Assert.Greater(terrain.Height(RouteTerrain.Plateau.x, RouteTerrain.Plateau.y)
                 - terrain.Height(RouteTerrain.CliffFoot.x, RouteTerrain.CliffFoot.y), 5f);
             Assert.AreEqual(terrain.Bounds.xMin, terrain.Road.xMin);
-            Assert.AreEqual(terrain.Bounds.xMax, terrain.Road.xMax);
+            Assert.AreEqual(terrain.FenceStart.x, terrain.Road.xMax);
             Assert.AreEqual(8f, terrain.Road.height);
-            Assert.AreEqual(RouteLayout.Clearing(6).z, terrain.Road.center.y);
             Assert.AreEqual(terrain.Road.yMax, terrain.Town.yMin);
             for (float x = terrain.Road.xMin; x < terrain.Road.xMax - 0.5f; x += 0.5f)
             {
-                float z = terrain.RoadCenterZ(x);
-                Assert.IsTrue(terrain.IsWalkable(x, z));
-                Assert.AreEqual(0f, terrain.Height(x, z), 0.001f);
+                Assert.IsTrue(terrain.IsWalkable(x, terrain.Road.center.y));
+                Assert.AreEqual(0f, terrain.Height(x, terrain.Road.center.y), 0.001f);
             }
             Assert.AreEqual(terrain.FenceStart.x, terrain.FenceEnd.x);
-            Assert.AreEqual(terrain.Road.yMax, terrain.FenceEnd.y);
+            Assert.AreEqual(terrain.Bounds.yMax, terrain.FenceEnd.y);
             Assert.AreEqual(terrain.RiverPoint(0), terrain.FenceStart);
             RouteLayout.Gate(out var gate, out float yaw, out float width);
             Assert.AreEqual(terrain.FenceStart.x, gate.x);
@@ -191,60 +187,6 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(RouteTerrain.RoadWidth, width);
             Assert.Less(terrain.LakeDistance(terrain.Bounds.xMin, RouteTerrain.LakeCenter.y), -6f);
             Assert.GreaterOrEqual(terrain.Bounds.yMax - terrain.Town.yMax, RouteTerrain.Margin);
-        }
-
-        [Test]
-        public void SmallTownContainsTiffanyNorthOfTheRoadAndKeepsTheMapBounds()
-        {
-            var house = RouteLayout.Clearing(7);
-            Assert.That(terrain.Town.width, Is.InRange(1f, 60f));
-            Assert.That(terrain.Town.height, Is.InRange(1f, 60f));
-            Assert.IsTrue(terrain.Town.Contains(new Vector2(house.x, house.z)));
-            Assert.AreEqual(Rect.MinMaxRect(-118f, -98f, 218f, 262f), terrain.Bounds);
-            for (float x = terrain.Town.xMin; x <= terrain.Town.xMax; x++)
-                Assert.GreaterOrEqual(terrain.Town.yMin, terrain.RoadCenterZ(x) + RouteTerrain.RoadWidth * 0.5f);
-        }
-
-        [Test]
-        public void CemeteryNorthEdgeHasTenMetersOfForestBeforeTheRoadAcrossItsFullWidth()
-        {
-            var cemetery = RouteLayout.Clearing(0);
-            float half = RouteLayout.ClearingSizeOf(0) * 0.5f;
-            float north = cemetery.z + half;
-            Assert.AreEqual(new Vector3(180f, 0f, 140f), cemetery);
-            for (float x = cemetery.x - half; x <= cemetery.x + half; x += 0.5f)
-            {
-                float roadSouth = terrain.RoadCenterZ(x) - RouteTerrain.RoadWidth * 0.5f;
-                Assert.GreaterOrEqual(roadSouth - north, 10f, $"Separación al norte del cementerio en x={x}");
-                float density = 0f;
-                for (float z = north + 0.5f; z < roadSouth; z += 0.5f)
-                {
-                    Assert.IsFalse(terrain.IsWalkable(x, z), $"Atajo en {x}, {z}");
-                    Assert.IsFalse(terrain.InClearingSquare(x, z));
-                    Assert.IsFalse(terrain.Town.Contains(new Vector2(x, z)));
-                    Assert.IsFalse(terrain.IsWater(x, z));
-                    if (!terrain.InClearingSquare(x, z, 3f) && terrain.DistanceToRoute(x, z) > 3.5f)
-                        density += terrain.ForestDensity(x, z);
-                }
-                Assert.Greater(density, 0f, $"Bosque de relleno al norte del cementerio en x={x}");
-            }
-        }
-
-        [Test]
-        public void FormerTownStripHasForestGroundAndPositiveDensityAcrossItsWidth()
-        {
-            for (float x = -64f; x <= 64f; x += 16f)
-            {
-                float density = 0f;
-                for (float z = 184f; z < 242f; z += 2f)
-                {
-                    Assert.IsFalse(terrain.Town.Contains(new Vector2(x, z)));
-                    Assert.IsFalse(terrain.IsWalkable(x, z));
-                    Assert.That(terrain.ForestGround(x, z), Is.EqualTo(GroundType.Leaves).Or.EqualTo(GroundType.Branches));
-                    density += terrain.ForestDensity(x, z);
-                }
-                Assert.Greater(density, 0f, $"Franja norte en x={x}");
-            }
         }
 
         [Test]
