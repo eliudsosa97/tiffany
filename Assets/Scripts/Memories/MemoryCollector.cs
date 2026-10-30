@@ -35,6 +35,7 @@ namespace TiffanyGame
 
         void Awake()
         {
+            if (progress != null) return;
             var order = new int[spots.Length];
             spotsByCollider = new Dictionary<Collider, MemorySpot>(spots.Length);
             overlaps = new Collider[32];

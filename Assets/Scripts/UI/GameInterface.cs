@@ -284,7 +284,8 @@ namespace TiffanyGame
             if (GameInput.StartPressed && (!clicked || hit))
             {
                 var action = pauseMenu.Submit();
-                if (action == PauseAction.ToggleFullscreen) UnityEngine.Screen.fullScreen = !UnityEngine.Screen.fullScreen;
+                if (action == PauseAction.ToggleFullscreen && Application.isPlaying)
+                    UnityEngine.Screen.fullScreen = !UnityEngine.Screen.fullScreen;
                 if (action == PauseAction.Restart) { NewGame(); return; }
                 if (action == PauseAction.Respawn) playerRespawn.ReturnToCheckpoint();
                 if (action == PauseAction.Resume || action == PauseAction.Respawn)
