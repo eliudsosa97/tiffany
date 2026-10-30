@@ -11,6 +11,7 @@ namespace TiffanyGame
     {
         public static bool SkipTitle;
 
+        public AudioSource memoryMusic;
         public TextAsset[] memoryAssets;
         public Texture2D[] drawings;
         public GameObject titlePanel;
@@ -243,6 +244,11 @@ namespace TiffanyGame
             flow.SetMemory(true);
             ApplyScreen();
             if (memoryAudio != null) memoryAudio.Play(slideshow);
+            if (memoryMusic != null)
+            {
+                memoryMusic.volume = slideshow.MusicVolume;
+                memoryMusic.Play();
+            }
             return true;
         }
 
@@ -252,6 +258,7 @@ namespace TiffanyGame
             int index = slideshow.PageIndex;
             slideshow.Tick(Time.unscaledDeltaTime, Time.frameCount != startFrame && GameInput.InteractPressed);
             if (memoryAudio != null) memoryAudio.ApplyAudio();
+            if (memoryMusic != null) memoryMusic.volume = slideshow.MusicVolume;
             if (notebookBackground != null)
                 notebookBackground.color = new Color(0f, 0f, 0f, slideshow.BlackOpacity);
             if (slideshow.Finished)
@@ -273,6 +280,7 @@ namespace TiffanyGame
         {
             if (slideshow == null) return;
             if (memoryAudio != null) memoryAudio.Stop();
+            if (memoryMusic != null) memoryMusic.Stop();
             slideshow = null;
             memoryAudio = null;
             memoryNotice = false;

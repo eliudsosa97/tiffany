@@ -915,6 +915,13 @@ namespace TiffanyGame.EditorTools
                 new Vector2(0.15f, 0.08f), new Vector2(0.85f, 0.15f));
             ui.storyPanel.SetActive(false);
 
+            ui.memoryMusic = root.AddComponent<AudioSource>();
+            ui.memoryMusic.clip = LoadClip("music_theme");
+            ui.memoryMusic.spatialBlend = 0f;
+            ui.memoryMusic.loop = true;
+            ui.memoryMusic.playOnAwake = false;
+            ui.memoryMusic.ignoreListenerPause = true;
+            ui.memoryMusic.volume = 0f;
             ui.memoryAssets = LoadInterfaceAssets<TextAsset>("t:TextAsset", "Assets/Data/Memories");
             ui.drawings = LoadInterfaceAssets<Texture2D>("t:Texture2D", "Assets/Art/Memories");
             ui.pausePanel.SetActive(false);

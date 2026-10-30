@@ -6,6 +6,7 @@ namespace TiffanyGame
     {
         public const float FadeSeconds = 0.4f;
         public const float PageSeconds = 4f;
+        const float MusicFadeSeconds = 0.5f;
         float stageTime;
 
         public MemoryData Memory { get; }
@@ -14,9 +15,20 @@ namespace TiffanyGame
         public int PageIndex { get; private set; }
         public float Elapsed { get; private set; }
         public bool Finished => Stage == MemorySlideshowStage.Finished;
+        public float MusicVolume
+        {
+            get
+            {
+                if (Finished) return 0f;
+                float remaining = Stage == MemorySlideshowStage.FadeIn ? MusicFadeSeconds - stageTime
+                    : (Memory.drawings.Length - PageIndex) * PageSeconds + MusicFadeSeconds - stageTime
+                        + (Stage == MemorySlideshowStage.FadeOut ? FadeSeconds : 0f);
+                return 0.35f * System.Math.Min(1f, System.Math.Min(Elapsed, remaining) / MusicFadeSeconds);
+            }
+        }
         public bool PageVisible => Stage == MemorySlideshowStage.Page;
         public float BlackOpacity => Stage == MemorySlideshowStage.FadeOut ? stageTime / FadeSeconds
-            : Stage == MemorySlideshowStage.FadeIn ? 1f - stageTime / FadeSeconds : Finished ? 0f : 1f;
+            : Stage == MemorySlideshowStage.FadeIn ? 1f - stageTime / MusicFadeSeconds : Finished ? 0f : 1f;
 
         public MemorySlideshow(MemoryData memory, EchoAudioEvaluator audio = null)
         {
@@ -36,7 +48,8 @@ namespace TiffanyGame
             float remaining = seconds;
             while (!Finished)
             {
-                float duration = PageVisible ? PageSeconds : FadeSeconds;
+                float duration = PageVisible ? PageSeconds
+                    : Stage == MemorySlideshowStage.FadeIn ? MusicFadeSeconds : FadeSeconds;
                 float step = System.Math.Min(remaining, duration - stageTime);
                 stageTime += step;
                 Elapsed += step;

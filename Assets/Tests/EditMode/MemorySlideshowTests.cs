@@ -20,9 +20,9 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(MemorySlideshowStage.FadeIn, show.Stage);
             Assert.IsFalse(show.PageVisible);
             Assert.IsFalse(show.Finished);
-            show.Tick(0.2f, true);
+            show.Tick(0.25f, true);
             Assert.AreEqual(0.5f, show.BlackOpacity, 0.001f);
-            show.Tick(0.2f);
+            show.Tick(0.25f);
             Assert.IsTrue(show.Finished);
             Assert.AreEqual(0f, show.BlackOpacity);
         }
@@ -37,7 +37,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(1, show.PageIndex);
             show.Tick(3.9f);
             Assert.AreEqual(2, show.PageIndex);
-            show.Tick(4.4f);
+            show.Tick(4.5f);
             Assert.IsTrue(show.Finished);
             float elapsed = show.Elapsed;
             show.Tick(100f, true);
@@ -56,7 +56,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(2, show.PageIndex);
             show.Tick(0f, true);
             Assert.AreEqual(MemorySlideshowStage.FadeIn, show.Stage);
-            show.Tick(0.4f);
+            show.Tick(0.5f);
             Assert.IsTrue(show.Finished);
         }
 
@@ -84,6 +84,25 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(0.3f, audio[1].Volume, 0.001f);
             show.Tick(0.3f);
             Assert.IsTrue(audio[1].Stop);
+        }
+
+        [Test] public void MusicFadesInHoldsAndFadesOutBeforeFinishing()
+        {
+            var show = new MemorySlideshow(Memory(1));
+            Assert.AreEqual(0f, show.MusicVolume);
+            show.Tick(0.25f);
+            Assert.AreEqual(0.175f, show.MusicVolume, 0.001f);
+            show.Tick(0.25f);
+            Assert.AreEqual(0.35f, show.MusicVolume, 0.001f);
+            show.Tick(1.9f);
+            Assert.AreEqual(0.35f, show.MusicVolume, 0.001f);
+            show.Tick(2f);
+            Assert.AreEqual(0.35f, show.MusicVolume, 0.001f);
+            show.Tick(0.25f);
+            Assert.AreEqual(0.175f, show.MusicVolume, 0.001f);
+            show.Tick(0.25f);
+            Assert.IsTrue(show.Finished);
+            Assert.AreEqual(0f, show.MusicVolume);
         }
 
         [Test] public void MissingMemoryOrDrawingsFinishesWithoutStartingSounds()
