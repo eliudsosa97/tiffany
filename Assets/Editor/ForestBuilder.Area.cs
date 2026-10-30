@@ -64,6 +64,7 @@ namespace TiffanyGame.EditorTools
                     || terrain.RiverDistance(point.x, point.y) <= RouteTerrain.RiverWidth * 0.5f + radius
                     || terrain.TrainDistance(point.x, point.y) <= RouteLayout.TrainWidth * 0.5f + radius + 0.5f
                     || Vector2.Distance(point, candlePoint) <= CandleSite.DefaultRadius + radius) return false;
+                if (TrailPatches.Reserves(point, radius)) return false;
                 if (ChallengeBuilder.Reserves(new Vector3(point.x, terrain.Height(point.x, point.y), point.y), radius)) return false;
                 foreach (var trunk in trunks)
                 {

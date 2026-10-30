@@ -497,6 +497,8 @@ namespace TiffanyGame.Tests
             var observation = new PlaythroughObservation { AtTarget = true };
             Assert.IsTrue(plan.Tick(0.1f, in observation).Interact);
             observation.Frozen = true;
+            plan.Tick(EndingRules.ApproachSeconds, in observation);
+            Assert.IsFalse(plan.Finished);
             plan.Tick(EndingRules.FadeSeconds, in observation);
             Assert.IsFalse(plan.Finished);
             observation.Credits = true;

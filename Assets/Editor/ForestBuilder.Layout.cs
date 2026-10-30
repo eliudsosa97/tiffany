@@ -10,6 +10,15 @@ namespace TiffanyGame.EditorTools
         {
             var zones = new List<(Vector2, float)>();
             void Add(float x, float z, float radius) => zones.Add((new Vector2(x, z), radius));
+            for (int patchIndex = 0; patchIndex < TrailPatches.Count; patchIndex++)
+            {
+                var patch = TrailPatches.Get(patchIndex);
+                for (int step = 0; step <= 6; step++)
+                {
+                    Vector3 point = Vector3.Lerp(patch.Center, patch.HidePosition, step / 6f) - RouteLayout.Clearing(index);
+                    Add(point.x, point.z, TrailPatches.ApproachRadius);
+                }
+            }
             foreach (Vector3 opening in RouteLayout.Openings(index))
             {
                 Vector3 local = opening - RouteLayout.Clearing(index);
@@ -74,6 +83,14 @@ namespace TiffanyGame.EditorTools
                 points.Add(hides[index] + Vector2.left * 1.2f);
             }
             if (index == 4) points.Add(new Vector2(0f, -8f));
+            for (int i = 0; i < TrailPatches.Count; i++)
+            {
+                var patch = TrailPatches.Get(i);
+                if (patch.From != index) continue;
+                Vector3 hide = patch.HidePosition - RouteLayout.Clearing(index);
+                points.Add(new Vector2(hide.x, hide.z));
+                points.Add(new Vector2(hide.x - 1.2f, hide.z));
+            }
             return points.ToArray();
         }
 

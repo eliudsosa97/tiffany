@@ -326,7 +326,7 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(plan.Finished);
             Assert.AreEqual(0, plan.ExitCode, plan.FailureReason);
             Assert.IsEmpty(plan.MissingContent);
-            Assert.AreEqual(6, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
+            Assert.AreEqual(6 + TrailPatches.Count, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length);
             Assert.IsFalse(Object.FindAnyObjectByType<PlayerHiding>().Hidden);
         }
 

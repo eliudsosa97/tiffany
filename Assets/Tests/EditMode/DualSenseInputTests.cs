@@ -115,6 +115,34 @@ namespace TiffanyGame.Tests
 
         [TestCase("DualSenseGamepadHID")]
         [TestCase("WebGLGamepad")]
+        public void StoryAdvancesOnStartButNotSouthAndDoesNotRepeatWhileHeld(string layout)
+        {
+            pad = (Gamepad)InputSystem.AddDevice(layout);
+            ChangeControl(pad.buttonSouth, 1f);
+            Assert.IsFalse(GameInput.StoryAdvancePressed);
+            ChangeControl(pad.startButton, 1f);
+            Assert.IsTrue(GameInput.StoryAdvancePressed);
+            NextFrame();
+            Assert.IsFalse(GameInput.StoryAdvancePressed);
+        }
+
+        [Test]
+        public void StoryAdvancesOnEnterOrClickButNotSpace()
+        {
+            NextFrame();
+            InputState.Change(keyboard, new KeyboardState(Key.Space));
+            Assert.IsFalse(GameInput.StoryAdvancePressed);
+            NextFrame();
+            InputState.Change(keyboard, new KeyboardState(Key.Enter));
+            Assert.IsTrue(GameInput.StoryAdvancePressed);
+            NextFrame();
+            Assert.IsFalse(GameInput.StoryAdvancePressed);
+            InputState.Change(mouse, new MouseState().WithButton(MouseButton.Left));
+            Assert.IsTrue(GameInput.StoryAdvancePressed);
+        }
+
+        [TestCase("DualSenseGamepadHID")]
+        [TestCase("WebGLGamepad")]
         public void ButtonsUseTriangleForLightAndR2ForFlashThroughNativeAndBrowserLayouts(string layout)
         {
             pad = (Gamepad)InputSystem.AddDevice(layout);
@@ -192,7 +220,50 @@ namespace TiffanyGame.Tests
             InputSystem.Update();
             keyboard.MakeCurrent();
             mouse.MakeCurrent();
-            pad.MakeCurrent();
+            pad?.MakeCurrent();
+        }
+
+        [TestCase("w", 0)]
+        [TestCase("upArrow", 0)]
+        [TestCase("s", 1)]
+        [TestCase("downArrow", 1)]
+        [TestCase("dpad/up", 0)]
+        [TestCase("dpad/down", 1)]
+        [TestCase("leftStick/up", 0)]
+        [TestCase("leftStick/down", 1)]
+        [TestCase("space", 2)]
+        [TestCase("enter", 2)]
+        [TestCase("buttonSouth", 2)]
+        [TestCase("leftButton", 2)]
+        [TestCase("escape", 3)]
+        [TestCase("p", 3)]
+        [TestCase("start", 3)]
+        public void PauseUsesExistingNavigationSubmitAndCloseInputs(string input, int action)
+        {
+            pad = InputSystem.AddDevice<Gamepad>();
+            NextFrame();
+            if (input.StartsWith("leftStick")) ChangeStick(pad.leftStick, input.EndsWith("up") ? Vector2.up : Vector2.down);
+            else GameInputTests.Press(keyboard.TryGetChildControl<ButtonControl>(input)
+                ?? pad.TryGetChildControl<ButtonControl>(input) ?? mouse.GetChildControl<ButtonControl>(input));
+            Assert.IsTrue(action == 0 ? GameInput.TitlePreviousPressed : action == 1 ? GameInput.TitleNextPressed
+                : action == 2 ? GameInput.StartPressed : GameInput.PausePressed);
+        }
+
+        [TestCase(Key.LeftCommand, Key.F, true, false, false)]
+        [TestCase(Key.RightCommand, Key.F, true, false, false)]
+        [TestCase(Key.LeftAlt, Key.Enter, true, false, false)]
+        [TestCase(Key.RightAlt, Key.Enter, true, false, false)]
+        [TestCase(Key.None, Key.F, false, true, false)]
+        [TestCase(Key.None, Key.Enter, false, false, true)]
+        public void FullscreenShortcutsDoNotFlashOrSubmit(Key modifier, Key key, bool fullscreen, bool flash, bool submit)
+        {
+            pad = InputSystem.AddDevice<Gamepad>();
+            InputSystem.Update();
+            if (modifier != Key.None) GameInputTests.Press(keyboard[modifier]);
+            GameInputTests.Press(keyboard[key]);
+            Assert.AreEqual((fullscreen, flash, submit), (GameInput.FullscreenTogglePressed, GameInput.FlashPressed, GameInput.StartPressed));
+            InputSystem.Update();
+            Assert.IsFalse(GameInput.FullscreenTogglePressed || GameInput.FlashPressed || GameInput.StartPressed);
         }
 
         static bool ReadAction(int action) => action switch

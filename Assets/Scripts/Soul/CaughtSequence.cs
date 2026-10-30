@@ -22,6 +22,13 @@ namespace TiffanyGame
 
         private float elapsed;
 
+        public void Cancel()
+        {
+            elapsed = 0f;
+            Phase = CaughtPhase.Idle;
+            RespawnDue = false;
+        }
+
         public void Begin()
         {
             if (Active) return;
