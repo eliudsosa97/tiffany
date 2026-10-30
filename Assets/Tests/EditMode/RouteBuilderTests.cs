@@ -1102,7 +1102,8 @@ namespace TiffanyGame.Tests
                 {
                     Assert.IsTrue(modifier.ignoreFromBuild, collider.name);
                     Vector3 point = route.InverseTransformPoint(collider.bounds.center);
-                    Assert.Greater(collider.bounds.min.y - route.position.y - new RouteTerrain().GroundHeight(point.x, point.z), 2.5f);
+                    Assert.Greater(collider.bounds.min.y - route.position.y - new RouteTerrain().GroundHeight(point.x, point.z),
+                        2.5f, $"{clearing.name}/{collider.transform.parent.name}/{collider.name}");
                     continue;
                 }
                 if (!modifier.ignoreFromBuild)

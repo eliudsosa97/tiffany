@@ -44,7 +44,7 @@ namespace TiffanyGame.EditorTools
                 else Ground("Ground", clearing, Vector3.zero, new Vector2(size, size), ClearingGrounds[i], floor);
                 BuildEdges(clearing, i, terrain);
                 if (i < names.Length - 1) BuildPath(clearing, i, pathFloor, terrain);
-                Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush);
+                Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush, player.transform);
                 if (i < memories.Length) memories[i] = Root("Memory Point", clearing, memoryPosition);
 
                 var stop = Root(clearing.name, clearing, new Vector3(0f, 0f, -8f));
@@ -157,7 +157,7 @@ namespace TiffanyGame.EditorTools
             return points.ToArray();
         }
 
-        static Vector3 BuildLandmark(int index, Transform clearing, Material structure, Material dark, Material bush)
+        static Vector3 BuildLandmark(int index, Transform clearing, Material structure, Material dark, Material bush, Transform player)
         {
             var building = GeneratedMaterials.Get("RouteBuilding", new Color(0.4f, 0.4f, 0.4f), occluder: true);
             switch (index)
@@ -194,7 +194,7 @@ namespace TiffanyGame.EditorTools
                     return new Vector3(0f, 0f, 3f);
                 case 4:
                     HidingBuilder.BuildHideSpot(clearing, "Hide Hut Bush", new Vector3(-6f, 0f, 3f), bush);
-                    WitchHutBuilder.Build(clearing);
+                    WitchHutBuilder.Build(clearing, player);
                     return new Vector3(0f, 0f, 3f);
                 case 6:
                     Part("Asphalt", clearing, new Vector3(0f, 0.02f, 0f), new Vector3(35f, 0.04f, 8f), GroundMaterials.For(GroundType.Slab))

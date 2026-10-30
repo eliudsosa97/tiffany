@@ -128,7 +128,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void HutInsideCapturePlacesTiffanyBesideTheTableWithTheGameCameraAndDitheredRoof()
+        public void HutInsideCapturePlacesTiffanyBesideTheTableWithTheGameCameraAndHiddenRoof()
         {
             var hut = route.GetChild(4).Find("Hut/witch-hut");
             var stop = hut.Find("Hut Inside").GetComponent<CaptureStop>();
@@ -152,15 +152,18 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(FollowCamera.DefaultPitch, camera.pitch);
             Assert.AreEqual(FollowCamera.DefaultYaw, camera.yaw);
             Assert.AreEqual(24f, camera.fieldOfView);
-            Vector3 focus = player.transform.position + Vector3.up * FollowCamera.ChestHeight;
-            var ray = new Ray(camera.transform.position, focus - camera.transform.position);
-            var roof = hut.Find("HutRoof").GetComponent<MeshCollider>();
-            Assert.IsTrue(roof.Raycast(ray, out var hit, 40f));
-            Assert.Less(OcclusionVolume.KeepFraction(hit.point, camera.transform.position, focus,
-                FollowCamera.OcclusionRadius, FollowCamera.OcclusionSoftness, FollowCamera.OcclusionFocusMargin,
-                FollowCamera.OcclusionMinimumKeep, FollowCamera.OcclusionNearMargin), 1f);
-            foreach (var material in roof.GetComponent<Renderer>().sharedMaterials)
-                Assert.AreEqual(GeneratedMaterials.OcclusionShader, material.shader.name);
+            var cutaway = hut.GetComponentInChildren<HutRoofCutaway>();
+            Assert.AreSame(player.transform, cutaway.player);
+            Assert.IsTrue(cutaway.interior.isTrigger);
+            CollectionAssert.AreEquivalent(hut.Find("HutRoof").GetComponentsInChildren<Renderer>(true), cutaway.roofRenderers);
+            cutaway.Refresh();
+            foreach (var renderer in cutaway.roofRenderers) Assert.IsFalse(renderer.enabled);
+            var cover = hut.Find("HutRoof").GetComponentInChildren<MeshCollider>();
+            Assert.IsTrue(cover.enabled && cover.gameObject.activeInHierarchy);
+            Assert.Greater(cover.bounds.min.y - hut.position.y, 2.5f);
+            player.transform.position = hut.TransformPoint(Vector3.forward * 6f);
+            cutaway.Refresh();
+            foreach (var renderer in cutaway.roofRenderers) Assert.IsTrue(renderer.enabled);
         }
 
         [Test]
@@ -169,8 +172,10 @@ namespace TiffanyGame.Tests
             var roof = route.GetChild(4).Find("Hut/witch-hut/HutRoof");
             Assert.AreEqual(LayerMask.NameToLayer(ForestLayout.CoverLayer), roof.gameObject.layer);
             Assert.IsTrue(roof.GetComponent<Renderer>().enabled);
-            Assert.IsTrue(roof.GetComponent<NavMeshModifier>().ignoreFromBuild);
-            var collider = roof.GetComponent<MeshCollider>();
+            var collider = roof.GetComponentInChildren<MeshCollider>();
+            Assert.IsTrue(collider.GetComponent<NavMeshModifier>().ignoreFromBuild);
+            Assert.AreEqual(roof.gameObject.layer, collider.gameObject.layer);
+            Assert.Greater(collider.bounds.min.y - roof.parent.position.y, 2.5f);
             Assert.AreSame(roof.GetComponent<MeshFilter>().sharedMesh, collider.sharedMesh);
             foreach (var material in roof.GetComponent<Renderer>().sharedMaterials)
                 Assert.AreEqual(GeneratedMaterials.OcclusionShader, material.shader.name);

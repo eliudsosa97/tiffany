@@ -15,7 +15,7 @@ namespace TiffanyGame.EditorTools
             public ModelLibrary.BoxSpec[] table;
         }
 
-        public static void Build(Transform clearing)
+        public static void Build(Transform clearing, Transform player)
         {
             var shelter = new GameObject("Hut").transform;
             shelter.SetParent(clearing, false);
@@ -35,8 +35,24 @@ namespace TiffanyGame.EditorTools
 
             var roof = model.Find("HutRoof");
             roof.gameObject.layer = LayerMask.NameToLayer(ForestLayout.CoverLayer);
-            roof.gameObject.AddComponent<MeshCollider>().sharedMesh = roof.GetComponent<MeshFilter>().sharedMesh;
-            roof.gameObject.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
+            var mesh = roof.GetComponent<MeshFilter>().sharedMesh;
+            var cover = new GameObject("Roof Cover").transform;
+            cover.SetParent(roof, false);
+            cover.localPosition = Vector3.up * Mathf.Max(0f, 2.55f - mesh.bounds.min.y);
+            cover.gameObject.layer = roof.gameObject.layer;
+            cover.gameObject.AddComponent<MeshCollider>().sharedMesh = mesh;
+            cover.gameObject.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
+
+            var interior = new GameObject("Hut Interior Volume").AddComponent<BoxCollider>();
+            interior.transform.SetParent(model, false);
+            interior.center = Vector3.up * 1.25f;
+            interior.size = new Vector3(7.6f, 3f, 7.6f);
+            interior.isTrigger = true;
+            var cutaway = interior.gameObject.AddComponent<HutRoofCutaway>();
+            cutaway.player = player;
+            cutaway.interior = interior;
+            cutaway.roofRenderers = roof.GetComponentsInChildren<Renderer>(true);
+
             var hearth = new GameObject("Hearth Light").transform;
             hearth.SetParent(model, false);
             hearth.localPosition = spec.lightOffset;
