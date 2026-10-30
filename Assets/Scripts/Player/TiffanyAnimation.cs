@@ -6,6 +6,7 @@ namespace TiffanyGame
     {
         public const string Idle = "Idle";
         public const string Walk = "Walk";
+        public const string WalkBack = "WalkBack";
         public const string TurnLeft = "TurnLeft";
         public const string TurnRight = "TurnRight";
         public const string Hide = "Hide";
@@ -51,12 +52,12 @@ namespace TiffanyGame
         }
 
         // angularSpeed en grados por segundo, positiva hacia la derecha como el yaw de Unity.
-        public static string StateFor(bool caught, bool vanishing, bool hidden, float speed, float angularSpeed)
+        public static string StateFor(bool caught, bool vanishing, bool hidden, float speed, float angularSpeed, bool backward)
         {
             if (caught) return Caught;
             if (vanishing) return Vanish;
             if (hidden) return Hide;
-            if (speed > MoveSpeed) return Walk;
+            if (speed > MoveSpeed) return backward ? WalkBack : Walk;
             if (angularSpeed > TurnSpeed) return TurnRight;
             if (angularSpeed < -TurnSpeed) return TurnLeft;
             return Idle;
@@ -67,7 +68,7 @@ namespace TiffanyGame
             return state switch
             {
                 Idle => IdleBlend,
-                Walk => WalkBlend,
+                Walk or WalkBack => WalkBlend,
                 TurnLeft or TurnRight => TurnBlend,
                 Hide => HideBlend,
                 Caught => CaughtBlend,

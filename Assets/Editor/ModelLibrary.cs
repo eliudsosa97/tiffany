@@ -108,6 +108,7 @@ namespace TiffanyGame.EditorTools
             public string name;
             public string clip;
             public float blend;
+            public bool reverse;
             public BlendTreeSpec blendTree;
         }
 
