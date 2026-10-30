@@ -23,6 +23,8 @@ namespace TiffanyGame
 
         void Awake() => startedAt = Time.time;
 
+        void Start() => GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerSoul>().Powers.Unlock(Power.Light);
+
         void Update()
         {
             float elapsed = Time.time - startedAt;

@@ -21,6 +21,7 @@ namespace TiffanyGame
             playerLight = player.GetComponent<PlayerLight>();
             soul = player.GetComponent<PlayerSoul>();
             if (playerLight == null || soul == null) return;
+            soul.Powers.Unlock(Power.Light);
             soul.Energy.ResetTo(energy);
             turnedOn = !playerLight.State.IsOn;
             if (turnedOn) playerLight.Toggle();

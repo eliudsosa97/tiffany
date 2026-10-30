@@ -66,7 +66,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void ParticlesLightsAndGlowDoNotReceiveSilhouettes()
+        public void ParticlesAndLightsDoNotReceiveSilhouettes()
         {
             var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             body.transform.SetParent(root.transform);
@@ -77,11 +77,8 @@ namespace TiffanyGame.Tests
             light.transform.SetParent(root.transform);
             var halo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             halo.transform.SetParent(light.transform);
-            var glow = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            glow.transform.SetParent(root.transform);
-            root.AddComponent<PlayerLight>().glow = glow.transform;
             var effect = GeneratedMaterials.Get("Effect", Color.yellow, unlit: true);
-            var effects = new[] { rain.GetComponent<Renderer>(), halo.GetComponent<Renderer>(), glow.GetComponent<Renderer>() };
+            var effects = new[] { rain.GetComponent<Renderer>(), halo.GetComponent<Renderer>() };
             foreach (var renderer in effects) renderer.sharedMaterial = effect;
             rain.SetActive(false);
 

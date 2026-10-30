@@ -52,28 +52,28 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void FlashCompletesItsClipThenReturnsToLightPose()
+        public void ArmsStayEmptyExceptWhileFlashCompletesItsClip()
         {
             var arms = new TiffanyAnimation.ArmsState();
-            Assert.AreEqual(TiffanyAnimation.CarryLight, arms.Advance(false, true, 0f, 0.7f, 0.01f));
-            Assert.AreEqual(TiffanyAnimation.Flash, arms.Advance(false, true, 0.2f, 0.7f, 0.01f));
+            Assert.AreEqual(TiffanyAnimation.Empty, arms.Advance(false, 0f, 0.7f, 0.01f));
+            Assert.AreEqual(TiffanyAnimation.Flash, arms.Advance(false, 0.2f, 0.7f, 0.01f));
             Assert.IsTrue(arms.RestartFlash);
-            Assert.AreEqual(TiffanyAnimation.Flash, arms.Advance(false, true, 0f, 0.7f, 0.3f));
+            Assert.AreEqual(TiffanyAnimation.Flash, arms.Advance(false, 0f, 0.7f, 0.3f));
             Assert.IsFalse(arms.RestartFlash);
-            Assert.AreEqual(TiffanyAnimation.CarryLight, arms.Advance(false, true, 0f, 0.7f, 0.41f));
-            Assert.AreEqual(TiffanyAnimation.Empty, arms.Advance(false, false, 0f, 0.7f, 0.01f));
+            Assert.AreEqual(TiffanyAnimation.Empty, arms.Advance(false, 0f, 0.7f, 0.41f));
+            Assert.AreEqual(TiffanyAnimation.Empty, arms.Advance(false, 0f, 0.7f, 0.01f));
         }
 
         [Test]
         public void NewFlashRestartsButSpecialPosesSuppressArmsAndClearPendingFlash()
         {
             var arms = new TiffanyAnimation.ArmsState();
-            arms.Advance(false, true, 0.2f, 0.7f, 0.01f);
-            arms.Advance(false, true, 0.1f, 0.7f, 0.1f);
-            arms.Advance(false, true, 0.2f, 0.7f, 0.01f);
+            arms.Advance(false, 0.2f, 0.7f, 0.01f);
+            arms.Advance(false, 0.1f, 0.7f, 0.1f);
+            arms.Advance(false, 0.2f, 0.7f, 0.01f);
             Assert.IsTrue(arms.RestartFlash);
-            Assert.AreEqual(TiffanyAnimation.Empty, arms.Advance(true, true, 0.1f, 0.7f, 0.01f));
-            Assert.AreEqual(TiffanyAnimation.CarryLight, arms.Advance(false, true, 0f, 0.7f, 0.01f));
+            Assert.AreEqual(TiffanyAnimation.Empty, arms.Advance(true, 0.1f, 0.7f, 0.01f));
+            Assert.AreEqual(TiffanyAnimation.Empty, arms.Advance(false, 0f, 0.7f, 0.01f));
         }
     }
 }

@@ -19,7 +19,7 @@ namespace TiffanyGame.EditorTools
             for (int i = 0; i < renderers.Length; i++)
             {
                 Transform candidate = renderers[i].transform;
-                if (candidate.IsChildOf(playerLight.glow) || candidate.IsChildOf(playerLight.spot.transform)) continue;
+                if (candidate.IsChildOf(playerLight.spot.transform)) continue;
                 renderers[figureCount++] = renderers[i];
             }
             Array.Resize(ref renderers, figureCount);

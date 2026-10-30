@@ -50,6 +50,18 @@ namespace TiffanyGame
         public bool IsFrozen => flow.IsFrozen || Time.frameCount == startFrame;
         public bool HasContinue => flow.HasContinue;
 
+        public static bool HasControllerSymbols(Font font) => font.HasCharacter('△') && font.HasCharacter('□')
+            && font.HasCharacter('○') && font.HasCharacter('✕');
+
+        void Start()
+        {
+            var controls = titlePanel != null ? titlePanel.transform.Find("Controls")?.GetComponent<Text>() : null;
+            if (controls == null) return;
+            controls.text = InterfaceTexts.ControllerText(InterfaceTexts.Controls, HasControllerSymbols(controls.font));
+            controls.fontSize = 20;
+            controls.lineSpacing = 1f;
+        }
+
         void Awake()
         {
             flow = new InterfaceFlow(!SkipTitle);
@@ -128,7 +140,8 @@ namespace TiffanyGame
 
         public void ShowPowerNotice(Power power)
         {
-            notice.Enqueue(InterfaceTexts.PowerNotice(power), InterfaceTexts.PowerNoticeSeconds);
+            notice.Enqueue(InterfaceTexts.ControllerText(InterfaceTexts.PowerNotice(power), HasControllerSymbols(noticeText.font)),
+                InterfaceTexts.PowerNoticeSeconds);
             RefreshLines();
         }
 
@@ -275,6 +288,7 @@ namespace TiffanyGame
 
         void ApplyScreen()
         {
+            if (IsFrozen || appliedFrozen == true) GameInput.ConsumePointerPress();
             if (appliedFrozen != IsFrozen)
             {
                 Time.timeScale = IsFrozen ? 0f : 1f;

@@ -181,6 +181,17 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(SoulLight.InCone(Vector3.zero, Vector3.up, Vector3.forward, 11f, 35f));
         }
 
+        [TestCase(true, false, false, 1f, 0f)]
+        [TestCase(true, true, false, 1f, 0f)]
+        [TestCase(true, true, true, 1f, 0f)]
+        [TestCase(false, false, false, 1f, 1f)]
+        [TestCase(false, false, true, 1f, 1f)]
+        [TestCase(false, true, false, 1f, 2.2f)]
+        [TestCase(false, true, false, 0.5f, 1.6f)]
+        [TestCase(false, true, true, 1f, 5.8f)]
+        public void BodyGlowHidesOrReturnsBaseOrBoostsWithSizeAndFlash(bool hidden, bool visible, bool flashing, float size, float expected) =>
+            Assert.AreEqual(expected, SoulLight.BodyGlow(hidden, visible, flashing, size, 1.2f, 4f), 0.0001f);
+
         [Test]
         public void SizeGrowsLinearlyUpToLowEnergyThreshold()
         {
