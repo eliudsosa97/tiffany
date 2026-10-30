@@ -125,11 +125,12 @@ namespace TiffanyGame.EditorTools
                                 var old = Array.Find(oldChildren, c => c.motion != null && c.motion.name == child.clip);
                                 var cycle = Reuse(old.motion as BlendTree, child.clip, controller, assets, owned);
                                 ConfigureTree(cycle, speed);
-                                // Speed está en m/s y cada rama se normaliza a 1 m/s.
-                                SetChildren(cycle, new[] { new ChildMotion { motion = motion, timeScale = 1f / child.threshold } });
+                                // La escala se aplica al clip, no al BlendTree que lo contiene.
+                                SetChildren(cycle, new[] { new ChildMotion { motion = motion, timeScale = 1f / natural } });
                                 motion = cycle;
                             }
-                            motions[k] = new ChildMotion { motion = motion, threshold = child.threshold, timeScale = child.threshold / natural };
+                            motions[k] = new ChildMotion { motion = motion, threshold = child.threshold,
+                                timeScale = entry.blendTree.normalizeSpeed ? 1f : child.threshold / natural };
                         }
                         SetChildren(tree, motions);
                         sharedTrees.Add(entry.blendTree.name, tree);
