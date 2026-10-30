@@ -31,7 +31,6 @@ namespace TiffanyGame.EditorTools
             cover.transform.SetParent(roof, false);
             cover.center = new Vector3(0f, 5.2f, 0f);
             cover.size = new Vector3(15f, 0.4f, 11f);
-            model.Find("BarnMud").gameObject.AddComponent<GroundSurface>().type = GroundType.Dirt;
             HidingBuilder.BuildHideSpot(clearing, "Hide Stable Crate", new Vector3(-4.5f, 0f, 7f), crate, PrimitiveType.Cube);
         }
 

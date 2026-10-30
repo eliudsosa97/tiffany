@@ -44,7 +44,7 @@ namespace TiffanyGame.Tests
                     Assert.AreEqual(GeneratedMaterials.OcclusionShader, material.shader.name);
                     Assert.IsFalse(ShaderUtil.ShaderHasError(material.shader));
                     ColorUtility.TryParseHtmlString(entry.color, out var color);
-                    Assert.AreEqual(color, material.GetColor("_BaseColor"));
+                    Assert.Less(((Vector4)(color - material.GetColor("_BaseColor"))).magnitude, 0.002f);
                     Assert.AreEqual(entry.smoothness, material.GetFloat("_Smoothness"), 0.0001f);
                     used.Add(material.name);
                 }

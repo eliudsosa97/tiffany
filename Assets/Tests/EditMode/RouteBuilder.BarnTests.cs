@@ -31,7 +31,7 @@ namespace TiffanyGame.Tests
                 AssertHutWalkable(clearing.TransformPoint(new Vector3(x, 0f, -2f)), clearing.TransformPoint(new Vector3(x, 0f, 7f)));
             var mud = barn.Find("BarnMud");
             Assert.IsEmpty(mud.GetComponentsInChildren<Collider>(true));
-            Assert.AreEqual(GroundType.Dirt, mud.GetComponent<GroundSurface>().type);
+            Assert.IsNull(mud.GetComponent<GroundSurface>());
             Assert.Greater(mud.GetComponent<Renderer>().sharedMaterial.GetFloat("_Smoothness"), 0.8f);
             var memory = clearing.GetComponentInChildren<MemorySpot>();
             Assert.AreEqual(4, memory.memoryId);
