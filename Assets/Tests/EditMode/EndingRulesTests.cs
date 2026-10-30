@@ -17,8 +17,26 @@ namespace TiffanyGame.Tests
         {
             var ending = new EndingRules();
             Assert.AreEqual(expected, ending.TryManifest(power, distance, interact));
-            Assert.AreEqual(expected ? EndingStage.Fade : EndingStage.Idle, ending.Stage);
+            Assert.AreEqual(expected ? EndingStage.Approach : EndingStage.Idle, ending.Stage);
+            Assert.AreEqual(0f, ending.ApproachProgress);
             Assert.AreEqual(0f, ending.FadeAlpha);
+        }
+
+        [TestCase(0f, EndingStage.Approach, 0f, 0f)]
+        [TestCase(1f, EndingStage.Approach, 0.5f, 0f)]
+        [TestCase(2f, EndingStage.Fade, 1f, 0f)]
+        [TestCase(2.75f, EndingStage.Fade, 1f, 0.5f)]
+        [TestCase(3.5f, EndingStage.Text, 1f, 1f)]
+        [TestCase(7.5f, EndingStage.Credits, 1f, 1f)]
+        public void ApproachPrecedesFadeWithIndependentProgress(float seconds, EndingStage stage, float progress, float alpha)
+        {
+            var ending = new EndingRules();
+            ending.TryManifest(true, 0f, true);
+            ending.Tick(seconds);
+            Assert.AreEqual(stage, ending.Stage);
+            Assert.AreEqual(progress, ending.ApproachProgress);
+            Assert.AreEqual(alpha, ending.FadeAlpha);
+            Assert.IsFalse(ending.TryManifest(true, 0f, true));
         }
 
         [Test]
@@ -28,6 +46,7 @@ namespace TiffanyGame.Tests
             ending.Tick(100f);
             Assert.AreEqual(EndingStage.Idle, ending.Stage);
             Assert.IsTrue(ending.TryManifest(true, 1f, true));
+            ending.Tick(EndingRules.ApproachSeconds);
             ending.Tick(0.75f);
             Assert.AreEqual(EndingStage.Fade, ending.Stage);
             Assert.AreEqual(0.5f, ending.FadeAlpha);
@@ -35,6 +54,7 @@ namespace TiffanyGame.Tests
             ending.Tick(0.75f);
             Assert.AreEqual(EndingStage.Text, ending.Stage);
             Assert.AreEqual(1f, ending.FadeAlpha);
+            Assert.AreEqual(1f, ending.ApproachProgress);
             ending.Tick(3.99f);
             Assert.AreEqual(EndingStage.Text, ending.Stage);
             ending.Tick(0.02f);
@@ -50,7 +70,7 @@ namespace TiffanyGame.Tests
         {
             var ending = new EndingRules();
             ending.TryManifest(true, 0f, true);
-            ending.Tick(EndingRules.FadeSeconds + EndingRules.TextSeconds);
+            ending.Tick(EndingRules.ApproachSeconds + EndingRules.FadeSeconds + EndingRules.TextSeconds);
             Assert.AreEqual(EndingStage.Credits, ending.Stage);
         }
 
@@ -61,7 +81,7 @@ namespace TiffanyGame.Tests
         {
             var ending = new EndingRules();
             ending.TryManifest(true, 0f, true);
-            ending.Tick(0.75f);
+            ending.Tick(EndingRules.ApproachSeconds + 0.75f);
             ending.Tick(dt);
             Assert.AreEqual(EndingStage.Fade, ending.Stage);
             Assert.AreEqual(0.5f, ending.FadeAlpha);

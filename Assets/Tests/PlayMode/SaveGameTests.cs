@@ -285,9 +285,9 @@ namespace TiffanyGame.Tests
             GameInput.InteractOverride = true;
             yield return null;
             GameInput.InteractOverride = false;
-            Assert.AreEqual(EndingStage.Fade, save.ending.Rules.Stage);
+            Assert.AreEqual(EndingStage.Approach, save.ending.Rules.Stage);
             Assert.IsTrue(PlayerPrefs.HasKey(SaveKey));
-            save.ending.Rules.Tick(EndingRules.FadeSeconds + EndingRules.TextSeconds);
+            save.ending.Rules.Tick(EndingRules.ApproachSeconds + EndingRules.FadeSeconds + EndingRules.TextSeconds);
             yield return null;
             Assert.AreEqual(EndingStage.Credits, save.ending.Rules.Stage);
             Assert.IsFalse(PlayerPrefs.HasKey(SaveKey));

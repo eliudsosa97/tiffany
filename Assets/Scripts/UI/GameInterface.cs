@@ -254,6 +254,7 @@ namespace TiffanyGame
 
         public void ShowEnding(EndingRules ending)
         {
+            if (ending.Stage == EndingStage.Approach) return;
             flow.SetEnding(ending.Stage != EndingStage.Idle);
             ApplyScreen();
             endingPanel.gameObject.SetActive(ending.Stage != EndingStage.Idle);
