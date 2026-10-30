@@ -46,6 +46,7 @@ namespace TiffanyGame.EditorTools
                 if (i < names.Length - 1) BuildPath(clearing, i, pathFloor, terrain);
                 Vector3 memoryPosition = BuildLandmark(i, clearing, structure, dark, bush);
                 if (i < memories.Length) memories[i] = Root("Memory Point", clearing, memoryPosition);
+                BuildTrailPatches(clearing, i, terrain, bush);
 
                 var stop = Root(clearing.name, clearing, new Vector3(0f, 0f, -8f));
                 var capture = stop.gameObject.AddComponent<CaptureStop>();
@@ -66,7 +67,8 @@ namespace TiffanyGame.EditorTools
             spawn.rotation = Quaternion.LookRotation(memories[0].position - spawn.position);
             player.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
             foreach (var node in route.GetComponentsInChildren<Transform>(true))
-                if (!ChallengeBuilder.IsMoving(node)) GameObjectUtility.SetStaticEditorFlags(node.gameObject, StaticEditorFlags.BatchingStatic);
+                if (!ChallengeBuilder.IsMoving(node) && node.GetComponentInParent<TrailBird>() == null)
+                    GameObjectUtility.SetStaticEditorFlags(node.gameObject, StaticEditorFlags.BatchingStatic);
             foreach (var renderer in route.GetComponentsInChildren<Renderer>(true))
             {
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -113,6 +115,7 @@ namespace TiffanyGame.EditorTools
                 }
                 else TerrainBuilder.PathFloor(path, $"Ground {i}", a, b, center, terrain, floor);
             }
+            TrailBirds.Place(path, index, terrain, 713 + index);
         }
 
         static Vector3 PathMidpoint(Vector3[] points)
@@ -127,6 +130,23 @@ namespace TiffanyGame.EditorTools
                 distance -= length;
             }
             return points[points.Length - 1];
+        }
+
+        static void BuildTrailPatches(Transform clearing, int index, RouteTerrain terrain, Material bush)
+        {
+            if (TrailPatches.CountForPath(index) == 0) return;
+            var patches = Root("Trail Patches", clearing, Vector3.zero);
+            Vector3 origin = RouteLayout.Clearing(index);
+            for (int i = 0; i < TrailPatches.Count; i++)
+            {
+                var patch = TrailPatches.Get(i);
+                if (patch.From != index) continue;
+                TerrainBuilder.PathFloor(patches, $"Trail Patch {i + 1}", patch.Start, patch.End, origin,
+                    terrain, GroundMaterials.For(patch.Type), patch.Type, TrailPatches.FloorLift);
+                Vector3 hide = patch.HidePosition;
+                hide.y = terrain.Height(hide.x, hide.z);
+                HidingBuilder.BuildHideSpot(patches, $"Hide Trail Patch {i + 1}", hide - origin, bush);
+            }
         }
 
         static Vector3[] BuildSkyRoute(Transform route, Transform[] clearings)

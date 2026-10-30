@@ -38,28 +38,35 @@ namespace TiffanyGame.EditorTools
             var storm = StormBuilder.BuildStorm(player.transform, spawn);
             var firstCandle = BuildCandles(testZone, player.GetComponent<PlayerSoul>(), storm);
             var gameInterface = BuildInterface(out var caughtFade);
+            gameInterface.soul = player.GetComponent<PlayerSoul>();
             BuildLightStops(testZone);
             HidingBuilder.BuildHideTest(testZone, player);
             var route = RouteBuilder.BuildRoute(world, player, storm, out var memories, out var skyRoute);
+            PosterBuilder.Build(route);
             FogBuilder.Build(world, route.GetComponent<WitchChapterTracker>());
             var viewCamera = CreateCamera(player);
             BakeNavMesh(world);
             playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute,
                 viewCamera.GetComponent<FollowCamera>());
+            ApparitionBuilder.BuildApparitions(route, player.transform, playerLight.witch, playerLight);
             route.GetComponent<WitchChapterTracker>().witch = playerLight.witch;
             storm.witch = playerLight.witch;
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
             respawn.witch = playerLight.witch;
             respawn.overlay = caughtFade;
+            gameInterface.playerRespawn = respawn;
             BuildEnding(route.GetChild(7), player.GetComponent<PlayerSoul>(), playerLight.witch, gameInterface);
             var tyler = BuildTyler(route.GetChild(0), player.transform, testZone, memories[0]);
             var ball = route.GetChild(0).Find("Ball");
             tyler.transform.position = ball.position + new Vector3(1.5f, -0.2f, 0f);
             MemoryBuilder.Build(world, player, gameInterface, tyler, viewCamera, memories, ball: ball);
+            gameInterface.route = route.GetComponent<WitchChapterTracker>();
+            gameInterface.memories = player.GetComponent<MemoryCollector>();
             PanicBuilder.BuildPanic(route.GetChild(0).Find("Spawn"), playerLight, tyler, gameInterface.transform);
             var ambience = BuildForestAmbience(player.transform, route, playerLight.witch);
             ambience.music = BuildTensionMusic(playerLight.witch, player.transform);
-            BuildBackgroundMusic(gameInterface, route.GetComponent<WitchChapterTracker>(), ambience.music, playerLight.witch);
+            ambience.panic.music = ambience.music;
+            BuildBackgroundMusic(gameInterface);
             var heartbeat = player.gameObject.AddComponent<Heartbeat>();
             heartbeat.panic = player.GetComponent<PanicController>();
             heartbeat.witch = playerLight.witch;
@@ -442,11 +449,11 @@ namespace TiffanyGame.EditorTools
             return music;
         }
 
-        static BackgroundMusic BuildBackgroundMusic(GameInterface gameInterface, WitchChapterTracker tracker, TensionMusic tension, WitchController witch)
+        static BackgroundMusic BuildBackgroundMusic(GameInterface gameInterface)
         {
             var root = new GameObject("Background Music");
             var music = root.AddComponent<BackgroundMusic>();
-            (music.gameInterface, music.tracker, music.tension, music.witch) = (gameInterface, tracker, tension, witch);
+            music.gameInterface = gameInterface;
             music.source = root.AddComponent<AudioSource>();
             (music.source.loop, music.source.playOnAwake, music.source.spatialBlend, music.source.volume) = (true, false, 0f, 0f);
             music.source.ignoreListenerPause = true;
@@ -485,7 +492,7 @@ namespace TiffanyGame.EditorTools
             tension.oneShot = root.AddComponent<AudioSource>();
             (tension.oneShot.playOnAwake, tension.oneShot.spatialBlend) = (false, 0f);
             tension.phantomSteps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
-            tension.branchSnaps = new[] { LoadClip("step_branches_1"), LoadClip("step_branches_2"), LoadClip("step_branches_3"), LoadClip("step_branches_4") };
+            tension.branchSnaps = new[] { LoadClip("branch_snap_1"), LoadClip("branch_snap_2"), LoadClip("branch_snap_3"), LoadClip("branch_snap_4") };
             tension.skyFire = LoadClip("fireball");
             var decoy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             decoy.name = "Sky Decoy";
@@ -513,10 +520,19 @@ namespace TiffanyGame.EditorTools
             forest.source.spatialBlend = 0.85f;
             forest.source.rolloffMode = AudioRolloffMode.Linear;
             (forest.source.minDistance, forest.source.maxDistance, forest.source.dopplerLevel) = (36f, 80f, 0f);
-            forest.branches = new[] { LoadClip("step_branches_1"), LoadClip("step_branches_2"), LoadClip("step_branches_3"), LoadClip("step_branches_4") };
+            forest.branches = new[] { LoadClip("branch_snap_1"), LoadClip("branch_snap_2"), LoadClip("branch_snap_3"), LoadClip("branch_snap_4") };
             forest.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
             forest.whispers = new[] { LoadClip("whisper_1"), LoadClip("whisper_2"), LoadClip("whisper_3") };
             forest.knocks = new[] { LoadClip("forest_knock_1"), LoadClip("forest_knock_2"), LoadClip("forest_knock_3") };
+            var names = new AudioClip[4];
+            int count = 0;
+            for (int i = 1; i <= names.Length; i++)
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>($"Assets/Audio/Sfx/tiffany_whisper_{i}.wav");
+                if (clip != null) names[count++] = clip;
+            }
+            Array.Resize(ref names, count);
+            forest.names = names;
         }
 
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
@@ -710,8 +726,8 @@ namespace TiffanyGame.EditorTools
             spot.color = new Color(1f, 0.78f, 0.52f);
             spot.spotAngle = 84f;
             spot.innerSpotAngle = 56f;
-            spot.range = 13f;
-            spot.intensity = 45f;
+            spot.range = 18f;
+            spot.intensity = 140f;
             spot.shadows = LightShadows.Soft;
             spot.renderMode = LightRenderMode.ForcePixel;
             var baseGlow = new GameObject("Soul Glow").AddComponent<Light>();
@@ -729,7 +745,7 @@ namespace TiffanyGame.EditorTools
             playerLight.bodyRenderers = body.GetComponentsInChildren<Renderer>(true);
             playerLight.bodyGlowBoost = 1.2f;
             playerLight.startOn = false;
-            playerLight.pitch = 28f;
+            playerLight.pitch = 7f;
             var movement = player.AddComponent<PlayerController>();
             var animation = player.AddComponent<TiffanyAnimator>();
             animation.animator = body.GetComponent<Animator>();
@@ -793,22 +809,58 @@ namespace TiffanyGame.EditorTools
             scaler.matchWidthOrHeight = 0.5f;
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var ui = root.AddComponent<GameInterface>();
+            var hud = root.AddComponent<GameplayHud>();
+            hud.gameInterface = ui;
+            hud.objectiveText = InterfaceText("Objective", root.transform, font, InterfaceTexts.GraveObjective, 26,
+                new Vector2(0.1f, 0.91f), new Vector2(0.9f, 0.96f));
+            hud.interactionText = InterfaceText("Interaction", root.transform, font, "", 26,
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            hud.interactionText.rectTransform.sizeDelta = new Vector2(600f, 48f);
+            hud.objectiveText.gameObject.AddComponent<Shadow>().effectDistance = new Vector2(2f, -2f);
+            hud.interactionText.gameObject.AddComponent<Shadow>().effectDistance = new Vector2(2f, -2f);
+            hud.objectiveText.gameObject.SetActive(false);
+            hud.interactionText.gameObject.SetActive(false);
 
             caughtFade = InterfacePanel("Caught Fade", root.transform, 1f).GetComponent<Image>();
             caughtFade.gameObject.SetActive(false);
-            ui.noticeText = InterfaceText("Power Notice", root.transform, font, "", 42,
-                new Vector2(0.12f, 0.65f), new Vector2(0.88f, 0.74f));
+            ui.noticeText = InterfaceText("Power Notice", root.transform, font, "", 32,
+                new Vector2(0.12f, 0.64f), new Vector2(0.88f, 0.80f));
             ui.noticeText.color = new Color(1f, 0.87f, 0.63f);
             ui.noticeText.gameObject.AddComponent<Shadow>().effectDistance = new Vector2(2f, -2f);
             ui.subtitleText = InterfaceText("Subtitle", root.transform, font, "", 38,
                 new Vector2(0.12f, 0.06f), new Vector2(0.88f, 0.18f));
             ui.subtitleText.gameObject.AddComponent<Outline>().effectDistance = new Vector2(2f, -2f);
 
+            ui.soulPanel = InterfaceRect("Soul Energy", root.transform,
+                new Vector2(0.39f, 0.02f), new Vector2(0.61f, 0.06f)).gameObject;
+            var track = InterfaceRect("Track", ui.soulPanel.transform, Vector2.zero, new Vector2(1f, 0.22f));
+            track.gameObject.AddComponent<Image>().color = new Color(0.08f, 0.06f, 0.04f, 0.9f);
+            ui.soulFill = InterfaceRect("Fill", track, Vector2.zero, Vector2.one).gameObject.AddComponent<Image>();
+            ui.soulFill.color = new Color(1f, 0.87f, 0.63f);
+            ui.soulFill.raycastTarget = false;
+            InterfaceText("Label", ui.soulPanel.transform, font, InterfaceTexts.SoulEnergy, 22,
+                new Vector2(0f, 0.25f), Vector2.one).color = new Color(1f, 0.87f, 0.63f);
+            ui.soulPanel.SetActive(false);
+
             ui.pausePanel = InterfacePanel("Pause", root.transform, 0.6f);
             InterfaceText("Title", ui.pausePanel.transform, font, InterfaceTexts.PauseTitle, 76,
-                new Vector2(0.1f, 0.47f), new Vector2(0.9f, 0.60f));
-            InterfaceText("Hint", ui.pausePanel.transform, font, InterfaceTexts.PauseHint, 30,
-                new Vector2(0.1f, 0.37f), new Vector2(0.9f, 0.46f));
+                new Vector2(0.1f, 0.80f), new Vector2(0.9f, 0.94f));
+            ui.pauseControls = InterfaceText("Controls", ui.pausePanel.transform, font, InterfaceTexts.Controls, 24,
+                new Vector2(0.06f, 0.22f), new Vector2(0.49f, 0.78f));
+            ui.pauseOptions = new[]
+            {
+                InterfaceText("Resume", ui.pausePanel.transform, font, InterfaceTexts.PauseResume, 32,
+                    new Vector2(0.50f, 0.63f), new Vector2(0.97f, 0.73f)),
+                InterfaceText("Respawn", ui.pausePanel.transform, font, InterfaceTexts.PauseRespawn, 32,
+                    new Vector2(0.50f, 0.49f), new Vector2(0.97f, 0.59f)),
+                InterfaceText("Fullscreen", ui.pausePanel.transform, font, InterfaceTexts.PauseFullscreen, 32,
+                    new Vector2(0.50f, 0.35f), new Vector2(0.97f, 0.45f)),
+                InterfaceText("Restart", ui.pausePanel.transform, font, InterfaceTexts.PauseRestart, 32,
+                    new Vector2(0.50f, 0.21f), new Vector2(0.97f, 0.31f))
+            };
+            InterfaceText("Hint", ui.pausePanel.transform, font,
+                InterfaceTexts.ControllerText(InterfaceTexts.PauseHint, GameInterface.HasControllerSymbols(font)), 24,
+                new Vector2(0.06f, 0.07f), new Vector2(0.94f, 0.19f));
 
             ui.notebookPanel = InterfacePanel("Notebook", root.transform, 0.92f);
             var notebook = ui.notebookPanel.transform;
@@ -854,6 +906,13 @@ namespace TiffanyGame.EditorTools
             var controls = InterfaceText("Controls", ui.titlePanel.transform, font, InterfaceTexts.Controls, 28,
                 new Vector2(0.1f, 0.08f), new Vector2(0.9f, 0.39f));
             controls.lineSpacing = 1.25f;
+
+            ui.storyPanel = InterfacePanel("Story", root.transform, 1f);
+            ui.storyText = InterfaceText("Story Text", ui.storyPanel.transform, font, "", 42,
+                new Vector2(0.15f, 0.3f), new Vector2(0.85f, 0.7f));
+            InterfaceText("Hint", ui.storyPanel.transform, font, InterfaceTexts.StoryHint, 26,
+                new Vector2(0.15f, 0.08f), new Vector2(0.85f, 0.15f));
+            ui.storyPanel.SetActive(false);
 
             ui.memoryAssets = LoadInterfaceAssets<TextAsset>("t:TextAsset", "Assets/Data/Memories");
             ui.drawings = LoadInterfaceAssets<Texture2D>("t:Texture2D", "Assets/Art/Memories");

@@ -37,24 +37,55 @@ namespace TiffanyGame.Tests
 
         [TestCase(1, Chapter.Cemetery)]
         [TestCase(2, Chapter.WaterPlant)]
-        [TestCase(3, Chapter.TrainTracks)]
-        [TestCase(4, Chapter.Stable)]
-        [TestCase(5, Chapter.WitchHut)]
-        [TestCase(6, Chapter.WitchHut)]
-        [TestCase(7, Chapter.WitchHut)]
-        [TestCase(8, Chapter.WitchHut)]
-        public void ClearingSelectsItsChapter(int clearing, Chapter expected) =>
-            Assert.AreEqual(expected, RouteChapters.Resolve(Chapter.Cemetery, clearing));
+        [TestCase(3, Chapter.Cemetery)]
+        [TestCase(4, Chapter.Cemetery)]
+        [TestCase(5, Chapter.Cemetery)]
+        [TestCase(6, Chapter.Cemetery)]
+        [TestCase(7, Chapter.Cemetery)]
+        [TestCase(8, Chapter.Cemetery)]
+        public void CemeteryOnlyAdvancesAtTheWaterPlant(int clearing, Chapter expected) =>
+            Assert.AreEqual(expected, RouteChapters.Resolve(Chapter.Cemetery, clearing),
+                "La caja de un claro lejano puede tapar el cementerio y no debe adelantar el capítulo.");
+
+        [TestCase(-1, -1, false)]
+        [TestCase(-1, 0, true)]
+        [TestCase(-1, 1, false)]
+        [TestCase(-1, 6, false)]
+        [TestCase(0, 6, false)]
+        [TestCase(1, 3, false)]
+        [TestCase(1, 2, true)]
+        [TestCase(2, 0, true)]
+        public void VisitsAcceptOnlyPreviousClearingsOrTheNextOne(int lastVisited, int clearing, bool expected) =>
+            Assert.AreEqual(expected, RouteChapters.CanVisitClearing(lastVisited, clearing));
+
+        [Test]
+        public void OverlappingRoadBoundsCannotAdvanceVisitsOrUnlockLanding()
+        {
+            var bounds = new Bounds[8];
+            bounds[6] = new Bounds(Vector3.zero, Vector3.one * 500f);
+            int visited = 0;
+            Chapter chapter = Chapter.Cemetery;
+            for (int frame = 0; frame < 10; frame++)
+            {
+                int clearing = RouteChapters.FindClearing(Vector3.zero, bounds);
+                if (RouteChapters.CanVisitClearing(visited, clearing)) visited = clearing;
+                chapter = RouteChapters.Resolve(chapter, clearing + 1);
+            }
+            Assert.AreEqual(0, visited);
+            Assert.AreEqual(Chapter.Cemetery, chapter);
+            Assert.IsFalse(WitchProfiles.For(chapter).CanLand);
+        }
 
         [Test]
         public void BacktrackingKeepsTheHighestChapter()
         {
             var chapter = RouteChapters.Resolve(Chapter.Cemetery, 2);
+            chapter = RouteChapters.Resolve(chapter, 3);
             chapter = RouteChapters.Resolve(chapter, 4);
             for (int clearing = 3; clearing >= 1; clearing--)
             {
                 chapter = RouteChapters.Resolve(chapter, clearing);
-                Assert.AreEqual(Chapter.Stable, chapter);
+                Assert.AreEqual(Chapter.Stable, chapter, "Antes del establo se visitan la planta y las vías en orden.");
             }
             chapter = RouteChapters.Resolve(chapter, 5);
             for (int clearing = 6; clearing <= 8; clearing++)

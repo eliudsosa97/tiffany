@@ -41,6 +41,7 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/step_gravel_1.wav` a `step_gravel_4.wav` | [Footsteps Dirt Gravel](https://freesound.org/s/352870/) | PotatokingXII | CC0 |
 | `Assets/Audio/Sfx/step_leaves_1.wav` a `step_leaves_4.wav` | [Forest dry leaves walk.](https://freesound.org/s/274833/) | rempen | CC0 |
 | `Assets/Audio/Sfx/step_branches_1.wav` a `step_branches_4.wav` | [Foot on branches and twigs](https://freesound.org/s/610126/) | xkeril | CC0 |
+| `Assets/Audio/Sfx/branch_snap_1.wav` a `branch_snap_4.wav` | [Foot on branches and twigs](https://freesound.org/s/610126/), más fuertes | xkeril | CC0 |
 | `Assets/Audio/Sfx/monster_step_1.wav` | [Monster Footsteps 01](https://freesound.org/s/339439/) | juansua990 | CC0 |
 | `Assets/Audio/Sfx/fireball.wav` | [Fireball](https://freesound.org/s/683179/) | NearTheAtmoshphere | CC0 |
 | `Assets/Audio/Sfx/cackle_1.wav` | [Witch's Laugh](https://freesound.org/s/348142/) | NikoMyth | CC0 |

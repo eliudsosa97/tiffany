@@ -23,6 +23,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(8f, profile.ReturnGraceDuration);
             Assert.AreEqual(20f, profile.CatchUpDistance);
             Assert.AreEqual(6f, profile.CatchUpDelay);
+            Assert.AreEqual(20f, profile.CatchUpRespawnDistance);
+            Assert.AreEqual(30f, profile.CatchUpRespawnDuration);
             Assert.AreEqual(14f, profile.CatchUpReappearDistance);
             Assert.AreEqual(18f, profile.CatchUpReappearMaxDistance);
             Assert.Less(profile.CatchUpReappearMaxDistance, profile.CatchUpDistance);
@@ -37,7 +39,7 @@ namespace TiffanyGame.Tests
             profile.ReturnGraceDuration = duration;
             p.PlayerPosition = p.NoisePosition = p.PlayerLightPosition = Vector3.forward * distance;
             p.SeesPlayer = p.SeesPlayerLight = p.SmellsPlayer = p.HeardNoise = true;
-            brain.StartGrace();
+            brain.StartGrace(p.PlayerPosition);
             for (int i = 0; i < duration * 4f - 1f; i++)
             {
                 WitchDecision decision = Step(0.25f);
@@ -59,7 +61,8 @@ namespace TiffanyGame.Tests
         [TestCase(2f)]
         public void ReappearanceClockExcludesGraceEvenWhenAFrameCrossesItsEnd(float afterGrace)
         {
-            brain.StartGrace();
+            brain.StartGrace(p.PlayerPosition);
+            p.PlayerPosition += Vector3.forward * profile.CatchUpRespawnDistance;
             Assert.IsFalse(Step(7.75f).CatchUp);
             Assert.IsFalse(Step(0.25f + afterGrace).CatchUp);
             Assert.IsFalse(Step(profile.CatchUpDelay - afterGrace - 0.25f).CatchUp);
@@ -69,7 +72,7 @@ namespace TiffanyGame.Tests
         [Test]
         public void GraceDoesNotRememberTheGirlForALaterSearch()
         {
-            brain.StartGrace();
+            brain.StartGrace(p.PlayerPosition);
             p.PlayerPosition = p.NoisePosition = Vector3.forward * 5f;
             p.SeesPlayer = p.HeardNoise = true;
             Step(7.75f);
@@ -104,7 +107,7 @@ namespace TiffanyGame.Tests
             brain = new WitchBrain(profile, null);
             p.PlayerPosition = Vector3.forward * 5f;
             p.SeesPlayer = true;
-            brain.StartGrace();
+            brain.StartGrace(p.PlayerPosition);
             Assert.AreEqual(expected, Step(0.25f).State);
         }
 
@@ -118,6 +121,40 @@ namespace TiffanyGame.Tests
             brain.CatchUpBlocked();
             Assert.IsFalse(Step(0.99f).CatchUp);
             Assert.IsTrue(Step(0.02f).CatchUp);
+        }
+
+        [Test]
+        public void AfterCaptureWaitsThirtySecondsAtTheCandleIncludingGrace()
+        {
+            Vector3 candle = p.PlayerPosition + Vector3.forward;
+            brain.StartGrace(candle);
+            Assert.IsFalse(Step(profile.ReturnGraceDuration).CatchUp);
+            Assert.IsFalse(Step(29.75f - profile.ReturnGraceDuration).CatchUp);
+            Assert.IsTrue(Step(0.25f).CatchUp);
+        }
+
+        [Test]
+        public void AfterCaptureReleasesAtTwentyHorizontalMetersFromTheOriginalCandle()
+        {
+            Vector3 candle = p.PlayerPosition + Vector3.forward;
+            brain.StartGrace(candle);
+            Assert.IsFalse(Step(profile.ReturnGraceDuration + profile.CatchUpDelay).CatchUp);
+            p.PlayerPosition = candle + Vector3.forward * 19.99f + Vector3.up * 50f;
+            Assert.IsFalse(Step(0f).CatchUp);
+            p.PlayerPosition = candle + Vector3.forward * 20f;
+            Assert.IsTrue(Step(0f).CatchUp);
+            p.PlayerPosition = candle;
+            Assert.IsTrue(Step(0f).CatchUp, "Volver a la veladora no reinicia la protección sin otra captura.");
+        }
+
+        [Test]
+        public void AnotherCaptureRestartsTheProtectionAtItsNewCandle()
+        {
+            brain.StartGrace(p.PlayerPosition);
+            p.PlayerPosition += Vector3.forward * 20f;
+            Assert.IsTrue(Step(profile.ReturnGraceDuration + profile.CatchUpDelay).CatchUp);
+            brain.StartGrace(p.PlayerPosition);
+            Assert.IsFalse(Step(profile.ReturnGraceDuration + profile.CatchUpDelay).CatchUp);
         }
 
         [Test]

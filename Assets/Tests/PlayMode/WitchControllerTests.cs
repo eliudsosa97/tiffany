@@ -151,7 +151,7 @@ namespace TiffanyGame.Tests
             var animator = controller.figure.GetComponent<Animator>();
             int speedHash = Animator.StringToHash("Speed");
 
-            float deadline = Time.time + 2f;
+            float deadline = Time.time + controller.Profile.HarassMaxLookDuration + 3f;
             while (Time.time < deadline && (animator.IsInTransition(0)
                 || !animator.GetCurrentAnimatorStateInfo(0).IsName("Stalking")
                 || animator.GetCurrentAnimatorStateInfo(0).length >= 2.5f
@@ -163,7 +163,7 @@ namespace TiffanyGame.Tests
             Assert.Less(animator.GetCurrentAnimatorStateInfo(0).length, 2.5f);
             Assert.GreaterOrEqual(animator.GetFloat(speedHash), 1f);
             Assert.Greater(agent.velocity.sqrMagnitude, 1f);
-            LightPlayerAt(witch.transform.position + Vector3.right * 8f);
+            LightPlayerAt(witch.transform.position + Vector3.right * 5f);
             yield return WaitForState(WitchState.WindUp, 1f);
 
             yield return new WaitForSeconds(0.3f);
@@ -177,6 +177,7 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator SprintingAnimatesAtMeasuredSpeedWithoutRestartingClip()
         {
+            UseImmediateHarassTimeout();
             witch.transform.position = Vector3.zero;
             LightPlayerAt(Vector3.right * 8f);
             yield return WaitForStalking();
@@ -466,7 +467,7 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator StalkingClosesHorizontalDistanceOnNavMesh()
+        public IEnumerator HarassLooksBeforeCirclingOnNavMesh()
         {
             TurnOnPlayerLight();
             yield return WaitForStalking();
@@ -488,7 +489,14 @@ namespace TiffanyGame.Tests
 #endif
             }
 
-            Assert.LessOrEqual(HorizontalDistanceToPlayer(), initialDistance - 0.5f);
+            Assert.AreEqual(WitchIntent.Harass, controller.Decision.Intent, "La detección empieza mirando durante 1.5 a 2.5 s.");
+            Assert.AreEqual(initialDistance, HorizontalDistanceToPlayer(), 0.05f);
+            Assert.AreEqual(0f, controller.Decision.Speed);
+            Assert.Greater(Vector3.Dot(witch.transform.forward, (player.transform.position - witch.transform.position).normalized), 0.95f);
+            yield return new WaitForSeconds(controller.Profile.HarassMaxLookDuration);
+            Assert.AreEqual(WitchIntent.Harass, controller.Decision.Intent);
+            Assert.AreEqual(controller.Profile.StalkSpeed, controller.Decision.Speed);
+            Assert.IsTrue(agent.enabled && agent.isOnNavMesh);
         }
 
         [UnityTest]
@@ -531,6 +539,7 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator WindUpKeepsPositionWithoutTryingToSnapToNavMesh()
         {
+            UseImmediateHarassTimeout();
             witch.transform.position = Vector3.zero;
             LightPlayerAt(Vector3.right * 6f);
             yield return WaitForStalking();
@@ -582,8 +591,83 @@ namespace TiffanyGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator FrozenSprintDoesNotMoveOrCatchPlayerUntilResumed()
+        {
+            Object.Destroy(witch);
+            yield return null;
+
+            var root = new GameObject("Interface");
+            root.SetActive(false);
+            root.transform.SetParent(world.transform);
+            var gameInterface = root.AddComponent<GameInterface>();
+            gameInterface.pausePanel = Child("Pause");
+            gameInterface.notebookPanel = Child("Notebook");
+            gameInterface.noticeText = Child("Notice").AddComponent<UnityEngine.UI.Text>();
+            gameInterface.subtitleText = Child("Subtitle").AddComponent<UnityEngine.UI.Text>();
+            bool skipTitle = GameInterface.SkipTitle;
+            try
+            {
+                GameInterface.SkipTitle = true;
+                root.SetActive(true);
+            }
+            finally
+            {
+                GameInterface.SkipTitle = skipTitle;
+            }
+
+            CreateWitch();
+            UseImmediateHarassTimeout();
+            witch.transform.position = Vector3.zero;
+            LightPlayerAt(Vector3.right * 6f);
+            int caughtCount = 0;
+            controller.Caught += () => caughtCount++;
+            yield return WaitForState(WitchState.Sprinting, 8f);
+            Assert.AreEqual(0, caughtCount);
+            Assert.IsFalse(gameInterface.IsFrozen);
+
+            gameInterface.TogglePause();
+            try
+            {
+                Assert.IsTrue(gameInterface.IsFrozen);
+                Assert.AreEqual(0f, Time.timeScale);
+                Vector3 position = witch.transform.position;
+                Quaternion rotation = witch.transform.rotation;
+                LightPlayerAt(position);
+                for (int i = 0; i < 3; i++)
+                {
+                    yield return null;
+                    Assert.IsTrue(gameInterface.IsFrozen);
+                    Assert.AreEqual(0f, Time.timeScale);
+                    Assert.AreEqual(0, caughtCount);
+                    Assert.AreEqual(WitchState.Sprinting, controller.Decision.State);
+                    Assert.AreEqual(position, witch.transform.position);
+                    Assert.AreEqual(rotation, witch.transform.rotation);
+                }
+            }
+            finally
+            {
+                gameInterface.TogglePause();
+            }
+
+            Assert.IsFalse(gameInterface.IsFrozen);
+            Assert.AreEqual(1f, Time.timeScale);
+            yield return WaitForState(WitchState.Caught, 1f);
+            Assert.AreEqual(1, caughtCount);
+            for (int i = 0; i < 3; i++) yield return null;
+            Assert.AreEqual(1, caughtCount);
+
+            GameObject Child(string name)
+            {
+                var child = new GameObject(name);
+                child.transform.SetParent(root.transform, false);
+                return child;
+            }
+        }
+
+        [UnityTest]
         public IEnumerator SprintCatchesPlayerOnceDespiteOwnSightCollider()
         {
+            UseImmediateHarassTimeout();
             witch.transform.position = Vector3.zero;
             agent.updateRotation = false;
             LightPlayerAt(Vector3.right * 6f);
@@ -610,6 +694,7 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator ResetBrainReturnsTheWitchToTheSky()
         {
+            UseImmediateHarassTimeout();
             witch.transform.position = Vector3.zero;
             LightPlayerAt(Vector3.right * 6f);
             int caughtCount = 0;
@@ -900,6 +985,7 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator SprintStopsAtWallAndRecoversOnNavMesh()
         {
+            UseImmediateHarassTimeout();
             witch.transform.position = Vector3.zero;
             LightPlayerAt(Vector3.right * 6f);
             var wall = AddBox("Wall", new Vector3(3f, 1f, 3.1f), new Vector3(0.5f, 2f, 6f));
@@ -928,6 +1014,7 @@ namespace TiffanyGame.Tests
         [UnityTest]
         public IEnumerator SprintStaysInsideNarrowNavMesh()
         {
+            UseImmediateHarassTimeout();
             surface.RemoveData();
             Object.Destroy(surface.navMeshData);
             ground.transform.localScale = new Vector3(10f, 1f, 80f);
@@ -1064,6 +1151,15 @@ namespace TiffanyGame.Tests
             Vector3 offset = witch.transform.position - player.transform.position;
             offset.y = 0f;
             return offset.magnitude;
+        }
+
+        private void UseImmediateHarassTimeout()
+        {
+            var profile = controller.Profile.Copy();
+            profile.HarassTimeLimit = 0f;
+            controller.SetProfile(profile);
+            Assert.AreEqual(0.8f, profile.WindUpDuration,
+                "Las pruebas de colisión y animación conservan el aviso y agotan el acoso sin mover el montaje.");
         }
 
         private IEnumerator WaitForState(WitchState state, float timeout)

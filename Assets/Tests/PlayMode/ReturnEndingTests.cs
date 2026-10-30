@@ -260,11 +260,33 @@ namespace TiffanyGame.Tests
             GameInput.InteractOverride = true;
             yield return null;
             Assert.AreEqual(EndingStage.Idle, ending.Rules.Stage);
+            var player = soul.GetComponent<PlayerController>();
+            var camera = player.viewCamera.transform;
+            camera.GetComponent<FollowCamera>().Snap();
+            var fromPosition = camera.position;
+            var fromRotation = camera.rotation;
+            EndingCamera.ClosePose(soul.transform.position, ending.transform.position, camera.eulerAngles.y,
+                EndingCamera.DefaultDistance, EndingCamera.DefaultPitch, out var closePosition, out var closeRotation);
             ui.TogglePause();
             yield return null;
             yield return null;
             GameInput.InteractOverride = false;
+            Assert.AreEqual(EndingStage.Approach, ending.Rules.Stage);
+            Assert.IsFalse(player.enabled);
+            Assert.IsFalse(camera.GetComponent<FollowCamera>().enabled);
+            Assert.IsFalse(witch.gameObject.activeSelf);
+            Assert.IsFalse(ui.endingPanel.gameObject.activeSelf);
+            Assert.IsEmpty(ui.endingText.text);
+            Assert.AreEqual(InterfaceScreen.Playing, ui.Screen);
+            EndingCamera.Blend(fromPosition, fromRotation, closePosition, closeRotation, ending.Rules.ApproachProgress,
+                out var blendedPosition, out var blendedRotation);
+            Assert.Less(Vector3.Distance(blendedPosition, camera.position), 0.001f);
+            Assert.Less(Quaternion.Angle(blendedRotation, camera.rotation), 0.05f);
+            float deadline = Time.realtimeSinceStartup + EndingRules.ApproachSeconds + 2f;
+            while (ending.Rules.Stage == EndingStage.Approach && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.AreEqual(EndingStage.Fade, ending.Rules.Stage);
+            Assert.Less(Vector3.Distance(closePosition, camera.position), 0.001f);
+            Assert.Less(Quaternion.Angle(closeRotation, camera.rotation), 0.05f);
             Assert.IsFalse(witch.gameObject.activeSelf);
             Assert.IsTrue(ui.endingPanel.gameObject.activeInHierarchy);
             Assert.IsFalse(ui.titlePanel.activeSelf);
@@ -275,7 +297,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(InterfaceScreen.Ending, ui.Screen);
             Assert.AreEqual(0f, Time.timeScale);
             Assert.IsEmpty(ui.endingText.text);
-            Assert.That(ui.endingPanel.color.a, Is.GreaterThan(0f).And.LessThan(1f));
+            Assert.That(ui.endingPanel.color.a, Is.GreaterThanOrEqualTo(0f).And.LessThan(1f));
             Assert.AreEqual(Vector2.zero, ui.endingPanel.rectTransform.anchorMin);
             Assert.AreEqual(Vector2.one, ui.endingPanel.rectTransform.anchorMax);
             ui.TogglePause();
@@ -286,11 +308,13 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(ui.titlePanel.activeSelf);
             Assert.IsTrue(ui.IsFrozen);
             Assert.IsTrue(AudioListener.pause);
-            float deadline = Time.realtimeSinceStartup + EndingRules.FadeSeconds + 2f;
+            deadline = Time.realtimeSinceStartup + EndingRules.FadeSeconds + 2f;
             while (ending.Rules.Stage == EndingStage.Fade && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.AreEqual(EndingStage.Text, ending.Rules.Stage);
             Assert.AreEqual(InterfaceTexts.EndingStory, ui.endingText.text);
             Assert.AreEqual(Color.white, ui.endingPanel.color);
+            Assert.Less(Vector3.Distance(closePosition, camera.position), 0.001f);
+            Assert.Less(Quaternion.Angle(closeRotation, camera.rotation), 0.05f);
             deadline = Time.realtimeSinceStartup + EndingRules.TextSeconds + 2f;
             while (ending.Rules.Stage != EndingStage.Credits && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.AreEqual(EndingStage.Credits, ending.Rules.Stage);

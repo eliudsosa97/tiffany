@@ -7,49 +7,29 @@ namespace TiffanyGame
         public Transform player;
         public PlayerHiding hiding;
         public AudioSource drone, pulse;
-        public float maxVolume = 0.55f;
         public float Level => rules.Level;
+        public float Silence => rules.Silence;
         private readonly TensionMusicRules rules = new TensionMusicRules();
-        private bool paused;
-        private int dominant;
-        private void Start()
-        {
-            if (drone != null) drone.volume = 0f;
-            if (pulse != null) pulse.volume = 0f;
-        }
+        private void Start() => StopLoops();
         private void Update()
         {
-            if (witch == null || player == null || drone == null || pulse == null) return;
-            if (Time.timeScale == 0f)
-            {
-                if (!paused) { drone.Pause(); pulse.Pause(); }
-                paused = true;
-                return;
-            }
-            if (paused) { drone.UnPause(); pulse.UnPause(); paused = false; }
+            StopLoops();
+            if (witch == null || player == null || Time.timeScale == 0f) return;
             Vector3 offset = player.position - witch.transform.position;
             offset.y = 0f;
             rules.Tick(Time.deltaTime, witch.Decision, offset.magnitude, hiding != null && hiding.Hidden, witch.Profile.FollowSpeed);
-            UpdateLoop(drone, rules.Drone * maxVolume);
-            UpdateLoop(pulse, rules.Pulse * maxVolume);
-            int next = rules.Pulse > 0f && rules.Pulse >= rules.Drone ? 2 : rules.Drone > 0f ? 1 : 0;
-            if (next == dominant) return;
-            dominant = next;
-            Debug.Log(next == 2 ? GameInfo.LogPrefix + " Música: persecución"
-                : next == 1 ? GameInfo.LogPrefix + " Música: acecho" : GameInfo.LogPrefix + " Música: silencio");
         }
-        private static void UpdateLoop(AudioSource source, float volume)
+        private void StopLoops()
         {
-            float previous = source.volume;
-            source.volume = volume;
-            if (volume > 0f && previous <= 0f) source.Play();
-            else if (volume <= 0f && previous > 0f) source.Stop();
+            StopLoop(drone);
+            StopLoop(pulse);
         }
-        private void OnDisable()
+        private static void StopLoop(AudioSource source)
         {
-            if (drone != null) { drone.Stop(); drone.volume = 0f; }
-            if (pulse != null) { pulse.Stop(); pulse.volume = 0f; }
-            paused = false;
+            if (source == null) return;
+            source.volume = 0f;
+            if (source.isPlaying) source.Stop();
         }
+        private void OnDisable() => StopLoops();
     }
 }

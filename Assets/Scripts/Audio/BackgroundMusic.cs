@@ -4,9 +4,6 @@ namespace TiffanyGame
     public sealed class BackgroundMusic : MonoBehaviour
     {
         public GameInterface gameInterface;
-        public WitchChapterTracker tracker;
-        public TensionMusic tension;
-        public WitchController witch;
         public AudioSource source;
         public AudioClip theme, finale;
         public float maxVolume = 0.5f;
@@ -26,11 +23,7 @@ namespace TiffanyGame
         private void Update()
         {
             if (gameInterface == null || source == null) return;
-            int clearing = tracker != null && tracker.player != null ? RouteChapters.FindClearing(tracker.player.position, tracker.ClearingBounds) : -1;
-            int lastClearing = tracker != null && tracker.clearings != null ? tracker.clearings.Length - 1 : -1;
-            bool tensionActive = (tension != null && tension.Level > 0f)
-                || (witch != null && witch.isActiveAndEnabled && TensionMusicRules.IsChasing(witch.Decision, witch.Profile.FollowSpeed));
-            rules.Tick(Time.unscaledDeltaTime, gameInterface.Screen, clearing, lastClearing, tensionActive);
+            rules.Tick(Time.unscaledDeltaTime, gameInterface.Screen);
             if (rules.Paused)
             {
                 if (!paused) source.Pause();
@@ -39,7 +32,7 @@ namespace TiffanyGame
             else
             {
                 if (paused) { source.UnPause(); paused = false; }
-                AudioClip clip = rules.Track == BackgroundTrack.Theme ? theme : finale;
+                AudioClip clip = rules.Track == BackgroundTrack.Finale ? finale : theme;
                 float previous = source.volume;
                 if (rules.Volume == 0f) source.volume = 0f;
                 if (source.volume == 0f && source.clip != clip) source.clip = clip;
@@ -50,13 +43,15 @@ namespace TiffanyGame
             if (rules.Cue == cue) return;
             cue = rules.Cue;
             Debug.Log(cue == BackgroundCue.Title ? GameInfo.LogPrefix + " Música de fondo: inicio"
-                : cue == BackgroundCue.Opening ? GameInfo.LogPrefix + " Música de fondo: cementerio"
-                : cue == BackgroundCue.House ? GameInfo.LogPrefix + " Música de fondo: casa"
+                : cue == BackgroundCue.Memory ? GameInfo.LogPrefix + " Música de fondo: recuerdo"
                 : cue == BackgroundCue.Ending ? GameInfo.LogPrefix + " Música de fondo: final" : GameInfo.LogPrefix + " Música de fondo: silencio");
         }
+        public void PlayMemory() => rules.PlayMemory();
+        public void StopMemory() => rules.StopMemory();
         private void OnDisable()
         {
             if (source != null) { source.Stop(); source.volume = 0f; }
+            rules.StopMemory();
             paused = false;
         }
     }

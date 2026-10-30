@@ -36,6 +36,9 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(flightHeightOffset, profile.FlightHeightOffset);
             Assert.AreEqual(defaults.FlySpeed, profile.FlySpeed);
             Assert.AreEqual(defaults.StalkSpeed, profile.StalkSpeed);
+            Assert.AreEqual(0.9f, profile.StalkSpeed, "El acecho deliberado baja a 0.9 m/s sin cambiar seguimiento ni embestida.");
+            Assert.AreEqual(2.5f, profile.FollowSpeed);
+            Assert.AreEqual(9f, profile.SprintSpeed);
             Assert.AreEqual(defaults.FollowSpeed, profile.FollowSpeed);
             Assert.AreEqual(defaults.SprintSpeed, profile.SprintSpeed);
             Assert.AreEqual(defaults.SprintDuration, profile.SprintDuration);

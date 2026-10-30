@@ -1,47 +1,40 @@
 using UnityEngine;
 namespace TiffanyGame
 {
-    public enum BackgroundCue { Silent, Title, Opening, House, Ending }
-    public enum BackgroundTrack { Theme, Finale }
+    public enum BackgroundCue { Silent, Title, Memory, Ending }
+    public enum BackgroundTrack { Theme, Memory, Finale }
     public sealed class BackgroundMusicRules
     {
-        public const float FadeIn = 3f, FadeOut = 4f, TensionFadeOut = 1f, TensionRest = 6f;
+        public const float FadeIn = 3f, FadeOut = 4f, MemoryFade = 0.5f;
         public BackgroundCue Cue { get; private set; }
         public BackgroundTrack Track { get; private set; }
         public float Volume { get; private set; }
         public bool Paused { get; private set; }
-        public bool OpeningOver { get; private set; }
-        private bool openingVisited;
-        private float rest;
-        public void Tick(float dt, InterfaceScreen screen, int clearing, int lastClearing, bool tension)
+        private bool memory;
+        public void PlayMemory() => memory = true;
+        public void StopMemory() => memory = false;
+        public void Tick(float dt, InterfaceScreen screen)
         {
-            bool playing = screen == InterfaceScreen.Playing;
             Paused = screen == InterfaceScreen.Paused || screen == InterfaceScreen.Notebook;
+            if (Paused) return;
             Cue = screen == InterfaceScreen.Title ? BackgroundCue.Title
                 : screen == InterfaceScreen.Ending ? BackgroundCue.Ending
-                : playing && lastClearing > 0 && clearing == lastClearing ? BackgroundCue.House
-                : playing && !OpeningOver && clearing == 0 ? BackgroundCue.Opening : BackgroundCue.Silent;
-            if (Paused || dt <= 0f || float.IsNaN(dt) || float.IsInfinity(dt)) return;
-            if (playing)
+                : screen == InterfaceScreen.Playing && memory ? BackgroundCue.Memory : BackgroundCue.Silent;
+            if (dt <= 0f || float.IsNaN(dt) || float.IsInfinity(dt)) return;
+            if (screen != InterfaceScreen.Playing) memory = false;
+            if (Cue == BackgroundCue.Silent)
             {
-                if (clearing == 0) openingVisited = true;
-                else if (openingVisited || clearing >= 1) OpeningOver = true;
-                if (tension) rest = TensionRest;
+                Volume = Track == BackgroundTrack.Memory ? Mathf.MoveTowards(Volume, 0f, dt / MemoryFade) : 0f;
+                return;
             }
-            float waiting = playing && !tension ? Mathf.Min(rest, dt) : 0f;
-            rest -= waiting;
-            if (Cue != BackgroundCue.Silent && waiting > 0f)
-            {
-                Volume = Mathf.MoveTowards(Volume, 0f, waiting / TensionFadeOut);
-                dt -= waiting;
-            }
-            BackgroundTrack next = Cue == BackgroundCue.House || Cue == BackgroundCue.Ending ? BackgroundTrack.Finale : BackgroundTrack.Theme;
-            bool audible = Cue != BackgroundCue.Silent;
-            if (audible && Volume == 0f) Track = next;
-            bool blocked = playing && (tension || rest > 0f);
-            float target = audible && !blocked && Track == next ? 1f : 0f;
-            Volume = Mathf.MoveTowards(Volume, target, dt / (target > Volume ? FadeIn : playing && tension ? TensionFadeOut : FadeOut));
-            if (audible && Volume == 0f) Track = next;
+            BackgroundTrack next = Cue == BackgroundCue.Ending ? BackgroundTrack.Finale
+                : Cue == BackgroundCue.Memory ? BackgroundTrack.Memory : BackgroundTrack.Theme;
+            if (Volume == 0f) Track = next;
+            float target = Track == next ? 1f : 0f;
+            float fade = Track == BackgroundTrack.Memory || next == BackgroundTrack.Memory ? MemoryFade
+                : target > Volume ? FadeIn : FadeOut;
+            Volume = Mathf.MoveTowards(Volume, target, dt / fade);
+            if (Volume == 0f) Track = next;
         }
     }
 }

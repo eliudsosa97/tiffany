@@ -7,6 +7,7 @@ namespace TiffanyGame
         Ambush,
         CandleWatch,
         BarkLure,
-        LastSeen
+        LastSeen,
+        Harass
     }
 }
