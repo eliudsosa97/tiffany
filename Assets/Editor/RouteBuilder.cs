@@ -183,7 +183,7 @@ namespace TiffanyGame.EditorTools
             switch (index)
             {
                 case 0:
-                    BuildCemetery(clearing, structure);
+                    BuildCemetery(clearing);
                     HidingBuilder.BuildHideSpot(clearing, "Hide Gravestone", new Vector3(-9f, 0f, 5f), null);
                     return new Vector3(0f, 0f, -3.2f);
                 case 1:
@@ -315,7 +315,7 @@ namespace TiffanyGame.EditorTools
             collider.center = Vector3.up * ((height / size.y - 1f) * 0.5f);
         }
 
-        static void BuildCemetery(Transform clearing, Material ballMaterial)
+        static void BuildCemetery(Transform clearing)
         {
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>($"{GraveyardFolder}/Textures/colormap.png");
             if (texture == null) throw new InvalidOperationException($"{GameInfo.LogPrefix} Falta el colormap del cementerio.");
@@ -331,8 +331,9 @@ namespace TiffanyGame.EditorTools
                 GraveyardModel($"Iron Fence {side}", "iron-fence-damaged", clearing, new Vector3(side * 5f, 0f, -16f), 1.8f, material);
                 GraveyardModel($"Wood Fence {side}", "fence-damaged", clearing, new Vector3(side * 13f, 0f, -11f), 1.2f, material);
             }
-            var ball = SceneBuilder.CreatePrimitive("Ball", PrimitiveType.Sphere, clearing, new Vector3(3f, 0.2f, -6f), Vector3.one * 0.4f, ballMaterial);
-            Object.DestroyImmediate(ball.GetComponent<Collider>());
+            var ball = ModelLibrary.Instantiate("ball", clearing);
+            ball.name = "Ball";
+            ball.transform.localPosition = new Vector3(3f, 0.2f, -6f);
         }
 
         static void GraveyardModel(string name, string id, Transform parent, Vector3 position, float height, Material material)

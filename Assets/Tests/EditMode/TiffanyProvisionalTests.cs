@@ -210,15 +210,16 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void ClothesUseBoneWhiteFromJson()
+        public void ClothesUseLilacFromJson()
         {
             var entry = Array.Find(spec.materials, m => m.name == "TiffanyClothes");
-            Assert.AreEqual("#ECE8E0", entry.color);
+            Assert.AreEqual("#A98BC9", entry.color);
             Assert.IsTrue(ColorUtility.TryParseHtmlString(entry.color, out var color));
             var materials = Instance().GetComponentInChildren<SkinnedMeshRenderer>().sharedMaterials;
             var clothes = Array.Find(materials, m => m.name == entry.name);
             Assert.IsNotNull(clothes);
             for (int c = 0; c < 4; c++) Assert.AreEqual(color[c], clothes.GetColor("_BaseColor")[c], 1e-4f);
+            for (int c = 0; c < 4; c++) Assert.AreEqual(color[c], clothes.GetColor("_Color")[c], 1e-4f);
         }
 
         [TestCase("Idle")]
