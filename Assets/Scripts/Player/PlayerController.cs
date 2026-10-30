@@ -80,7 +80,7 @@ namespace TiffanyGame
             displacement.y = 0f;
             horizontalDistance = displacement.magnitude;
             HorizontalSpeed = horizontalDistance / dt;
-            CurrentGait = PlayerMotion.NoiseGait(HorizontalSpeed);
+            CurrentGait = inputGait;
 
             TurnTowardsAim(inputGait, direction, yaw, dt);
         }

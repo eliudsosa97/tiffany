@@ -10,9 +10,9 @@ namespace TiffanyGame
 
         public static float StepLength(Gait gait) => gait switch
         {
-            Gait.Slow => PlayerMotion.SlowSpeed * (40f / 60f) * 0.5f,
-            Gait.Walk => PlayerMotion.WalkSpeed * (28f / 60f) * 0.5f,
-            Gait.Run => PlayerMotion.RunSpeed * (24f / 60f) * 0.5f,
+            Gait.Slow => 1.1f * (40f / 60f) * 0.5f,
+            Gait.Walk => 2.2f * (28f / 60f) * 0.5f,
+            Gait.Run => 4f * (24f / 60f) * 0.5f,
             _ => throw new System.ArgumentOutOfRangeException(nameof(gait))
         };
 
