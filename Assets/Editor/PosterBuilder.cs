@@ -64,7 +64,7 @@ namespace TiffanyGame.EditorTools
             foreach (Transform candidate in root)
             {
                 Vector3 position = candidate.localPosition;
-                float distance = terrain.RoadDistance(position.x, position.z);
+                float distance = RouteTerrain.RectangleDistance(new Vector2(position.x, position.z), terrain.Road);
                 if (distance >= nearest) continue;
                 nearest = distance;
                 poster = candidate;

@@ -86,7 +86,7 @@ namespace TiffanyGame
         }
 
         public static float MinimumSpacing(Vector3 position, RouteTerrain terrain) =>
-            terrain.RoadDistance(position.x, position.z) < DenseDistance
+            RouteTerrain.RectangleDistance(new Vector2(position.x, position.z), terrain.Road) < DenseDistance
             || RouteTerrain.RectangleDistance(new Vector2(position.x, position.z), terrain.Town) < DenseDistance
                 ? DenseSpacing : Spacing;
 

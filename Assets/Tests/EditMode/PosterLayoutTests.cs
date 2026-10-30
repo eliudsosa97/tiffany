@@ -52,7 +52,7 @@ namespace TiffanyGame.Tests
             var along = new Vector3(6f, 0f, 28f).normalized;
             var side = new Vector3(along.z, 0f, -along.x) * 6.5f;
             var rural = Pair(new Vector3(177f, 0f, 34f) + side, new Vector3(177f, 0f, 34f) + side + along * 6f);
-            foreach (var anchor in town) Assert.Greater(terrain.RoadDistance(anchor.Position.x, anchor.Position.z), PosterLayout.DenseDistance);
+            foreach (var anchor in town) Assert.Greater(RouteTerrain.RectangleDistance(new Vector2(anchor.Position.x, anchor.Position.z), terrain.Road), PosterLayout.DenseDistance);
             Assert.AreEqual(2, PosterLayout.Select(road, terrain).Count);
             Assert.AreEqual(2, PosterLayout.Select(town, terrain).Count);
             Assert.AreEqual(1, PosterLayout.Select(rural, terrain).Count);
