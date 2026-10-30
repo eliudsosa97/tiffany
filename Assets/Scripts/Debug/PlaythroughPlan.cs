@@ -34,7 +34,7 @@ namespace TiffanyGame
 
     public struct PlaythroughCommand
     {
-        public bool Move, Run, Repath, Interact, ToggleLight, Flash, Kindle, MoveObject, Vanish, ForceRespawn;
+        public bool Move, Run, Repath, Interact, ToggleLight, LightHeld, Kindle, MoveObject, Vanish, ForceRespawn;
     }
 
     public sealed class PlaythroughPlan
@@ -181,12 +181,12 @@ namespace TiffanyGame
                 || action == ChallengeAction.Distract || action == ChallengeAction.Wait
                 || (Current == PlaythroughMilestone.Capture && observation.AtTarget)
                 || WalksWithLight(Current, command.Move, in observation);
-            command.ToggleLight = press && observation.LightOn != wantsLight;
+            command.ToggleLight = Current != PlaythroughMilestone.Flash && press && observation.LightOn != wantsLight;
+            command.LightHeld = Current == PlaythroughMilestone.Flash && observation.AtTarget;
             if (observation.AtTarget && press)
             {
                 command.Interact = MemoryId(Current) > 0 || Current == PlaythroughMilestone.Ball || Current == PlaythroughMilestone.Hide
                     || Current == PlaythroughMilestone.LeaveHide || Current == PlaythroughMilestone.Manifest;
-                command.Flash = Current == PlaythroughMilestone.Flash;
                 command.Kindle = Current == PlaythroughMilestone.Kindle || action == ChallengeAction.Candle1 || action == ChallengeAction.Candle2;
                 command.MoveObject = Current == PlaythroughMilestone.MoveObject || action == ChallengeAction.Distract;
                 command.Vanish = Current == PlaythroughMilestone.Vanish || action == ChallengeAction.Vanish;

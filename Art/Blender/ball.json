@@ -1,0 +1,9 @@
+{
+  "seed": 715,
+  "pivot": [0, 0, 0],
+  "diameter": 0.4,
+  "materials": [
+    {"name": "BallBlue", "color": "#2F63B5", "smoothness": 0.12},
+    {"name": "BallWhite", "color": "#FFFFFF", "smoothness": 0.12}
+  ]
+}

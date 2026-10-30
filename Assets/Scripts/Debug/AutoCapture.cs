@@ -59,7 +59,7 @@ namespace TiffanyGame
                         Debug.LogError($"{GameInfo.LogPrefix} No se pudo preparar {stop.name}.");
                     else
                     {
-                        yield return new WaitForSeconds(stop.wait);
+                        yield return new WaitForSecondsRealtime(stop.wait);
                         yield return Capture($"{i + 1:00}_{stop.name}");
                         echoStage.Clear();
                     }

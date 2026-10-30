@@ -39,6 +39,19 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(0, controller.groundMask.value & cover);
             Assert.AreNotEqual(0, controller.groundMask.value & LayerMask.GetMask("Default"));
             Assert.AreEqual(Physics.DefaultRaycastLayers, controller.groundMask.value | cover);
+            var ring = root.GetComponentInChildren<WitchSightRingView>();
+            Assert.IsNotNull(ring);
+            Assert.AreSame(controller, ring.witch);
+            Assert.AreSame(controller.transform.parent, ring.transform.parent);
+            Assert.IsFalse(ring.ring.enabled);
+            Assert.AreEqual(ShadowCastingMode.Off, ring.ring.shadowCastingMode);
+            Assert.IsFalse(ring.ring.receiveShadows);
+            var mesh = ring.GetComponent<MeshFilter>().sharedMesh;
+            Assert.IsTrue(AssetDatabase.Contains(mesh));
+            Assert.AreEqual(128, mesh.vertexCount);
+            Assert.AreEqual(384, mesh.triangles.Length);
+            Assert.IsTrue(AssetDatabase.Contains(ring.ring.sharedMaterial));
+            Assert.AreEqual("Universal Render Pipeline/Tiffany Sight Ring", ring.ring.sharedMaterial.shader.name);
         }
 
         [Test]

@@ -10,7 +10,7 @@
   "materials": [
     { "name": "TiffanySkin", "color": "#CAA88D", "smoothness": 0.1, "spirit": true, "rimColor": "#BFE3FF", "rimPower": 3, "rimIntensity": 1.5 },
     { "name": "TiffanyHair", "color": "#15131A", "smoothness": 0.05, "spirit": true, "rimColor": "#BFE3FF", "rimPower": 3, "rimIntensity": 1.5 },
-    { "name": "TiffanyClothes", "color": "#ECE8E0", "smoothness": 0.05, "spirit": true, "rimColor": "#BFE3FF", "rimPower": 3, "rimIntensity": 1.5 },
+    { "name": "TiffanyClothes", "color": "#A98BC9", "smoothness": 0.05, "spirit": true, "rimColor": "#BFE3FF", "rimPower": 3, "rimIntensity": 1.5 },
     { "name": "TiffanyGlow", "color": "#FFF1C2", "smoothness": 0.0, "spirit": true, "rimColor": "#BFE3FF", "rimPower": 3, "rimIntensity": 1.5 }
   ],
   "skeleton": [

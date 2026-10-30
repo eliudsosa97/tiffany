@@ -6,13 +6,23 @@ namespace TiffanyGame
     public sealed class PlaythroughNavigation
     {
         readonly NavMeshPath path = new NavMeshPath();
-        readonly Vector3[] corners = new Vector3[256];
+        readonly Vector3[] segmentCorners = new Vector3[256];
+        readonly Vector3[] corners = new Vector3[256 * RouteLayout.Count];
+        readonly Vector3[] clearings;
         readonly NavMeshQueryFilter filter = CreateFilter();
         Vector3 target;
         int count, corner;
 
         public NavMeshPathStatus Status => path.status;
-        public int GetCorners(Vector3[] buffer) => path.GetCornersNonAlloc(buffer);
+        public int GetCorners(Vector3[] buffer)
+        {
+            int copied = Mathf.Min(count, buffer.Length);
+            System.Array.Copy(corners, buffer, copied);
+            return copied;
+        }
+
+        public PlaythroughNavigation(Vector3[] clearings = null) =>
+            this.clearings = clearings == null ? System.Array.Empty<Vector3>() : (Vector3[])clearings.Clone();
 
         public bool Calculate(Vector3 position, Vector3 destination)
         {
@@ -22,17 +32,47 @@ namespace TiffanyGame
             Vector3 start = position;
             if (SafeZones.Contains(position) && !SafeZones.TryPushOut(position, 0.5f, out start)) return false;
             if (SafeZones.Contains(destination) && !SafeZones.TryPushOut(destination, 0.5f, out destination)) return false;
-            return TryPath(start, destination);
+            int first = NearestClearing(start), last = NearestClearing(destination);
+            if (first != last)
+            {
+                int step = first < last ? 1 : -1;
+                for (int i = first + step; i != last; i += step)
+                    if (!TryPath(ref start, clearings[i])) { count = 0; return false; }
+            }
+            if (TryPath(ref start, destination)) return true;
+            count = 0;
+            return false;
         }
 
-        bool TryPath(Vector3 start, Vector3 destination)
+        int NearestClearing(Vector3 position)
         {
+            int nearest = -1;
+            float distance = float.PositiveInfinity;
+            for (int i = 0; i < clearings.Length; i++)
+            {
+                Vector3 offset = clearings[i] - position;
+                offset.y = 0f;
+                if (offset.sqrMagnitude >= distance) continue;
+                distance = offset.sqrMagnitude;
+                nearest = i;
+            }
+            return nearest;
+        }
+
+        bool TryPath(ref Vector3 start, Vector3 destination)
+        {
+            if (SafeZones.Contains(destination) && !SafeZones.TryPushOut(destination, 0.5f, out destination)) return false;
             if (!NavMesh.SamplePosition(start, out var from, 5f, filter)
                 || !NavMesh.SamplePosition(destination, out var to, 5f, filter)
                 || !NavMesh.CalculatePath(from.position, to.position, filter, path)
                 || path.status != NavMeshPathStatus.PathComplete) return false;
-            count = path.GetCornersNonAlloc(corners);
-            return count > 0 && count < corners.Length;
+            int added = path.GetCornersNonAlloc(segmentCorners);
+            if (added == 0 || added == segmentCorners.Length || count + added > corners.Length) return false;
+            int skip = count > 0 ? 1 : 0;
+            System.Array.Copy(segmentCorners, skip, corners, count, added - skip);
+            count += added - skip;
+            start = to.position;
+            return true;
         }
 
         public Vector2 Move(Vector3 position, float yaw, float dt, out bool run, bool forceRun = false)

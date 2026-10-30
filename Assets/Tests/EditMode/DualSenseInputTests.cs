@@ -143,7 +143,7 @@ namespace TiffanyGame.Tests
 
         [TestCase("DualSenseGamepadHID")]
         [TestCase("WebGLGamepad")]
-        public void ButtonsUseTriangleForLightAndR2ForFlashThroughNativeAndBrowserLayouts(string layout)
+        public void ButtonsHoldTriangleForLightAndR2ForRunThroughNativeAndBrowserLayouts(string layout)
         {
             pad = (Gamepad)InputSystem.AddDevice(layout);
             var buttons = new ButtonControl[] { pad.leftTrigger, pad.leftStickButton, pad.buttonNorth,
@@ -153,9 +153,10 @@ namespace TiffanyGame.Tests
             {
                 ChangeControl(buttons[action], 1f);
                 for (int other = 0; other < buttons.Length; other++)
-                    Assert.AreEqual(action == other, ReadAction(other), layout + " " + buttons[action].name);
+                    Assert.AreEqual(action == other || (action == 1 && other == 3) || (action == 3 && other == 1),
+                        ReadAction(other), layout + " " + buttons[action].name);
                 NextFrame();
-                Assert.AreEqual(action < 2, ReadAction(action));
+                Assert.AreEqual(action < 4, ReadAction(action));
                 ChangeControl(buttons[action], 0f);
                 Assert.IsFalse(ReadAction(action));
             }
@@ -255,23 +256,25 @@ namespace TiffanyGame.Tests
         [TestCase(Key.RightAlt, Key.Enter, true, false, false)]
         [TestCase(Key.None, Key.F, false, true, false)]
         [TestCase(Key.None, Key.Enter, false, false, true)]
-        public void FullscreenShortcutsDoNotFlashOrSubmit(Key modifier, Key key, bool fullscreen, bool flash, bool submit)
+        public void FullscreenShortcutsDoNotHoldLightOrSubmit(Key modifier, Key key, bool fullscreen, bool lightHeld, bool submit)
         {
             pad = InputSystem.AddDevice<Gamepad>();
             InputSystem.Update();
             if (modifier != Key.None) GameInputTests.Press(keyboard[modifier]);
             GameInputTests.Press(keyboard[key]);
-            Assert.AreEqual((fullscreen, flash, submit), (GameInput.FullscreenTogglePressed, GameInput.FlashPressed, GameInput.StartPressed));
+            Assert.AreEqual((fullscreen, lightHeld, submit), (GameInput.FullscreenTogglePressed, GameInput.LightHeld, GameInput.StartPressed));
             InputSystem.Update();
-            Assert.IsFalse(GameInput.FullscreenTogglePressed || GameInput.FlashPressed || GameInput.StartPressed);
+            Assert.AreEqual((false, lightHeld, false), (GameInput.FullscreenTogglePressed, GameInput.LightHeld, GameInput.StartPressed));
+            InputState.Change(keyboard, new KeyboardState());
+            Assert.IsFalse(GameInput.LightHeld);
         }
 
         static bool ReadAction(int action) => action switch
         {
             0 => GameInput.Slow,
             1 => GameInput.Run,
-            2 => GameInput.LightTogglePressed,
-            3 => GameInput.FlashPressed,
+            2 => GameInput.LightHeld,
+            3 => GameInput.Run,
             4 => GameInput.KindlePressed,
             5 => GameInput.PoltergeistPressed,
             6 => GameInput.FadePressed,

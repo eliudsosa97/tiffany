@@ -183,7 +183,7 @@ namespace TiffanyGame.EditorTools
             switch (index)
             {
                 case 0:
-                    BuildCemetery(clearing, structure);
+                    BuildCemetery(clearing);
                     HidingBuilder.BuildHideSpot(clearing, "Hide Gravestone", new Vector3(-9f, 0f, 5f), null);
                     return new Vector3(0f, 0f, -3.2f);
                 case 1:
@@ -193,19 +193,11 @@ namespace TiffanyGame.EditorTools
                     for (int i = 0; i < 2; i++)
                         Part($"Rail {i + 1}", fence, new Vector3(0f, 0.8f + i * 1.4f, 0f), new Vector3(20f, 0.2f, 0.25f), structure);
                     for (int side = -1; side <= 1; side += 2)
-                        SceneBuilder.CreatePrimitive($"Tank {side}", PrimitiveType.Cylinder, clearing,
-                            new Vector3(side * 7f, 3f, 8f), new Vector3(5f, 3f, 5f), structure);
+                        BuildWaterTower(clearing, side);
                     HidingBuilder.BuildHideSpot(clearing, "Hide Fence Bush", new Vector3(6f, 0f, -1.5f), bush);
                     return new Vector3(0f, 0f, -1f);
                 case 2:
-                    var tracks = Root("Tracks", clearing, Vector3.back * 7f);
-                    tracks.localRotation = Quaternion.Euler(0f, 90f, 0f);
-                    for (int i = 0; i < 7; i++)
-                        Part($"Sleeper {i + 1}", tracks, new Vector3(-6.6f + i * 2.2f, 0.04f, 0f),
-                            new Vector3(0.45f, 0.08f, RouteLayout.TrainWidth), GroundMaterials.For(GroundType.Gravel)).AddComponent<GroundSurface>().type = GroundType.Gravel;
-                    for (int side = -1; side <= 1; side += 2)
-                        Part($"Rail {side}", tracks, new Vector3(0f, TerrainBuilder.FloorOffset + 0.04f, side * 0.9f),
-                            new Vector3(14f, 0.08f, 0.12f), GroundMaterials.For(GroundType.Gravel)).AddComponent<GroundSurface>().type = GroundType.Gravel;
+                    BuildTracks(clearing);
                     HidingBuilder.BuildHideSpot(clearing, "Hide Tracks Bush", new Vector3(6f, 0f, -4f), bush);
                     return new Vector3(0f, 0f, -3f);
                 case 3:
@@ -232,6 +224,63 @@ namespace TiffanyGame.EditorTools
                     break;
             }
             return Vector3.zero;
+        }
+
+        static void BuildWaterTower(Transform clearing, int side)
+        {
+            var spec = ModelLibrary.LoadSpec("water-tower");
+            var tower = ModelLibrary.Instantiate("water-tower", clearing).transform;
+            tower.name = $"Tank {side}";
+            tower.localPosition = new Vector3(side * 7f, 0f, 8f);
+            tower.localRotation = Quaternion.Euler(0f, side < 0 ? 20f : 155f, 0f);
+            for (int i = 0; i < spec.colliders.Length; i++)
+            {
+                var part = Root(spec.colliders[i].name, tower, Vector3.zero);
+                var collider = part.gameObject.AddComponent<BoxCollider>();
+                collider.center = spec.colliders[i].center;
+                collider.size = spec.colliders[i].size;
+            }
+        }
+
+        static void BuildTracks(Transform clearing)
+        {
+            var tracks = Root("Tracks", clearing, Vector3.back * 7f);
+            float floor = TerrainBuilder.FloorOffset;
+            var ballast = Part("Ballast", tracks, new Vector3(0f, floor + 0.05f, 0f),
+                new Vector3(RouteLayout.TrainWidth, 0.1f, 14f), GroundMaterials.For(GroundType.Gravel));
+            ballast.AddComponent<GroundSurface>().type = GroundType.Gravel;
+            var wood = GeneratedMaterials.Get("TrackWood", new Color(0.19f, 0.13f, 0.09f));
+            var steel = GeneratedMaterials.Get("TrackSteel", new Color(0.32f, 0.35f, 0.37f), smoothness: 0.35f);
+            steel.SetFloat("_Metallic", 0.8f);
+            var vertices = new List<Vector3>();
+            var triangles = new List<int>();
+            int[] faces = { 0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 3, 7, 6, 2, 0, 4, 7, 3, 1, 2, 6, 5 };
+            Vector3[] corners = { new(-1, -1, -1), new(1, -1, -1), new(1, 1, -1), new(-1, 1, -1),
+                new(-1, -1, 1), new(1, -1, 1), new(1, 1, 1), new(-1, 1, 1) };
+            for (int sleeper = 0; sleeper < 24; sleeper++)
+            {
+                var center = new Vector3(0f, floor + 0.17f, -6.9f + sleeper * 0.6f);
+                for (int face = 0; face < 6; face++)
+                {
+                    int start = vertices.Count;
+                    for (int corner = 0; corner < 4; corner++)
+                        vertices.Add(center + Vector3.Scale(corners[faces[face * 4 + corner]], new Vector3(1.2f, 0.07f, 0.11f)));
+                    triangles.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
+                }
+            }
+            var mesh = TerrainBuilder.SaveMesh("Track Sleepers", vertices.ToArray(), triangles.ToArray());
+            var sleepers = TerrainBuilder.MeshObject("Sleepers", tracks, mesh, wood);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Rail($"Rail Foot {side}", 0.14f, 0.03f, floor + 0.255f);
+                Rail($"Rail {side}", 0.07f, 0.15f, floor + 0.345f);
+                void Rail(string name, float width, float height, float y)
+                {
+                    var rail = Part(name, tracks, new Vector3(side * (1.435f + 0.07f) * 0.5f, y, 0f),
+                        new Vector3(width, height, 14f), steel);
+                    Object.DestroyImmediate(rail.GetComponent<Collider>());
+                }
+            }
         }
 
         static Transform BuildShelter(string name, Transform clearing, float width, float depth, float height, Material material)
@@ -265,7 +314,7 @@ namespace TiffanyGame.EditorTools
             collider.center = Vector3.up * ((height / size.y - 1f) * 0.5f);
         }
 
-        static void BuildCemetery(Transform clearing, Material ballMaterial)
+        static void BuildCemetery(Transform clearing)
         {
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>($"{GraveyardFolder}/Textures/colormap.png");
             if (texture == null) throw new InvalidOperationException($"{GameInfo.LogPrefix} Falta el colormap del cementerio.");
@@ -281,8 +330,9 @@ namespace TiffanyGame.EditorTools
                 GraveyardModel($"Iron Fence {side}", "iron-fence-damaged", clearing, new Vector3(side * 5f, 0f, -16f), 1.8f, material);
                 GraveyardModel($"Wood Fence {side}", "fence-damaged", clearing, new Vector3(side * 13f, 0f, -11f), 1.2f, material);
             }
-            var ball = SceneBuilder.CreatePrimitive("Ball", PrimitiveType.Sphere, clearing, new Vector3(3f, 0.2f, -6f), Vector3.one * 0.4f, ballMaterial);
-            Object.DestroyImmediate(ball.GetComponent<Collider>());
+            var ball = ModelLibrary.Instantiate("ball", clearing);
+            ball.name = "Ball";
+            ball.transform.localPosition = new Vector3(3f, 0.2f, -6f);
         }
 
         static void GraveyardModel(string name, string id, Transform parent, Vector3 position, float height, Material material)

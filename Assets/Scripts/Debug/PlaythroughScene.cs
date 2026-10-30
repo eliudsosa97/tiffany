@@ -35,6 +35,7 @@ namespace TiffanyGame
         public Vector3 Position => player.transform.position;
         public Vector3 Forward => player.transform.forward;
         public Vector3 Target { get; private set; }
+        public Vector3[] ClearingCenters { get; }
         bool AtTarget => PlaythroughPlan.HorizontalDistance(Position, Target) <= arrivalRadius && Mathf.Abs(Position.y - Target.y) < 0.8f;
         public float CameraYaw => player.viewCamera != null ? player.viewCamera.transform.eulerAngles.y : 0f;
         public Vector2 Aim => (milestone == PlaythroughMilestone.MoveObject || PlaythroughPlan.Action(milestone) == ChallengeAction.Distract)
@@ -56,11 +57,13 @@ namespace TiffanyGame
             var tracker = Require(Object.FindAnyObjectByType<WitchChapterTracker>(), "WitchChapterTracker");
             route = tracker.transform;
             clearings = tracker.clearings;
+            ClearingCenters = new Vector3[clearings.Length];
             foreach (var item in route.GetComponentsInChildren<PowerChallenge>()) challenges[(int)item.kind] = item;
             if (clearings.Length != 8) throw new InvalidOperationException("La ruta necesita ocho claros.");
             for (int i = 0; i < clearings.Length; i++)
             {
                 Require(clearings[i], "claro de la ruta");
+                ClearingCenters[i] = clearings[i].position;
                 foreach (var candle in clearings[i].GetComponentsInChildren<CandleSpot>())
                     if (candle.kind == CandleKind.Family) { family[i] = candle; break; }
                 Require(family[i], "veladora familiar");
@@ -114,8 +117,7 @@ namespace TiffanyGame
         {
             HideVolume nearest = null;
             float distance = float.PositiveInfinity;
-            var path = new NavMeshPath();
-            var filter = PlaythroughNavigation.CreateFilter();
+            var navigation = new PlaythroughNavigation(ClearingCenters);
             if (!NavMesh.SamplePosition(Position, out var start, 5f, NavMesh.AllAreas)) return null;
             foreach (var volume in volumes)
             {
@@ -123,8 +125,7 @@ namespace TiffanyGame
                 float candidate = (volume.HidePoint - Position).sqrMagnitude;
                 if (candidate >= distance) continue;
                 if (!NavMesh.SamplePosition(volume.HidePoint, out var end, 0.5f, NavMesh.AllAreas)
-                    || !NavMesh.CalculatePath(start.position, end.position, filter, path)
-                    || path.status != NavMeshPathStatus.PathComplete) continue;
+                    || !navigation.Calculate(start.position, end.position)) continue;
                 nearest = volume;
                 distance = candidate;
             }

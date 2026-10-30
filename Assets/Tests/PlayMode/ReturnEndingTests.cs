@@ -24,7 +24,7 @@ namespace TiffanyGame.Tests
             Time.timeScale = 1f;
             AudioListener.pause = false;
             GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
-            GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = GameInput.FlashOverride = false;
+            GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = GameInput.LightHeldOverride = false;
             yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Single);
             yield return null;
             // Heartbeat registra cada cambio de ritmo y estos tests no admiten logs inesperados.
@@ -42,6 +42,7 @@ namespace TiffanyGame.Tests
             respawn = soul.GetComponent<PlayerRespawn>();
             witch = collector.tyler.witch;
             ui = collector.gameInterface;
+            ui.LoadMemories(System.Array.Empty<TextAsset>(), System.Array.Empty<Texture2D>());
             route = GameObject.Find("Route").transform;
             Assert.IsNotNull(respawn);
             Assert.AreSame(witch, respawn.witch);

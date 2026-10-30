@@ -2,11 +2,16 @@ using UnityEngine;
 
 namespace TiffanyGame
 {
+    [DefaultExecutionOrder(-50)]
     [RequireComponent(typeof(PlayerSoul))]
     public sealed class PlayerLight : MonoBehaviour
     {
         public Light spot;
         public Light baseGlow;
+        public Light burstLight;
+        public Transform visual;
+        public AudioSource flashAudio;
+        public AudioClip chargeClip, burstClip;
         public Renderer[] bodyRenderers = System.Array.Empty<Renderer>();
         public float bodyGlowBoost;
         public WitchController witch;
@@ -20,9 +25,14 @@ namespace TiffanyGame
 
         public SoulLight State { get; private set; }
         public Vector3 LitPoint { get; private set; }
+        public FlashCharge Charge { get; private set; } = new FlashCharge();
 
         private PlayerSoul soul;
         private PlayerHiding hiding;
+        private PlayerController movement;
+        private Vector3 visualPosition;
+        private float burstIntensity, pulseElapsed;
+        private bool pulseActive, chargeAudioPlaying;
         private float baseIntensity;
         private float baseRange;
         private float baseAngle;
@@ -37,6 +47,12 @@ namespace TiffanyGame
         {
             soul = GetComponent<PlayerSoul>();
             hiding = GetComponent<PlayerHiding>();
+            if (visual != null) visualPosition = visual.localPosition;
+            if (burstLight != null)
+            {
+                burstIntensity = burstLight.intensity;
+                burstLight.enabled = false;
+            }
             baseIntensity = spot.intensity;
             baseRange = spot.range;
             baseAngle = spot.spotAngle;
@@ -55,6 +71,7 @@ namespace TiffanyGame
 
         private void Start()
         {
+            movement = GetComponent<PlayerController>();
             State = new SoulLight(soul.Powers, soul.Energy);
             if (startOn) Toggle();
         }
@@ -64,11 +81,20 @@ namespace TiffanyGame
             bool hidden = hiding != null && hiding.Hidden;
             State.SetHidden(hidden);
             State.Tick(Time.deltaTime);
-            if (State.CanReadInput(Time.timeScale))
+            if (Time.timeScale > 0f)
             {
-                if (GameInput.LightTogglePressed) Toggle();
-                if (GameInput.FlashPressed) TryFlash();
+                bool wasCharging = Charge.Charging;
+                bool canCharge = !hidden && soul.Powers.Has(Power.Light) && soul.Energy.Current >= SoulCosts.Flash;
+                var result = Charge.Tick(Time.deltaTime, State.CanReadInput(Time.timeScale) && GameInput.LightHeld, canCharge);
+                if (Charge.Charging && !wasCharging) Debug.Log($"{GameInfo.LogPrefix} Destello: carga");
+                if (result == FlashChargeResult.Toggle) Toggle();
+                if (result == FlashChargeResult.Cancelled || (wasCharging && !Charge.Charging && result != FlashChargeResult.Burst))
+                    Debug.Log($"{GameInfo.LogPrefix} Destello: cancelado");
+                if (result == FlashChargeResult.Burst) TryBurst();
+                if (movement != null) movement.speedScale = Charge.MoveScale;
             }
+            UpdateChargeAudio(Time.timeScale > 0f && Charge.Charging);
+            UpdatePulse(Time.deltaTime, hidden);
 
             Vector3 normal = CastGround(transform.position + Vector3.up, Vector3.down, Mathf.Infinity, out var ground)
                 ? ground.normal : Vector3.up;
@@ -92,13 +118,56 @@ namespace TiffanyGame
                 spot.intensity = baseIntensity * SoulLight.Flicker(soul.Energy.Current, Time.time)
                     * (State.IsFlashing ? flashBoost : 1f) * visibility * intensityScale;
             }
-            ApplyBodyGlow(SoulLight.BodyGlow(hidden, lightVisible, State.IsFlashing, size, bodyGlowBoost, flashBoost));
+            float glow = SoulLight.BodyGlow(hidden, lightVisible, State.IsFlashing, size, bodyGlowBoost, flashBoost);
+            if (!hidden && Charge.Charging) glow += Charge.Progress * flashBoost;
+            ApplyBodyGlow(glow);
 
             if (witch != null)
             {
                 witch.playerLightOn = visible;
                 witch.playerLightPosition = LitPoint;
             }
+        }
+
+        private void LateUpdate()
+        {
+            if (visual != null) visual.localPosition = visualPosition + Vector3.up * Charge.FloatOffset;
+        }
+
+        private void OnDisable()
+        {
+            UpdateChargeAudio(false);
+            if (flashAudio != null) flashAudio.Stop();
+            if (burstLight != null) burstLight.enabled = false;
+            if (movement != null) movement.speedScale = 1f;
+            if (visual != null) visual.localPosition = visualPosition;
+            pulseActive = false;
+            Charge = new FlashCharge();
+        }
+
+        private void UpdateChargeAudio(bool charging)
+        {
+            if (flashAudio == null || chargeAudioPlaying == charging) return;
+            chargeAudioPlaying = charging;
+            if (!charging) { flashAudio.Stop(); flashAudio.loop = false; return; }
+            flashAudio.clip = chargeClip;
+            flashAudio.loop = true;
+            if (chargeClip != null) flashAudio.Play();
+        }
+
+        private void UpdatePulse(float dt, bool hidden)
+        {
+            if (burstLight == null) return;
+            if (hidden) pulseActive = false;
+            if (!pulseActive) { burstLight.enabled = false; return; }
+            pulseElapsed += dt;
+            float strength = pulseElapsed <= FlashCharge.PulseRise
+                ? Mathf.SmoothStep(0f, 1f, pulseElapsed / FlashCharge.PulseRise)
+                : Mathf.SmoothStep(1f, 0f, (pulseElapsed - FlashCharge.PulseRise) / FlashCharge.PulseFade);
+            burstLight.intensity = burstIntensity * strength;
+            burstLight.range = Mathf.Max(0.01f, FlashCharge.BurstRadius * strength);
+            burstLight.enabled = strength > 0f;
+            pulseActive = pulseElapsed < FlashCharge.PulseRise + FlashCharge.PulseFade;
         }
 
         private void ApplyBodyGlow(float target)
@@ -124,17 +193,22 @@ namespace TiffanyGame
             State.Toggle();
         }
 
-        public bool TryFlash()
+        public bool TryBurst()
         {
             State.SetHidden(hiding != null && hiding.Hidden);
             bool grounded = witch != null && witch.Decision.Form == WitchForm.Grounded
                 && witch.Decision.State != WitchState.Caught;
-            bool inCone = witch != null && SoulLight.InCone(transform.position, transform.forward,
-                witch.transform.position, baseRange, baseAngle * 0.5f);
-            bool lineOfSight = grounded && inCone && HasFlashLineOfSight();
-            if (!State.TryFlash(grounded, inCone, lineOfSight, out bool stuns)) return false;
+            bool inRange = witch != null && FlashCharge.InBurst(transform.position,
+                witch.transform.position, FlashCharge.BurstRadius);
+            bool lineOfSight = grounded && inRange && HasFlashLineOfSight();
+            if (!State.TryFlash(grounded, inRange, lineOfSight, out bool stuns)) return false;
             if (stuns) witch.Flash();
-            Debug.Log(stuns ? $"{GameInfo.LogPrefix} Destello, la bruja queda aturdida" : $"{GameInfo.LogPrefix} Destello");
+            pulseElapsed = 0f;
+            pulseActive = true;
+            UpdateChargeAudio(false);
+            if (flashAudio != null && burstClip != null) flashAudio.PlayOneShot(burstClip);
+            Debug.Log(stuns ? $"{GameInfo.LogPrefix} Destello: estallido, la bruja queda aturdida"
+                : $"{GameInfo.LogPrefix} Destello: estallido");
             return true;
         }
 

@@ -689,6 +689,27 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void FlashMilestoneHoldsThroughChargeAndReleasesAfterBurst()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Flash });
+            var observation = new PlaythroughObservation { AtTarget = true, Energy = SoulEnergy.Max };
+            var charge = new FlashCharge();
+            for (int i = 0; i < 12; i++)
+            {
+                var command = plan.Tick(0.25f, in observation);
+                Assert.IsTrue(command.LightHeld);
+                Assert.IsFalse(command.ToggleLight);
+                var result = charge.Tick(0.25f, command.LightHeld, true);
+                Assert.AreEqual(i == 11 ? FlashChargeResult.Burst : FlashChargeResult.None, result);
+            }
+            observation.Flashing = true;
+            var release = plan.Tick(0.01f, in observation);
+            Assert.IsTrue(plan.Finished);
+            Assert.IsFalse(release.LightHeld);
+            Assert.AreEqual(FlashChargeResult.None, charge.Tick(0.01f, release.LightHeld, true));
+        }
+
+        [Test]
         public void WalkingLightTogglesTheLampOnTheWayToAMemory()
         {
             var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Memory2 });

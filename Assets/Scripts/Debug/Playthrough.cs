@@ -99,7 +99,7 @@ namespace TiffanyGame
             {
                 scene = new PlaythroughScene();
                 scene.Prepare(Plan, LogMilestone);
-                navigation = new PlaythroughNavigation();
+                navigation = new PlaythroughNavigation(scene.ClearingCenters);
                 dodge = new PlaythroughDodge((from, direction) =>
                     PlaythroughNavigation.CanMove(from, direction, PlayerMotion.RunSpeed * PlaythroughDodge.Duration));
                 CacheClearings();
@@ -167,8 +167,7 @@ namespace TiffanyGame
             }
             GameInput.AimOverride = scene.Aim;
             GameInput.InteractOverride = command.Interact;
-            GameInput.LightToggleOverride = command.ToggleLight;
-            GameInput.FlashOverride = command.Flash;
+            GameInput.LightHeldOverride = command.ToggleLight || command.LightHeld;
             GameInput.KindleOverride = command.Kindle;
             GameInput.PoltergeistOverride = command.MoveObject;
             GameInput.FadeOverride = command.Vanish;
@@ -251,7 +250,7 @@ namespace TiffanyGame
         {
             GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
             GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = false;
-            GameInput.LightToggleOverride = GameInput.FlashOverride = GameInput.KindleOverride = false;
+            GameInput.LightHeldOverride = GameInput.KindleOverride = false;
             GameInput.PoltergeistOverride = GameInput.FadeOverride = false;
         }
 

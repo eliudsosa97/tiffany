@@ -118,12 +118,12 @@ namespace TiffanyGame.Tests
         [TestCase(true, false, true, false)]
         [TestCase(true, true, true, true)]
         [TestCase(true, true, false, false)]
-        public void FlashStunsOnlyGroundedWitchInConeWithLineOfSight(
-            bool grounded, bool inCone, bool lineOfSight, bool expected)
+        public void FlashStunsOnlyGroundedWitchInRangeWithLineOfSight(
+            bool grounded, bool inRange, bool lineOfSight, bool expected)
         {
             powers.Unlock(Power.Light);
             energy.ResetTo(SoulCosts.Flash);
-            Assert.IsTrue(light.TryFlash(grounded, inCone, lineOfSight, out bool stuns));
+            Assert.IsTrue(light.TryFlash(grounded, inRange, lineOfSight, out bool stuns));
             Assert.AreEqual(expected, stuns);
             Assert.AreEqual(0f, energy.Current);
             Assert.IsTrue(light.Visible);
