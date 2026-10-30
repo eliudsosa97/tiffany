@@ -19,6 +19,7 @@ namespace TiffanyGame
             + "R / R1  desvanecerte\n"
             + "Espacio / Equis  esconderte y recoger\n"
             + "Tab / Create  cuaderno\n"
+            + "M / L1  mapa\n"
             + "Esc o P / Options  pausa";
         public const string PauseTitle = "Pausa";
         public const string PauseHint = "W/S, flechas o stick/cruceta: elegir\nEspacio / Enter / ✕ / clic: aceptar · Esc / P / Options: seguir";
