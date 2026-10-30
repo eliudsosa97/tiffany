@@ -101,8 +101,8 @@ namespace TiffanyGame.Tests
             p.NoisePosition = p.WitchPosition + Vector3.forward * 20f;
             Step(0f, WitchState.Suspicious);
             p.HeardNoise = false;
-            Step(profile.SuspicionDuration, WitchState.Stalking, 1.2f, true);
-            Assert.AreEqual(p.NoisePosition, Step(0f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Step(profile.SuspicionDuration, WitchState.Stalking, 0.9f, true);
+            Assert.AreEqual(p.NoisePosition, Step(0f, WitchState.Stalking, 0.9f, true).MoveTarget);
         }
 
         [Test]
@@ -120,9 +120,12 @@ namespace TiffanyGame.Tests
         public void DisabledSprintStalksSlowlyAndStillCatches()
         {
             profile.CanSprint = false;
-            WitchDecision decision = Step(0.5f, WitchState.Stalking, 1.2f, true);
-            Assert.AreEqual(0.6f, p.WitchPosition.x, 1e-4f);
-            for (int i = 0; i < 140 && decision.State != WitchState.Caught; i++)
+            Step(0f, WitchState.WindUp);
+            Step(profile.WindUpDuration, WitchState.Stalking, 0.9f, true);
+            p.WitchPosition = Vector3.zero;
+            WitchDecision decision = Step(0.5f, WitchState.Stalking, 0.9f, true);
+            Assert.AreEqual(0.45f, p.WitchPosition.x, 1e-4f);
+            for (int i = 0; i < 180 && decision.State != WitchState.Caught; i++)
             {
                 decision = WitchSim.Step(brain, ref p, 0.05f);
                 Assert.That(decision.State, Is.EqualTo(WitchState.Stalking).Or.EqualTo(WitchState.Caught));
@@ -139,6 +142,8 @@ namespace TiffanyGame.Tests
         {
             profile.CanSprint = false;
             p.PlayerPosition = p.WitchPosition + Vector3.up * playerHeight;
+            Step(0f, WitchState.WindUp);
+            Step(profile.WindUpDuration, WitchState.Stalking, 0.9f, true);
             Assert.AreEqual(caught ? WitchState.Caught : WitchState.Stalking, WitchSim.Step(brain, ref p, 0f).State);
             Assert.AreEqual(0f, p.DistanceToPlayer, 1e-4f);
         }
@@ -165,7 +170,7 @@ namespace TiffanyGame.Tests
             Step(0.02f, WitchState.Stunned);
             p.Flashed = false;
             Step(1.99f, WitchState.Stunned);
-            Step(0.02f, WitchState.Stalking, 1.2f, true);
+            Step(0.02f, WitchState.Stalking, 0.9f, true);
             brain = new WitchBrain(profile, null);
             p.Flashed = true;
             Step(1f, WitchState.Flying, 6f);
@@ -202,9 +207,9 @@ namespace TiffanyGame.Tests
             Vector3 target = p.PlayerPosition;
             Step(0f, WitchState.WindUp);
             p.PlayerInSafeZone = true;
-            Assert.AreEqual(target, Step(0.1f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Assert.AreEqual(target, Step(0.1f, WitchState.Stalking, 0.9f, true).MoveTarget);
             p.PlayerPosition = p.WitchPosition + Vector3.right * 0.5f;
-            Assert.AreEqual(target, Step(0.1f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Assert.AreEqual(target, Step(0.1f, WitchState.Stalking, 0.9f, true).MoveTarget);
             Assert.Greater(Vector3.Distance(p.WitchPosition, target), profile.ArriveDistance);
             Assert.Less(p.DistanceToPlayer, profile.CatchDistance);
             p.PlayerInSafeZone = false;
@@ -232,7 +237,8 @@ namespace TiffanyGame.Tests
         {
             p.SeesPlayer = true;
             p.PlayerPosition = Vector3.right * 12f;
-            Step(0f, WitchState.Stalking, 1.2f, true);
+            Assert.AreEqual(WitchIntent.Harass, Step(0f, WitchState.Stalking).Intent,
+                "La detección visual comienza mirando antes de perseguir.");
             p.PlayerHidden = true;
             p.SeesPlayer = p.SmellsPlayer = false;
             p.PlayerPosition = Vector3.right * 8f;
@@ -249,10 +255,11 @@ namespace TiffanyGame.Tests
         {
             p.SeesPlayer = true;
             p.PlayerPosition = Vector3.right * 12f;
-            Step(0f, WitchState.Stalking, 1.2f, true);
+            Assert.AreEqual(WitchIntent.Harass, Step(0f, WitchState.Stalking).Intent,
+                "La detección visual comienza mirando antes de perseguir.");
             p.PlayerHidden = true;
             p.SeesPlayer = p.SmellsPlayer = false;
-            Step(0f, WitchState.Stalking, 1.2f, true);
+            Step(0f, WitchState.Stalking);
             p.PlayerPosition = Vector3.right * 8f;
             p.PlayerVanished = true;
             Step(0f, WitchState.Stalking, voice: true);
@@ -271,8 +278,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(decoy, Step(1f, WitchState.Suspicious).MoveTarget);
             p.HeardNoise = false;
             p.PlayerHidden = true;
-            Step(profile.SuspicionDuration, WitchState.Stalking, 1.2f, true);
-            Assert.AreEqual(decoy, Step(1f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Step(profile.SuspicionDuration, WitchState.Stalking, 0.9f, true);
+            Assert.AreEqual(decoy, Step(1f, WitchState.Stalking, 0.9f, true).MoveTarget);
         }
 
         [Test]
@@ -284,14 +291,14 @@ namespace TiffanyGame.Tests
             Vector3 decoy = p.NoisePosition;
             Assert.AreEqual(decoy, Step(0f, WitchState.Suspicious).MoveTarget);
             p.HeardNoise = false;
-            Step(profile.SuspicionDuration, WitchState.Stalking, 1.2f, true);
+            Step(profile.SuspicionDuration, WitchState.Stalking, 0.9f, true);
             p.PlayerVanished = true;
-            Assert.AreEqual(decoy, Step(0f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Assert.AreEqual(decoy, Step(0f, WitchState.Stalking, 0.9f, true).MoveTarget);
             p.PlayerVanished = false;
             p.HeardNoise = true;
             p.HearingMuted = true;
             p.NoisePosition = p.PlayerPosition + Vector3.up * 20f;
-            Assert.AreEqual(decoy, Step(0f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Assert.AreEqual(decoy, Step(0f, WitchState.Stalking, 0.9f, true).MoveTarget);
             p.HearingMuted = false;
             Assert.AreEqual(p.PlayerPosition, Step(0f, WitchState.WindUp).MoveTarget);
         }
@@ -309,10 +316,10 @@ namespace TiffanyGame.Tests
             Vector3 decoy = p.NoisePosition;
             Assert.AreEqual(decoy, Step(0.2f, WitchState.Suspicious).MoveTarget);
             p.HeardNoise = false;
-            Step(profile.SuspicionDuration, WitchState.Stalking, 1.2f, true);
+            Step(profile.SuspicionDuration, WitchState.Stalking, 0.9f, true);
             p.HeardNoise = true;
             p.NoisePosition = p.PlayerPosition + Vector3.right * noiseOffset;
-            Assert.AreEqual(decoy, Step(7.9f, WitchState.Stalking, 1.2f, true).MoveTarget);
+            Assert.AreEqual(decoy, Step(7.9f, WitchState.Stalking, 0.9f, true).MoveTarget);
             p.WitchPosition = decoy;
             Step(0f, WitchState.Stalking, voice: true);
             Step(profile.HideInspectionDuration - 0.1f, WitchState.Stalking, voice: true);
@@ -347,8 +354,9 @@ namespace TiffanyGame.Tests
 
         private WitchDecision Step(float dt, WitchState state, float speed = 0f, bool voice = false)
         {
-            WitchDecision decision = WitchSim.Step(brain, ref p, dt);
-            Assert.AreEqual(state, decision.State);
+            WitchDecision decision = state == WitchState.WindUp && dt == 0f
+                ? WitchSim.BeginWarning(brain, profile, ref p) : WitchSim.Step(brain, ref p, dt);
+            Assert.AreEqual(state, decision.State, "La primera detección completa el acoso antes del aviso que comprueba esta prueba.");
             bool flying = state == WitchState.Flying || state == WitchState.TakingOff;
             Assert.AreEqual(flying ? WitchForm.Flying : WitchForm.Grounded, decision.Form);
             Assert.AreEqual(flying, decision.FireLit);

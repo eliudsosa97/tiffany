@@ -6,6 +6,9 @@ namespace TiffanyGame
     {
         public Vector3 WitchPosition;
         public bool SeesPlayerLight;
+        public bool PlayerLightTouchesWitch;
+        public bool HasCover;
+        public Vector3 CoverPosition;
         public Vector3 PlayerLightPosition;
         public bool HeardNoise;
         public Vector3 NoisePosition;

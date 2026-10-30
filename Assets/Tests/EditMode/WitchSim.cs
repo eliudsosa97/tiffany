@@ -4,6 +4,12 @@ namespace TiffanyGame.Tests
 {
     internal static class WitchSim
     {
+        internal static WitchDecision BeginWarning(WitchBrain brain, WitchProfile profile, ref WitchPerception p)
+        {
+            WitchDecision decision = Step(brain, ref p, 0f);
+            return decision.Intent == WitchIntent.Harass ? Step(brain, ref p, profile.HarassTimeLimit) : decision;
+        }
+
         internal static WitchDecision Step(WitchBrain brain, ref WitchPerception p, float dt)
         {
             Measure(ref p);
