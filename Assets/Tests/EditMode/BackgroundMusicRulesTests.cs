@@ -5,156 +5,107 @@ namespace TiffanyGame.Tests
     {
         private BackgroundMusicRules rules;
         [SetUp] public void SetUp() => rules = new BackgroundMusicRules();
-        [Test]
-        public void TitleFadesThemeInOverThreeSeconds()
+        [TestCase(InterfaceScreen.Title, BackgroundCue.Title, BackgroundTrack.Theme)]
+        [TestCase(InterfaceScreen.Ending, BackgroundCue.Ending, BackgroundTrack.Finale)]
+        public void TitleAndEndingFadeInOverThreeSeconds(InterfaceScreen screen, BackgroundCue cue, BackgroundTrack track)
         {
-            rules.Tick(1.5f, InterfaceScreen.Title, -1, 7, false);
-            Assert.AreEqual((BackgroundCue.Title, BackgroundTrack.Theme, 0.5f), (rules.Cue, rules.Track, rules.Volume));
-            rules.Tick(1.5f, InterfaceScreen.Title, -1, 7, false);
+            rules.Tick(1.5f, screen);
+            Assert.AreEqual((cue, track, 0.5f), (rules.Cue, rules.Track, rules.Volume));
+            rules.Tick(1.5f, screen);
             Assert.AreEqual(1f, rules.Volume);
         }
         [Test]
-        public void StartingInCemeteryKeepsThemeAtFullVolume()
+        public void StartingGameStopsTitleImmediatelyAndNeverRestartsIt()
         {
-            rules.Tick(3f, InterfaceScreen.Title, 0, 7, false);
-            rules.Tick(1f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual((BackgroundCue.Opening, BackgroundTrack.Theme, 1f, false), (rules.Cue, rules.Track, rules.Volume, rules.OpeningOver));
+            rules.Tick(3f, InterfaceScreen.Title);
+            for (int frame = 0; frame < 1000; frame++)
+            {
+                rules.Tick(0.1f, InterfaceScreen.Playing);
+                Assert.AreEqual((BackgroundCue.Silent, 0f), (rules.Cue, rules.Volume));
+            }
         }
-        [TestCase(-1)] [TestCase(1)]
-        public void LeavingCemeteryEndsOpeningAndFadesOutOverFourSeconds(int clearing)
+        [TestCase(InterfaceScreen.Playing)] [TestCase(InterfaceScreen.Story)]
+        public void GameplayAndStoryStaySilentWithoutAnExplicitMemory(InterfaceScreen screen)
         {
-            rules.Tick(3f, InterfaceScreen.Playing, 0, 7, false);
-            rules.Tick(2f, InterfaceScreen.Playing, clearing, 7, false);
-            Assert.AreEqual((BackgroundCue.Silent, 0.5f, true), (rules.Cue, rules.Volume, rules.OpeningOver));
-            rules.Tick(2f, InterfaceScreen.Playing, 1, 7, false);
-            Assert.AreEqual(0f, rules.Volume);
-            rules.Tick(3f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual((BackgroundCue.Silent, 0f, true), (rules.Cue, rules.Volume, rules.OpeningOver));
+            rules.Tick(100f, screen);
+            Assert.AreEqual((BackgroundCue.Silent, 0f), (rules.Cue, rules.Volume));
         }
         [Test]
-        public void StartingBeyondCemeteryPermanentlyEndsOpening()
+        public void ChangingTitleToEndingFadesCurrentTrackToZeroBeforeSwitching()
         {
-            rules.Tick(1f, InterfaceScreen.Playing, 1, 7, false);
-            rules.Tick(3f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual((BackgroundCue.Silent, 0f, true), (rules.Cue, rules.Volume, rules.OpeningOver));
-        }
-        [Test]
-        public void TensionFadesOutOverOneSecondAndWaitsForSixSecondsOfCalm()
-        {
-            rules.Tick(3f, InterfaceScreen.Playing, 0, 7, false);
-            rules.Tick(0.5f, InterfaceScreen.Playing, 0, 7, true);
-            Assert.AreEqual(0.5f, rules.Volume);
-            rules.Tick(0.5f, InterfaceScreen.Playing, 0, 7, true);
-            Assert.AreEqual(0f, rules.Volume);
-            rules.Tick(5.9f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual(0f, rules.Volume);
-            rules.Tick(0.2f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual(0.1f / BackgroundMusicRules.FadeIn, rules.Volume, 1e-5f);
-        }
-        [Test]
-        public void RenewedTensionRestartsCalmCountdown()
-        {
-            rules.Tick(1f, InterfaceScreen.Playing, 0, 7, true);
-            rules.Tick(5f, InterfaceScreen.Playing, 0, 7, false);
-            rules.Tick(0.1f, InterfaceScreen.Playing, 0, 7, true);
-            rules.Tick(5.9f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual(0f, rules.Volume);
-            rules.Tick(0.4f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual(0.1f, rules.Volume, 1e-5f);
-        }
-        [TestCase(7, 7, BackgroundCue.House, BackgroundTrack.Finale)]
-        [TestCase(0, -1, BackgroundCue.Opening, BackgroundTrack.Theme)]
-        [TestCase(0, 0, BackgroundCue.Opening, BackgroundTrack.Theme)]
-        [TestCase(1, 7, BackgroundCue.Silent, BackgroundTrack.Theme)]
-        public void OnlyLastClearingOfAMultiClearingRouteUsesFinale(int clearing, int last, BackgroundCue cue, BackgroundTrack track)
-        {
-            rules.Tick(3f, InterfaceScreen.Playing, clearing, last, false);
-            Assert.AreEqual((cue, track), (rules.Cue, rules.Track));
-        }
-        [Test]
-        public void ChangingTracksFadesCurrentTrackToZeroBeforeSwitching()
-        {
-            rules.Tick(3f, InterfaceScreen.Title, 0, 7, false);
-            rules.Tick(2f, InterfaceScreen.Ending, 7, 7, false);
+            rules.Tick(3f, InterfaceScreen.Title);
+            rules.Tick(2f, InterfaceScreen.Ending);
             Assert.AreEqual((BackgroundCue.Ending, BackgroundTrack.Theme, 0.5f), (rules.Cue, rules.Track, rules.Volume));
-            rules.Tick(2f, InterfaceScreen.Ending, 7, 7, false);
+            rules.Tick(2f, InterfaceScreen.Ending);
             Assert.AreEqual((BackgroundTrack.Finale, 0f), (rules.Track, rules.Volume));
-            rules.Tick(3f, InterfaceScreen.Ending, 7, 7, false);
+            rules.Tick(3f, InterfaceScreen.Ending);
             Assert.AreEqual((BackgroundTrack.Finale, 1f), (rules.Track, rules.Volume));
         }
-        [TestCase(InterfaceScreen.Title, BackgroundTrack.Theme)]
-        [TestCase(InterfaceScreen.Ending, BackgroundTrack.Finale)]
-        public void FrozenScreensIgnoreTensionAndItsRest(InterfaceScreen screen, BackgroundTrack track)
+        [Test]
+        public void ExplicitMemoryFadesInAndOutOverHalfASecondThenStaysSilent()
         {
-            rules.Tick(1f, InterfaceScreen.Playing, 0, 7, true);
-            rules.Tick(3f, screen, 7, 7, true);
-            Assert.AreEqual((track, 1f), (rules.Track, rules.Volume));
-            rules.Tick(1f, InterfaceScreen.Playing, 0, 7, false);
+            rules.PlayMemory();
+            rules.Tick(0.25f, InterfaceScreen.Playing);
+            Assert.AreEqual((BackgroundCue.Memory, BackgroundTrack.Memory, 0.5f), (rules.Cue, rules.Track, rules.Volume));
+            rules.Tick(0.25f, InterfaceScreen.Playing);
+            Assert.AreEqual(1f, rules.Volume);
+            rules.StopMemory();
+            rules.Tick(0.25f, InterfaceScreen.Playing);
+            Assert.AreEqual((BackgroundCue.Silent, 0.5f), (rules.Cue, rules.Volume));
+            rules.Tick(0.25f, InterfaceScreen.Playing);
             Assert.AreEqual(0f, rules.Volume);
-        }
-        [TestCase(InterfaceScreen.Paused)] [TestCase(InterfaceScreen.Notebook)]
-        public void PauseFreezesVolumeTrackAndOpeningProgress(InterfaceScreen screen)
-        {
-            rules.Tick(1.5f, InterfaceScreen.Playing, 0, 7, false);
-            rules.Tick(10f, screen, 7, 7, true);
-            Assert.AreEqual((true, BackgroundTrack.Theme, 0.5f, false), (rules.Paused, rules.Track, rules.Volume, rules.OpeningOver));
-            rules.Tick(1.5f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual((false, BackgroundCue.Opening, 1f), (rules.Paused, rules.Cue, rules.Volume));
-        }
-        [TestCase(InterfaceScreen.Paused)] [TestCase(InterfaceScreen.Notebook)]
-        public void PauseDoesNotAdvanceCalmCountdown(InterfaceScreen screen)
-        {
-            rules.Tick(1f, InterfaceScreen.Playing, 0, 7, true);
-            rules.Tick(3f, InterfaceScreen.Playing, 0, 7, false);
-            rules.Tick(10f, screen, 7, 7, false);
-            rules.Tick(2.9f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual(0f, rules.Volume);
-            rules.Tick(0.4f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual(0.1f, rules.Volume, 1e-5f);
-        }
-        [TestCase(0f)] [TestCase(-1f)] [TestCase(float.NaN)]
-        [TestCase(float.PositiveInfinity)] [TestCase(float.NegativeInfinity)]
-        public void InvalidDeltaUpdatesCueAndPauseWithoutAdvancingState(float dt)
-        {
-            rules.Tick(1.5f, InterfaceScreen.Title, 0, 7, false);
-            rules.Tick(dt, InterfaceScreen.Ending, 7, 7, true);
-            Assert.AreEqual((BackgroundCue.Ending, BackgroundTrack.Theme, 0.5f, false), (rules.Cue, rules.Track, rules.Volume, rules.OpeningOver));
-            rules.Tick(dt, InterfaceScreen.Notebook, 7, 7, false);
-            Assert.IsTrue(rules.Paused);
-            rules.Tick(dt, InterfaceScreen.Playing, 7, 7, true);
-            Assert.AreEqual((BackgroundCue.House, false, false), (rules.Cue, rules.Paused, rules.OpeningOver));
-            rules.Tick(1.5f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual((BackgroundCue.Opening, 1f), (rules.Cue, rules.Volume));
-        }
-        [TestCase(0f)] [TestCase(-1f)] [TestCase(float.NaN)]
-        [TestCase(float.PositiveInfinity)] [TestCase(float.NegativeInfinity)]
-        public void InvalidDeltaCannotSelectTrackOrRememberCemetery(float dt)
-        {
-            rules.Tick(dt, InterfaceScreen.Ending, 7, 7, false);
-            Assert.AreEqual((BackgroundTrack.Theme, 0f), (rules.Track, rules.Volume));
-            rules.Tick(dt, InterfaceScreen.Playing, 0, 7, false);
-            rules.Tick(1f, InterfaceScreen.Playing, -1, 7, false);
-            Assert.IsFalse(rules.OpeningOver);
-        }
-        [TestCase(0f)] [TestCase(-1f)] [TestCase(float.NaN)]
-        [TestCase(float.PositiveInfinity)] [TestCase(float.NegativeInfinity)]
-        public void InvalidDeltaCannotAdvanceOrResetCalmCountdown(float dt)
-        {
-            rules.Tick(1f, InterfaceScreen.Playing, 0, 7, true);
-            rules.Tick(3f, InterfaceScreen.Playing, 0, 7, false);
-            rules.Tick(dt, InterfaceScreen.Playing, 0, 7, false);
-            rules.Tick(dt, InterfaceScreen.Playing, 0, 7, true);
-            rules.Tick(2.9f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual(0f, rules.Volume);
-            rules.Tick(0.4f, InterfaceScreen.Playing, 0, 7, false);
-            Assert.AreEqual(0.1f, rules.Volume, 1e-5f);
+            rules.Tick(100f, InterfaceScreen.Playing);
+            Assert.AreEqual((BackgroundCue.Silent, 0f), (rules.Cue, rules.Volume));
         }
         [Test]
-        public void MissingRouteStaysSilentWithoutEndingOpening()
+        public void RepeatedMemoryRequestsDoNotResetTheFade()
         {
-            rules.Tick(3f, InterfaceScreen.Playing, -1, -1, false);
-            rules.Tick(10f, InterfaceScreen.Playing, -1, -1, false);
-            Assert.AreEqual((BackgroundCue.Silent, 0f, false), (rules.Cue, rules.Volume, rules.OpeningOver));
+            rules.PlayMemory();
+            rules.Tick(0.25f, InterfaceScreen.Playing);
+            rules.PlayMemory();
+            rules.Tick(0.25f, InterfaceScreen.Playing);
+            Assert.AreEqual(1f, rules.Volume);
+        }
+        [TestCase(InterfaceScreen.Title)] [TestCase(InterfaceScreen.Ending)]
+        public void ReturningToTitleOrEndingClearsMemoryRequest(InterfaceScreen screen)
+        {
+            rules.PlayMemory();
+            rules.Tick(3f, screen);
+            Assert.AreEqual(1f, rules.Volume);
+            rules.Tick(1f, InterfaceScreen.Playing);
+            Assert.AreEqual((BackgroundCue.Silent, 0f), (rules.Cue, rules.Volume));
+        }
+        [TestCase(InterfaceScreen.Paused)] [TestCase(InterfaceScreen.Notebook)]
+        public void PauseFreezesMemoryFadeAndResumesWithoutChangingTracks(InterfaceScreen screen)
+        {
+            rules.PlayMemory();
+            rules.Tick(0.25f, InterfaceScreen.Playing);
+            rules.Tick(10f, screen);
+            Assert.AreEqual((true, BackgroundCue.Memory, BackgroundTrack.Memory, 0.5f),
+                (rules.Paused, rules.Cue, rules.Track, rules.Volume));
+            rules.Tick(0.25f, InterfaceScreen.Playing);
+            Assert.AreEqual((false, BackgroundCue.Memory, 1f), (rules.Paused, rules.Cue, rules.Volume));
+        }
+        [TestCase(InterfaceScreen.Paused)] [TestCase(InterfaceScreen.Notebook)]
+        public void PauseDuringGameplayNeverStartsMusic(InterfaceScreen screen)
+        {
+            rules.Tick(3f, InterfaceScreen.Title);
+            rules.Tick(0.1f, InterfaceScreen.Playing);
+            rules.Tick(10f, screen);
+            rules.Tick(10f, InterfaceScreen.Playing);
+            Assert.AreEqual((BackgroundCue.Silent, 0f), (rules.Cue, rules.Volume));
+        }
+        [TestCase(0f)] [TestCase(-1f)] [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)] [TestCase(float.NegativeInfinity)]
+        public void InvalidDeltaUpdatesCueAndPauseWithoutAdvancingFades(float dt)
+        {
+            rules.Tick(1.5f, InterfaceScreen.Title);
+            rules.Tick(dt, InterfaceScreen.Ending);
+            Assert.AreEqual((BackgroundCue.Ending, BackgroundTrack.Theme, 0.5f), (rules.Cue, rules.Track, rules.Volume));
+            rules.Tick(dt, InterfaceScreen.Notebook);
+            Assert.IsTrue(rules.Paused);
+            rules.Tick(0.1f, InterfaceScreen.Playing);
+            Assert.AreEqual((false, BackgroundCue.Silent, 0f), (rules.Paused, rules.Cue, rules.Volume));
         }
     }
 }
