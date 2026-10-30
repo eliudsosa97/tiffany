@@ -77,6 +77,36 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void CemeteryBallIsBlueWithWhiteSeams()
+        {
+            var ball = route.GetChild(0).Find("Ball");
+            Assert.AreEqual(new Vector3(3f, 0.2f, -6f), ball.localPosition);
+            Assert.AreEqual(Vector3.one, ball.localScale);
+            Assert.IsEmpty(ball.GetComponentsInChildren<Collider>(true));
+            var renderers = ball.GetComponentsInChildren<Renderer>(true);
+            Assert.AreEqual(1, renderers.Length);
+            var materials = renderers[0].sharedMaterials;
+            CollectionAssert.AreEquivalent(new[] { "BallBlue", "BallWhite" },
+                System.Array.ConvertAll(materials, material => material.name));
+            var spec = ModelLibrary.LoadSpec("ball");
+            foreach (var material in materials)
+            {
+                var entry = System.Array.Find(spec.materials, value => value.name == material.name);
+                Assert.AreEqual(material.name == "BallBlue" ? "#2F63B5" : "#FFFFFF", entry.color);
+                Assert.IsTrue(ColorUtility.TryParseHtmlString(entry.color, out var color));
+                Assert.AreEqual(color, material.GetColor("_BaseColor"));
+                Assert.AreEqual(color, material.GetColor("_Color"));
+            }
+            var mesh = ball.GetComponentInChildren<MeshFilter>().sharedMesh;
+            Assert.AreEqual(2, mesh.subMeshCount);
+            Assert.That(ModelLibraryTests.TriangleCount(mesh), Is.InRange(300L, 800L));
+            for (int axis = 0; axis < 3; axis++) Assert.AreEqual(0.4f, mesh.bounds.size[axis], 0.01f);
+            var pickup = root.GetComponentInChildren<MemoryCollector>().spots[1].GetComponent<SphereCollider>();
+            Assert.IsTrue(pickup.isTrigger);
+            Assert.AreEqual(1.2f, pickup.radius);
+        }
+
+        [Test]
         public void BuildingsAndForestUseOcclusionWhileGroundKeepsItsShader()
         {
             foreach (var clearing in new[] { route.GetChild(3), route.GetChild(4), route.GetChild(7) })
@@ -91,7 +121,9 @@ namespace TiffanyGame.Tests
                 Assert.AreEqual("Universal Render Pipeline/Tiffany Forest Ground",
                     clearing.Find("Ground").GetComponent<Renderer>().sharedMaterial.shader.name);
             }
-            Assert.AreEqual("Universal Render Pipeline/Lit", route.GetChild(0).Find("Ball").GetComponent<Renderer>().sharedMaterial.shader.name);
+            foreach (var renderer in route.GetChild(0).Find("Ball").GetComponentsInChildren<Renderer>(true))
+                foreach (var material in renderer.sharedMaterials)
+                    Assert.AreEqual("Universal Render Pipeline/Lit", material.shader.name);
             foreach (var movable in route.GetComponentsInChildren<MovableObject>(true))
                 Assert.AreNotEqual(GeneratedMaterials.OcclusionShader, movable.GetComponent<Renderer>().sharedMaterial.shader.name);
             foreach (var candle in route.GetComponentsInChildren<CandleSpot>(true))
