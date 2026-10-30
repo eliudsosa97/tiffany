@@ -1,0 +1,19 @@
+{
+  "id": 5,
+  "title": "Brazalete",
+  "place": "Choza de la bruja",
+  "drawings": [
+    {
+      "image": "memory-5-1",
+      "phrase": "Encontré una casita. Tyler está adentro."
+    },
+    {
+      "image": "memory-5-2",
+      "phrase": "Ese no era Tyler."
+    },
+    {
+      "image": "memory-5-3",
+      "phrase": "Aquí hay cosas de muchos niños."
+    }
+  ]
+}
