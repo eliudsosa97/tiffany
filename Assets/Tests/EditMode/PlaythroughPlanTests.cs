@@ -402,6 +402,77 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void ReturnResumesNavigationAfterRespawnAtANewerFamilyCandle()
+        {
+            var checkpoint = new RespawnPoint(new Vector3(230f, 2f, 72f));
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Respawn, PlaythroughMilestone.Road });
+            var observation = new PlaythroughObservation { Respawning = true };
+            plan.Tick(0.1f, in observation);
+            checkpoint.Touch(new Candle(CandleKind.Family, new Vector3(190f, 0f, 76f)));
+            observation.Position = new Vector3(190f, 0.2f, 75f);
+            observation.AtRespawn = checkpoint.IsAtArrival(observation.Position, 1f, 0.35f);
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.Respawn, plan.Current);
+            observation.Respawning = false;
+            plan.Tick(0.1f, in observation);
+            Assert.AreEqual(PlaythroughMilestone.Road, plan.Current);
+            Assert.IsTrue(plan.Tick(0.1f, in observation).Move);
+        }
+
+        [TestCase(PlaythroughMilestone.Road, PlaythroughPlan.DefaultTimeout)]
+        [TestCase(PlaythroughMilestone.LakeCandle, PlaythroughPlan.LakeCandleTimeout)]
+        [TestCase(PlaythroughMilestone.Challenge1Recharge, PlaythroughPlan.DefaultTimeout)]
+        public void FourthRespawnKeepsTheDeadlineAndRepeatedCapturesEventuallyFail(PlaythroughMilestone milestone, float deadline)
+        {
+            var plan = new PlaythroughPlan(new[] { milestone });
+            var observation = new PlaythroughObservation();
+            for (int capture = 0; capture < 3; capture++)
+            {
+                plan.Tick(20f, in observation);
+                observation.Respawning = true;
+                plan.Tick(1f, in observation);
+                observation.Respawning = false;
+                plan.Tick(1f, in observation);
+                Assert.AreEqual(0f, plan.MilestoneElapsed);
+            }
+            observation.Respawning = true;
+            plan.Tick(1f, in observation);
+            observation.Respawning = false;
+            Assert.IsTrue(plan.Tick(1f, in observation).Repath);
+            Assert.AreEqual(2f, plan.MilestoneElapsed);
+            while (!plan.Finished)
+            {
+                observation.Respawning = !observation.Respawning;
+                plan.Tick(1f, in observation);
+                Assert.LessOrEqual(plan.Elapsed, 66f + deadline);
+            }
+            Assert.AreEqual(1, plan.ExitCode);
+            StringAssert.Contains("tiempo límite", plan.FailureReason);
+        }
+
+        [Test]
+        public void CompletingAMilestoneRenewsTheThreeRespawnRestarts()
+        {
+            var plan = new PlaythroughPlan(new[] { PlaythroughMilestone.Road, PlaythroughMilestone.Manifest }, timeout: 5f);
+            var observation = new PlaythroughObservation();
+            for (int milestone = 0; milestone < 2; milestone++)
+            {
+                for (int capture = 0; capture < 3; capture++)
+                {
+                    observation.Respawning = true;
+                    plan.Tick(1f, in observation);
+                    observation.Respawning = false;
+                    plan.Tick(1f, in observation);
+                    Assert.AreEqual(0f, plan.MilestoneElapsed);
+                }
+                observation.AtTarget = milestone == 0;
+                observation.Credits = milestone == 1;
+                plan.Tick(0f, in observation);
+            }
+            Assert.AreEqual(0, plan.ExitCode);
+        }
+
+        [Test]
         public void ReachingTheRespawnPointWithoutCaptureDoesNotRestartTheDeadline()
         {
             var plan = new PlaythroughPlan(timeout: 2f);

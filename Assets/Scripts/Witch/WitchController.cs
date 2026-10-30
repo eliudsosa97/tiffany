@@ -147,7 +147,8 @@ namespace TiffanyGame
             if (profile.GroundChase)
             {
                 PlaceForGroundChase();
-                if (afterCapture) brain.StartGrace();
+                if (afterCapture) brain.StartGrace(respawn != null ? respawn.Position
+                    : player != null ? player.position : transform.position);
             }
             else
             {
