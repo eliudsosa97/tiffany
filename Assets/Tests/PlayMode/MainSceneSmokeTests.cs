@@ -457,10 +457,10 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(RouteLayout.Count + 1, route.childCount);
             Assert.IsNotNull(route.Find("Landscape/Terrain"));
             Assert.AreEqual(4, Object.FindAnyObjectByType<MemoryCollector>().challenges.Length);
-            Assert.AreEqual(79, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
+            Assert.AreEqual(81, Object.FindObjectsByType<CaptureStop>(FindObjectsSortMode.None).Length,
                 "58 paradas de main (48 de escena, una vista previa, cinco ecos, dos de la pelota " +
-                "y dos vistas del agua), Witch Suspicious, seis comparaciones de neblina, ocho vistas de los retos y seis de cobertura.");
-            Assert.AreEqual(29, route.GetComponentsInChildren<CaptureStop>().Length, "21 paradas previas y ocho vistas de los retos.");
+                "y dos vistas del agua), Witch Suspicious, seis comparaciones de neblina, ocho vistas de los retos, seis de cobertura y dos de los pájaros.");
+            Assert.AreEqual(31, route.GetComponentsInChildren<CaptureStop>().Length, "21 paradas previas, ocho vistas de los retos y dos de los pájaros.");
             Assert.AreEqual(11, Object.FindObjectsByType<HideVolume>(FindObjectsSortMode.None).Length, "Seis escondites previos y cinco junto a los parches del sendero.");
             Assert.AreEqual(10, route.GetComponentsInChildren<HideVolume>().Length, "Cinco de los claros y cinco de los parches.");
             Assert.AreEqual(21, Object.FindObjectsByType<CandleSpot>(FindObjectsSortMode.None).Length,
