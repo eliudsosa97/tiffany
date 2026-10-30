@@ -5,6 +5,75 @@ namespace TiffanyGame.Tests
 {
     public sealed class FlashChargeTests
     {
+        [TestCase(0.2f, 0f)]
+        [TestCase(0.3f, 0f)]
+        [TestCase(1.65f, 0.5f)]
+        [TestCase(3f, 1f)]
+        [TestCase(10f, 1f)]
+        public void ProgressFillsBetweenTapThresholdAndThreeSeconds(float seconds, float expected)
+        {
+            var charge = new FlashCharge();
+            charge.Tick(seconds, true, true);
+            Assert.That(charge.Progress, Is.EqualTo(expected).Within(0.0001f));
+        }
+
+        [TestCase(0.2f, 100f, false)]
+        [TestCase(0.3f, 100f, true)]
+        [TestCase(1.65f, 50f, true)]
+        [TestCase(1.65f, 49f, true)]
+        [TestCase(1.65f, 0f, true)]
+        public void IndicatorShowsHoldAndEnergyWithoutEnablingUnavailableBurst(float seconds, float energy, bool visible)
+        {
+            var charge = new FlashCharge();
+            charge.Tick(seconds, true, energy >= SoulCosts.Flash);
+            var indicator = new FlashChargeIndicator();
+            indicator.Tick(0f, charge, energy, InterfaceScreen.Playing, false);
+            Assert.AreEqual(visible, indicator.Visible);
+            Assert.AreEqual(energy >= 50f ? FlashChargeIndicator.Warm : FlashChargeIndicator.LowEnergy, indicator.Tint);
+            Assert.That(indicator.Fill, Is.EqualTo(charge.AttemptProgress).Within(0.0001f));
+            charge.Tick(0.01f, false, true);
+            indicator.Tick(0.01f, charge, energy, InterfaceScreen.Playing, false);
+            Assert.IsFalse(indicator.Visible);
+            Assert.AreEqual(0f, indicator.Fill);
+        }
+
+        [TestCase(InterfaceScreen.Title, false)]
+        [TestCase(InterfaceScreen.Paused, false)]
+        [TestCase(InterfaceScreen.Notebook, false)]
+        [TestCase(InterfaceScreen.Story, false)]
+        [TestCase(InterfaceScreen.Ending, false)]
+        [TestCase(InterfaceScreen.Playing, true)]
+        public void IndicatorIsHiddenOutsideGameplayOrDuringEcho(InterfaceScreen screen, bool blocked)
+        {
+            var charge = new FlashCharge();
+            charge.Tick(1f, true, true);
+            var indicator = new FlashChargeIndicator();
+            indicator.Tick(0f, charge, 100f, screen, blocked);
+            Assert.IsFalse(indicator.Visible);
+            charge.Tick(2f, true, true);
+            indicator.Tick(0f, charge, 50f, screen, blocked);
+            Assert.IsFalse(indicator.Visible);
+        }
+
+        [Test]
+        public void CompletedIndicatorExpandsAndFadesOnceEvenAfterEnergyWasSpent()
+        {
+            var charge = new FlashCharge();
+            charge.Tick(3f, true, true);
+            var indicator = new FlashChargeIndicator();
+            indicator.Tick(0f, charge, 0f, InterfaceScreen.Playing, false);
+            Assert.IsTrue(indicator.Visible);
+            Assert.AreEqual(1f, indicator.Fill);
+            Assert.AreEqual(1.3f, indicator.Scale);
+            Assert.AreEqual(FlashChargeIndicator.Warm, indicator.Tint);
+            charge.Tick(0.125f, true, true);
+            indicator.Tick(0.125f, charge, 0f, InterfaceScreen.Playing, false);
+            Assert.AreEqual(0.5f, indicator.Tint.a);
+            indicator.Tick(0.125f, charge, 0f, InterfaceScreen.Playing, false);
+            Assert.IsFalse(indicator.Visible);
+            Assert.AreEqual(1f, indicator.Scale);
+        }
+
         [Test]
         public void ShortTapTogglesOnlyOnReleaseWithoutCharging()
         {

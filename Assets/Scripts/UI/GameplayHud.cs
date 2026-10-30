@@ -8,8 +8,11 @@ namespace TiffanyGame
         public GameInterface gameInterface;
         public Text objectiveText;
         public Text interactionText;
+        public Image chargeRing;
 
         readonly InteractionPrompt prompt = new InteractionPrompt();
+        readonly FlashChargeIndicator chargeIndicator = new FlashChargeIndicator();
+        PlayerLight playerLight;
         MemoryCollector memories;
         PlayerHiding hiding;
         CandleKindler kindler;
@@ -23,6 +26,7 @@ namespace TiffanyGame
         {
             memories = gameInterface.memories;
             soul = gameInterface.soul;
+            playerLight = soul.GetComponent<PlayerLight>();
             hiding = soul.GetComponent<PlayerHiding>();
             kindler = soul.GetComponent<CandleKindler>();
             viewCamera = memories.viewCamera;
@@ -43,6 +47,7 @@ namespace TiffanyGame
         {
             if (foundCount != memories.Progress.FoundCount) RefreshObjective(0);
             RefreshVisibility();
+            RefreshCharge();
             if (gameInterface.Screen != InterfaceScreen.Playing || gameInterface.IsFrozen) return;
 
             prompt.Clear();
@@ -84,6 +89,18 @@ namespace TiffanyGame
             }
             interactionText.text = prompt.Text;
             SetVisible(interactionText, visible);
+        }
+
+        void RefreshCharge()
+        {
+            if (chargeRing == null || playerLight == null) return;
+            chargeIndicator.Tick(Time.deltaTime, playerLight.Charge, soul.Energy.Current, gameInterface.Screen,
+                gameInterface.IsFrozen || memories.IsEchoActive || hiding.Hidden
+                || !playerLight.isActiveAndEnabled || !soul.Powers.Has(Power.Light));
+            chargeRing.gameObject.SetActive(chargeIndicator.Visible);
+            chargeRing.fillAmount = chargeIndicator.Fill;
+            chargeRing.color = chargeIndicator.Tint;
+            chargeRing.rectTransform.localScale = Vector3.one * chargeIndicator.Scale;
         }
 
         void RefreshVisibility()

@@ -880,6 +880,20 @@ namespace TiffanyGame.EditorTools
                 new Vector2(0f, 0.25f), Vector2.one).color = new Color(1f, 0.87f, 0.63f);
             ui.soulPanel.SetActive(false);
 
+            var chargeRect = InterfaceRect("Flash Charge", root.transform, Vector2.one * 0.5f, Vector2.one * 0.5f);
+            chargeRect.sizeDelta = new Vector2(64f, 64f);
+            hud.chargeRing = chargeRect.gameObject.AddComponent<FlashChargeRing>();
+            hud.chargeRing.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            hud.chargeRing.type = Image.Type.Filled;
+            hud.chargeRing.fillMethod = Image.FillMethod.Radial360;
+            hud.chargeRing.fillOrigin = (int)Image.Origin360.Top;
+            hud.chargeRing.fillAmount = 0f;
+            hud.chargeRing.raycastTarget = false;
+            var chargeOutline = chargeRect.gameObject.AddComponent<Outline>();
+            chargeOutline.effectColor = new Color(0.1f, 0.07f, 0.04f, 0.25f);
+            chargeOutline.effectDistance = Vector2.one;
+            chargeRect.gameObject.SetActive(false);
+
             ui.pausePanel = InterfacePanel("Pause", root.transform, 0.6f);
             InterfaceText("Title", ui.pausePanel.transform, font, InterfaceTexts.PauseTitle, 76,
                 new Vector2(0.1f, 0.80f), new Vector2(0.9f, 0.94f));
