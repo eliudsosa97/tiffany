@@ -10,10 +10,10 @@ namespace TiffanyGame
         public const string NewGame = "Nueva partida";
         public const string Controls = "WASD / stick izq.  mover\n"
             + "Ratón / stick der.  apuntar\n"
-            + "Shift / L3  correr\n"
+            + "Shift / L3 / R2  correr\n"
             + "Ctrl / L2  despacio\n"
             + "Clic / △  prender la luz\n"
-            + "F / R2  destello\n"
+            + "mantén clic / △ / F  destello\n"
             + "Q / □  encender veladora\n"
             + "E / ○  mover objeto\n"
             + "R / R1  desvanecerse\n"
@@ -37,7 +37,7 @@ namespace TiffanyGame
         {
             switch (power)
             {
-                case Power.Light: return "Tu luz te obedece · clic o △ prende y apaga, F o R2 para el destello";
+                case Power.Light: return "Tu luz te obedece · clic o △ prende y apaga, mantenlo 3 s para el destello";
                 case Power.Candles: return "Puedes encender veladoras · Q";
                 case Power.Poltergeist: return "Puedes mover cosas · E";
                 case Power.Vanish: return "Puedes desvanecerte · R";

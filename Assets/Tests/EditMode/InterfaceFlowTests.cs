@@ -91,7 +91,7 @@ namespace TiffanyGame.Tests
             Assert.That(flow.IsFrozen, Is.EqualTo(frozen));
         }
 
-        [TestCase(Power.Light, "Tu luz te obedece · clic o △ prende y apaga, F o R2 para el destello")]
+        [TestCase(Power.Light, "Tu luz te obedece · clic o △ prende y apaga, mantenlo 3 s para el destello")]
         [TestCase(Power.Candles, "Puedes encender veladoras · Q")]
         [TestCase(Power.Poltergeist, "Puedes mover cosas · E")]
         [TestCase(Power.Vanish, "Puedes desvanecerte · R")]
@@ -101,10 +101,10 @@ namespace TiffanyGame.Tests
 
         [TestCase("WASD / stick izq.  mover")]
         [TestCase("Ratón / stick der.  apuntar")]
-        [TestCase("Shift / L3  correr")]
+        [TestCase("Shift / L3 / R2  correr")]
         [TestCase("Ctrl / L2  despacio")]
         [TestCase("Clic / △  prender la luz")]
-        [TestCase("F / R2  destello")]
+        [TestCase("mantén clic / △ / F  destello")]
         [TestCase("Q / □  encender veladora")]
         [TestCase("E / ○  mover objeto")]
         [TestCase("R / R1  desvanecerse")]

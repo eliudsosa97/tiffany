@@ -12,14 +12,14 @@ namespace TiffanyGame
         public static bool? RunOverride;
         public static Vector2? AimOverride;
         public static bool? InteractOverride;
-        public static bool? LightToggleOverride;
-        public static bool? FlashOverride;
+        public static bool? LightHeldOverride;
         public static bool? KindleOverride;
         public static bool? PoltergeistOverride;
         public static bool? FadeOverride;
 
         static bool commandWasPressed;
         static int pointerConsumedThroughFrame = -1;
+        static bool pointerLightHeld, pointerLightInvalid;
         static FocusClickFilter focusClickFilter = new FocusClickFilter(true, float.NegativeInfinity, false);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -28,6 +28,7 @@ namespace TiffanyGame
             ClearOverrides();
             commandWasPressed = false;
             pointerConsumedThroughFrame = -1;
+            pointerLightHeld = pointerLightInvalid = false;
 #if UNITY_WEBGL && !UNITY_EDITOR
             const bool consumeFirstClick = true;
 #else
@@ -47,8 +48,7 @@ namespace TiffanyGame
             RunOverride = null;
             AimOverride = null;
             InteractOverride = null;
-            LightToggleOverride = null;
-            FlashOverride = null;
+            LightHeldOverride = null;
             KindleOverride = null;
             PoltergeistOverride = null;
             FadeOverride = null;
@@ -59,6 +59,7 @@ namespace TiffanyGame
 
         static void UpdateKeyboard()
         {
+            UpdatePointerLight();
             var keyboard = Keyboard.current;
             bool pressed = keyboard != null && CommandHeld(keyboard);
             if (commandWasPressed && !pressed && keyboard != null) InputSystem.ResetDevice(keyboard);
@@ -68,6 +69,11 @@ namespace TiffanyGame
         static void ResetKeyboardOnFocus(bool focused)
         {
             focusClickFilter.SetFocus(focused, Time.realtimeSinceStartup);
+            if (!focused)
+            {
+                pointerLightHeld = false;
+                pointerLightInvalid = Mouse.current?.leftButton.isPressed == true;
+            }
             if (!focused) return;
             var keyboard = Keyboard.current;
             if (keyboard != null) InputSystem.ResetDevice(keyboard);
@@ -121,7 +127,8 @@ namespace TiffanyGame
             (KeyHeld(Key.LeftCtrl) || KeyHeld(Key.RightCtrl) || Gamepad.current?.leftTrigger.isPressed == true);
 
         public static bool Run => RunOverride ??
-            (KeyHeld(Key.LeftShift) || KeyHeld(Key.RightShift) || Gamepad.current?.leftStickButton.isPressed == true);
+            (KeyHeld(Key.LeftShift) || KeyHeld(Key.RightShift) || Gamepad.current?.leftStickButton.isPressed == true
+                || Gamepad.current?.rightTrigger.isPressed == true);
 
         public static Vector2 PointerPosition => Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
 
@@ -138,12 +145,27 @@ namespace TiffanyGame
             }
         }
 
-        public static bool LightTogglePressed => LightToggleOverride ??
-            ((Time.frameCount > pointerConsumedThroughFrame && focusClickFilter.Accept(PointerPressed, Time.realtimeSinceStartup)) ||
-            Gamepad.current?.buttonNorth.wasPressedThisFrame == true);
+        public static bool LightHeld
+        {
+            get
+            {
+                if (LightHeldOverride.HasValue) return LightHeldOverride.Value;
+                UpdatePointerLight();
+                return pointerLightHeld || KeyHeld(Key.F) || Gamepad.current?.buttonNorth.isPressed == true;
+            }
+        }
 
-        public static bool FlashPressed => FlashOverride ??
-            (KeyPressed(Key.F) || Gamepad.current?.rightTrigger.wasPressedThisFrame == true);
+        static void UpdatePointerLight()
+        {
+            if (Mouse.current?.leftButton.isPressed != true)
+                pointerLightHeld = pointerLightInvalid = false;
+            else if (!pointerLightHeld && !pointerLightInvalid)
+            {
+                pointerLightHeld = Time.frameCount > pointerConsumedThroughFrame
+                    && focusClickFilter.Accept(true, Time.realtimeSinceStartup);
+                pointerLightInvalid = !pointerLightHeld;
+            }
+        }
 
         public static bool KindlePressed => KindleOverride ??
             (KeyPressed(Key.Q) || Gamepad.current?.buttonWest.wasPressedThisFrame == true);
@@ -176,6 +198,8 @@ namespace TiffanyGame
             if (!PointerPressed) return;
             focusClickFilter.Accept(true, Time.realtimeSinceStartup);
             pointerConsumedThroughFrame = Time.frameCount + 1;
+            pointerLightHeld = false;
+            pointerLightInvalid = true;
         }
 
         public static bool TitlePreviousPressed => KeyPressed(Key.W) || KeyPressed(Key.UpArrow)

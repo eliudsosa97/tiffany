@@ -723,9 +723,28 @@ namespace TiffanyGame.EditorTools
             baseGlow.intensity = 1.2f;
             baseGlow.shadows = LightShadows.None;
             baseGlow.renderMode = LightRenderMode.Auto;
+            var burstLight = new GameObject("Flash Burst").AddComponent<Light>();
+            burstLight.transform.SetParent(player.transform, false);
+            burstLight.transform.localPosition = Vector3.up;
+            burstLight.type = LightType.Point;
+            burstLight.color = baseGlow.color;
+            burstLight.range = FlashCharge.BurstRadius;
+            burstLight.intensity = 70f;
+            burstLight.shadows = LightShadows.None;
+            burstLight.enabled = false;
+            var flashAudio = player.AddComponent<AudioSource>();
+            flashAudio.playOnAwake = false;
+            flashAudio.spatialBlend = 0f;
             playerLight = player.AddComponent<PlayerLight>();
             playerLight.spot = spot;
             playerLight.baseGlow = baseGlow;
+            playerLight.burstLight = burstLight;
+            playerLight.visual = body.transform;
+            playerLight.flashAudio = flashAudio;
+            playerLight.chargeClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/flash_charge.wav");
+            playerLight.burstClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sfx/flash_burst.wav");
+            if (playerLight.chargeClip == null || playerLight.burstClip == null)
+                Debug.LogError($"{GameInfo.LogPrefix} Faltan los clips flash_charge o flash_burst.");
             playerLight.bodyRenderers = body.GetComponentsInChildren<Renderer>(true);
             playerLight.bodyGlowBoost = 1.2f;
             playerLight.startOn = false;

@@ -66,11 +66,11 @@ namespace TiffanyGame.Tests
             if (ui.HasContinue) InputState.Change(mouse.position, RectTransformUtility.WorldToScreenPoint(null, ui.continueOption.rectTransform.position));
             InputState.Change(mouse.leftButton, 1f);
             ui.SendMessage("Update");
-            GameInput.FlashOverride = true;
+            GameInput.LightHeldOverride = true;
             light.SendMessage("Update");
-            GameInput.FlashOverride = false;
+            GameInput.LightHeldOverride = null;
             Assert.That(light.State.IsFlashing, Is.False);
-            Assert.IsFalse(light.State.IsOn || GameInput.LightTogglePressed);
+            Assert.IsFalse(light.State.IsOn || GameInput.LightHeld);
             Assert.That((ui.IsFrozen, Time.timeScale, AudioListener.pause), Is.EqualTo((true, 0f, true)));
             yield return null;
 
@@ -83,7 +83,7 @@ namespace TiffanyGame.Tests
             ui.StartGame();
             Assert.That(ui.IsFrozen, Is.False);
             light.GetComponent<PlayerSoul>().Powers.Unlock(Power.Light);
-            Assert.IsFalse(light.State.IsOn || GameInput.LightTogglePressed);
+            Assert.IsFalse(light.State.IsOn || GameInput.LightHeld);
             for (int screen = 0; screen < 4; screen++)
             {
                 InputState.Change(mouse.leftButton, 0f);
@@ -93,13 +93,22 @@ namespace TiffanyGame.Tests
                 if (screen < 2) ui.SendMessage("Update");
                 if (screen % 2 == 0) ui.TogglePause(); else ui.ToggleNotebook();
                 light.SendMessage("Update");
-                Assert.IsFalse(light.State.IsOn || GameInput.LightTogglePressed);
+                Assert.IsFalse(light.State.IsOn || GameInput.LightHeld);
                 yield return null;
-                Assert.IsFalse(light.State.IsOn || GameInput.LightTogglePressed);
+                Assert.IsFalse(light.State.IsOn || GameInput.LightHeld);
+                yield return null;
+                Assert.IsFalse(light.State.IsOn || GameInput.LightHeld);
+                InputState.Change(mouse.leftButton, 0f);
+                yield return null;
+                Assert.IsFalse(light.State.IsOn);
             }
             InputState.Change(mouse.leftButton, 0f);
             yield return null;
             InputState.Change(mouse.leftButton, 1f);
+            light.SendMessage("Update");
+            Assert.IsTrue(GameInput.LightHeld);
+            Assert.IsFalse(light.State.IsOn);
+            InputState.Change(mouse.leftButton, 0f);
             light.SendMessage("Update");
             Assert.IsTrue(light.State.IsOn);
         }

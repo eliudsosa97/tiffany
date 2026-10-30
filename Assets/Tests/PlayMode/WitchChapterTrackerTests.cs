@@ -21,7 +21,7 @@ namespace TiffanyGame.Tests
             Time.timeScale = 1f;
             AudioListener.pause = false;
             GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
-            GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = GameInput.FlashOverride = false;
+            GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = GameInput.LightHeldOverride = false;
             yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Single);
             yield return null;
             foreach (var heartbeat in Object.FindObjectsByType<Heartbeat>(FindObjectsSortMode.None)) heartbeat.enabled = false;

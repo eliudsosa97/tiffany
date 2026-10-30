@@ -41,10 +41,10 @@ namespace TiffanyGame
             return IsOn;
         }
 
-        public bool TryFlash(bool witchGrounded, bool witchInCone, bool lineOfSight, out bool stunsWitch)
+        public bool TryFlash(bool witchGrounded, bool witchInRange, bool lineOfSight, out bool stunsWitch)
         {
             stunsWitch = false;
-            if (hidden || !PowerRules.TryFlash(powers, energy, witchGrounded, witchInCone, out stunsWitch)) return false;
+            if (hidden || !PowerRules.TryFlash(powers, energy, witchGrounded, witchInRange, out stunsWitch)) return false;
             stunsWitch &= lineOfSight;
             FlashRemaining = FlashDuration;
             return true;
