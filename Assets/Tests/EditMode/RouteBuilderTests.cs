@@ -393,13 +393,12 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(0.6f, mesh.vertices[24].z - mesh.vertices[0].z, 0.001f);
             Assert.AreEqual(0.22f, Mathf.Abs(mesh.vertices[4].z - mesh.vertices[0].z), 0.001f);
             Assert.IsTrue(AssetDatabase.Contains(mesh));
-            Assert.AreSame(mesh, sleepers.GetComponent<MeshCollider>().sharedMesh);
+            Assert.IsNull(sleepers.GetComponent<Collider>());
             var ballast = tracks.Find("Ballast").GetComponent<BoxCollider>();
             Assert.AreEqual(RouteLayout.TrainWidth, ballast.bounds.size.x, 0.001f);
             Assert.AreEqual(14f, ballast.bounds.size.z, 0.001f);
             Assert.AreEqual(TerrainBuilder.FloorOffset + 0.1f, ballast.bounds.max.y - tracks.position.y, 0.001f);
             Assert.AreEqual(GroundType.Gravel, GroundSurface.TypeOf(ballast));
-            Assert.AreEqual(GroundType.Gravel, GroundSurface.TypeOf(sleepers.GetComponent<Collider>()));
             Assert.AreEqual(ballast.bounds.max.y, sleepers.GetComponent<Renderer>().bounds.min.y, 0.001f);
             Assert.LessOrEqual(tracks.GetComponentsInChildren<Renderer>().Length, 6);
         }

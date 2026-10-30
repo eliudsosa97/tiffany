@@ -271,8 +271,6 @@ namespace TiffanyGame.EditorTools
             }
             var mesh = TerrainBuilder.SaveMesh("Track Sleepers", vertices.ToArray(), triangles.ToArray());
             var sleepers = TerrainBuilder.MeshObject("Sleepers", tracks, mesh, wood);
-            sleepers.AddComponent<MeshCollider>().sharedMesh = mesh;
-            sleepers.AddComponent<GroundSurface>().type = GroundType.Gravel;
             for (int side = -1; side <= 1; side += 2)
             {
                 Rail($"Rail Foot {side}", 0.14f, 0.03f, floor + 0.255f);
