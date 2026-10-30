@@ -46,6 +46,7 @@ namespace TiffanyGame.EditorTools
             BakeNavMesh(world);
             playerLight.witch = BuildWitch(route.GetChild(0), player.transform, testZone, skyRoute,
                 viewCamera.GetComponent<FollowCamera>());
+            ApparitionBuilder.BuildApparitions(route, player.transform, playerLight.witch, playerLight);
             route.GetComponent<WitchChapterTracker>().witch = playerLight.witch;
             storm.witch = playerLight.witch;
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
