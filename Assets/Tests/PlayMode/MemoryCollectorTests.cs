@@ -128,7 +128,8 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(collector.Collect(1));
             Assert.IsFalse(collector.Collect(1));
             Assert.IsTrue(collector.soul.Powers.Has(Power.Light));
-            Assert.AreEqual(InterfaceTexts.PowerNotice(Power.Light), ui.noticeText.text);
+            Assert.AreEqual(InterfaceTexts.ControllerText(InterfaceTexts.PowerNotice(Power.Light),
+                GameInterface.HasControllerSymbols(ui.noticeText.font)), ui.noticeText.text);
             Assert.AreSame(collector.spots[1].transform, collector.tyler.nextMemory);
             Assert.IsFalse(collector.spots[0].visual.activeSelf);
             Assert.AreEqual(6, collector.spots.Length);
@@ -144,7 +145,8 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(collector.Collect(MemoryProgress.BallId));
             Assert.IsTrue(collector.tyler.NearPlayer);
             Assert.AreEqual(powersBeforeBall, collector.soul.Powers.Count);
-            Assert.AreEqual(InterfaceTexts.PowerNotice(Power.Light), ui.noticeText.text);
+            Assert.AreEqual(InterfaceTexts.ControllerText(InterfaceTexts.PowerNotice(Power.Light),
+                GameInterface.HasControllerSymbols(ui.noticeText.font)), ui.noticeText.text);
             Assert.AreEqual(echoBeforeBall, collector.echoVolume.weight);
             Assert.AreSame(collector.spots[0].echoPlayer, collector.ActiveEcho);
             Assert.IsTrue(collector.ActiveEcho.IsPlaying);

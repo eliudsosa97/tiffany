@@ -15,6 +15,7 @@ namespace TiffanyGame
             Clear();
             panic = player.GetComponent<PanicController>();
             if (panic == null) return;
+            player.GetComponent<PlayerSoul>().Powers.Unlock(Power.Light);
             panic.Model.ResetTo(level);
             if (!panic.playerLight.State.IsOn) panic.playerLight.Toggle();
             if (panic.tyler != null)

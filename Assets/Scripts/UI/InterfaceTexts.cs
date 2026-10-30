@@ -9,12 +9,17 @@ namespace TiffanyGame
         public const string Continue = "Continuar";
         public const string NewGame = "Nueva partida";
         public const string Controls = "WASD / stick izquierdo  moverte\n"
-            + "Shift / L3  correr · Ctrl / L2  despacio\n"
             + "Ratón / stick derecho  apuntar la luz\n"
-            + "F o clic derecho / Triángulo  luz · Clic izquierdo / R2  destello\n"
-            + "Q / Cuadrado  veladora · E / Círculo  mover · R / R1  desvanecerte\n"
+            + "Shift / L3  correr\n"
+            + "Ctrl / L2  despacio\n"
+            + "Clic / Triángulo  prender la luz\n"
+            + "F / R2  destello\n"
+            + "Q / Cuadrado  encender veladora\n"
+            + "E / Círculo  mover objeto\n"
+            + "R / R1  desvanecerte\n"
             + "Espacio / Equis  esconderte y recoger\n"
-            + "Tab / Create  cuaderno · Esc o P / Options  pausa";
+            + "Tab / Create  cuaderno\n"
+            + "Esc o P / Options  pausa";
         public const string PauseTitle = "Pausa";
         public const string PauseHint = "Esc, P u Options para seguir";
         public const string NotebookEmpty = "Aún no recuerdas nada";
@@ -42,6 +47,9 @@ namespace TiffanyGame
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
+        public static string ControllerText(string text, bool hasSymbols) => hasSymbols ? text :
+            text.Replace("△", "Triángulo").Replace("□", "Cuadrado").Replace("○", "Círculo").Replace("✕", "Equis");
+
         // Provisional: lo aprueba Eliud.
         public const string EndingStory = "Su familia la vio una última vez. Tiffany pudo descansar.";
         public const string EndingCredits = "Gracias por jugar\n\nEliud Sosa y Claudia.\n\nTyler, el perro del juego, es un perro real.";
@@ -50,8 +58,8 @@ namespace TiffanyGame
         {
             switch (power)
             {
-                case Power.Light: return "F o clic derecho / Triángulo: prende o apaga tu luz.\n"
-                    + "Clic izquierdo / R2: destello para cegar a la bruja en el suelo y escapar.";
+                case Power.Light: return "Clic / Triángulo: prende o apaga tu luz.\n"
+                    + "F / R2: destello para cegar a la bruja en el suelo y escapar.";
                 case Power.Candles: return "Q / Cuadrado: enciende una veladora apagada cercana.\n"
                     + "Su luz te protege de la bruja por un tiempo.";
                 case Power.Poltergeist: return "E / Círculo: mueve un objeto iluminado a 12 m o menos.\n"

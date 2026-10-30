@@ -97,8 +97,8 @@ namespace TiffanyGame.Tests
             Assert.That(flow.IsFrozen, Is.EqualTo(frozen));
         }
 
-        [TestCase(Power.Light, "F o clic derecho / Triángulo", "prende o apaga")]
-        [TestCase(Power.Light, "Clic izquierdo / R2", "cegar")]
+        [TestCase(Power.Light, "Clic / Triángulo", "prende o apaga")]
+        [TestCase(Power.Light, "F / R2", "cegar")]
         [TestCase(Power.Candles, "Q / Cuadrado", "protege")]
         [TestCase(Power.Poltergeist, "E / Círculo", "distrae")]
         [TestCase(Power.Vanish, "R / R1", "pierde tu rastro")]
@@ -110,12 +110,32 @@ namespace TiffanyGame.Tests
                 .And.Not.Contain("○").And.Not.Contain("✕"));
         }
 
+        [TestCase("WASD / stick izquierdo  moverte")]
+        [TestCase("Ratón / stick derecho  apuntar la luz")]
+        [TestCase("Shift / L3  correr")]
+        [TestCase("Ctrl / L2  despacio")]
+        [TestCase("Clic / Triángulo  prender la luz")]
+        [TestCase("F / R2  destello")]
+        [TestCase("Q / Cuadrado  encender veladora")]
+        [TestCase("E / Círculo  mover objeto")]
+        [TestCase("R / R1  desvanecerte")]
+        [TestCase("Espacio / Equis  esconderte y recoger")]
+        [TestCase("Tab / Create  cuaderno")]
+        [TestCase("Esc o P / Options  pausa")]
+        public void ControlsDescribeEachKeyboardAndDualSenseAction(string line) =>
+            CollectionAssert.Contains(InterfaceTexts.Controls.Split('\n'), line);
+
+        [TestCase(true, "△ □ ○ ✕")]
+        [TestCase(false, "Triángulo Cuadrado Círculo Equis")]
+        public void UnsupportedControllerSymbolsUseNames(bool hasSymbols, string expected) =>
+            Assert.AreEqual(expected, InterfaceTexts.ControllerText("△ □ ○ ✕", hasSymbols));
+
         [Test]
         public void WakeHintExplainsTheYellowBirds() =>
             Assert.That(InterfaceTexts.WakeHint, Is.EqualTo("Sigue a los pájaros amarillos."));
 
-        [TestCase("F o clic derecho / Triángulo")]
-        [TestCase("Clic izquierdo / R2")]
+        [TestCase("Clic / Triángulo")]
+        [TestCase("F / R2")]
         [TestCase("Q / Cuadrado")]
         [TestCase("E / Círculo")]
         [TestCase("R / R1")]

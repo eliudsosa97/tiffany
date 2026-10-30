@@ -141,7 +141,6 @@ namespace TiffanyGame.Tests
         {
             var player = GameObject.FindGameObjectWithTag("Player");
             var tyler = Object.FindAnyObjectByType<TylerController>(FindObjectsInactive.Include);
-            var light = player.GetComponent<PlayerLight>();
             foreach (var figure in new[] { player.transform, tyler.figure.transform })
             {
                 var renderers = figure.GetComponentsInChildren<Renderer>(true);
@@ -149,7 +148,7 @@ namespace TiffanyGame.Tests
                 foreach (var renderer in renderers)
                 {
                     var materials = renderer.sharedMaterials;
-                    if (renderer is ParticleSystemRenderer || renderer.transform.IsChildOf(light.glow)
+                    if (renderer is ParticleSystemRenderer
                         || renderer.GetComponentInParent<Light>(true) != null)
                     {
                         foreach (var material in materials)
@@ -328,7 +327,7 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(playerLight.spot);
             Assert.AreSame(playerLight.spot, poltergeist.handLight);
             Assert.IsFalse(soul.Powers.Has(Power.Poltergeist));
-            Assert.IsTrue(soul.Powers.Has(Power.Light));
+            Assert.IsFalse(soul.Powers.Has(Power.Light));
 
             var objects = MovableObject.Active;
             Assert.AreEqual(6, objects.Count, "Cuatro objetos originales y dos campanas de los retos.");
@@ -354,6 +353,7 @@ namespace TiffanyGame.Tests
             }
 
             soul.Powers.Unlock(Power.Poltergeist);
+            soul.Powers.Unlock(Power.Light);
             float expectedEnergy = soul.Energy.Current - 15f;
             playerLight.Toggle();
             yield return null;
@@ -371,15 +371,16 @@ namespace TiffanyGame.Tests
             var animation = player.GetComponent<TiffanyAnimator>();
             var animator = animation.animator;
             var light = player.GetComponent<PlayerLight>();
+            player.GetComponent<PlayerSoul>().Powers.Unlock(Power.Light);
             light.Toggle();
             yield return new WaitForSeconds(0.3f);
-            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.CarryLight"));
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Empty"));
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello");
             Assert.IsTrue(light.TryFlash());
             yield return new WaitForSeconds(0.15f);
             Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Flash"));
             yield return new WaitForSeconds(animation.flashDuration + TiffanyAnimation.CarryLightBlend);
-            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.CarryLight"));
+            Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Empty"));
 
             var hiding = player.GetComponent<PlayerHiding>();
             var hide = GameObject.Find("Test Zone").transform.Find("Hide Test").GetComponent<HideVolume>();

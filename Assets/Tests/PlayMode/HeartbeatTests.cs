@@ -35,8 +35,6 @@ namespace TiffanyGame.Tests
             light = player.AddComponent<PlayerLight>();
             light.spot = new GameObject("Light").AddComponent<Light>();
             light.spot.transform.SetParent(player.transform, false);
-            light.glow = new GameObject("Glow").transform;
-            light.glow.SetParent(player.transform, false);
             light.startOn = true;
             panic = player.AddComponent<PanicController>();
             panic.playerLight = light;
