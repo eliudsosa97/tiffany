@@ -19,6 +19,8 @@ namespace TiffanyGame
 
         public bool Charging { get; private set; }
         public float Progress { get; private set; }
+        public bool Attempting => wasHeld && !burst && heldSeconds >= TapSeconds;
+        public float AttemptProgress => Mathf.InverseLerp(TapSeconds, ChargeSeconds, heldSeconds);
         public float FloatOffset { get; private set; }
         public float MoveScale => Charging ? ChargeMoveScale : 1f;
 
