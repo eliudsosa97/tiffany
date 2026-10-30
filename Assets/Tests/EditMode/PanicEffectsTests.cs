@@ -205,5 +205,8 @@ namespace TiffanyGame.Tests
 
         private static int CueCount(PanicCues cues) =>
             (cues.FakeStep ? 1 : 0) + (cues.Whisper ? 1 : 0) + (cues.Sob ? 1 : 0);
+
+        [Test]
+        public void CuesPlayBelowFullVolume() => Assert.AreEqual(0.6f, PanicEffects.CueVolume);
     }
 }

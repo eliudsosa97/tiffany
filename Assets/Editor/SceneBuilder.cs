@@ -485,7 +485,7 @@ namespace TiffanyGame.EditorTools
             tension.oneShot = root.AddComponent<AudioSource>();
             (tension.oneShot.playOnAwake, tension.oneShot.spatialBlend) = (false, 0f);
             tension.phantomSteps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
-            tension.branchSnaps = new[] { LoadClip("step_branches_1"), LoadClip("step_branches_2"), LoadClip("step_branches_3"), LoadClip("step_branches_4") };
+            tension.branchSnaps = new[] { LoadClip("branch_snap_1"), LoadClip("branch_snap_2"), LoadClip("branch_snap_3"), LoadClip("branch_snap_4") };
             tension.skyFire = LoadClip("fireball");
             var decoy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             decoy.name = "Sky Decoy";
@@ -513,7 +513,7 @@ namespace TiffanyGame.EditorTools
             forest.source.spatialBlend = 0.85f;
             forest.source.rolloffMode = AudioRolloffMode.Linear;
             (forest.source.minDistance, forest.source.maxDistance, forest.source.dopplerLevel) = (36f, 80f, 0f);
-            forest.branches = new[] { LoadClip("step_branches_1"), LoadClip("step_branches_2"), LoadClip("step_branches_3"), LoadClip("step_branches_4") };
+            forest.branches = new[] { LoadClip("branch_snap_1"), LoadClip("branch_snap_2"), LoadClip("branch_snap_3"), LoadClip("branch_snap_4") };
             forest.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
             forest.whispers = new[] { LoadClip("whisper_1"), LoadClip("whisper_2"), LoadClip("whisper_3") };
             forest.knocks = new[] { LoadClip("forest_knock_1"), LoadClip("forest_knock_2"), LoadClip("forest_knock_3") };

@@ -76,7 +76,7 @@ namespace TiffanyGame
             AudioClip clip = clips[Random.Range(0, clips.Length)];
             if (clip == null) return;
             cueSource.panStereo = pan;
-            cueSource.PlayOneShot(clip);
+            cueSource.PlayOneShot(clip, PanicEffects.CueVolume);
         }
 
         private void OnDisable()
