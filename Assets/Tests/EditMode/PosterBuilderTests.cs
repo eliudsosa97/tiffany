@@ -136,6 +136,10 @@ namespace TiffanyGame.Tests
             float nearest = float.PositiveInfinity;
             foreach (var renderer in renderers)
             {
+                var texture = renderer.sharedMaterial.mainTexture;
+                Assert.AreEqual(0.6f, renderer.transform.localScale.y);
+                Assert.AreEqual(0.6f * texture.width / texture.height, renderer.transform.localScale.x, 0.0001f);
+                Assert.AreEqual(0.6f * 711f / 1024f, renderer.transform.localScale.x, 0.0001f);
                 Vector3 position = renderer.transform.localPosition;
                 float distance = RouteTerrain.RectangleDistance(new Vector2(position.x, position.z), terrain.Road);
                 if (distance >= nearest) continue;
