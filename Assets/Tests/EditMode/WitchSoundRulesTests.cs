@@ -25,6 +25,16 @@ namespace TiffanyGame.Tests
         [TestCase(-1f, 1f)] [TestCase(5f, 1f)] [TestCase(17.5f, 0.5f)]
         [TestCase(30f, 0f)] [TestCase(float.PositiveInfinity, 0f)]
         public void VolumeClampsAtEdges(float distance, float expected) => Assert.AreEqual(expected, WitchSoundRules.Volume(distance, 5f, 30f));
+        [TestCase(0f, 0.3f)] [TestCase(5f, 0.3f)] [TestCase(10f, 0.15f)]
+        [TestCase(14f, 0.03f)] [TestCase(15f, 0f)] [TestCase(30f, 0f)]
+        public void StepsMatchTiffanyWalkingVolumeAndFadeOutAtFifteenMeters(float distance, float expected)
+        {
+            rules.Tick(1f, new WitchDecision { Form = WitchForm.Grounded, State = WitchState.Stalking, Speed = 1.2f }, distance);
+            var sounds = new FootstepSounds(new[] { 4, 4, 4, 4, 4, 4 });
+            float walkingVolume = sounds.Choose(GroundType.Dirt, Gait.Walk, 0f).Volume;
+            Assert.AreEqual(expected, walkingVolume * rules.StepAttenuation, 1e-6f);
+            Assert.AreEqual(WitchSoundRules.Volume(distance, 5f, 30f), rules.OneShotVolume);
+        }
         [TestCase(WitchState.Landing, WitchState.Stalking)] [TestCase(WitchState.Landing, WitchState.Recovering)]
         [TestCase(WitchState.Landing, WitchState.WindUp)]
         [TestCase(WitchState.Stalking, WitchState.WindUp)]
@@ -42,21 +52,20 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(HasEvent);
         }
         [TestCase(1.2f)] [TestCase(2.5f)]
-        public void StepsUseIrregularIntervalsAndClipOrderAndStopAtZeroSpeed(float speed)
+        public void StepsUseIrregularIntervalsAndStopAtZeroSpeed(float speed)
         {
             var decision = new WitchDecision { Form = WitchForm.Grounded, State = WitchState.Stalking };
             rules.Tick(100f, decision, 0f);
             Assert.IsFalse(rules.Step);
             decision.Speed = speed;
             float[] factors = { 0.85f, 1.2f, 0.95f, 1.1f };
-            int[] clips = { 0, 2, 1, 3 };
             for (int i = 0; i < 8; i++)
             {
                 float interval = WitchSoundRules.StepInterval * WitchSoundRules.StepReferenceSpeed / speed * factors[i % 4];
                 rules.Tick(interval / 2f, decision, 0f);
                 Assert.IsFalse(rules.Step);
                 rules.Tick(interval / 2f, decision, 0f);
-                Assert.AreEqual((true, clips[i % 4]), (rules.Step, rules.StepClip));
+                Assert.IsTrue(rules.Step);
             }
             decision.Speed = 0f;
             rules.Tick(100f, decision, 0f);

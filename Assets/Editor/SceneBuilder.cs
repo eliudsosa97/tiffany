@@ -426,7 +426,7 @@ namespace TiffanyGame.EditorTools
             audio.fireLoop.clip = LoadClip("fireball");
             audio.breathLoop.clip = LoadClip("witch_breath");
             (audio.land, audio.crack, audio.whoosh) = (LoadClip("witch_land"), LoadClip("witch_crack"), LoadClip("witch_whoosh"));
-            audio.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
+            audio.footsteps = player.GetComponent<PlayerFootsteps>();
             audio.cackles = new[] { LoadClip("cackle_1"), LoadClip("cackle_2"), LoadClip("cackle_3") };
             var presence = witch.gameObject.AddComponent<WitchPresence>();
             (presence.witch, presence.player, presence.view) = (witch, player, view);
@@ -493,7 +493,7 @@ namespace TiffanyGame.EditorTools
             tension.challenges = tracker.GetComponentsInChildren<PowerChallenge>(true);
             tension.oneShot = root.AddComponent<AudioSource>();
             (tension.oneShot.playOnAwake, tension.oneShot.spatialBlend) = (false, 0f);
-            tension.phantomSteps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
+            tension.phantomSteps = LoadSteps("step");
             tension.branchSnaps = new[] { LoadClip("branch_snap_1"), LoadClip("branch_snap_2"), LoadClip("branch_snap_3"), LoadClip("branch_snap_4") };
             tension.skyFire = LoadClip("fireball");
             var decoy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -523,7 +523,7 @@ namespace TiffanyGame.EditorTools
             forest.source.rolloffMode = AudioRolloffMode.Linear;
             (forest.source.minDistance, forest.source.maxDistance, forest.source.dopplerLevel) = (36f, 80f, 0f);
             forest.branches = new[] { LoadClip("branch_snap_1"), LoadClip("branch_snap_2"), LoadClip("branch_snap_3"), LoadClip("branch_snap_4") };
-            forest.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
+            forest.steps = LoadSteps("step");
             forest.whispers = new[] { LoadClip("whisper_1"), LoadClip("whisper_2"), LoadClip("whisper_3") };
             var names = new AudioClip[4];
             int count = 0;
