@@ -170,7 +170,7 @@ namespace TiffanyGame
             toNext.y = 0f;
             bool canRemind = route.HasNextClearing && !IsFrozen && !notice.IsVisible
                 && RouteGuidance.CanRemind(Screen, showingEcho || (memories != null && memories.IsEchoActive),
-                    chasing, inChallenge);
+                    chasing, inChallenge, memories != null ? memories.Progress : null);
             routeGuidance.Tick(Time.deltaTime, guidanceTerrain.DistanceToRoute(local.x, local.z),
                 route.LastVisitedClearingIndex, toNext.magnitude, canRemind);
             RefreshLines();
@@ -184,7 +184,6 @@ namespace TiffanyGame
             {
                 flow.FinishStory();
                 startFrame = Time.frameCount;
-                notice.Enqueue(InterfaceTexts.WakeHint, InterfaceTexts.PowerNoticeSeconds);
             }
             else
             {
@@ -266,7 +265,6 @@ namespace TiffanyGame
         public void StartGame()
         {
             if (Screen != InterfaceScreen.Title) return;
-            bool continuing = flow.ContinueSelected;
             if (saveGame != null)
             {
                 if (flow.ContinueSelected) saveGame.Continue();
@@ -275,7 +273,6 @@ namespace TiffanyGame
             startFrame = Time.frameCount;
             flow.PressStart(!skipStory);
             if (Screen == InterfaceScreen.Story) story = new StorySequence();
-            else if (!continuing) notice.Enqueue(InterfaceTexts.WakeHint, InterfaceTexts.PowerNoticeSeconds);
             ApplyScreen();
         }
 

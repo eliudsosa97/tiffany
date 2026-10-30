@@ -5,11 +5,15 @@ namespace TiffanyGame.Tests
     public sealed class RouteGuidanceTests
     {
         RouteGuidance guidance;
+        MemoryProgress progress;
 
         [SetUp]
         public void SetUp()
         {
             guidance = new RouteGuidance();
+            progress = new MemoryProgress(new[] { 1, MemoryProgress.BallId, 2, 3, 4, 5 });
+            progress.MarkFound(1);
+            progress.MarkFound(MemoryProgress.BallId);
             guidance.Tick(0f, 0f, 0, 100f, true);
         }
 
@@ -106,7 +110,7 @@ namespace TiffanyGame.Tests
             InterfaceScreen screen, bool echo, bool chasing, bool inChallenge)
         {
             guidance.Tick(0f, 11f, 0, 100f, true);
-            bool allowed = RouteGuidance.CanRemind(screen, echo, chasing, inChallenge);
+            bool allowed = RouteGuidance.CanRemind(screen, echo, chasing, inChallenge, progress);
             Assert.That(allowed, Is.False);
             Assert.That(guidance.Tick(60f, 11f, 0, 100f, allowed), Is.False);
             Assert.That(guidance.IsVisible, Is.False);
@@ -116,7 +120,33 @@ namespace TiffanyGame.Tests
 
         [Test]
         public void ExplorationAllowsReminders() =>
-            Assert.That(RouteGuidance.CanRemind(InterfaceScreen.Playing, false, false, false), Is.True);
+            Assert.That(RouteGuidance.CanRemind(InterfaceScreen.Playing, false, false, false, progress), Is.True);
+
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        public void EarlierObjectivesHideRemindersAndDoNotAccumulateStalledTime(bool grave, bool ball)
+        {
+            guidance.Tick(0f, 11f, 0, 100f, true);
+            Assert.That(guidance.IsVisible, Is.True);
+            progress.Clear();
+            if (grave) progress.MarkFound(1);
+            if (ball) progress.MarkFound(MemoryProgress.BallId);
+            bool allowed = RouteGuidance.CanRemind(InterfaceScreen.Playing, false, false, false, progress);
+            Assert.That(allowed, Is.False);
+            Assert.That(guidance.Tick(60f, 11f, 0, 100f, allowed), Is.False);
+            Assert.That(guidance.IsVisible, Is.False);
+            progress.MarkFound(1);
+            progress.MarkFound(MemoryProgress.BallId);
+            allowed = RouteGuidance.CanRemind(InterfaceScreen.Playing, false, false, false, progress);
+            Assert.That(allowed, Is.True);
+            Assert.That(guidance.Tick(19f, 0f, 0, 100f, allowed), Is.False);
+            Assert.That(guidance.Tick(1f, 0f, 0, 100f, allowed), Is.True);
+        }
+
+        [Test]
+        public void MissingProgressSuppressesReminders() =>
+            Assert.That(RouteGuidance.CanRemind(InterfaceScreen.Playing, false, false, false, null), Is.False);
 
         [TestCase(0f)]
         [TestCase(-20f)]

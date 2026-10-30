@@ -28,6 +28,7 @@ namespace TiffanyGame.Tests
             if (grave) progress.MarkFound(1);
             if (ball) progress.MarkFound(MemoryProgress.BallId);
             Assert.That(GameplayObjective.Text(progress), Is.EqualTo(expected));
+            Assert.That(GameplayObjective.IsFollowingBirds(progress), Is.EqualTo(expected == InterfaceTexts.BirdsObjective));
         }
 
         [Test]
@@ -36,9 +37,12 @@ namespace TiffanyGame.Tests
             var progress = NewProgress();
             foreach (int id in new[] { 1, MemoryProgress.BallId, 2, 3, 4, 5 }) progress.MarkFound(id);
             Assert.That(GameplayObjective.Text(progress), Is.EqualTo(InterfaceTexts.BirdsObjective));
+            Assert.That(GameplayObjective.IsFollowingBirds(progress), Is.True);
             progress.Clear();
             Assert.That(GameplayObjective.Text(progress), Is.EqualTo(InterfaceTexts.GraveObjective));
+            Assert.That(GameplayObjective.IsFollowingBirds(progress), Is.False);
             Assert.That(GameplayObjective.Text(null), Is.EqualTo(InterfaceTexts.GraveObjective));
+            Assert.That(GameplayObjective.IsFollowingBirds(null), Is.False);
         }
     }
 }

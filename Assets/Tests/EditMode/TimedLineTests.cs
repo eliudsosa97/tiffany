@@ -79,13 +79,13 @@ namespace TiffanyGame.Tests
             AssertLine(null, 4);
         }
 
-        [Test] public void WakeAndPowerGuidesWaitTheirFullDurationWithoutOverwriting()
+        [Test] public void PowerGuidesWaitTheirFullDurationWithoutOverwriting()
         {
-            line.Enqueue(InterfaceTexts.WakeHint, InterfaceTexts.PowerNoticeSeconds);
+            line.Enqueue(InterfaceTexts.PowerNotice(Power.Light), InterfaceTexts.PowerNoticeSeconds);
             line.Tick(1f);
             line.Enqueue(InterfaceTexts.PowerNotice(Power.Candles), InterfaceTexts.PowerNoticeSeconds);
             line.Enqueue(InterfaceTexts.PowerNotice(Power.Poltergeist), InterfaceTexts.PowerNoticeSeconds);
-            Assert.That(line.Text, Is.EqualTo(InterfaceTexts.WakeHint));
+            Assert.That(line.Text, Is.EqualTo(InterfaceTexts.PowerNotice(Power.Light)));
             line.Tick(InterfaceTexts.PowerNoticeSeconds - 1f);
             Assert.That(line.Text, Is.EqualTo(InterfaceTexts.PowerNotice(Power.Candles)));
             line.Tick(InterfaceTexts.PowerNoticeSeconds - 0.5f);

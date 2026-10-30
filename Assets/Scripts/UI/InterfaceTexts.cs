@@ -26,7 +26,6 @@ namespace TiffanyGame
         public const string NotebookHint = "A / D o cruceta para pasar de página · Tab o Create para cerrar";
         public const float PowerNoticeSeconds = 7f;
         public const string SoulEnergy = "Energía del alma";
-        public const string WakeHint = "Sigue a los pájaros amarillos.";
         public const string RouteReminder = "Los pájaros amarillos marcan el camino.";
         public const string StoryHint = "Clic, Enter u Options para seguir";
         public const string GraveObjective = "Toca tu lápida (" + GameInput.InteractBinding + ")";
@@ -66,7 +65,7 @@ namespace TiffanyGame
                     + "El ruido distrae a la bruja cuando está en el suelo.";
                 case Power.Vanish: return "R / R1: desvanécete durante 3 segundos.\n"
                     + "La bruja no te ve, oye ni huele y pierde tu rastro.";
-                case Power.Manifest: return "Espacio / Equis: manifiéstate ante tu familia en la capilla.\n"
+                case Power.Manifest: return "Espacio / Equis: manifiéstate ante tu familia en tu casa.\n"
                     + "Solo puedes hacerlo ante los vivos, al final.";
                 default: throw new ArgumentOutOfRangeException(nameof(power));
             }

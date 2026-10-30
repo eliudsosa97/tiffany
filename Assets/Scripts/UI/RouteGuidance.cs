@@ -18,8 +18,10 @@ namespace TiffanyGame
 
         public bool IsVisible => remaining > 0f;
 
-        public static bool CanRemind(InterfaceScreen screen, bool echo, bool chasing, bool inChallenge) =>
-            screen == InterfaceScreen.Playing && !echo && !chasing && !inChallenge;
+        public static bool CanRemind(InterfaceScreen screen, bool echo, bool chasing, bool inChallenge,
+            MemoryProgress progress) =>
+            screen == InterfaceScreen.Playing && !echo && !chasing && !inChallenge
+                && GameplayObjective.IsFollowingBirds(progress);
 
         public bool Tick(float dt, float distanceToRoute, int visitedClearing, float distanceToNext, bool canRemind)
         {

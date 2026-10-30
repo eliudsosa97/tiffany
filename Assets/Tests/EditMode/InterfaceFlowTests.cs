@@ -102,7 +102,7 @@ namespace TiffanyGame.Tests
         [TestCase(Power.Candles, "Q / Cuadrado", "protege")]
         [TestCase(Power.Poltergeist, "E / Círculo", "distrae")]
         [TestCase(Power.Vanish, "R / R1", "pierde tu rastro")]
-        [TestCase(Power.Manifest, "Espacio / Equis", "familia en la capilla")]
+        [TestCase(Power.Manifest, "Espacio / Equis", "manifiéstate ante tu familia en tu casa")]
         public void PowerNoticeExplainsControlsAndPurpose(Power power, string controls, string purpose)
         {
             Assert.That(InterfaceTexts.PowerNotice(power), Does.Contain(controls).And.Contain(purpose));
@@ -129,10 +129,6 @@ namespace TiffanyGame.Tests
         [TestCase(false, "Triángulo Cuadrado Círculo Equis")]
         public void UnsupportedControllerSymbolsUseNames(bool hasSymbols, string expected) =>
             Assert.AreEqual(expected, InterfaceTexts.ControllerText("△ □ ○ ✕", hasSymbols));
-
-        [Test]
-        public void WakeHintExplainsTheYellowBirds() =>
-            Assert.That(InterfaceTexts.WakeHint, Is.EqualTo("Sigue a los pájaros amarillos."));
 
         [TestCase("Clic / Triángulo")]
         [TestCase("F / R2")]
