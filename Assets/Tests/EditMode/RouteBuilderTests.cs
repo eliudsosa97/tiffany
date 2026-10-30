@@ -575,9 +575,9 @@ namespace TiffanyGame.Tests
             Assert.IsNotNull(fog);
             Assert.IsFalse(fog.transform.IsChildOf(route));
             Assert.AreSame(player.transform, fog.player);
-            Assert.AreEqual(108, fog.layers.Length, "16 de claros, 54 del sendero, 8 del bosque embrujado y 30 de agua.");
-            Assert.AreEqual(108, fog.GetComponentsInChildren<Renderer>().Length);
-            Assert.AreEqual(30, System.Array.FindAll(fog.layers, layer => layer.water).Length);
+            Assert.AreEqual(100, fog.layers.Length, "16 de claros, 54 del sendero, 8 del bosque embrujado y 22 de agua.");
+            Assert.AreEqual(100, fog.GetComponentsInChildren<Renderer>().Length);
+            Assert.AreEqual(22, System.Array.FindAll(fog.layers, layer => layer.water).Length);
             Assert.IsEmpty(fog.GetComponentsInChildren<Collider>());
             Assert.IsEmpty(fog.GetComponentsInChildren<Light>());
             foreach (var layer in fog.layers)
@@ -919,7 +919,7 @@ namespace TiffanyGame.Tests
             var water = lake.Find("Water");
             Assert.IsNull(water.GetComponent<Collider>());
             Assert.Greater(water.GetComponent<Renderer>().bounds.size.x, 100f);
-            Assert.Greater(water.GetComponent<Renderer>().bounds.size.z, 90f);
+            Assert.Greater(water.GetComponent<Renderer>().bounds.size.z, 60f);
             Assert.IsTrue(HitsRoute(water.position + Vector3.up * 2f, Vector3.down, 7f));
             var terrain = new RouteTerrain();
             var mesh = water.GetComponent<MeshFilter>().sharedMesh;
@@ -1057,6 +1057,12 @@ namespace TiffanyGame.Tests
             }
             var lakeStop = route.GetChild(5).Find("Water 1 Lake");
             Assert.Less(Vector3.Distance(lakeStop.GetComponent<CaptureStop>().cameraPosition, lake.position), 80f);
+            var capture = lakeStop.GetComponent<CaptureStop>();
+            var view = new Ray(capture.cameraPosition, capture.cameraRotation * Vector3.forward);
+            Assert.IsTrue(new Plane(Vector3.up, lake.position).Raycast(view, out float distance));
+            Vector3 focus = route.InverseTransformPoint(view.GetPoint(distance));
+            Assert.Less(new RouteTerrain().LakeDistance(focus.x, focus.z), 0f, "La cámara fija encuadra el agua.");
+            Assert.IsTrue(HitsRoute(lakeStop.position + Vector3.up, Vector3.down, 1.1f));
             var riverStop = river.parent.Find("Water 2 Crossing");
             foreach (var stop in new[] { lakeStop, riverStop })
             {
