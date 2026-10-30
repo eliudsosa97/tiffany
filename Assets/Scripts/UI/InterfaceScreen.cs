@@ -7,6 +7,7 @@ namespace TiffanyGame
         Notebook,
         Ending,
         Title,
-        Story
+        Story,
+        Memory
     }
 }

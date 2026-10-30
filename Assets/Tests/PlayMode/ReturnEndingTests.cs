@@ -42,6 +42,7 @@ namespace TiffanyGame.Tests
             respawn = soul.GetComponent<PlayerRespawn>();
             witch = collector.tyler.witch;
             ui = collector.gameInterface;
+            ui.LoadMemories(System.Array.Empty<TextAsset>(), System.Array.Empty<Texture2D>());
             route = GameObject.Find("Route").transform;
             Assert.IsNotNull(respawn);
             Assert.AreSame(witch, respawn.witch);

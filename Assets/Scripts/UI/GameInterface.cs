@@ -11,6 +11,7 @@ namespace TiffanyGame
     {
         public static bool SkipTitle;
 
+        public AudioSource memoryMusic;
         public TextAsset[] memoryAssets;
         public Texture2D[] drawings;
         public GameObject titlePanel;
@@ -29,6 +30,8 @@ namespace TiffanyGame
         public Text[] pauseOptions = Array.Empty<Text>();
         public PlayerRespawn playerRespawn;
         public GameObject notebookPanel;
+        public Image notebookBackground;
+        public Text notebookHint;
         public RawImage drawingImage;
         public AspectRatioFitter drawingFitter;
         public Text notebookTitle;
@@ -47,8 +50,6 @@ namespace TiffanyGame
         NotebookPages pages;
         TimedLine notice;
         TimedLine subtitle;
-        TimedLine echoSubtitle;
-        bool showingEcho;
         InterfaceScreen? appliedScreen;
         bool? appliedFrozen;
         bool pageDirty = true;
@@ -56,6 +57,9 @@ namespace TiffanyGame
         int subtitleVersion = -1;
         int startFrame = -1;
         SaveGame saveGame;
+        MemorySlideshow slideshow;
+        EchoPlayer memoryAudio;
+        bool memoryNotice;
         readonly PauseMenu pauseMenu = new PauseMenu();
         StorySequence story;
         SoulMeter soulMeter;
@@ -99,7 +103,6 @@ namespace TiffanyGame
             if (route != null) guidanceTerrain = new RouteTerrain();
             notice = new TimedLine();
             subtitle = new TimedLine();
-            echoSubtitle = new TimedLine();
             pausePanel.SetActive(false);
             notebookPanel.SetActive(false);
             LoadMemories(memoryAssets, drawings);
@@ -144,6 +147,7 @@ namespace TiffanyGame
                 if (GameInput.NotebookPressed) flow.PressNotebook();
             }
             ApplyScreen();
+            if (Screen == InterfaceScreen.Memory) UpdateMemory();
             if (Screen == InterfaceScreen.Notebook)
             {
                 if (GameInput.NotebookNextPressed) NextPage();
@@ -152,12 +156,8 @@ namespace TiffanyGame
 
             if (!IsFrozen)
             {
-                if (showingEcho) echoSubtitle.Tick(Time.deltaTime);
-                else
-                {
-                    notice.Tick(Time.deltaTime);
-                    subtitle.Tick(Time.deltaTime);
-                }
+                notice.Tick(Time.deltaTime);
+                subtitle.Tick(Time.deltaTime);
             }
             RefreshLines();
             RefreshSoul();
@@ -181,7 +181,7 @@ namespace TiffanyGame
             Vector3 toNext = route.NextClearingPosition - position;
             toNext.y = 0f;
             bool canRemind = route.HasNextClearing && !IsFrozen && !notice.IsVisible
-                && RouteGuidance.CanRemind(Screen, showingEcho || (memories != null && memories.IsEchoActive),
+                && RouteGuidance.CanRemind(Screen, memories != null && memories.IsEchoActive,
                     chasing, inChallenge, memories != null ? memories.Progress : null);
             routeGuidance.Tick(Time.deltaTime, guidanceTerrain.DistanceToRoute(local.x, local.z),
                 route.LastVisitedClearingIndex, toNext.magnitude, canRemind);
@@ -233,6 +233,62 @@ namespace TiffanyGame
 
         public bool TryGetMemory(int memoryId, out MemoryData memory) => catalog.TryGet(memoryId, out memory);
 
+        public bool ShowMemory(int memoryId, EchoPlayer audio, bool notify = false)
+        {
+            if (memoryId < 1 || memoryId > 5 || Screen != InterfaceScreen.Playing || !catalog.TryGet(memoryId, out var memory)
+                || memory.drawings.Length == 0) return false;
+            slideshow = new MemorySlideshow(memory, audio != null ? audio.PrepareAudio() : null);
+            memoryAudio = audio;
+            memoryNotice = notify;
+            startFrame = Time.frameCount;
+            flow.SetMemory(true);
+            ApplyScreen();
+            if (memoryAudio != null) memoryAudio.Play(slideshow);
+            if (memoryMusic != null)
+            {
+                memoryMusic.volume = slideshow.MusicVolume;
+                memoryMusic.Play();
+            }
+            return true;
+        }
+
+        void UpdateMemory()
+        {
+            var stage = slideshow.Stage;
+            int index = slideshow.PageIndex;
+            slideshow.Tick(Time.unscaledDeltaTime, Time.frameCount != startFrame && GameInput.InteractPressed);
+            if (memoryAudio != null) memoryAudio.ApplyAudio();
+            if (memoryMusic != null) memoryMusic.volume = slideshow.MusicVolume;
+            if (notebookBackground != null)
+                notebookBackground.color = new Color(0f, 0f, 0f, slideshow.BlackOpacity);
+            if (slideshow.Finished)
+            {
+                int id = slideshow.Memory.id;
+                bool notify = memoryNotice;
+                StopMemory();
+                startFrame = Time.frameCount;
+                ApplyScreen();
+                if (notify) ShowPowerNotice(PowerSet.ForMemory(id));
+                return;
+            }
+            if (stage == slideshow.Stage && index == slideshow.PageIndex) return;
+            pageDirty = true;
+            RefreshNotebook();
+        }
+
+        public void StopMemory()
+        {
+            if (slideshow == null) return;
+            if (memoryAudio != null) memoryAudio.Stop();
+            if (memoryMusic != null) memoryMusic.Stop();
+            slideshow = null;
+            memoryAudio = null;
+            memoryNotice = false;
+            flow.SetMemory(false);
+            if (notebookBackground != null) notebookBackground.color = new Color(0f, 0f, 0f, 0.92f);
+            ApplyScreen();
+        }
+
         public void ShowPowerNotice(Power power)
         {
             notice.Enqueue(InterfaceTexts.ControllerText(InterfaceTexts.PowerNotice(power), HasControllerSymbols(noticeText.font)),
@@ -248,36 +304,14 @@ namespace TiffanyGame
 
         public void ShowSubtitle(string text, float seconds)
         {
-            (showingEcho ? echoSubtitle : subtitle).Enqueue(text, seconds);
+            subtitle.Enqueue(text, seconds);
             RefreshLines();
         }
 
         public void ReplaceSubtitle(string text, float seconds)
         {
-            (showingEcho ? echoSubtitle : subtitle).Clear();
+            subtitle.Clear();
             ShowSubtitle(text, seconds);
-        }
-
-        public void BeginEcho()
-        {
-            showingEcho = true;
-            echoSubtitle.Clear();
-            RefreshEchoLines();
-        }
-
-        public void EndEcho()
-        {
-            showingEcho = false;
-            echoSubtitle.Clear();
-            RefreshEchoLines();
-        }
-
-        void RefreshEchoLines()
-        {
-            subtitleVersion = -1;
-            appliedScreen = null;
-            ApplyScreen();
-            RefreshLines();
         }
 
         public void StartGame()
@@ -452,9 +486,9 @@ namespace TiffanyGame
             if (titlePanel != null) titlePanel.SetActive(Screen == InterfaceScreen.Title);
             if (storyPanel != null) storyPanel.SetActive(Screen == InterfaceScreen.Story);
             pausePanel.SetActive(Screen == InterfaceScreen.Paused);
-            notebookPanel.SetActive(Screen == InterfaceScreen.Notebook);
+            notebookPanel.SetActive(Screen == InterfaceScreen.Notebook || Screen == InterfaceScreen.Memory);
             bool showLines = Screen == InterfaceScreen.Playing || Screen == InterfaceScreen.Paused;
-            noticeText.gameObject.SetActive(!showingEcho && showLines);
+            noticeText.gameObject.SetActive(showLines);
             subtitleText.gameObject.SetActive(showLines);
             appliedScreen = Screen;
             pageDirty = true;
@@ -470,8 +504,38 @@ namespace TiffanyGame
 
         void RefreshNotebook()
         {
-            if (Screen != InterfaceScreen.Notebook || !pageDirty) return;
+            if (!pageDirty) return;
+            if (Screen == InterfaceScreen.Memory)
+            {
+                pageDirty = false;
+                bool visible = slideshow.PageVisible;
+                notebookEmpty.gameObject.SetActive(false);
+                drawingImage.gameObject.SetActive(visible);
+                notebookTitle.gameObject.SetActive(visible);
+                notebookPhrase.gameObject.SetActive(visible);
+                notebookPage.gameObject.SetActive(false);
+                if (notebookHint != null)
+                {
+                    notebookHint.text = InterfaceTexts.MemoryHint;
+                    notebookHint.gameObject.SetActive(visible);
+                }
+                if (notebookBackground != null)
+                    notebookBackground.color = new Color(0f, 0f, 0f, slideshow.BlackOpacity);
+                if (!visible) return;
+                var memory = slideshow.Memory;
+                var drawing = memory.drawings[slideshow.PageIndex];
+                notebookTitle.text = memory.title;
+                notebookPhrase.text = drawing?.phrase;
+                ShowDrawing(drawing?.image);
+                return;
+            }
+            if (Screen != InterfaceScreen.Notebook) return;
             pageDirty = false;
+            if (notebookHint != null)
+            {
+                notebookHint.text = InterfaceTexts.NotebookHint;
+                notebookHint.gameObject.SetActive(true);
+            }
             notebookEmpty.gameObject.SetActive(pages.IsEmpty);
             drawingImage.gameObject.SetActive(!pages.IsEmpty);
             notebookTitle.gameObject.SetActive(!pages.IsEmpty);
@@ -487,7 +551,12 @@ namespace TiffanyGame
             notebookTitle.text = page.Title;
             notebookPhrase.text = page.Phrase;
             notebookPage.text = $"{page.Number} / {pages.Count}";
-            string imageName = page.Image ?? string.Empty;
+            ShowDrawing(page.Image);
+        }
+
+        void ShowDrawing(string imageName)
+        {
+            imageName ??= string.Empty;
             textures.TryGetValue(imageName, out var texture);
             drawingImage.texture = texture;
             drawingImage.enabled = texture != null;
@@ -506,16 +575,16 @@ namespace TiffanyGame
                 noticeVersion = notice.Version;
                 appliedReminder = reminderVisible;
             }
-            var line = showingEcho ? echoSubtitle : subtitle;
-            if (subtitleVersion != line.Version)
+            if (subtitleVersion != subtitle.Version)
             {
-                subtitleText.text = line.Text;
-                subtitleVersion = line.Version;
+                subtitleText.text = subtitle.Text;
+                subtitleVersion = subtitle.Version;
             }
         }
 
         void OnDisable()
         {
+            StopMemory();
             Time.timeScale = 1f;
             AudioListener.pause = false;
             appliedFrozen = null;

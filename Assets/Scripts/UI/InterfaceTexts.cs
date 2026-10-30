@@ -29,6 +29,7 @@ namespace TiffanyGame
         public const string PauseConfirmRestart = "¿Reiniciar? Se pierde la partida";
         public const string NotebookEmpty = "Aún no recuerdas nada";
         public const string NotebookHint = "A / D o cruceta para pasar de página · Tab o Create para cerrar";
+        public const string MemoryHint = "Espacio / Cruz para continuar";
         public const float PowerNoticeSeconds = 7f;
         public const string SoulEnergy = "Energía del alma";
         public const string RouteReminder = "Los pájaros amarillos marcan el camino.";

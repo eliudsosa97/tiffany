@@ -113,6 +113,7 @@ namespace TiffanyGame.Tests
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Bruja: retoma la persecución a pie");
             LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Recuerdo 5 encontrado");
             Assert.IsTrue(collector.Collect(5));
+            collector.StopEcho();
             for (int clearing = 8; clearing >= 1; clearing--)
             {
                 yield return MoveToClearing(clearing);
