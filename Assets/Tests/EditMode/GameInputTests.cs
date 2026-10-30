@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
 
 namespace TiffanyGame.Tests
@@ -8,6 +9,16 @@ namespace TiffanyGame.Tests
     public class GameInputTests
     {
         const float Tolerance = 0.00001f;
+
+        static void Press(ButtonControl control)
+        {
+            using (StateEvent.From(control.device, out var eventPtr))
+            {
+                control.WriteValueIntoEvent(1f, eventPtr);
+                InputSystem.QueueEvent(eventPtr);
+            }
+            InputSystem.Update();
+        }
 
         [TestCase("left", true, false)]
         [TestCase("f", false, true)]
@@ -32,9 +43,8 @@ namespace TiffanyGame.Tests
                 InputSystem.Update();
                 keyboard.MakeCurrent();
                 mouse.MakeCurrent();
-                if (input == "f") InputState.Change(keyboard.fKey, 1f);
-                else if (input == "north" || input == "r2") InputState.Change(input == "north" ? pad.buttonNorth : pad.rightTrigger, 1f);
-                else InputState.Change(input == "left" ? mouse.leftButton : mouse.rightButton, 1f);
+                Press(input == "f" ? keyboard.fKey : input == "north" ? pad.buttonNorth : input == "r2" ? pad.rightTrigger
+                    : input == "left" ? mouse.leftButton : mouse.rightButton);
                 Assert.AreEqual(toggle, GameInput.LightTogglePressed);
                 Assert.AreEqual(flash, GameInput.FlashPressed);
                 InputSystem.Update();
