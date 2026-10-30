@@ -88,7 +88,7 @@ namespace TiffanyGame
             {
                 AudioClip clip = clips[index++ % clips.Length];
                 if (clip == null) continue;
-                source.PlayOneShot(clip);
+                source.PlayOneShot(clip, 0.5f);
                 return;
             }
         }

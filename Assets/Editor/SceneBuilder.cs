@@ -66,7 +66,7 @@ namespace TiffanyGame.EditorTools
             var ambience = BuildForestAmbience(player.transform, route, playerLight.witch);
             ambience.music = BuildTensionMusic(playerLight.witch, player.transform);
             ambience.panic.music = ambience.music;
-            BuildBackgroundMusic(gameInterface, route.GetComponent<WitchChapterTracker>(), ambience.music, playerLight.witch);
+            BuildBackgroundMusic(gameInterface);
             var heartbeat = player.gameObject.AddComponent<Heartbeat>();
             heartbeat.panic = player.GetComponent<PanicController>();
             heartbeat.witch = playerLight.witch;
@@ -449,11 +449,11 @@ namespace TiffanyGame.EditorTools
             return music;
         }
 
-        static BackgroundMusic BuildBackgroundMusic(GameInterface gameInterface, WitchChapterTracker tracker, TensionMusic tension, WitchController witch)
+        static BackgroundMusic BuildBackgroundMusic(GameInterface gameInterface)
         {
             var root = new GameObject("Background Music");
             var music = root.AddComponent<BackgroundMusic>();
-            (music.gameInterface, music.tracker, music.tension, music.witch) = (gameInterface, tracker, tension, witch);
+            music.gameInterface = gameInterface;
             music.source = root.AddComponent<AudioSource>();
             (music.source.loop, music.source.playOnAwake, music.source.spatialBlend, music.source.volume) = (true, false, 0f, 0f);
             music.source.ignoreListenerPause = true;
