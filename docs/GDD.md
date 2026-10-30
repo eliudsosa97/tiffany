@@ -5,7 +5,6 @@
 | Género | Terror de sigilo en tercera persona |
 | Plataforma | Navegador (WebGL), en itch.io |
 | Motor | Unity 6.3 LTS (`6000.3.27f1`) con URP |
-| Duración prevista | Unos 25 minutos |
 | Controles | Teclado y ratón, o mando |
 | Jam | Spooky Game Jam de Hybridge, 26 al 30 de octubre de 2026 |
 
@@ -15,10 +14,8 @@ El jugador controla el alma de Tiffany. Ella despierta de noche en el cementerio
 Su familia la llama con una veladora en el altar de casa.
 Tiffany recupera cinco recuerdos y vuelve a casa para que su alma quede libre.
 
-Para avanzar, el jugador decide cuándo usar la luz, cuánto ruido hacer y dónde esconder a Tiffany.
-Ella gasta energía del alma en luz y poderes para escapar de la bruja.
-Se refugia junto a veladoras y cuenta con la compañía de Tyler.
-Interviene en el mundo humano al encender veladoras y mover objetos.
+El jugador decide cuándo usar la luz, cuánto ruido hacer y dónde esconder a Tiffany.
+Ella gasta energía del alma en luz y poderes, y la recupera junto a las veladoras de su familia.
 
 ## 2. Cómo cumple el reto
 
@@ -28,9 +25,7 @@ Interviene en el mundo humano al encender veladoras y mover objetos.
 | Llega al mundo humano con un propósito | La veladora de su familia llama a Tiffany. Debe recuperar cinco recuerdos y volver a casa para liberar su alma. |
 | Interacción con el mundo humano | Tiffany enciende veladoras temporales y mueve objetos para distraer a la bruja. |
 | Gestión de recursos | La energía del alma se gasta en luz, destellos y poderes. Se recupera junto a las veladoras familiares. |
-| Victoria y derrota | El jugador gana al interactuar junto a la veladora de casa con el poder de manifestarse. Si la bruja atrapa a Tiffany, ella vuelve a la última veladora familiar con 50 de energía. Conserva sus recuerdos y poderes. |
-
-El sigilo exige decidir cuándo mostrar la luz, correr, caminar despacio o gastar energía en un poder.
+| Victoria y derrota | Gana al llegar a la veladora de casa con el poder de manifestarse. Si la bruja la atrapa, vuelve a la última veladora familiar. |
 
 ## 3. Historia
 
@@ -57,7 +52,7 @@ Tiffany recorre ocho claros.
 | 2 | Planta de agua | 2. Listón | Enciende veladoras. |
 | 3 | Vías del tren | 3. Muñeca | Mueve objetos. |
 | 4 | Establo | 4. Zapato | Se desvanece. |
-| 5 | Jacal (choza) de la bruja | 5. Brazalete | Se manifiesta ante los vivos. |
+| 5 | Jacal de la bruja | 5. Brazalete | Se manifiesta ante los vivos. |
 | 6 | Lago | | Continúa el regreso. |
 | 7 | Carretera | | Continúa el regreso. |
 | 8 | Casa de Tiffany | | Llega a la veladora del final. |
@@ -72,12 +67,10 @@ Con el quinto recuerdo se inician el regreso y la tormenta.
 
 ## 5. Bucle de juego
 
-1. Tiffany explora el camino y busca el siguiente recuerdo.
-2. El jugador escucha los pasos y vigila la forma de la bruja.
-3. Elige entre avanzar despacio, correr, esconder a Tiffany o gastar energía.
-4. Tiffany se acerca a una veladora familiar para recargarse y fijar el regreso.
-5. Recoge recuerdos y usa sus poderes para superar los pasos del recorrido.
-6. Tras el brazalete, cruza el lago y la carretera hacia casa.
+1. Explora el camino y busca el siguiente recuerdo.
+2. Decide luz, ruido y escondite.
+3. Se recarga en las veladoras.
+4. Recoge el recuerdo, gana su poder y supera el reto.
 
 Antes de recoger el brazalete, Tiffany necesita completar los cuatro retos del camino.
 En el último combina encender veladoras, distraer a la bruja y desvanecerse.
@@ -102,8 +95,7 @@ En el último combina encender veladoras, distraer a la bruja y desvanecerse.
 | Inicio desde el título | Clic izquierdo, Espacio o Enter | Options / Start o cruz (sur) |
 | Selección de opción del título | W / S o flechas arriba / abajo | Stick izquierdo o cruceta arriba / abajo |
 
-Al correr, Tiffany orienta el cuerpo hacia el movimiento.
-El jugador apunta con el ratón o el stick derecho cuando ella camina o va despacio.
+Caminando, Tiffany mira hacia donde apunta. Corriendo, hacia donde corre.
 
 ## 7. Energía del alma y veladoras
 
@@ -200,9 +192,8 @@ Baja junto a veladoras, al quedarse quieta en un escondite y con Tyler cerca.
 Al llegar al 50 %, el jugador oye pasos falsos. Desde el 75 % también oye susurros.
 Desde el 90 %, la luz de Tiffany tiembla y ella solloza, produciendo ruido fuera del escondite.
 El latido suena con más fuerza y rapidez al subir el pánico o acercarse la bruja a pie.
-Tyler sigue a Tiffany. Si ella se detiene unos segundos y él no reacciona a una amenaza,
-la guía hacia el siguiente recuerdo pendiente.
-Le advierte de la bruja con sus reacciones y gruñe al detectarla cerca en el suelo.
+Tyler sigue a Tiffany y, si ella se detiene, la guía hacia el siguiente recuerdo.
+Gruñe cuando la bruja está cerca en el suelo.
 
 ## 12. Tormenta y regreso
 
@@ -215,8 +206,8 @@ Las veladoras familiares le permiten refugiarse y recargarse.
 
 ## 13. Victoria y derrota
 
-El jugador gana cuando Tiffany llega a la veladora de casa con el poder de manifestarse e interactúa
-a menos de 2.5 metros, sin gastar energía. Aparecen un fundido, el cierre y los créditos.
+El jugador gana cuando Tiffany llega a la veladora de casa con el poder de manifestarse e interactúa con ella.
+Aparecen un fundido, el cierre y los créditos.
 En la historia, Tiffany se muestra ante su familia y su alma queda libre.
 El intento se pierde si la bruja la atrapa. Aparecen fuego y un fundido antes del regreso.
 Tiffany vuelve junto a la última veladora familiar que tocó, con 50 de energía.
