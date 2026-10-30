@@ -27,6 +27,7 @@ namespace TiffanyGame
         public const float SobInterval = 4f;
         public const float SobRadius = 6f;
         public const float CueGap = 2.5f;
+        public const float CueVolume = 0.6f;
 
         private readonly System.Random random;
         private float stepRemaining = -1f;
