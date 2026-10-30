@@ -137,7 +137,7 @@ namespace TiffanyGame.Tests
             foreach (var renderer in renderers)
             {
                 Vector3 position = renderer.transform.localPosition;
-                float distance = terrain.RoadDistance(position.x, position.z);
+                float distance = RouteTerrain.RectangleDistance(new Vector2(position.x, position.z), terrain.Road);
                 if (distance >= nearest) continue;
                 nearest = distance;
                 selected = renderer.transform;
