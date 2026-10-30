@@ -143,6 +143,9 @@ AnimatorStateMachine:
     m_State: {fileID: -2242330076592335094}
     m_Position: {x: 300, y: 60, z: 0}
   - serializedVersion: 1
+    m_State: {fileID: 6125220376055030866}
+    m_Position: {x: 300, y: 120, z: 0}
+  - serializedVersion: 1
     m_State: {fileID: -197225355505861767}
     m_Position: {x: 300, y: 120, z: 0}
   - serializedVersion: 1
@@ -482,3 +485,29 @@ AnimatorStateMachine:
   m_ExitPosition: {x: 800, y: 120, z: 0}
   m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
   m_DefaultState: {fileID: -7444020287600616945}
+--- !u!1102 &6125220376055030866
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: WalkBack
+  m_Speed: -1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours: []
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 1
+  m_Mirror: 0
+  m_SpeedParameterActive: 1
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: -4298635026301758911}
+  m_Tag: 
+  m_SpeedParameter: Speed
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 

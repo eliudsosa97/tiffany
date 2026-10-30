@@ -15,7 +15,9 @@ namespace TiffanyGame.Tests
         [TestCase(false, false, false, 0f, 0f, TiffanyAnimation.Idle)]
         public void StateFollowsThePriority(bool caught, bool vanishing, bool hidden, float speed, float angularSpeed, string expected)
         {
-            Assert.AreEqual(expected, TiffanyAnimation.StateFor(caught, vanishing, hidden, speed, angularSpeed));
+            Assert.AreEqual(expected, TiffanyAnimation.StateFor(caught, vanishing, hidden, speed, angularSpeed, false));
+            string reverse = expected == TiffanyAnimation.Walk ? TiffanyAnimation.WalkBack : expected;
+            Assert.AreEqual(reverse, TiffanyAnimation.StateFor(caught, vanishing, hidden, speed, angularSpeed, true));
         }
 
         [Test]
@@ -23,21 +25,22 @@ namespace TiffanyGame.Tests
         {
             float below = TiffanyAnimation.TurnSpeed * 0.9f;
             float above = TiffanyAnimation.TurnSpeed * 1.1f;
-            Assert.AreEqual(TiffanyAnimation.Idle, TiffanyAnimation.StateFor(false, false, false, 0f, below));
-            Assert.AreEqual(TiffanyAnimation.Idle, TiffanyAnimation.StateFor(false, false, false, 0f, -below));
-            Assert.AreEqual(TiffanyAnimation.TurnRight, TiffanyAnimation.StateFor(false, false, false, TiffanyAnimation.MoveSpeed, above));
-            Assert.AreEqual(TiffanyAnimation.TurnLeft, TiffanyAnimation.StateFor(false, false, false, TiffanyAnimation.MoveSpeed, -above));
-            Assert.AreEqual(TiffanyAnimation.Walk, TiffanyAnimation.StateFor(false, false, false, TiffanyAnimation.MoveSpeed * 1.5f, 0f));
+            Assert.AreEqual(TiffanyAnimation.Idle, TiffanyAnimation.StateFor(false, false, false, 0f, below, false));
+            Assert.AreEqual(TiffanyAnimation.Idle, TiffanyAnimation.StateFor(false, false, false, 0f, -below, false));
+            Assert.AreEqual(TiffanyAnimation.TurnRight, TiffanyAnimation.StateFor(false, false, false, TiffanyAnimation.MoveSpeed, above, false));
+            Assert.AreEqual(TiffanyAnimation.TurnLeft, TiffanyAnimation.StateFor(false, false, false, TiffanyAnimation.MoveSpeed, -above, false));
+            Assert.AreEqual(TiffanyAnimation.Walk, TiffanyAnimation.StateFor(false, false, false, TiffanyAnimation.MoveSpeed * 1.5f, 0f, false));
         }
 
         [Test]
         public void EveryStateHasAPositiveBlendTime()
         {
-            foreach (string state in new[] { TiffanyAnimation.Idle, TiffanyAnimation.Walk, TiffanyAnimation.TurnLeft, TiffanyAnimation.TurnRight,
+            foreach (string state in new[] { TiffanyAnimation.Idle, TiffanyAnimation.Walk, TiffanyAnimation.WalkBack, TiffanyAnimation.TurnLeft, TiffanyAnimation.TurnRight,
                          TiffanyAnimation.Hide, TiffanyAnimation.Caught, TiffanyAnimation.Vanish, TiffanyAnimation.Empty,
                          TiffanyAnimation.CarryLight, TiffanyAnimation.Flash })
                 Assert.That(TiffanyAnimation.BlendFor(state), Is.InRange(0.05f, 0.5f), state);
             Assert.Throws<ArgumentOutOfRangeException>(() => TiffanyAnimation.BlendFor("Dance"));
+            Assert.AreEqual(TiffanyAnimation.WalkBlend, TiffanyAnimation.BlendFor(TiffanyAnimation.WalkBack));
         }
 
         [TestCase(-180f, 90f, 2f)]

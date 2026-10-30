@@ -8,6 +8,19 @@ namespace TiffanyGame.Tests
         static readonly Vector2 Phases = new Vector2(0f, 0.5f);
 
         [Test]
+        public void ReversedPlaybackReflectsContactsWhileNormalizedTimeGrows()
+        {
+            Assert.AreEqual(new Vector2(0.8f, 0.3f), FootContacts.Reversed(new Vector2(0.2f, 0.7f)));
+            var contacts = new FootContacts();
+            var phases = new Vector2(0.2f, 0.7f);
+            Assert.AreEqual(0, contacts.Advance(1, 0.29f, phases, true));
+            Assert.AreEqual(1, contacts.Advance(1, 0.31f, phases, true));
+            Assert.AreEqual(0, contacts.Advance(1, 0.79f, phases, true));
+            Assert.AreEqual(1, contacts.Advance(1, 0.81f, phases, true));
+            Assert.AreEqual(2, contacts.Advance(1, 1.81f, phases, true));
+        }
+
+        [Test]
         public void FirstStepWaitsForAContactAndNeverRepeatsTheSameSample()
         {
             var contacts = new FootContacts();
