@@ -451,14 +451,15 @@ namespace TiffanyGame.Tests
                 var child = tree.children[i];
                 float natural = Array.Find(spec.clips, c => c.name == names[i]).speed;
                 Assert.AreEqual(PlayerMotion.Speed((Gait)Enum.Parse(typeof(Gait), names[i])), child.threshold);
-                Assert.AreEqual(child.threshold / natural, child.timeScale);
+                // El estado aplica Speed en m/s, por lo que el árbol principal conserva la escala 1.
+                Assert.AreEqual(1f, child.timeScale);
                 if (i > 0) Assert.Greater(child.threshold, tree.children[i - 1].threshold);
                 var cycle = child.motion as BlendTree;
                 Assert.IsNotNull(cycle);
                 Assert.AreEqual(names[i], cycle.name);
                 Assert.AreEqual(1, cycle.children.Length);
                 Assert.AreEqual(Clips()[names[i]], cycle.children[0].motion);
-                Assert.AreEqual(1f, natural * child.timeScale * cycle.children[0].timeScale, 1e-5f);
+                Assert.AreEqual(1f, natural * cycle.children[0].timeScale, 1e-5f);
             }
         }
 
