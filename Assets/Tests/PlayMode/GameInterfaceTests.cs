@@ -36,6 +36,12 @@ namespace TiffanyGame.Tests
         {
             gameInterface.TogglePause();
             AssertScreen(InterfaceScreen.Paused);
+            Canvas.ForceUpdateCanvases();
+            var controls = gameInterface.pauseControls;
+            Assert.AreEqual(InterfaceTexts.ControllerText(InterfaceTexts.Controls, GameInterface.HasControllerSymbols(controls.font)), controls.text);
+            var settings = controls.GetGenerationSettings(controls.rectTransform.rect.size);
+            Assert.LessOrEqual(controls.cachedTextGenerator.GetPreferredHeight(controls.text, settings),
+                controls.rectTransform.rect.height * controls.pixelsPerUnit);
             yield return null;
             gameInterface.ToggleNotebook();
             AssertScreen(InterfaceScreen.Paused);

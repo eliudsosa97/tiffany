@@ -53,6 +53,7 @@ namespace TiffanyGame.EditorTools
             var respawn = player.gameObject.AddComponent<PlayerRespawn>();
             respawn.witch = playerLight.witch;
             respawn.overlay = caughtFade;
+            gameInterface.playerRespawn = respawn;
             BuildEnding(route.GetChild(7), player.GetComponent<PlayerSoul>(), playerLight.witch, gameInterface);
             var tyler = BuildTyler(route.GetChild(0), player.transform, testZone, memories[0]);
             var ball = route.GetChild(0).Find("Ball");
@@ -842,9 +843,23 @@ namespace TiffanyGame.EditorTools
 
             ui.pausePanel = InterfacePanel("Pause", root.transform, 0.6f);
             InterfaceText("Title", ui.pausePanel.transform, font, InterfaceTexts.PauseTitle, 76,
-                new Vector2(0.1f, 0.47f), new Vector2(0.9f, 0.60f));
-            InterfaceText("Hint", ui.pausePanel.transform, font, InterfaceTexts.PauseHint, 30,
-                new Vector2(0.1f, 0.37f), new Vector2(0.9f, 0.46f));
+                new Vector2(0.1f, 0.80f), new Vector2(0.9f, 0.94f));
+            ui.pauseControls = InterfaceText("Controls", ui.pausePanel.transform, font, InterfaceTexts.Controls, 24,
+                new Vector2(0.06f, 0.22f), new Vector2(0.49f, 0.78f));
+            ui.pauseOptions = new[]
+            {
+                InterfaceText("Resume", ui.pausePanel.transform, font, InterfaceTexts.PauseResume, 32,
+                    new Vector2(0.50f, 0.63f), new Vector2(0.97f, 0.73f)),
+                InterfaceText("Respawn", ui.pausePanel.transform, font, InterfaceTexts.PauseRespawn, 32,
+                    new Vector2(0.50f, 0.49f), new Vector2(0.97f, 0.59f)),
+                InterfaceText("Fullscreen", ui.pausePanel.transform, font, InterfaceTexts.PauseFullscreen, 32,
+                    new Vector2(0.50f, 0.35f), new Vector2(0.97f, 0.45f)),
+                InterfaceText("Restart", ui.pausePanel.transform, font, InterfaceTexts.PauseRestart, 32,
+                    new Vector2(0.50f, 0.21f), new Vector2(0.97f, 0.31f))
+            };
+            InterfaceText("Hint", ui.pausePanel.transform, font,
+                InterfaceTexts.ControllerText(InterfaceTexts.PauseHint, GameInterface.HasControllerSymbols(font)), 24,
+                new Vector2(0.06f, 0.07f), new Vector2(0.94f, 0.19f));
 
             ui.notebookPanel = InterfacePanel("Notebook", root.transform, 0.92f);
             var notebook = ui.notebookPanel.transform;

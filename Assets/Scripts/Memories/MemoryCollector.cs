@@ -34,6 +34,7 @@ namespace TiffanyGame
 
         void Awake()
         {
+            if (progress != null) return;
             var order = new int[spots.Length];
             spotColliders = new SphereCollider[spots.Length];
             for (int i = 0; i < spots.Length; i++)
