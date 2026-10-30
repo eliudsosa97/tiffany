@@ -62,6 +62,84 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void CemeteryFenceClosesFourSidesExceptTheSouthTrailGate()
+        {
+            var clearing = route.GetChild(0);
+            var fence = clearing.Find("Cemetery Fence");
+            Assert.IsNotNull(fence);
+            var barriers = fence.GetComponentsInChildren<BoxCollider>();
+            Assert.AreEqual(5, barriers.Length);
+            Assert.AreEqual(5, fence.GetComponentsInChildren<Collider>().Length);
+            foreach (var barrier in barriers)
+            {
+                Assert.IsFalse(barrier.isTrigger);
+                Assert.AreEqual(clearing.position.y, barrier.bounds.min.y, 0.001f);
+                Assert.AreEqual(1.2f, barrier.bounds.size.y, 0.001f);
+                var modifier = barrier.GetComponent<NavMeshModifier>();
+                Assert.IsNotNull(modifier);
+                Assert.IsTrue(modifier.overrideArea && !modifier.ignoreFromBuild);
+                Assert.AreEqual(NavMesh.GetAreaFromName("Not Walkable"), modifier.area);
+                var visual = ModelLibrary.LocalBounds(barrier.transform);
+                Assert.Less(Vector3.Distance(visual.center, barrier.center), 0.001f);
+                Assert.Less(Vector3.Distance(visual.size, barrier.size), 0.001f);
+            }
+            var material = clearing.Find("Tiffany Gravestone").GetComponentInChildren<Renderer>().sharedMaterial;
+            foreach (var renderer in fence.GetComponentsInChildren<Renderer>())
+            {
+                Assert.AreSame(material, renderer.sharedMaterial);
+                Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic));
+                Assert.AreEqual(ShadowCastingMode.Off, renderer.shadowCastingMode);
+            }
+            for (float offset = -16.75f; offset <= 16.75f; offset += 0.5f)
+            {
+                Check(new Vector3(offset, 0.6f, 16f), Vector3.forward, true);
+                Check(new Vector3(-16f, 0.6f, offset), Vector3.left, true);
+                Check(new Vector3(16f, 0.6f, offset), Vector3.right, true);
+                Check(new Vector3(offset, 0.6f, -16f), Vector3.back, Mathf.Abs(offset) >= 3f);
+            }
+            float left = fence.Find("South -1").GetComponent<BoxCollider>().bounds.max.x;
+            float right = fence.Find("South 1").GetComponent<BoxCollider>().bounds.min.x;
+            var opening = route.TransformPoint(RouteLayout.Openings(0)[0]);
+            Assert.AreEqual(6f, right - left, 0.001f);
+            Assert.AreEqual(opening.x, (left + right) * 0.5f, 0.001f);
+            Assert.AreEqual(opening.z + 0.5f, fence.Find("South -1").position.z, 0.001f);
+            var spawn = clearing.Find("Spawn").position;
+            Assert.AreEqual(new Vector3(0f, 0f, -13f), clearing.InverseTransformPoint(spawn));
+            Assert.IsTrue(fence.Find("North").GetComponent<BoxCollider>().Raycast(
+                new Ray(spawn + Vector3.up * 0.8f, Vector3.forward), out _, 36f));
+            foreach (float x in new[] { -2.5f, 0f, 2.5f })
+                Assert.IsFalse(Physics.SphereCast(clearing.TransformPoint(new Vector3(x, 0.6f, -15f)),
+                    0.25f, Vector3.back, out var hit, 6f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore),
+                    $"Reja bloqueada por {hit.collider} en x={x}.");
+            void Check(Vector3 point, Vector3 direction, bool blocked) => Assert.AreEqual(blocked,
+                System.Array.Exists(barriers, barrier => barrier.Raycast(
+                    new Ray(clearing.TransformPoint(point), direction), out _, 2f)), point.ToString());
+        }
+
+        [Test]
+        public void CemeteryBakedNavigationBlocksTheFenceAndConnectsTheSouthGate()
+        {
+            var clearing = route.GetChild(0);
+            BakeRouteNavMesh(bounds: new Bounds(RouteLayout.Clearing(0), new Vector3(48f, 12f, 48f)));
+            foreach (var direction in new[] { Vector3.forward, Vector3.left, Vector3.right, Vector3.back })
+            {
+                Vector3 offset = direction == Vector3.back ? Vector3.right * 8f : Vector3.zero;
+                var inside = clearing.TransformPoint(offset + direction * 16f);
+                Assert.IsTrue(NavMesh.SamplePosition(inside, out var start, 0.5f, NavMesh.AllAreas));
+                Assert.IsTrue(NavMesh.Raycast(start.position, clearing.TransformPoint(offset + direction * 20f),
+                    out var edge, NavMesh.AllAreas), direction.ToString());
+                Assert.That(Vector3.Dot(edge.position - clearing.position, direction), Is.InRange(16.5f, 17.5f));
+            }
+            Assert.IsTrue(NavMesh.SamplePosition(clearing.Find("Spawn").position, out var spawn, 0.5f, NavMesh.AllAreas));
+            var exit = route.TransformPoint(RouteLayout.Openings(0)[0] + Vector3.back * 3f);
+            Assert.IsTrue(NavMesh.SamplePosition(exit, out var trail, 0.5f, NavMesh.AllAreas));
+            Assert.IsFalse(NavMesh.Raycast(spawn.position, trail.position, out _, NavMesh.AllAreas));
+            var path = new NavMeshPath();
+            Assert.IsTrue(NavMesh.CalculatePath(spawn.position, trail.position, NavMesh.AllAreas, path));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
+        }
+
+        [Test]
         public void CemeteryBallIsBlueWithWhiteSeams()
         {
             var ball = route.GetChild(0).Find("Ball");

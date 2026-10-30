@@ -15,7 +15,6 @@ namespace TiffanyGame.EditorTools
             for (int i = 0; i < paths.Length; i++) paths[i] = RouteLayout.Path(i);
             var material = SilhouetteMaterial();
             var idle = WitchAnimator.Clips()["Idle"];
-            var knock = AudioBuilder.LoadClip("forest_knock_2");
             for (int i = 1; i <= 6; i++)
             {
                 Vector3 entry = RouteLayout.Openings(i)[0];
@@ -48,9 +47,6 @@ namespace TiffanyGame.EditorTools
                     renderer.receiveShadows = false;
                     renderer.enabled = false;
                 }
-                apparition.source = figure.AddComponent<AudioSource>();
-                (apparition.source.playOnAwake, apparition.source.spatialBlend) = (false, 0f);
-                apparition.knock = knock;
             }
         }
         private static bool Blocked(Vector3 point, Vector3[][] paths, CandleSpot[] candles, Transform route)

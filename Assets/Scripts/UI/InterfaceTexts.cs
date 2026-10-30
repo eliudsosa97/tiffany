@@ -22,7 +22,12 @@ namespace TiffanyGame
             + "M / L1  mapa\n"
             + "Esc o P / Options  pausa";
         public const string PauseTitle = "Pausa";
-        public const string PauseHint = "W/S, flechas o stick/cruceta: elegir\nEspacio / Enter / ✕ / clic: aceptar · Esc / P / Options: seguir";
+        public const string PauseActions = "Moverte\nApuntar la luz\nCorrer\nDespacio\n"
+            + "Luz (toque) / destello (mantén)\nEncender veladora\nMover objeto\nDesvanecerte\n"
+            + "Esconderte y recoger\nCuaderno\nMapa\nPausa";
+        public const string PauseKeyboard = "WASD\nRatón\nShift\nCtrl\nClic / F\nQ\nE\nR\nEspacio\nTab\nM\nEsc / P";
+        public const string PauseController = "Stick izq.\nStick der.\nL3 / R2\nL2\n△\n□\n○\nR1\n✕\nCreate\nL1\nOptions";
+        public const string PauseHint = "W/S o cruceta: elegir · Espacio / ✕: aceptar · Esc / Options: seguir";
         public const string PauseResume = "Seguir";
         public const string PauseRespawn = "Volver a la última veladora";
         public const string PauseFullscreen = "Pantalla completa";
@@ -38,8 +43,9 @@ namespace TiffanyGame
         public const string GraveObjective = "Toca tu lápida (" + GameInput.InteractBinding + ")";
         public const string BallObjective = "Busca la pelota";
         public const string TylerNotice = "Tyler te sigue. Si te detienes, te lleva al siguiente recuerdo.\n"
-            + "Gruñe cuando la bruja anda cerca. Junto a él tienes menos miedo y te presta su luz.";
-        public const string BirdsObjective = "Sigue a los pájaros amarillos";
+            + "Gruñe cuando la bruja anda cerca. Junto a él tienes menos miedo y te presta su luz.\n"
+            + "M / L1: abre el mapa del camino.";
+        public const string BirdsObjective = "Sigue a los pájaros amarillos · M / L1: mapa";
         public const string TouchPrompt = GameInput.InteractBinding + ": recordar";
         public const string CollectPrompt = GameInput.InteractBinding + ": recoger";
         public const string HidePrompt = GameInput.InteractBinding + ": esconderte";

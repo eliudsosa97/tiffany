@@ -325,9 +325,12 @@ namespace TiffanyGame.EditorTools
             var models = new[] { "gravestone-round", "gravestone-broken", "gravestone-cross", "cross", "cross-wood", "gravestone-bevel" };
             for (int i = 0; i < models.Length; i++)
                 GraveyardModel($"Grave {i + 1}", models[i], clearing, new Vector3(i % 2 == 0 ? -9f : 9f, 0f, 3f + i / 2 * 5f), i == 0 ? 2f : 1.5f, material);
+            var fence = Root("Cemetery Fence", clearing, Vector3.zero);
+            CemeteryFence("North", fence, new Vector3(0f, 0f, 17.5f), 35f, 0f, material);
             for (int side = -1; side <= 1; side += 2)
             {
-                GraveyardModel($"Iron Fence {side}", "iron-fence-damaged", clearing, new Vector3(side * 5f, 0f, -16f), 1.8f, material);
+                CemeteryFence(side < 0 ? "West" : "East", fence, new Vector3(side * 17.5f, 0f, 0f), 35.4f, 90f, material);
+                CemeteryFence($"South {side}", fence, new Vector3(side * 10.25f, 0f, -17.5f), 14.5f, 0f, material);
                 GraveyardModel($"Wood Fence {side}", "fence-damaged", clearing, new Vector3(side * 13f, 0f, -11f), 1.2f, material);
             }
             var ball = ModelLibrary.Instantiate("ball", clearing);
@@ -335,7 +338,27 @@ namespace TiffanyGame.EditorTools
             ball.transform.localPosition = new Vector3(3f, 0.2f, -6f);
         }
 
-        static void GraveyardModel(string name, string id, Transform parent, Vector3 position, float height, Material material)
+        static void CemeteryFence(string name, Transform parent, Vector3 position, float length, float yaw, Material material)
+        {
+            var section = Root(name, parent, position);
+            int count = Mathf.CeilToInt(length / 4f);
+            float width = length / count;
+            for (int i = 0; i < count; i++)
+            {
+                var model = GraveyardModel($"Iron Fence {i + 1}", "iron-fence-damaged", section, Vector3.zero, 1.2f, material);
+                var collider = model.GetComponent<BoxCollider>();
+                model.localScale = new Vector3(width / collider.size.x, model.localScale.y, 0.4f / collider.size.z);
+                model.localPosition = new Vector3(-length * 0.5f + (i + 0.5f) * width, 0.6f, 0f)
+                    - Vector3.Scale(collider.center, model.localScale);
+                Object.DestroyImmediate(collider);
+            }
+            section.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            var barrier = section.gameObject.AddComponent<BoxCollider>();
+            barrier.center = Vector3.up * 0.6f;
+            barrier.size = new Vector3(length, 1.2f, 0.4f);
+        }
+
+        static Transform GraveyardModel(string name, string id, Transform parent, Vector3 position, float height, Material material)
         {
             string path = $"{GraveyardFolder}/{id}.fbx";
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -361,6 +384,7 @@ namespace TiffanyGame.EditorTools
             collider.center = bounds.center - model.transform.position;
             collider.size = bounds.size;
             model.transform.position += Vector3.up * ((parent.TransformPoint(position).y - bounds.min.y) * scale);
+            return model.transform;
         }
 
         static Transform Root(string name, Transform parent, Vector3 position)

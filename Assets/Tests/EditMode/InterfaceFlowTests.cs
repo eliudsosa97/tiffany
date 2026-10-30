@@ -140,6 +140,14 @@ namespace TiffanyGame.Tests
         public void ControlsDescribeEachKeyboardAndDualSenseAction(string line) =>
             CollectionAssert.Contains(InterfaceTexts.Controls.Split('\n'), line);
 
+        [Test]
+        public void MapHintsAppearInObjectiveAndTylerNotice()
+        {
+            Assert.AreEqual("Sigue a los pájaros amarillos · M / L1: mapa", InterfaceTexts.BirdsObjective);
+            Assert.That(InterfaceTexts.TylerNotice, Does.EndWith("\nM / L1: abre el mapa del camino."));
+            Assert.AreEqual("W/S o cruceta: elegir · Espacio / ✕: aceptar · Esc / Options: seguir", InterfaceTexts.PauseHint);
+        }
+
         [TestCase(true, "△ □ ○ ✕")]
         [TestCase(false, "Triángulo Cuadrado Círculo Equis")]
         public void UnsupportedControllerSymbolsUseNames(bool hasSymbols, string expected) =>

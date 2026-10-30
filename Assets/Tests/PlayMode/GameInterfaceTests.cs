@@ -38,10 +38,22 @@ namespace TiffanyGame.Tests
             AssertScreen(InterfaceScreen.Paused);
             Canvas.ForceUpdateCanvases();
             var controls = gameInterface.pauseControls;
-            Assert.AreEqual(InterfaceTexts.ControllerText(InterfaceTexts.Controls, GameInterface.HasControllerSymbols(controls.font)), controls.text);
-            var settings = controls.GetGenerationSettings(controls.rectTransform.rect.size);
-            Assert.LessOrEqual(controls.cachedTextGenerator.GetPreferredHeight(controls.text, settings),
-                controls.rectTransform.rect.height * controls.pixelsPerUnit);
+            Assert.That(controls.text, Does.EndWith(InterfaceTexts.ControllerText(InterfaceTexts.PauseController,
+                GameInterface.HasControllerSymbols(controls.font))));
+            var columns = controls.transform.parent.GetComponentsInChildren<UnityEngine.UI.Text>();
+            Assert.AreEqual(3, columns.Length);
+            foreach (var column in columns)
+            {
+                Assert.AreEqual(13, column.text.Split('\n').Length);
+                Assert.AreEqual(TextAnchor.UpperLeft, column.alignment);
+                Assert.AreEqual(22, column.fontSize);
+                Assert.AreEqual(1.6f, column.lineSpacing);
+                var settings = column.GetGenerationSettings(column.rectTransform.rect.size);
+                Assert.LessOrEqual(column.cachedTextGenerator.GetPreferredHeight(column.text, settings),
+                    column.rectTransform.rect.height * column.pixelsPerUnit);
+                Assert.LessOrEqual(column.cachedTextGenerator.GetPreferredWidth(column.text, settings),
+                    column.rectTransform.rect.width * column.pixelsPerUnit);
+            }
             yield return null;
             gameInterface.ToggleNotebook();
             AssertScreen(InterfaceScreen.Paused);

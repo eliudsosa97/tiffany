@@ -73,8 +73,9 @@ namespace TiffanyGame.Tests
             Assert.That(TylerMotion.MoveSpeed(distance), Is.EqualTo(expected).Within(0.0001f));
         }
 
-        [TestCase(22.01f, true, false, true)]
-        [TestCase(22f, true, false, false)]
+        [TestCase(30.01f, true, false, true)]
+        [TestCase(30f, true, false, false)]
+        [TestCase(22.01f, true, false, false)]
         [TestCase(7f, true, false, false)]
         [TestCase(30f, false, false, false)]
         [TestCase(30f, true, true, false)]
@@ -84,11 +85,11 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void CatchUpRecoversAfterThreeSecondsWithoutProgress()
+        public void CatchUpRecoversAfterFiveSecondsWithoutProgress()
         {
             var recovery = new TylerCatchUp();
             Assert.IsFalse(recovery.Tick(0f, 12f, true, false));
-            Assert.IsFalse(recovery.Tick(2.9f, 12f, true, false));
+            Assert.IsFalse(recovery.Tick(4.9f, 12f, true, false));
             Assert.IsTrue(recovery.Tick(0.1f, 12f, true, false));
         }
 
@@ -98,7 +99,7 @@ namespace TiffanyGame.Tests
         [TestCase(12f, true, true, false)]
         public void CatchUpCountsOnlyEligibleStallTime(float distance, bool active, bool returning, bool expected)
         {
-            Assert.AreEqual(expected, new TylerCatchUp().Tick(3f, distance, active, returning));
+            Assert.AreEqual(expected, new TylerCatchUp().Tick(5f, distance, active, returning));
         }
 
         [Test]
@@ -109,7 +110,41 @@ namespace TiffanyGame.Tests
             Assert.IsFalse(recovery.Tick(2f, 14f, true, false));
             Assert.IsFalse(recovery.Tick(1f, 13f, true, false));
             Assert.IsFalse(recovery.Tick(2f, 13f, true, false));
-            Assert.IsTrue(recovery.Tick(1f, 13f, true, false));
+            Assert.IsTrue(recovery.Tick(3f, 13f, true, false));
+        }
+
+        [TestCase(10f, false, false, true)]
+        [TestCase(14f, false, false, true)]
+        [TestCase(9.99f, false, false, false)]
+        [TestCase(14.01f, false, false, false)]
+        [TestCase(12f, true, false, false)]
+        [TestCase(12f, false, true, false)]
+        [TestCase(12f, true, true, false)]
+        public void PlacementRequiresBothTylerAndDestinationOutOfView(float distance, bool tyler, bool point, bool expected) =>
+            Assert.AreEqual(expected, TylerCatchUp.AcceptsPlacement(distance, tyler, point));
+
+        [TestCase(0, 0f, -10f)]
+        [TestCase(2, 0f, -14f)]
+        [TestCase(3, 10f, 0f)]
+        [TestCase(5, 14f, 0f)]
+        [TestCase(6, -10f, 0f)]
+        [TestCase(8, -14f, 0f)]
+        public void CandidatesTryBehindThenSides(int index, float x, float z) =>
+            Assert.AreEqual(new Vector3(3f + x, 1f, 2f + z),
+                TylerCatchUp.Candidate(new Vector3(3f, 1f, 2f), Vector3.forward, Vector3.right, index));
+
+        [Test]
+        public void BlockedAttemptsWaitOneSecondAndPlacementRunsUntilBesidePlayer()
+        {
+            var recovery = new TylerCatchUp();
+            Assert.IsTrue(recovery.Tick(0f, 31f, true, false));
+            Assert.IsFalse(recovery.Tick(0.99f, 31f, true, false));
+            Assert.IsTrue(recovery.Tick(0.01f, 31f, true, false));
+            recovery.Placed();
+            recovery.Tick(0f, 10f, true, false);
+            Assert.IsTrue(recovery.Approaching);
+            recovery.Tick(0f, TylerMotion.FollowDistance + 0.05f, true, false);
+            Assert.IsFalse(recovery.Approaching);
         }
 
         [TestCase(7f, true, false)]

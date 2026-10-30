@@ -131,18 +131,18 @@ namespace TiffanyGame.Tests
             Assert.IsNull(restored);
         }
 
-        [TestCase(3, 0, false)]
+        [TestCase(3, 0, true)]
         [TestCase(3, 1, true)]
-        [TestCase(3, 2, false)]
-        [TestCase(4, 1, false)]
-        [TestCase(4, 2, false)]
+        [TestCase(3, 2, true)]
+        [TestCase(4, 1, true)]
+        [TestCase(4, 2, true)]
         [TestCase(4, 3, true)]
-        [TestCase(5, 7, false)]
-        [TestCase(5, 11, false)]
-        [TestCase(5, 13, false)]
-        [TestCase(5, 14, false)]
+        [TestCase(5, 7, true)]
+        [TestCase(5, 11, true)]
+        [TestCase(5, 13, true)]
+        [TestCase(5, 14, true)]
         [TestCase(5, 15, true)]
-        public void MemoriesRequireTheirCompletedChallenges(int memoryId, int mask, bool valid)
+        public void MemoriesLoadWhateverChallengesAreDone(int memoryId, int mask, bool valid)
         {
             var data = Valid();
             data.memories = new[] { memoryId };

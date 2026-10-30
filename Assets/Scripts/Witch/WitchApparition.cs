@@ -8,8 +8,6 @@ namespace TiffanyGame
         public WitchController witch;
         public PlayerLight playerLight;
         public Renderer[] renderers = System.Array.Empty<Renderer>();
-        public AudioSource source;
-        public AudioClip knock;
         public int clearing;
         private readonly ApparitionRules rules = new ApparitionRules();
         private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
@@ -37,9 +35,8 @@ namespace TiffanyGame
             ApplyAlpha();
             if (result == ApparitionEvent.Appeared)
                 Debug.Log($"{GameInfo.LogPrefix} Aparición {clearing}: aparece a {distance:0.0} m");
-            else if (result == ApparitionEvent.VanishedWithKnock || result == ApparitionEvent.VanishedQuietly)
+            else if (result == ApparitionEvent.VanishedQuietly)
             {
-                if (result == ApparitionEvent.VanishedWithKnock && source != null && knock != null) source.PlayOneShot(knock);
                 string reason = chasing ? "persecución" : witchDistance < ApparitionRules.WitchClearance ? "bruja"
                     : distance > ApparitionRules.ForgetDistance ? "lejos" : distance < ApparitionRules.VanishNear ? "cerca" : "luz";
                 Debug.Log($"{GameInfo.LogPrefix} Aparición {clearing}: se desvanece ({reason})");
