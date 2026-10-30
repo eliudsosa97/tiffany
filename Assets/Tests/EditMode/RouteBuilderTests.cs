@@ -248,6 +248,35 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
+        public void PendingMemoriesShareASavedCoolEmissiveMaterialWithoutLights()
+        {
+            var collector = player.GetComponent<MemoryCollector>();
+            var material = collector.spots[0].visual.GetComponent<Renderer>().sharedMaterial;
+            Assert.AreEqual(GeneratedMaterials.folder + "/MemoryCandle.mat", AssetDatabase.GetAssetPath(material));
+            Assert.IsTrue(material.IsKeywordEnabled("_EMISSION"));
+            Color emission = material.GetColor("_EmissionColor");
+            Assert.GreaterOrEqual(emission.maxColorComponent, 1f);
+            Assert.Greater(emission.b, emission.g);
+            Assert.Greater(emission.g, emission.r);
+            foreach (var spot in collector.spots)
+            {
+                if (spot.kind != MemorySpotKind.Memory) continue;
+                Assert.IsTrue(spot.visual.activeSelf);
+                Assert.AreSame(material, spot.visual.GetComponent<Renderer>().sharedMaterial);
+                Assert.IsEmpty(spot.GetComponentsInChildren<Light>(true));
+            }
+        }
+
+        [Test]
+        public void GraveAndBallHaveSeparateInteractionRanges()
+        {
+            var collector = player.GetComponent<MemoryCollector>();
+            Assert.AreEqual(1.5f, collector.searchRadius);
+            Assert.Greater(Vector3.Distance(collector.spots[0].transform.position, collector.spots[1].transform.position),
+                collector.searchRadius * 2f);
+        }
+
+        [Test]
         public void FiveMemoriesBelongToTheirClearingsAndEchoesStayOutsideTheRoute()
         {
             var collector = player.GetComponent<MemoryCollector>();

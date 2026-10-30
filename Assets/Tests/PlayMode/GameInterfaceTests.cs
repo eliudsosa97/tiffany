@@ -91,6 +91,78 @@ namespace TiffanyGame.Tests
                 gameInterface.drawingImage.gameObject.activeInHierarchy), Is.EqualTo((true, InterfaceTexts.NotebookEmpty, false)));
             Assert.That((gameInterface.MemoryFound(1), gameInterface.noticeText.text), Is.EqualTo((false, string.Empty)));
         }
+        [Test] public void SoulBarReadsPlayerEnergyAndFollowsInterfaceVisibility()
+        {
+            Assert.That(gameInterface.soulPanel.activeSelf, Is.False);
+            gameInterface.MemoryFound(2);
+            Assert.That(gameInterface.soulPanel.activeSelf, Is.False);
+            gameInterface.MemoryFound(1);
+            Assert.That(gameInterface.soulPanel.activeSelf, Is.True);
+            var energy = gameInterface.soul.Energy;
+            energy.ResetTo(80f);
+            gameInterface.SendMessage("Update");
+            Assert.That(gameInterface.soulFill.rectTransform.anchorMax.x, Is.EqualTo(0.8f).Within(0.001f));
+            energy.TrySpend(30f);
+            gameInterface.SendMessage("Update");
+            Assert.That(gameInterface.soulFill.rectTransform.anchorMax.x, Is.EqualTo(0.5f));
+            var spentColor = gameInterface.soulFill.color;
+            energy.Recharge(1f);
+            gameInterface.SendMessage("Update");
+            Assert.That(gameInterface.soulFill.rectTransform.anchorMax.x, Is.EqualTo(0.7f).Within(0.001f));
+            Assert.That(gameInterface.soulFill.color, Is.Not.EqualTo(spentColor));
+            energy.ResetTo(10f);
+            gameInterface.SendMessage("Update");
+            Assert.That(gameInterface.soulFill.color, Is.Not.EqualTo(spentColor));
+            gameInterface.TogglePause();
+            Assert.That(gameInterface.soulPanel.activeSelf, Is.True);
+            gameInterface.TogglePause();
+            gameInterface.ToggleNotebook();
+            Assert.That(gameInterface.soulPanel.activeSelf, Is.False);
+            gameInterface.ToggleNotebook();
+            Assert.That(gameInterface.soulPanel.activeSelf, Is.True);
+            var ending = new EndingRules();
+            Assert.That(ending.TryManifest(true, 0f, true), Is.True);
+            gameInterface.ShowEnding(ending);
+            Assert.That(gameInterface.soulPanel.activeSelf, Is.False);
+            ending.Tick(EndingRules.FadeSeconds + EndingRules.TextSeconds);
+            gameInterface.ShowEnding(ending);
+            Assert.That(gameInterface.soulPanel.activeSelf, Is.False);
+        }
+        [Test] public void RestoringFirstMemoryUnlocksSoulBarEvenWithoutNotebookAssetsOrNotice()
+        {
+            gameInterface.LoadMemories(System.Array.Empty<TextAsset>(), System.Array.Empty<Texture2D>());
+            Assert.That(gameInterface.soulPanel.activeSelf, Is.False);
+            Assert.That(gameInterface.MemoryFound(1, false), Is.False);
+            Assert.That(gameInterface.soulPanel.activeSelf, Is.True);
+            Assert.That(gameInterface.noticeText.text, Is.Empty);
+        }
+
+        [Test] public void ObjectiveStartsVisibleAndRefreshesRestoredProgressWithoutCollectionEvents()
+        {
+            var hud = Object.FindAnyObjectByType<GameplayHud>();
+            Assert.That(hud, Is.Not.Null);
+            Assert.That(hud.objectiveText.gameObject.activeInHierarchy, Is.True);
+            Assert.That(hud.objectiveText.text, Is.EqualTo(InterfaceTexts.GraveObjective));
+            Assert.That(hud.objectiveText.font, Is.SameAs(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")));
+            var progress = gameInterface.memories.Progress;
+            progress.MarkFound(1);
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.objectiveText.text, Is.EqualTo(InterfaceTexts.BallObjective));
+            progress.MarkFound(MemoryProgress.BallId);
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.objectiveText.text, Is.EqualTo(InterfaceTexts.BirdsObjective));
+            gameInterface.BeginEcho();
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.objectiveText.gameObject.activeInHierarchy, Is.True);
+            gameInterface.ToggleNotebook();
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.objectiveText.gameObject.activeSelf, Is.False);
+            Assert.That(hud.interactionText.gameObject.activeSelf, Is.False);
+            gameInterface.ToggleNotebook();
+            hud.SendMessage("LateUpdate");
+            Assert.That(hud.objectiveText.gameObject.activeInHierarchy, Is.True);
+            Assert.That(hud.objectiveText.text, Is.EqualTo(InterfaceTexts.BirdsObjective));
+        }
         void AssertScreen(InterfaceScreen screen)
         {
             bool frozen = screen != InterfaceScreen.Playing;

@@ -115,6 +115,34 @@ namespace TiffanyGame.Tests
 
         [TestCase("DualSenseGamepadHID")]
         [TestCase("WebGLGamepad")]
+        public void StoryAdvancesOnStartButNotSouthAndDoesNotRepeatWhileHeld(string layout)
+        {
+            pad = (Gamepad)InputSystem.AddDevice(layout);
+            ChangeControl(pad.buttonSouth, 1f);
+            Assert.IsFalse(GameInput.StoryAdvancePressed);
+            ChangeControl(pad.startButton, 1f);
+            Assert.IsTrue(GameInput.StoryAdvancePressed);
+            NextFrame();
+            Assert.IsFalse(GameInput.StoryAdvancePressed);
+        }
+
+        [Test]
+        public void StoryAdvancesOnEnterOrClickButNotSpace()
+        {
+            NextFrame();
+            InputState.Change(keyboard, new KeyboardState(Key.Space));
+            Assert.IsFalse(GameInput.StoryAdvancePressed);
+            NextFrame();
+            InputState.Change(keyboard, new KeyboardState(Key.Enter));
+            Assert.IsTrue(GameInput.StoryAdvancePressed);
+            NextFrame();
+            Assert.IsFalse(GameInput.StoryAdvancePressed);
+            InputState.Change(mouse, new MouseState().WithButton(MouseButton.Left));
+            Assert.IsTrue(GameInput.StoryAdvancePressed);
+        }
+
+        [TestCase("DualSenseGamepadHID")]
+        [TestCase("WebGLGamepad")]
         public void ButtonsUseTriangleForLightAndR2ForFlashThroughNativeAndBrowserLayouts(string layout)
         {
             pad = (Gamepad)InputSystem.AddDevice(layout);
@@ -192,7 +220,7 @@ namespace TiffanyGame.Tests
             InputSystem.Update();
             keyboard.MakeCurrent();
             mouse.MakeCurrent();
-            pad.MakeCurrent();
+            pad?.MakeCurrent();
         }
 
         static bool ReadAction(int action) => action switch
