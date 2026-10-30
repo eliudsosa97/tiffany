@@ -7,7 +7,7 @@ namespace TiffanyGame
         public const float FollowDistance = 2f;
         public const float GuideLead = 5f;
         public const float StillSpeed = 0.1f;
-        public const float SpeedMargin = 0.5f;
+        public const float SpeedMargin = 2.5f;
 
         public static bool IsStill(Vector3 previous, Vector3 current, float dt)
         {
@@ -32,9 +32,10 @@ namespace TiffanyGame
             return player + Vector3.ClampMagnitude(offset, GuideLead);
         }
 
-        public static float MoveSpeed(float distanceToTarget)
+        public static float MoveSpeed(float distanceToPlayer)
         {
-            return distanceToTarget <= 4f ? PlayerMotion.WalkSpeed : PlayerMotion.RunSpeed + SpeedMargin;
+            return Mathf.Lerp(PlayerMotion.WalkSpeed, PlayerMotion.RunSpeed + SpeedMargin,
+                Mathf.InverseLerp(4f, 12f, distanceToPlayer));
         }
     }
 }

@@ -13,10 +13,10 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(Vector2.zero, StickResponse.Shape(Vector2.up * magnitude));
         }
 
-        [TestCase(0.325f, 1.1f)]
-        [TestCase(0.5f, 2.2f)]
-        [TestCase(1f, 4f)]
-        public void PhysicalStickPassesThroughSlowWalkAndRun(float raw, float expected)
+        [TestCase(0.325f, 2f)]
+        [TestCase(0.5f, 4f)]
+        [TestCase(1f, 5.5f)]
+        public void PhysicalStickPassesThroughPartialWalkWalkAndRun(float raw, float expected)
         {
             float amount = StickResponse.Shape(Vector2.up * raw).magnitude;
             Assert.AreEqual(expected, PlayerMotion.TargetSpeed(amount, Gait.Run), 1e-4f);

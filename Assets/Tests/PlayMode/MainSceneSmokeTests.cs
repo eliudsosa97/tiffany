@@ -371,8 +371,8 @@ namespace TiffanyGame.Tests
             light.Toggle();
             yield return new WaitForSeconds(0.3f);
             Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Empty"));
-            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello");
-            Assert.IsTrue(light.TryFlash());
+            LogAssert.Expect(LogType.Log, $"{GameInfo.LogPrefix} Destello: estallido");
+            Assert.IsTrue(light.TryBurst());
             yield return new WaitForSeconds(0.15f);
             Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(1).IsName("Arms.Flash"));
             yield return new WaitForSeconds(animation.flashDuration + TiffanyAnimation.CarryLightBlend);
@@ -618,7 +618,7 @@ namespace TiffanyGame.Tests
                     Assert.GreaterOrEqual(player.transform.position.y, minimumHeight, "Tiffany cayó por debajo del cruce.");
                     Assert.That(player.HorizontalSpeed, Is.InRange(0f, PlayerMotion.WalkSpeed + 0.05f),
                         $"dt={Time.deltaTime:R}, desde={previousPosition:R}, hasta={player.transform.position:R}");
-                    Assert.AreEqual(PlayerMotion.GaitForSpeed(player.HorizontalSpeed), player.CurrentGait);
+                    Assert.AreEqual(Gait.Walk, player.CurrentGait);
                 }
                 GameInput.MoveOverride = Vector2.zero;
                 Assert.GreaterOrEqual(river.InverseTransformPoint(player.transform.position).z * direction, 3f,

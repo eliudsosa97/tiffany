@@ -80,8 +80,8 @@ namespace TiffanyGame.Tests
         [TestCase(true, 100f, true, false, true, 50f, false)]
         [TestCase(true, 100f, true, true, true, 50f, true)]
         [TestCase(true, 50f, true, true, true, 0f, true)]
-        public void FlashSpendsOnlyWhenUsableAndStunsOnlyInGroundCone(bool unlocked, float start,
-            bool grounded, bool inCone, bool used, float remaining, bool stuns)
+        public void FlashSpendsOnlyWhenUsableAndStunsOnlyInGroundRange(bool unlocked, float start,
+            bool grounded, bool inRange, bool used, float remaining, bool stuns)
         {
             var powers = new PowerSet();
             var energy = new SoulEnergy(start);
@@ -89,7 +89,7 @@ namespace TiffanyGame.Tests
             {
                 powers.Unlock(Power.Light);
             }
-            Assert.AreEqual(used, PowerRules.TryFlash(powers, energy, grounded, inCone, out bool actualStun));
+            Assert.AreEqual(used, PowerRules.TryFlash(powers, energy, grounded, inRange, out bool actualStun));
             Assert.AreEqual(stuns, actualStun);
             Assert.AreEqual(remaining, energy.Current);
         }

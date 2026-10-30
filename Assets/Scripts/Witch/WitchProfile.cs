@@ -52,7 +52,7 @@ namespace TiffanyGame
         public float HarassHideDuration = 2f;
         public float HarassTimeLimit = 12f;
         public float HarassCooldown = 20f;
-        public float FollowSpeed = 2.5f;
+        public float FollowSpeed = PlayerMotion.WalkSpeed + 0.3f;
         public float SprintSpeed = 9f;
         public float SprintDuration = 1.2f;
         public float WindUpDuration = 0.8f;
