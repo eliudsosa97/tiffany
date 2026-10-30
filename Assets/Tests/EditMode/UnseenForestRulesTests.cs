@@ -68,7 +68,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(0f, rules.Remaining);
             Assert.IsTrue(Tick(0.1f, sinceScare: UnseenForestRules.OtherScareGap));
         }
-        [Test] public void FiveHundredSoundsNeverRepeatAndCoverAllFourKinds()
+        [Test] public void FiveHundredSoundsNeverRepeatAndCoverAllThreeKinds()
         {
             var seen = new bool[UnseenForestRules.SoundCount];
             int previous = -1;
@@ -80,7 +80,7 @@ namespace TiffanyGame.Tests
                 Assert.That(rules.Distance, Is.InRange(UnseenForestRules.MinDistance, UnseenForestRules.MaxDistance));
                 Assert.That(System.Math.Abs(rules.Angle), Is.InRange(UnseenForestRules.FrontHalfAngle, UnseenForestRules.HalfTurn));
             }
-            CollectionAssert.AreEqual(new[] { true, true, true, true }, seen);
+            CollectionAssert.AreEqual(new[] { true, true, true }, seen);
         }
         [Test] public void FiveHundredSoundsWithoutNameClipsNeverSelectName()
         {

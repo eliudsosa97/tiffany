@@ -35,10 +35,10 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(ApparitionEvent.Appeared, Tick());
         }
         [TestCase(7.9f, false)] [TestCase(15f, true)]
-        public void NearPlayerOrLightVanishesWithOneKnock(float distance, bool lit)
+        public void NearPlayerOrLightVanishesQuietly(float distance, bool lit)
         {
             Tick();
-            Assert.AreEqual(ApparitionEvent.VanishedWithKnock, Tick(distance, lit));
+            Assert.AreEqual(ApparitionEvent.VanishedQuietly, Tick(distance, lit));
             Assert.AreEqual(ApparitionState.Vanishing, rules.State);
             Assert.AreEqual(1f, rules.Alpha);
             Assert.AreEqual(ApparitionEvent.None, Tick(distance, lit));
@@ -51,7 +51,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(ApparitionState.Vanishing, rules.State);
         }
         [TestCase(true, 30f)] [TestCase(false, 29f)]
-        public void ChaseOrNearbyWitchSuppressesKnockEvenWhenNearAndLit(bool chasing, float witch)
+        public void ChaseOrNearbyWitchVanishesQuietlyEvenWhenNearAndLit(bool chasing, float witch)
         {
             Tick();
             Assert.AreEqual(ApparitionEvent.VanishedQuietly, Tick(7f, true, chasing, witch));

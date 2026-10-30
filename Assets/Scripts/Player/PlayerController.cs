@@ -18,6 +18,7 @@ namespace TiffanyGame
         public float AngularSpeed => isActiveAndEnabled ? facingTurn.AngularSpeed : 0f;
         public bool Grounded => controller.enabled && controller.isGrounded;
         public event System.Action<GroundType, Gait> Stepped;
+        public event System.Action<GroundType, Gait> SoundStepped;
 
         CharacterController controller;
         readonly RaycastHit[] groundHits = new RaycastHit[4];
@@ -30,6 +31,7 @@ namespace TiffanyGame
         TiffanyAnimator tiffanyAnimator;
         VanishPower vanish;
         StepGuarantee steps;
+        FootstepCadence soundSteps;
         float horizontalDistance;
 
         void Awake()
@@ -54,6 +56,7 @@ namespace TiffanyGame
             verticalVelocity = 0f;
             facingTurn = default;
             steps = default;
+            soundSteps = default;
             horizontalDistance = 0f;
         }
 
@@ -95,27 +98,32 @@ namespace TiffanyGame
             if (dt <= 0f) return;
             int contacts = tiffanyAnimator != null && tiffanyAnimator.isActiveAndEnabled ? tiffanyAnimator.ReadFootContacts() : 0;
             if (CanStep)
-                PublishSteps(steps.Advance(horizontalDistance, CurrentGait, contacts));
+                PublishSteps(steps.Advance(horizontalDistance, CurrentGait, contacts),
+                    soundSteps.Advance(horizontalDistance, CurrentGait, contacts));
             else
+            {
                 steps = default;
+                soundSteps = default;
+            }
             horizontalDistance = 0f;
         }
 
         public void PublishFootstep()
         {
             if (!CanStep || Time.deltaTime <= 0f) return;
-            PublishSteps(steps.Advance(0f, CurrentGait, 1));
+            PublishSteps(steps.Advance(0f, CurrentGait, 1), soundSteps.Advance(0f, CurrentGait, 1));
         }
 
-        void PublishSteps(int count)
+        void PublishSteps(int count, int soundCount)
         {
-            if (count == 0) return;
+            if (count == 0 && soundCount == 0) return;
             var ground = FindGround();
             for (int i = 0; i < count; i++)
             {
                 NoiseBus.Publish(new StepNoise(transform.position, NoiseModel.StepRadius(ground, CurrentGait, raining)));
                 Stepped?.Invoke(ground, CurrentGait);
             }
+            for (int i = 0; i < soundCount; i++) SoundStepped?.Invoke(ground, CurrentGait);
         }
 
         GroundType FindGround()
