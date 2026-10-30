@@ -52,6 +52,8 @@ namespace TiffanyGame
         private readonly TylerCatchUp catchUp = new TylerCatchUp();
         private readonly TylerIcon icon = new TylerIcon();
         private Camera view;
+        private readonly Plane[] viewPlanes = new Plane[6];
+        private Renderer[] bodyRenderers;
         private bool heardMimic, heardForest;
         private Vector3? forestPoint;
         private NavMeshAgent agent;
@@ -110,6 +112,7 @@ namespace TiffanyGame
         private void Start()
         {
             view = Camera.main;
+            bodyRenderers = GetComponentsInChildren<Renderer>(true);
             if (player == null)
             {
                 var found = GameObject.FindGameObjectWithTag("Player");
@@ -179,7 +182,7 @@ namespace TiffanyGame
             TylerReaction reaction = brain.Tick(Time.deltaTime, in inputs);
             if (reaction != TylerReaction.Growl) forestPoint = null;
             if (reaction != Reaction) EnterReaction(reaction);
-            TylerPose pose = TylerPoses.For(Reaction);
+            TylerPose pose = TylerPoses.For(catchUp.Approaching ? TylerReaction.None : Reaction);
             ApplyMovement(pose, playerPosition);
             ApplyPose(pose);
             if (brain.GrowlingAtForest && forestPoint.HasValue) FaceWitch(pose, forestPoint.Value);
@@ -217,12 +220,12 @@ namespace TiffanyGame
             agent.updateRotation = !pose.FaceWitch;
             agent.isStopped = pose.Stopped;
             if (pose.Stopped) return;
-            Vector3 target = Reaction == TylerReaction.Guide && nextMemory != null
+            Vector3 target = !catchUp.Approaching && Reaction == TylerReaction.Guide && nextMemory != null
                 ? TylerMotion.GuideTarget(transform.position, playerPosition, nextMemory.position)
                 : TylerMotion.FollowTarget(transform.position, playerPosition);
             Vector3 offset = target - transform.position;
             offset.y = 0f;
-            agent.speed = TylerMotion.MoveSpeed(Vector3.Distance(transform.position, playerPosition));
+            agent.speed = TylerMotion.MoveSpeed(catchUp.Approaching ? 14f : Vector3.Distance(transform.position, playerPosition));
             agent.isStopped = offset.sqrMagnitude == 0f;
             if (agent.isStopped) return;
             if (!hasDestination || WitchMotion.ShouldRepath(lastDestination, target, repathThreshold))
@@ -242,29 +245,27 @@ namespace TiffanyGame
 
         private void Recover(Vector3 playerPosition)
         {
-            Vector3 fallback = default;
-            bool found = false;
-            for (int i = 0; i < 3; i++)
+            if (view == null) return;
+            GeometryUtility.CalculateFrustumPlanes(view, viewPlanes);
+            var bounds = new Bounds(transform.position + Vector3.up, Vector3.one * 2f);
+            for (int i = 0; i < bodyRenderers.Length; i++) bounds.Encapsulate(bodyRenderers[i].bounds);
+            bool tylerVisible = GeometryUtility.TestPlanesAABB(viewPlanes, bounds);
+            for (int i = 0; i < 9; i++)
             {
-                Vector3 direction = i == 0 ? -player.forward : i == 1 ? player.right : -player.right;
-                Vector3 candidate = playerPosition + direction * (TylerMotion.FollowDistance + 1f);
+                Vector3 candidate = TylerCatchUp.Candidate(playerPosition, player.forward, player.right, i);
                 if (!NavMesh.SamplePosition(candidate, out var hit, 1f, agent.areaMask)) continue;
-                if (!found) fallback = hit.position;
-                found = true;
-                Vector3 screen = view != null ? view.WorldToViewportPoint(hit.position + Vector3.up * 0.5f) : default;
-                if (view != null && screen.z > 0f && screen.x >= 0f && screen.x <= 1f
-                    && screen.y >= 0f && screen.y <= 1f) continue;
-                fallback = hit.position;
-                break;
+                var placedBounds = new Bounds(bounds.center + hit.position - transform.position, bounds.size);
+                if (!TylerCatchUp.AcceptsPlacement(Vector3.Distance(playerPosition, hit.position), tylerVisible,
+                    GeometryUtility.TestPlanesAABB(viewPlanes, placedBounds))) continue;
+                agent.enabled = false;
+                transform.position = hit.position;
+                EnableAgent();
+                hasDestination = false;
+                catchUp.Placed();
+                icon.Reset();
+                if (voice != null) voice.Stop();
+                return;
             }
-            if (!found) return;
-            agent.enabled = false;
-            transform.position = fallback;
-            EnableAgent();
-            hasDestination = false;
-            catchUp.Reset();
-            icon.Reset();
-            if (voice != null) voice.Stop();
         }
 
         private void LateUpdate()
@@ -296,7 +297,7 @@ namespace TiffanyGame
         {
             if (animator == null) return;
             animator.SetFloat(speedParameterHash, speed);
-            int stateHash = TylerAnimation.StateFor(Reaction, speed, idleSeconds) switch
+            int stateHash = TylerAnimation.StateFor(catchUp.Approaching ? TylerReaction.None : Reaction, speed, idleSeconds) switch
             {
                 TylerAnimation.Walk => walkHash,
                 TylerAnimation.Sit => sitHash,

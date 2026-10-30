@@ -12,7 +12,7 @@ namespace TiffanyGame
         {
             this.counts = counts;
             previous = new int[counts.Length];
-            volumes = new[] { slow, walk, run };
+            volumes = new[] { slow * 0.5f, walk * 0.5f, run * 0.5f };
         }
 
         public (GroundType Ground, int Index, float Volume, float Pitch) Choose(GroundType ground, Gait gait, float random)

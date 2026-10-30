@@ -80,7 +80,7 @@ namespace TiffanyGame
         void Start()
         {
             if (pauseControls != null)
-                pauseControls.text = InterfaceTexts.ControllerText(InterfaceTexts.Controls, HasControllerSymbols(pauseControls.font));
+                pauseControls.text = InterfaceTexts.ControllerText(pauseControls.text, HasControllerSymbols(pauseControls.font));
             var controls = titlePanel != null ? titlePanel.transform.Find("Controls")?.GetComponent<Text>() : null;
             if (controls == null) return;
             controls.text = InterfaceTexts.ControllerText(InterfaceTexts.Controls, HasControllerSymbols(controls.font));
