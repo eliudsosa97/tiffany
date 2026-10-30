@@ -27,6 +27,9 @@ namespace TiffanyGame
             }
         }
         public bool PageVisible => Stage == MemorySlideshowStage.Page;
+        public static bool ShouldShowPhrase(int textureWidth, int textureHeight, string textureName) =>
+            textureWidth <= 1 || textureHeight <= 1
+            || (textureName?.IndexOf("placeholder", System.StringComparison.OrdinalIgnoreCase) ?? -1) >= 0;
         public float BlackOpacity => Stage == MemorySlideshowStage.FadeOut ? stageTime / FadeSeconds
             : Stage == MemorySlideshowStage.FadeIn ? 1f - stageTime / MusicFadeSeconds : Finished ? 0f : 1f;
 

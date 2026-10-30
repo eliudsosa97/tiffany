@@ -339,6 +339,7 @@ namespace TiffanyGame.EditorTools
             controller.fireLight = WitchBuilder.BuildFireBall(witch.transform, out var ball);
             ball.transform.localPosition = Vector3.up * FireBallHeight;
             controller.fireBall = ball;
+            WitchBuilder.BuildSightRing(controller);
             var viewDirection = Quaternion.Euler(0f, followCamera.yaw, 0f) * Vector3.forward;
             var flyingOffset = Vector3.forward * followCamera.lookAhead - viewDirection * 2f
                 + Vector3.up * RouteBuilder.SkyHeight;

@@ -530,6 +530,9 @@ namespace TiffanyGame
                 notebookTitle.text = memory.title;
                 notebookPhrase.text = drawing?.phrase;
                 ShowDrawing(drawing?.image);
+                var texture = drawingImage.texture;
+                notebookPhrase.gameObject.SetActive(MemorySlideshow.ShouldShowPhrase(
+                    texture != null ? texture.width : 0, texture != null ? texture.height : 0, texture?.name));
                 return;
             }
             if (Screen != InterfaceScreen.Notebook) return;

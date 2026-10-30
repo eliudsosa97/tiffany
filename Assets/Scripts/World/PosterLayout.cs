@@ -13,7 +13,7 @@ namespace TiffanyGame
         public const float DenseDistance = 15f;
         public const float MinRouteDistance = 1f;
         public const float MaxRouteDistance = 6f;
-        public const float Width = 0.45f;
+        public const float Width = Height * 711f / 1024f;
         public const float Height = 0.6f;
 
         public enum AnchorKind { Tree, Post, Fence }
