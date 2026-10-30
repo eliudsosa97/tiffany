@@ -42,10 +42,17 @@ namespace TiffanyGame.EditorTools
             hearth.localPosition = spec.lightOffset;
             var light = hearth.gameObject.AddComponent<Light>();
             light.type = LightType.Point;
-            light.color = new Color(1f, 0.42f, 0.12f);
-            light.range = 4f;
-            light.intensity = 0.65f;
+            light.color = new Color(1f, 0.22f, 0.06f);
+            light.range = 8f;
+            light.intensity = 1.15f;
             light.shadows = LightShadows.None;
+
+            var inside = new GameObject("Hut Inside").transform;
+            inside.SetParent(model, false);
+            inside.localPosition = new Vector3(-0.45f, 0f, 0.25f);
+            inside.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            inside.gameObject.AddComponent<CaptureStop>().overrideCamera = false;
+            inside.gameObject.AddComponent<LightCaptureStage>().energy = SoulEnergy.Max;
         }
 
         static void AddBoxes(Transform parent, string name, ModelLibrary.BoxSpec[] boxes)

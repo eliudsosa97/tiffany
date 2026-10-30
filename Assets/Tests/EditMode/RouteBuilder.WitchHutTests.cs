@@ -104,7 +104,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void WitchHutAddsOneSmallWarmShadowlessLightAndStaysWithinTheClearingBudget()
+        public void WitchHutHearthReachesTheDoorAndRoofHolesWithoutAddingLightsOrShadows()
         {
             var clearing = route.GetChild(4);
             var hut = clearing.Find("Hut/witch-hut");
@@ -113,15 +113,54 @@ namespace TiffanyGame.Tests
             var light = lights[0];
             Assert.AreEqual(LightType.Point, light.type);
             Assert.AreEqual(LightShadows.None, light.shadows);
-            Assert.That(light.range, Is.GreaterThan(0f).And.LessThanOrEqualTo(4f));
-            Assert.That(light.intensity, Is.GreaterThan(0f).And.LessThanOrEqualTo(1f));
-            Assert.Greater(light.color.r, light.color.g);
+            Assert.That(light.range, Is.GreaterThan(4f).And.LessThanOrEqualTo(8f));
+            Assert.That(light.intensity, Is.GreaterThan(0f).And.LessThanOrEqualTo(1.5f));
+            Assert.Less(light.color.g, light.color.r * 0.3f);
             Assert.Greater(light.color.g, light.color.b);
             Assert.AreEqual(ModelLibrary.LoadSpec("witch-hut").lightOffset, light.transform.localPosition);
+            foreach (var opening in new[] { new Vector3(0f, 0.8f, 4.3f), new Vector3(-2.2f, 3.65f, -1.25f),
+                new Vector3(3.85f, 2.9f, 3.3f) })
+                Assert.Less(Vector3.Distance(light.transform.localPosition, opening), light.range);
             Assert.AreEqual(2, clearing.GetComponentsInChildren<Light>(true).Length);
             int renderers = clearing.GetComponentsInChildren<Renderer>(true).Length;
             TestContext.WriteLine($"Route 5 Witch Hut: {renderers} renderers");
             Assert.LessOrEqual(renderers, 200);
+        }
+
+        [Test]
+        public void HutInsideCapturePlacesTiffanyBesideTheTableWithTheGameCameraAndDitheredRoof()
+        {
+            var hut = route.GetChild(4).Find("Hut/witch-hut");
+            var stop = hut.Find("Hut Inside").GetComponent<CaptureStop>();
+            Assert.IsFalse(stop.overrideCamera);
+            Assert.GreaterOrEqual(stop.wait, 1.5f);
+            Assert.AreEqual(SoulEnergy.Max, stop.GetComponent<LightCaptureStage>().energy);
+            Assert.IsTrue(stop.GetComponent<LightCaptureStage>().hideWitch);
+            var point = hut.InverseTransformPoint(stop.transform.position);
+            Assert.That(point.x, Is.InRange(-0.7f, -0.3f));
+            Assert.That(point.z, Is.InRange(-0.5f, 0.5f));
+            Assert.AreEqual(0f, point.y, 0.001f);
+            AssertHutWalkable(hut.TransformPoint(new Vector3(0f, 0f, 1.5f)), stop.transform.position);
+            var camera = new GameObject("Hut Inside Camera").AddComponent<FollowCamera>();
+            camera.transform.SetParent(root.transform, false);
+            camera.target = player.transform;
+            stop.ApplyPose(player.transform, camera);
+            Assert.IsTrue(camera.enabled);
+            Assert.AreEqual(stop.transform.position, player.transform.position);
+            Assert.Less(Quaternion.Angle(stop.transform.rotation, player.transform.rotation), 0.001f);
+            Assert.AreEqual(FollowCamera.DefaultDistance, camera.distance);
+            Assert.AreEqual(FollowCamera.DefaultPitch, camera.pitch);
+            Assert.AreEqual(FollowCamera.DefaultYaw, camera.yaw);
+            Assert.AreEqual(24f, camera.fieldOfView);
+            Vector3 focus = player.transform.position + Vector3.up * FollowCamera.ChestHeight;
+            var ray = new Ray(camera.transform.position, focus - camera.transform.position);
+            var roof = hut.Find("HutRoof").GetComponent<MeshCollider>();
+            Assert.IsTrue(roof.Raycast(ray, out var hit, 40f));
+            Assert.Less(OcclusionVolume.KeepFraction(hit.point, camera.transform.position, focus,
+                FollowCamera.OcclusionRadius, FollowCamera.OcclusionSoftness, FollowCamera.OcclusionFocusMargin,
+                FollowCamera.OcclusionMinimumKeep, FollowCamera.OcclusionNearMargin), 1f);
+            foreach (var material in roof.GetComponent<Renderer>().sharedMaterials)
+                Assert.AreEqual(GeneratedMaterials.OcclusionShader, material.shader.name);
         }
 
         [Test]

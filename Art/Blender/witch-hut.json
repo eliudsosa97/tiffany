@@ -6,8 +6,8 @@
     { "name": "WitchHutPatch", "color": "#BA956A", "smoothness": 0 },
     { "name": "WitchHutCrack", "color": "#34291F", "smoothness": 0 },
     { "name": "WitchHutWood", "color": "#473526", "smoothness": 0 },
-    { "name": "WitchHutPalm", "color": "#827043", "smoothness": 0 },
-    { "name": "WitchHutPalmDry", "color": "#B4A06A", "smoothness": 0 },
+    { "name": "WitchHutPalm", "color": "#B99B60", "smoothness": 0 },
+    { "name": "WitchHutPalmDry", "color": "#E1C78A", "smoothness": 0 },
     { "name": "WitchHutStone", "color": "#575453", "smoothness": 0 },
     { "name": "WitchHutEmber", "color": "#FF6322", "smoothness": 0, "unlit": true },
     { "name": "WitchHutJar", "color": "#688676", "smoothness": 0.3 },
@@ -29,6 +29,14 @@
     { "center": { "x": 0, "y": 0.7, "z": -5 }, "size": { "x": 10.4, "y": 1.4, "z": 0.45 } },
     { "center": { "x": -3.6, "y": 0.7, "z": 5 }, "size": { "x": 3.2, "y": 1.4, "z": 0.45 } },
     { "center": { "x": 3.6, "y": 0.7, "z": 5 }, "size": { "x": 3.2, "y": 1.4, "z": 0.45 } }
+  ],
+  "fenceCharms": [
+    { "kind": "skull", "center": { "x": -3.6, "y": 0.95, "z": 5.12 }, "yaw": 0 },
+    { "kind": "skull", "center": { "x": 3.3, "y": 0.9, "z": 5.12 }, "yaw": 0 },
+    { "kind": "skull", "center": { "x": -5.12, "y": 0.95, "z": 1.2 }, "yaw": -90 },
+    { "kind": "doll", "center": { "x": -2.65, "y": 1.05, "z": 5.12 }, "yaw": 0 },
+    { "kind": "doll", "center": { "x": 4.6, "y": 1.1, "z": 5.12 }, "yaw": 0 },
+    { "kind": "doll", "center": { "x": 5.12, "y": 1.05, "z": -1 }, "yaw": 90 }
   ],
   "table": [
     { "center": { "x": -2.1, "y": 1.35, "z": -0.3 }, "size": { "x": 2.2, "y": 0.16, "z": 1.6 } },

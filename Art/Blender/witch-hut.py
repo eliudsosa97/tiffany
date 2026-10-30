@@ -2,6 +2,8 @@ import math
 import os
 import sys
 
+from mathutils import Vector
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lowpoly import Mesh, run
 
@@ -60,24 +62,32 @@ def roof(mesh, rng):
         stick(mesh, [(-4, 2.65, z), (4, 2.65, z)], 0.07)
     stick(mesh, [(0, 4.5, -4.55), (0.1, 4.48, 4.55)], 0.12)
     for side in (-1, 1):
-        for strip in range(14):
-            z = -4.5 + strip * 0.65
+        for strip in range(42):
+            z = -4.5 + strip * 9 / 41 + rng.uniform(-0.025, 0.025)
+            width = rng.uniform(0.24, 0.32)
             for row in range(3):
-                if (side, strip, row) in ((-1, 4, 1), (-1, 5, 1), (1, 11, 2), (1, 12, 2)):
+                if ((side == -1 and row == 1 and z + width / 2 > -1.9 and z - width / 2 < -0.6)
+                        or (side == 1 and row == 2 and z + width / 2 > 2.65 and z - width / 2 < 3.95)):
                     continue
-                inner = row * 1.4
-                outer = min(4.65, inner + 1.55 + rng.uniform(-0.12, 0.12))
-                y0 = 4.5 - inner * 0.39 + rng.uniform(-0.04, 0.04)
-                y1 = 4.5 - outer * 0.39 + rng.uniform(-0.06, 0.02)
-                points = [(side * inner, y0, z), (side * inner, y0, z + 0.63),
-                          (side * outer, y1, z + 0.65), (side * outer, y1 - 0.08, z + 0.3),
-                          (side * (outer - 0.16), y1 + 0.04, z - 0.025)]
-                rings = [[mesh.vertex((x, y - inset, along)) for x, y, along in points] for inset in (0, 0.08)]
-                mesh.bridge(rings, rng.choice(("WitchHutPalm", "WitchHutPalmDry")))
-            for tip in range(2):
-                start = (side * 4.1, 2.91, z + tip * 0.27)
-                end = (side * rng.uniform(4.45, 4.7), rng.uniform(2.56, 2.7), z + tip * 0.27 + 0.08)
-                stick(mesh, [start, end], 0.018, "WitchHutPalmDry", sides=3)
+                inner = max(0, row * 1.4 + rng.uniform(-0.06, 0.06))
+                outer = min(4.75, inner + rng.uniform(1.65, 1.95))
+                bend = outer - rng.uniform(0.23, 0.4)
+                lift = (2 - row) * 0.045 + rng.uniform(-0.02, 0.03)
+                y0, y1 = 4.5 - inner * 0.39 + lift, 4.5 - bend * 0.39 + lift
+                lean = rng.uniform(-0.12, 0.12)
+                points = [(side * inner, y0, z - width / 2),
+                          (side * inner, y0 + 0.035, z + width / 2),
+                          (side * bend, y1 + 0.035, z - width * 0.45 + lean),
+                          (side * bend, y1 - 0.04, z + width * 0.4 + lean),
+                          (side * outer, 4.5 - outer * 0.39 - rng.uniform(0.12, 0.22), z + lean)]
+                vertices = [mesh.vertex(point) for point in points]
+                material = "WitchHutPalmDry" if rng.random() < 0.8 else "WitchHutPalm"
+                for indices in ((0, 1, 2), (1, 3, 2), (2, 3, 4)):
+                    face = [vertices[i] for i in indices]
+                    if side < 0:
+                        face.reverse()
+                    mesh.face(face, material)
+                    mesh.face(reversed(face), material)
 
 
 def clothing(mesh, x, material, dress):
@@ -136,6 +146,7 @@ def interior(mesh, spec, rng):
 
 
 def fence(mesh, spec, rng):
+    anchors = []
     for part in spec["fence"]:
         center, size = xyz(part["center"]), xyz(part["size"])
         axis = 0 if size[0] > size[2] else 2
@@ -147,13 +158,48 @@ def fence(mesh, spec, rng):
             point[1] = 0
             tip = (point[0] + rng.uniform(-0.14, 0.14), rng.uniform(0.95, 1.65), point[2] + rng.uniform(-0.14, 0.14))
             stick(mesh, [tuple(point), tip], 0.055)
+            if tip[1] >= 1.2:
+                anchors.append(tip)
             if i in (0, count):
                 ends.append((point[0], 0.75, point[2]))
         stick(mesh, ends, 0.045)
+    for charm in spec["fenceCharms"]:
+        start = len(mesh.vertices)
+        stick(mesh, [(0, 0.62, -0.04), (0, 0.18, 0)], 0.012, sides=3)
+        if charm["kind"] == "skull":
+            outline = [(-0.23, 0.23), (-0.18, -0.03), (-0.07, -0.34),
+                       (0.07, -0.34), (0.18, -0.03), (0.23, 0.23)]
+            rings = [[mesh.vertex((x, y, depth)) for x, y in outline] for depth in (-0.06, 0.09)]
+            mesh.bridge(rings, "WitchHutBone")
+            for side in (-1, 1):
+                mesh.tube([(side * 0.17, 0.2, 0), (side * 0.35, 0.35, -0.03), (side * 0.4, 0.61, -0.05)],
+                          [(0.07, 0.07), (0.04, 0.04), (0.007, 0.007)], "WitchHutBone", sides=4)
+                eye = [(side * 0.04, 0.12, 0.095), (side * 0.17, 0.12, 0.095), (side * 0.1, -0.02, 0.095)]
+                if side > 0:
+                    eye.reverse()
+                mesh.face([mesh.vertex(point) for point in eye], "WitchHutCrack")
+            mesh.face([mesh.vertex(point) for point in ((-0.04, -0.16, 0.095), (0, -0.25, 0.095),
+                                                       (0.04, -0.16, 0.095))], "WitchHutCrack")
+        else:
+            mesh.clump((0, 0.13, 0), (0.09, 0.1, 0.075), "WitchHutWood", rng, sides=5, rows=1)
+            stick(mesh, [(0, 0.05, 0), (0.015, -0.25, 0)], 0.035, sides=3)
+            stick(mesh, [(-0.24, -0.12, 0), (0, -0.03, 0), (0.22, -0.09, 0.02)], 0.025, sides=3)
+            for side in (-1, 1):
+                stick(mesh, [(0.015, -0.23, 0), (side * 0.15, -0.48, 0.02)], 0.025, sides=3)
+        angle = math.radians(charm["yaw"])
+        target = xyz(charm["center"])
+        anchor = min(anchors, key=lambda tip: sum((tip[i] - target[i] - (0.62 if i == 1 else 0)) ** 2 for i in range(3)))
+        anchors.remove(anchor)
+        center = (anchor[0] + math.sin(angle) * 0.04, anchor[1] - 0.62, anchor[2] + math.cos(angle) * 0.04)
+        for i in range(start, len(mesh.vertices)):
+            x, y, z = mesh.vertices[i]
+            mesh.vertices[i] = Vector((center[0] + math.cos(angle) * x + math.sin(angle) * z,
+                                       center[1] + y, center[2] - math.sin(angle) * x + math.cos(angle) * z))
 
 
 def build(spec, rng):
-    meshes = [Mesh(name) for name in ("HutWalls", "HutRoof", "HutInterior", "HutFence")]
+    meshes = [Mesh(name, recalculate_normals=name != "HutRoof")
+              for name in ("HutWalls", "HutRoof", "HutInterior", "HutFence")]
     walls(meshes[0], spec, rng)
     roof(meshes[1], rng)
     interior(meshes[2], spec, rng)
