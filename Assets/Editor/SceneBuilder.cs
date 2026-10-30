@@ -86,7 +86,7 @@ namespace TiffanyGame.EditorTools
             caughtCapture.wait = CaughtSequence.FireDuration + CaughtSequence.FadeOutDuration + CaughtSequence.FadeInDuration * 0.5f;
             caughtStop.AddComponent<CaughtCaptureStage>().spot = firstCandle;
             BuildWitchVoice(playerLight.witch, tyler);
-            BuildWitchAudio(playerLight.witch, player.transform);
+            BuildWitchAudio(playerLight.witch, player.transform, viewCamera);
             var save = player.gameObject.AddComponent<SaveGame>();
             save.soul = player.GetComponent<PlayerSoul>();
             save.memories = player.GetComponent<MemoryCollector>();
@@ -96,7 +96,8 @@ namespace TiffanyGame.EditorTools
             save.ending = route.GetChild(7).GetComponentInChildren<EndingController>();
             save.candles = Array.FindAll(world.GetComponentsInChildren<CandleSpot>(true), candle => candle.kind == CandleKind.Family);
             save.initialCandle = route.GetChild(0).GetComponentInChildren<CandleSpot>();
-            BuildTrailTension(route.GetComponent<WitchChapterTracker>(), playerLight.witch, tyler);
+            var trailTension = BuildTrailTension(route.GetComponent<WitchChapterTracker>(), playerLight.witch, tyler);
+            BuildUnseenForest(route.GetComponent<WitchChapterTracker>(), playerLight.witch, trailTension, viewCamera.transform);
             GroundLitterBuilder.Scatter(world);
             CharacterSilhouetteBuilder.Add(player.transform);
             CharacterSilhouetteBuilder.Add(tyler.figure.transform);
@@ -399,7 +400,7 @@ namespace TiffanyGame.EditorTools
             }
         }
 
-        static void BuildWitchAudio(WitchController witch, Transform player)
+        static void BuildWitchAudio(WitchController witch, Transform player, Camera view)
         {
             var audio = witch.gameObject.AddComponent<WitchAudio>();
             audio.witch = witch;
@@ -418,6 +419,14 @@ namespace TiffanyGame.EditorTools
             (audio.land, audio.crack, audio.whoosh) = (LoadClip("witch_land"), LoadClip("witch_crack"), LoadClip("witch_whoosh"));
             audio.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
             audio.cackles = new[] { LoadClip("cackle_1"), LoadClip("cackle_2"), LoadClip("cackle_3") };
+            var presence = witch.gameObject.AddComponent<WitchPresence>();
+            (presence.witch, presence.player, presence.view) = (witch, player, view);
+            presence.source = witch.gameObject.AddComponent<AudioSource>();
+            (presence.source.playOnAwake, presence.source.loop, presence.source.volume) = (false, true, 0f);
+            presence.source.spatialBlend = 0.9f;
+            presence.source.rolloffMode = AudioRolloffMode.Linear;
+            (presence.source.minDistance, presence.source.maxDistance, presence.source.dopplerLevel) = (36f, 80f, 0f);
+            presence.source.clip = LoadClip("witch_murmur");
         }
 
         static TensionMusic BuildTensionMusic(WitchController witch, Transform player)
@@ -466,7 +475,7 @@ namespace TiffanyGame.EditorTools
             return audio;
         }
 
-        static void BuildTrailTension(WitchChapterTracker tracker, WitchController witch, TylerController tyler)
+        static TrailTension BuildTrailTension(WitchChapterTracker tracker, WitchController witch, TylerController tyler)
         {
             var root = new GameObject("Trail Tension");
             var tension = root.AddComponent<TrailTension>();
@@ -489,6 +498,25 @@ namespace TiffanyGame.EditorTools
             renderer.receiveShadows = false;
             decoy.SetActive(false);
             tension.skyDecoy = decoy.transform;
+            return tension;
+        }
+
+        static void BuildUnseenForest(WitchChapterTracker tracker, WitchController witch, TrailTension trailTension, Transform view)
+        {
+            var root = new GameObject("Unseen Forest");
+            var forest = root.AddComponent<UnseenForest>();
+            (forest.tracker, forest.witch, forest.trailTension, forest.view) = (tracker, witch, trailTension, view);
+            var child = new GameObject("Unseen Forest Source");
+            child.transform.SetParent(root.transform, false);
+            forest.source = child.AddComponent<AudioSource>();
+            forest.source.playOnAwake = false;
+            forest.source.spatialBlend = 0.85f;
+            forest.source.rolloffMode = AudioRolloffMode.Linear;
+            (forest.source.minDistance, forest.source.maxDistance, forest.source.dopplerLevel) = (36f, 80f, 0f);
+            forest.branches = new[] { LoadClip("step_branches_1"), LoadClip("step_branches_2"), LoadClip("step_branches_3"), LoadClip("step_branches_4") };
+            forest.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
+            forest.whispers = new[] { LoadClip("whisper_1"), LoadClip("whisper_2"), LoadClip("whisper_3") };
+            forest.knocks = new[] { LoadClip("forest_knock_1"), LoadClip("forest_knock_2"), LoadClip("forest_knock_3") };
         }
 
         static CandleSpot BuildCandles(Transform zoneRoot, PlayerSoul soul, Storm storm)
