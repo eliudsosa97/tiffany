@@ -423,7 +423,6 @@ namespace TiffanyGame.EditorTools
                 source.spatialBlend = 0f;
             }
             audio.fireLoop.loop = audio.breathLoop.loop = true;
-            audio.fireLoop.clip = LoadClip("fireball");
             audio.breathLoop.clip = LoadClip("witch_breath");
             (audio.land, audio.crack, audio.whoosh) = (LoadClip("witch_land"), LoadClip("witch_crack"), LoadClip("witch_whoosh"));
             audio.footsteps = player.GetComponent<PlayerFootsteps>();
@@ -495,7 +494,6 @@ namespace TiffanyGame.EditorTools
             (tension.oneShot.playOnAwake, tension.oneShot.spatialBlend) = (false, 0f);
             tension.phantomSteps = LoadSteps("step");
             tension.branchSnaps = new[] { LoadClip("branch_snap_1"), LoadClip("branch_snap_2"), LoadClip("branch_snap_3"), LoadClip("branch_snap_4") };
-            tension.skyFire = LoadClip("fireball");
             var decoy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             decoy.name = "Sky Decoy";
             decoy.transform.SetParent(root.transform, false);
