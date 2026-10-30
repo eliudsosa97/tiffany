@@ -89,7 +89,7 @@ namespace TiffanyGame.Tests
                 yield return null;
                 Assert.IsFalse(challenge.Underway, challenge.name);
                 tension.skyDecoy.gameObject.SetActive(true);
-                tension.oneShot.PlayOneShot(tension.skyFire);
+                if (tension.skyFire != null) tension.oneShot.PlayOneShot(tension.skyFire);
                 Teleport(challenge.transform.TransformPoint(Vector3.forward * progress), challenge.transform.forward);
                 yield return null;
                 Assert.IsTrue(challenge.Underway, challenge.name);
