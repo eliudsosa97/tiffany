@@ -12,8 +12,9 @@ namespace TiffanyGame.Tests
         [TestCase(PanicStage.Steps, 4f, 8f)]
         [TestCase(PanicStage.FalseFires, 6f, 10f)]
         [TestCase(PanicStage.Children, 4f, 4f)]
-        public void CuesRepeatWithinTheirIntervals(PanicStage stage, float min, float max)
+        public void CuesRepeatWithinTheirIntervalsAndSpacing(PanicStage stage, float min, float max)
         {
+            if (stage > PanicStage.Steps) max += PanicEffects.CueGap;
             Assert.IsFalse(Cue(effects.Tick(0f, stage, 0f, false), stage));
             float time = 0f;
             for (int cycle = 0; cycle < 3; cycle++)
@@ -31,6 +32,87 @@ namespace TiffanyGame.Tests
                 Assert.That(elapsed, Is.InRange(min, max));
                 Assert.IsFalse(Cue(effects.Tick(0f, stage, time, false), stage));
             }
+        }
+
+        [Test]
+        public void ChildrenCuesStaySpacedAndIncludeAllTypes()
+        {
+            const float dt = 0.02f;
+            int previousCueFrame = -1;
+            bool step = false, whisper = false, sob = false;
+            for (int frame = 1; frame <= 15000; frame++)
+            {
+                PanicCues cues = effects.Tick(dt, PanicStage.Children, frame * dt, false);
+                int count = CueCount(cues);
+                if (count == 0) continue;
+                Assert.LessOrEqual(count, 1);
+                if (previousCueFrame >= 0)
+                    Assert.GreaterOrEqual((frame - previousCueFrame) * dt, 2.5f);
+                previousCueFrame = frame;
+                step |= cues.FakeStep;
+                whisper |= cues.Whisper;
+                sob |= cues.Sob;
+            }
+            Assert.IsTrue(step);
+            Assert.IsTrue(whisper);
+            Assert.IsTrue(sob);
+        }
+
+        [TestCase(0.02f)]
+        [TestCase(10f)]
+        public void AtMostOneCueFiresPerTick(float dt)
+        {
+            for (int frame = 1; frame <= 1000; frame++)
+                Assert.LessOrEqual(CueCount(effects.Tick(dt, PanicStage.Children, frame * dt, false)), 1);
+        }
+
+        [Test]
+        public void DeferredCuesKeepPriorityAndFireWhenGapEnds()
+        {
+            float time = PanicEffects.WhisperMaxInterval;
+            Assert.IsTrue(effects.Tick(time, PanicStage.Children, time, false).Sob);
+            time += PanicEffects.CueGap - 0.25f;
+            Assert.AreEqual(0, CueCount(effects.Tick(PanicEffects.CueGap - 0.25f,
+                PanicStage.Children, time, false)));
+            time += 0.25f;
+            Assert.IsTrue(effects.Tick(0.25f, PanicStage.Children, time, false).Whisper);
+            time += 2f;
+            Assert.AreEqual(0, CueCount(effects.Tick(2f, PanicStage.Children, time, false)));
+            time += 0.25f;
+            Assert.AreEqual(0, CueCount(effects.Tick(0.25f, PanicStage.Children, time, false)));
+            time += 0.25f;
+            Assert.IsTrue(effects.Tick(0.25f, PanicStage.Children, time, false).Sob);
+            time += PanicEffects.CueGap;
+            Assert.IsTrue(effects.Tick(PanicEffects.CueGap, PanicStage.Children, time, false).FakeStep);
+        }
+
+        [TestCase(PanicStage.Steps, PanicStage.Calm)]
+        [TestCase(PanicStage.FalseFires, PanicStage.Steps)]
+        public void FallingBelowThresholdDiscardsPendingCue(PanicStage stage, PanicStage lower)
+        {
+            float time = PanicEffects.WhisperMaxInterval;
+            effects.Tick(time, PanicStage.Children, time, false);
+            time += PanicEffects.CueGap;
+            Assert.IsFalse(Cue(effects.Tick(PanicEffects.CueGap, lower, time, false), stage));
+            time += PanicEffects.CueGap;
+            Assert.IsFalse(Cue(effects.Tick(PanicEffects.CueGap, stage, time, false), stage));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void InactiveSobDiscardsPendingCue(bool hidden)
+        {
+            float time = PanicEffects.WhisperMaxInterval;
+            effects.Tick(time, PanicStage.Children, time, false);
+            time += PanicEffects.CueGap;
+            effects.Tick(PanicEffects.CueGap, PanicStage.Children, time, false);
+            time += 2f;
+            Assert.IsFalse(effects.Tick(2f, PanicStage.Children, time, false).Sob);
+            var stage = hidden ? PanicStage.Children : PanicStage.FalseFires;
+            time += 0.5f;
+            Assert.IsFalse(effects.Tick(0.5f, stage, time, hidden).Sob);
+            time += PanicEffects.CueGap;
+            Assert.IsFalse(effects.Tick(PanicEffects.CueGap, PanicStage.Children, time, false).Sob);
         }
 
         [TestCase(PanicStage.Calm)]
@@ -67,7 +149,9 @@ namespace TiffanyGame.Tests
             var lower = (PanicStage)((int)stage - 1);
             Assert.IsFalse(Cue(effects.Tick(20f, lower, 23f, false), stage));
             Assert.IsFalse(Cue(effects.Tick(min - 0.25f, stage, 24f, false), stage));
-            Assert.IsTrue(Cue(effects.Tick(max - min + 0.25f, stage, 32f, false), stage));
+            PanicCues cues = effects.Tick(max - min + 0.25f, stage, 32f, false);
+            if (!Cue(cues, stage)) cues = effects.Tick(PanicEffects.CueGap, stage, 32f + PanicEffects.CueGap, false);
+            Assert.IsTrue(Cue(cues, stage));
         }
 
         [Test]
@@ -78,7 +162,9 @@ namespace TiffanyGame.Tests
                 Assert.IsFalse(effects.Tick(0.25f, PanicStage.Children, 3f + frame * 0.25f, true).Sob);
             float time = 13f + PanicEffects.SobInterval;
             Assert.IsFalse(effects.Tick(PanicEffects.SobInterval - 0.25f, PanicStage.Children, time - 0.25f, false).Sob);
-            Assert.IsTrue(effects.Tick(0.25f, PanicStage.Children, time, false).Sob);
+            PanicCues cues = effects.Tick(0.25f, PanicStage.Children, time, false);
+            if (!cues.Sob) cues = effects.Tick(PanicEffects.CueGap, PanicStage.Children, time + PanicEffects.CueGap, false);
+            Assert.IsTrue(cues.Sob);
         }
 
         [TestCase(0f)]
@@ -116,5 +202,8 @@ namespace TiffanyGame.Tests
 
         private static bool Cue(PanicCues cues, PanicStage stage) => stage == PanicStage.Steps
             ? cues.FakeStep : stage == PanicStage.FalseFires ? cues.Whisper : cues.Sob;
+
+        private static int CueCount(PanicCues cues) =>
+            (cues.FakeStep ? 1 : 0) + (cues.Whisper ? 1 : 0) + (cues.Sob ? 1 : 0);
     }
 }
