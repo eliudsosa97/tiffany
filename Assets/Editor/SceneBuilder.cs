@@ -525,7 +525,6 @@ namespace TiffanyGame.EditorTools
             forest.branches = new[] { LoadClip("branch_snap_1"), LoadClip("branch_snap_2"), LoadClip("branch_snap_3"), LoadClip("branch_snap_4") };
             forest.steps = new[] { LoadClip("monster_step_1"), LoadClip("monster_step_2"), LoadClip("monster_step_3"), LoadClip("monster_step_4") };
             forest.whispers = new[] { LoadClip("whisper_1"), LoadClip("whisper_2"), LoadClip("whisper_3") };
-            forest.knocks = new[] { LoadClip("forest_knock_1"), LoadClip("forest_knock_2"), LoadClip("forest_knock_3") };
             var names = new AudioClip[4];
             int count = 0;
             for (int i = 1; i <= names.Length; i++)
