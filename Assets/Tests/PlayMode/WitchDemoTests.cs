@@ -52,7 +52,7 @@ namespace TiffanyGame.Tests
             Vector3 anchor = witch.transform.position;
             yield return new WaitForSeconds(0.5f);
             Assert.AreEqual(anchor, witch.transform.position);
-            yield return WaitForState(WitchState.WindUp, 10f);
+            yield return WaitForState(WitchState.WindUp, witch.Profile.HarassTimeLimit + 3f);
             Assert.AreEqual(2, noises);
             anchor = witch.transform.position;
             yield return new WaitForSeconds(0.6f);
@@ -105,6 +105,8 @@ namespace TiffanyGame.Tests
         public void NothingVideoIncludesTimeForTheFullInvestigation()
         {
             Assert.AreEqual(WitchDemo.NothingDuration, VideoCapture.MinimumDuration(new[] { "-witchdemo", "nothing" }));
+            Assert.AreEqual(WitchDemo.HarassDuration, VideoCapture.MinimumDuration(new[] { "-witchdemo", "harass" }),
+                "El video de acoso incluye mirada, arco, escondite, aviso y embestida.");
             Assert.AreEqual(0f, VideoCapture.MinimumDuration(new[] { "-witchdemo", "chase" }));
             Assert.AreEqual(0f, VideoCapture.MinimumDuration(new[] { "-witchdemo" }));
         }
@@ -123,6 +125,31 @@ namespace TiffanyGame.Tests
         [UnityTest] public IEnumerator CandleDemoStartsWithinTwentyFiveSeconds() => CheckBehavior("candle", WitchIntent.CandleWatch);
         [UnityTest] public IEnumerator BarkDemoStartsWithinTwentyFiveSeconds() => CheckBehavior("bark", WitchIntent.BarkLure);
         [UnityTest] public IEnumerator LightsOffDemoStartsWithinTwentyFiveSeconds() => CheckBehavior("lightsoff", WitchIntent.LastSeen);
+
+        [UnityTest]
+        public IEnumerator HarassDemoShowsLookingCirclingHidingAndWarningBeforeSprintWithinTwentyFiveSeconds()
+        {
+            demo = new GameObject("WitchDemo Test").AddComponent<WitchDemo>();
+            demo.mode = "harass";
+            float deadline = Time.time + 25f;
+            bool looked = false, circled = false, hid = false, warned = false;
+            while (Time.time < deadline && witch.Decision.State != WitchState.Sprinting)
+            {
+                WitchDecision decision = witch.Decision;
+                if (decision.Intent == WitchIntent.Harass)
+                {
+                    if (decision.Speed > 0f) circled |= looked;
+                    else if (circled) hid = true;
+                    else looked = true;
+                }
+                warned |= decision.State == WitchState.WindUp;
+                yield return null;
+            }
+            Assert.IsTrue(looked && circled && hid && warned, "La demo debe mostrar las fases del acoso en orden.");
+            Assert.AreEqual(WitchState.Sprinting, witch.Decision.State, "El aviso y la embestida caben en menos de 25 s.");
+            CheckFraming(witch.transform.position);
+            CheckFraming(witch.player.position);
+        }
 
         private IEnumerator CheckBehavior(string mode, WitchIntent expected)
         {

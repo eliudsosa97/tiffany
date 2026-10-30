@@ -8,6 +8,7 @@ namespace TiffanyGame
     public sealed partial class WitchDemo : MonoBehaviour
     {
         public const float NothingDuration = 24f;
+        public const float HarassDuration = 24f;
         public bool chase;
         public bool stalk;
         public string mode;
@@ -29,7 +30,7 @@ namespace TiffanyGame
             if (index < 0) return;
             if (index + 1 >= args.Length || (!IsMode(args[index + 1]) && args[index + 1] != "stalk"))
             {
-                Debug.LogError($"{GameInfo.LogPrefix} -witchdemo requiere chase, nothing, stalk, search, ambush, candle, bark o lightsoff.");
+                Debug.LogError($"{GameInfo.LogPrefix} -witchdemo requiere chase, nothing, stalk, search, ambush, candle, bark, lightsoff o harass.");
                 return;
             }
             var demo = new GameObject("WitchDemo").AddComponent<WitchDemo>();
@@ -168,6 +169,6 @@ namespace TiffanyGame
         }
 
         public static bool IsMode(string value) => value == "chase" || value == "nothing" || value == "search"
-            || value == "ambush" || value == "candle" || value == "bark" || value == "lightsoff";
+            || value == "ambush" || value == "candle" || value == "bark" || value == "lightsoff" || value == "harass";
     }
 }

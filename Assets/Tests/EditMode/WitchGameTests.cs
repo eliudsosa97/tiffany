@@ -90,7 +90,7 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void SecondNoiseWithinSuspicionStartsFollowingThePlayer()
+        public void SecondNoiseWithinSuspicionStartsHarassingThePlayer()
         {
             Ground();
             HearPlayer();
@@ -100,7 +100,8 @@ namespace TiffanyGame.Tests
             HearPlayer();
             WitchDecision chase = Step(0f);
             Assert.AreEqual(WitchState.Stalking, chase.State);
-            Assert.AreEqual(profile.FollowSpeed, chase.Speed);
+            Assert.AreEqual(WitchIntent.Harass, chase.Intent, "La detección confirmada inicia el acoso antes de perseguir.");
+            Assert.AreEqual(0f, chase.Speed);
             Assert.AreEqual(perception.PlayerPosition, chase.MoveTarget);
             Assert.IsFalse(chase.VoiceLure);
         }
@@ -179,7 +180,8 @@ namespace TiffanyGame.Tests
             perception.SeesPlayer = sight;
             perception.PlayerPosition = Vector3.right * 0.5f;
             perception.NoisePosition = perception.PlayerPosition;
-            Assert.AreEqual(WitchState.WindUp, Step(0.5f).State);
+            Assert.AreEqual(WitchIntent.Harass, Step(0.5f).Intent, "Confirmar la sospecha empieza por retirarse y mirar.");
+            Assert.AreEqual(WitchState.WindUp, Step(profile.HarassTimeLimit).State);
         }
 
         [Test]
@@ -194,7 +196,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchState.Suspicious, Step(0f).State);
         }
 
-        [TestCase(5f, WitchState.WindUp)]
+        [TestCase(5f, WitchState.Stalking)]
         [TestCase(4.9f, WitchState.Suspicious)]
         public void ClearNoiseDistanceIsConfigurable(float clearDistance, WitchState expected)
         {
@@ -202,7 +204,9 @@ namespace TiffanyGame.Tests
             profile.ClearNoiseDistance = clearDistance;
             perception.PlayerPosition = Vector3.right * 5f;
             HearPlayer();
-            Assert.AreEqual(expected, Step(0f).State);
+            WitchDecision decision = Step(0f);
+            Assert.AreEqual(expected, decision.State, "El ruido claro inicia el acoso y el lejano conserva la sospecha.");
+            if (clearDistance >= 5f) Assert.AreEqual(WitchIntent.Harass, decision.Intent);
         }
 
         [Test]
@@ -278,7 +282,8 @@ namespace TiffanyGame.Tests
             Ground();
             perception.PlayerPosition = Vector3.right * 5f;
             perception.SeesPlayer = true;
-            Assert.AreEqual(WitchState.WindUp, Step(0f).State);
+            Assert.AreEqual(WitchState.WindUp, WitchSim.BeginWarning(brain, profile, ref perception).State,
+                "El aviso se comprueba después de completar el acoso inicial.");
             Assert.AreEqual(0f, Step(0.79f).Speed);
             Assert.AreEqual(WitchState.Sprinting, Step(0.02f).State);
             SetUp();
@@ -286,7 +291,7 @@ namespace TiffanyGame.Tests
             Ground();
             perception.PlayerPosition = Vector3.right * 5f;
             perception.SeesPlayer = true;
-            Step(0f);
+            WitchSim.BeginWarning(brain, profile, ref perception);
             Assert.AreEqual(WitchState.WindUp, Step(1.49f).State);
             Assert.AreEqual(WitchState.Sprinting, Step(0.02f).State);
         }
@@ -421,10 +426,12 @@ namespace TiffanyGame.Tests
             WitchDecision chase = Step(0f);
             Assert.AreEqual(WitchState.Stalking, chase.State);
             Assert.AreEqual(perception.PlayerPosition, chase.MoveTarget);
-            Assert.AreEqual(profile.FollowSpeed, chase.Speed);
+            Assert.AreEqual(WitchIntent.Harass, chase.Intent, "La detección confirmada inicia el acoso antes de perseguir.");
+            Assert.AreEqual(0f, chase.Speed);
             Assert.IsFalse(chase.InspectingHide || chase.VoiceLure);
             perception.PlayerPosition = perception.WitchPosition + Vector3.forward * 5f;
-            Assert.AreEqual(WitchState.WindUp, Step(0f).State);
+            Assert.AreEqual(WitchState.WindUp, WitchSim.BeginWarning(brain, profile, ref perception).State,
+                "El aviso se comprueba después de completar el acoso inicial.");
             Assert.AreEqual(0f, Step(profile.WindUpDuration - 0.01f).Speed);
             Assert.AreEqual(WitchState.Sprinting, Step(0.02f).State);
         }
@@ -539,7 +546,8 @@ namespace TiffanyGame.Tests
             Ground();
             perception.PlayerPosition = Vector3.right * 5f;
             perception.SeesPlayer = true;
-            Step(0f);
+            Assert.AreEqual(WitchState.WindUp, WitchSim.BeginWarning(brain, profile, ref perception).State,
+                "El escondite se prueba después del acoso, durante el aviso.");
             perception.PlayerHidden = true;
             perception.SeesPlayer = false;
             Assert.AreEqual(WitchState.Sprinting, Step(profile.WindUpDuration).State);
@@ -549,7 +557,8 @@ namespace TiffanyGame.Tests
             Ground();
             perception.PlayerPosition = Vector3.right * 5f;
             HearPlayer();
-            Assert.AreEqual(WitchState.WindUp, Step(0f).State);
+            Assert.AreEqual(WitchState.WindUp, WitchSim.BeginWarning(brain, profile, ref perception).State,
+                "El aviso se comprueba después de completar el acoso inicial.");
             perception.HeardNoise = false;
             perception.PlayerHidden = true;
             Assert.AreEqual(WitchState.Stalking, Step(profile.WindUpDuration).State);

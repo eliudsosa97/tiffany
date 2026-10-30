@@ -70,8 +70,8 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchState.TakingOff, Step(0.02f).State);
         }
 
-        [TestCase("sight", WitchState.WindUp)]
-        [TestCase("smell", WitchState.WindUp)]
+        [TestCase("sight", WitchState.Stalking)]
+        [TestCase("smell", WitchState.Stalking)]
         [TestCase("noise", WitchState.Suspicious)]
         [TestCase("flash", WitchState.Stunned)]
         [TestCase("rain", WitchState.Stalking)]
@@ -91,7 +91,8 @@ namespace TiffanyGame.Tests
             p.PlayerInSafeZone = signal == "safe";
             p.PlayerVanished = signal == "vanished";
             WitchDecision decision = Step(0f);
-            Assert.AreEqual(WitchIntent.None, decision.Intent);
+            Assert.AreEqual(signal == "sight" || signal == "smell" ? WitchIntent.Harass : WitchIntent.None,
+                decision.Intent, "La detección interrumpe la búsqueda y empieza por el acoso.");
             Assert.AreEqual(expected, decision.State);
             Assert.AreNotEqual(WitchState.Sprinting, decision.State, "Percibir durante la búsqueda no omite el aviso.");
         }
@@ -243,8 +244,8 @@ namespace TiffanyGame.Tests
             Step(profile.LandingDuration);
             p.PlayerPosition = p.WitchPosition + Vector3.right * 5f;
             p.SeesPlayer = true;
-            WitchDecision warning = Step(0f);
-            Assert.AreEqual(WitchIntent.None, warning.Intent);
+            WitchDecision warning = WitchSim.BeginWarning(brain, profile, ref p);
+            Assert.AreEqual(WitchIntent.None, warning.Intent, "La emboscada también completa el acoso antes del aviso.");
             Assert.AreEqual(WitchState.WindUp, warning.State);
             Assert.AreEqual(WitchState.WindUp, Step(profile.WindUpDuration - 0.01f).State);
             Assert.AreEqual(WitchState.Sprinting, Step(0.02f).State);
@@ -425,7 +426,8 @@ namespace TiffanyGame.Tests
             p.PlayerPosition = p.WitchPosition + Vector3.right * 4f;
             p.SeesPlayer = true;
             profile.CanSprint = true;
-            Assert.AreEqual(WitchState.WindUp, Step(0f).State);
+            Assert.AreEqual(WitchState.WindUp, WitchSim.BeginWarning(brain, profile, ref p).State,
+                "La detección inicia el acoso antes de llegar al aviso.");
         }
 
         [Test]
@@ -537,7 +539,8 @@ namespace TiffanyGame.Tests
             profile.CanSprint = true;
             p.PlayerPosition = Vector3.right * 5f;
             p.SeesPlayer = true;
-            Assert.AreEqual(WitchState.WindUp, Step(0f).State);
+            Assert.AreEqual(WitchState.WindUp, WitchSim.BeginWarning(brain, profile, ref p).State,
+                "La detección inicia el acoso antes de llegar al aviso.");
             Assert.AreEqual(WitchIntent.None, Step(0f).Intent);
             SetUp();
             Ground();

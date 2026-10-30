@@ -20,8 +20,13 @@ namespace TiffanyGame
         public static float MinimumDuration(string[] args)
         {
             int index = System.Array.IndexOf(args, "-witchdemo");
-            return index >= 0 && index + 1 < args.Length && args[index + 1] == "nothing"
-                ? WitchDemo.NothingDuration : 0f;
+            if (index < 0 || index + 1 >= args.Length) return 0f;
+            return args[index + 1] switch
+            {
+                "nothing" => WitchDemo.NothingDuration,
+                "harass" => WitchDemo.HarassDuration,
+                _ => 0f
+            };
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
