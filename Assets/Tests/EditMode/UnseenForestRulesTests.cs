@@ -11,7 +11,7 @@ namespace TiffanyGame.Tests
             rules.Tick(dt, zone, chasing, sinceScare, nameAvailable);
         private float Next(UnseenZone zone = UnseenZone.Forest)
         {
-            for (int frame = 1; frame <= 601; frame++)
+            for (int frame = 1; frame <= 1201; frame++)
                 if (Tick(Delta, zone)) return frame * Delta;
             Assert.Fail("No sonó antes del intervalo máximo.");
             return 0f;
@@ -20,7 +20,7 @@ namespace TiffanyGame.Tests
         {
             var other = new UnseenForestRules(18);
             int sounds = 0;
-            for (int frame = 0; sounds < 200 && frame < 120200; frame++)
+            for (int frame = 0; sounds < 200 && frame < 240400; frame++)
             {
                 UnseenZone zone = (UnseenZone)((frame / 100) % 3);
                 bool chasing = frame % 1000 < 50;
@@ -32,10 +32,10 @@ namespace TiffanyGame.Tests
             }
             Assert.AreEqual(200, sounds);
         }
-        [TestCase(UnseenZone.Forest, 25f, 40f)]
-        [TestCase(UnseenZone.Trail, 40f, 60f)]
-        [TestCase(UnseenZone.Town, 45f, 60f)]
-        public void TwoHundredIntervalsStayInZoneRange(UnseenZone zone, float min, float max)
+        [TestCase(UnseenZone.Forest, 50f, 80f)]
+        [TestCase(UnseenZone.Trail, 80f, 120f)]
+        [TestCase(UnseenZone.Town, 90f, 120f)]
+        public void TwoHundredIntervalsTakeTwiceAsLongInEveryZone(UnseenZone zone, float min, float max)
         {
             for (int i = 0; i < 200; i++) Assert.That(Next(zone), Is.InRange(min, max + Delta));
         }
@@ -95,7 +95,7 @@ namespace TiffanyGame.Tests
         {
             int sounds = 0, names = 0, previous = -1;
             float lastName = float.NegativeInfinity;
-            for (int frame = 1; sounds < 500 && frame <= 20000; frame++)
+            for (int frame = 1; sounds < 500 && frame <= 40000; frame++)
             {
                 if (!Tick(dt, nameAvailable: true)) continue;
                 sounds++;
@@ -110,24 +110,24 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(500, sounds);
             Assert.Greater(names, 1);
         }
-        [Test] public void ForestToTownKeepsThirtyFiveSecondsInsteadOfExtendingInterval()
+        [Test] public void ForestToTownKeepsSeventySecondsInsteadOfExtendingInterval()
         {
             for (int seed = 0; seed < 1000; seed++)
             {
                 rules = new UnseenForestRules(seed);
                 Tick(Delta);
-                if (rules.Remaining < 35f) continue;
-                Tick(rules.Remaining - 35f);
-                Assert.AreEqual(35f, rules.Remaining, 1e-5f);
+                if (rules.Remaining < 70f) continue;
+                Tick(rules.Remaining - 70f);
+                Assert.AreEqual(70f, rules.Remaining, 1e-5f);
                 Assert.IsFalse(Tick(Delta, UnseenZone.Town));
-                Assert.AreEqual(35f - Delta, rules.Remaining, 1e-5f);
+                Assert.AreEqual(70f - Delta, rules.Remaining, 1e-5f);
                 Assert.LessOrEqual(rules.Remaining, UnseenForestRules.TownMaxInterval);
                 Assert.IsTrue(Tick(rules.Remaining, UnseenZone.Town));
                 return;
             }
-            Assert.Fail("No se encontró un intervalo de bosque de al menos 35 s.");
+            Assert.Fail("No se encontró un intervalo de bosque de al menos 70 s.");
         }
-        [Test] public void TownToForestClampsRemainingToFortySeconds()
+        [Test] public void TownToForestClampsRemainingToEightySeconds()
         {
             Assert.IsFalse(Tick(Delta, UnseenZone.Town));
             Assert.Greater(rules.Remaining, UnseenForestRules.ForestMaxInterval);

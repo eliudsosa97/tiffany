@@ -101,7 +101,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(RouteLayout.Count + 1, route.childCount);
             Assert.IsNotNull(route.Find("Landscape/Terrain"));
             var captures = route.GetComponentsInChildren<CaptureStop>();
-            Assert.AreEqual(18, captures.Length, "Ocho claros, dos vistas del agua y dos vistas por cada uno de los cuatro retos.");
+            Assert.AreEqual(20, captures.Length, "Ocho claros, dos vistas del agua, dos de los pájaros y dos por cada uno de los cuatro retos.");
             captures = System.Array.FindAll(captures, capture => capture.name.StartsWith("Route "));
             System.Array.Sort(captures, (a, b) => string.CompareOrdinal(a.name, b.name));
             for (int i = 0; i < names.Length; i++)
@@ -112,7 +112,7 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(captures[i].transform.IsChildOf(clearing));
                 Assert.IsFalse(captures[i].overrideCamera);
                 int challenges = i == 3 ? 2 : i == 1 || i == 2 ? 1 : 0;
-                Assert.AreEqual((i == 5 ? 3 : 1) + challenges * 2, clearing.GetComponentsInChildren<CaptureStop>().Length);
+                Assert.AreEqual((i == 0 || i == 5 ? 3 : 1) + challenges * 2, clearing.GetComponentsInChildren<CaptureStop>().Length);
                 Assert.AreEqual(RouteLayout.Clearing(i), clearing.localPosition);
                 Assert.AreEqual(Quaternion.identity, clearing.localRotation);
                 var ground = clearing.GetComponentInChildren<GroundSurface>();
@@ -574,9 +574,9 @@ namespace TiffanyGame.Tests
                 renderer => renderer.GetComponentInParent<HideVolume>() != null).Length);
             foreach (var renderer in renderers)
             {
-                Assert.AreEqual(!ChallengeBuilder.IsMoving(renderer.transform),
+                Assert.AreEqual(!ChallengeBuilder.IsMoving(renderer.transform) && renderer.GetComponentInParent<TrailBird>() == null,
                     GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic), renderer.name);
-                if (renderer.GetComponentInParent<PowerChallenge>() == null)
+                if (renderer.GetComponentInParent<PowerChallenge>() == null && renderer.GetComponentInParent<TrailBird>() == null)
                     Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic), renderer.name);
                 Assert.AreEqual(ShadowCastingMode.Off, renderer.shadowCastingMode, renderer.name);
                 Assert.IsNotEmpty(renderer.sharedMaterials, renderer.name);
@@ -1236,7 +1236,7 @@ namespace TiffanyGame.Tests
             echo.Tick(stage.GetComponent<CaptureStop>().wait);
             Assert.IsTrue(echo.Active);
             Assert.Greater(echo.Weight, 0f);
-            echo.Tick(route.GetChild(0).GetComponentInChildren<CaptureStop>().wait);
+            echo.Tick(route.GetChild(0).Find("Route 1 Cemetery").GetComponent<CaptureStop>().wait);
             Assert.IsFalse(echo.Active);
             Assert.AreEqual(0f, echo.Weight);
         }

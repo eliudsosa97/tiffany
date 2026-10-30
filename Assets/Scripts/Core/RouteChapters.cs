@@ -23,7 +23,10 @@ namespace TiffanyGame
         {
             if (current == Chapter.Return || clearing < 1 || clearing > 8) return current;
             var reached = (Chapter)Math.Min(clearing - 1, (int)Chapter.WitchHut);
-            return reached > current ? reached : current;
+            return (int)reached == (int)current + 1 ? reached : current;
         }
+
+        public static bool CanVisitClearing(int lastVisited, int clearing) =>
+            clearing >= 0 && clearing <= lastVisited + 1;
     }
 }

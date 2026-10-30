@@ -67,7 +67,8 @@ namespace TiffanyGame.EditorTools
             spawn.rotation = Quaternion.LookRotation(memories[0].position - spawn.position);
             player.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
             foreach (var node in route.GetComponentsInChildren<Transform>(true))
-                if (!ChallengeBuilder.IsMoving(node)) GameObjectUtility.SetStaticEditorFlags(node.gameObject, StaticEditorFlags.BatchingStatic);
+                if (!ChallengeBuilder.IsMoving(node) && node.GetComponentInParent<TrailBird>() == null)
+                    GameObjectUtility.SetStaticEditorFlags(node.gameObject, StaticEditorFlags.BatchingStatic);
             foreach (var renderer in route.GetComponentsInChildren<Renderer>(true))
             {
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -114,6 +115,7 @@ namespace TiffanyGame.EditorTools
                 }
                 else TerrainBuilder.PathFloor(path, $"Ground {i}", a, b, center, terrain, floor);
             }
+            TrailBirds.Place(path, index, terrain, 713 + index);
         }
 
         static Vector3 PathMidpoint(Vector3[] points)

@@ -30,7 +30,6 @@ namespace TiffanyGame
         MovableObject movable;
         HideVolume hideVolume;
         PlaythroughMilestone milestone;
-        Vector3 expectedRespawn;
         float arrivalRadius;
 
         public Vector3 Position => player.transform.position;
@@ -188,9 +187,6 @@ namespace TiffanyGame
                 case PlaythroughMilestone.LakeCandle: SelectCandle(5); break;
                 case PlaythroughMilestone.Kindle: Target = kindleTarget.transform.position + Vector3.back * 1.4f; break;
                 case PlaythroughMilestone.MoveObject: Target = movable.transform.position + Vector3.back * 2f; break;
-                case PlaythroughMilestone.Capture:
-                    expectedRespawn = soul.Respawn.Position + Vector3.back * respawn.sideOffset;
-                    break;
                 case PlaythroughMilestone.Road: Target = clearings[6].position; break;
                 case PlaythroughMilestone.Manifest:
                     Target = ending.transform.position + Vector3.back * 1.5f;
@@ -230,7 +226,7 @@ namespace TiffanyGame
             Energy = soul.Energy.Current,
             CheckpointReached = checkpoint != null && checkpoint.Site.PlayerInside && soul.Respawn.Position == checkpoint.Candle.Position,
             Respawning = respawn.Active,
-            AtRespawn = player.enabled && PlaythroughPlan.HorizontalDistance(Position, expectedRespawn) < 0.35f,
+            AtRespawn = player.enabled && soul.Respawn.IsAtArrival(Position, respawn.sideOffset, 0.35f),
             Credits = ending.Rules.Stage == EndingStage.Credits,
             Frozen = collector.gameInterface.IsFrozen,
             ChallengeCompleted = challenge != null && challenge.Rules.Completed,
