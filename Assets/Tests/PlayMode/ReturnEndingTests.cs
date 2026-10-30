@@ -24,7 +24,7 @@ namespace TiffanyGame.Tests
             Time.timeScale = 1f;
             AudioListener.pause = false;
             GameInput.MoveOverride = GameInput.AimOverride = Vector2.zero;
-            GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = GameInput.FlashOverride = false;
+            GameInput.SlowOverride = GameInput.RunOverride = GameInput.InteractOverride = GameInput.LightHeldOverride = false;
             yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Single);
             yield return null;
             // Heartbeat registra cada cambio de ritmo y estos tests no admiten logs inesperados.

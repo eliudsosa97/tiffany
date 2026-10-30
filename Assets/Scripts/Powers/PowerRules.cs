@@ -22,7 +22,7 @@ namespace TiffanyGame
         }
 
         public static bool TryFlash(PowerSet powers, SoulEnergy energy,
-            bool witchGrounded, bool witchInCone, out bool stunsWitch)
+            bool witchGrounded, bool witchInRange, out bool stunsWitch)
         {
             stunsWitch = false;
             if (!CanUseLight(powers, energy) || !energy.TrySpend(SoulCosts.Flash))
@@ -30,7 +30,7 @@ namespace TiffanyGame
                 return false;
             }
 
-            stunsWitch = witchGrounded && witchInCone;
+            stunsWitch = witchGrounded && witchInRange;
             return true;
         }
 

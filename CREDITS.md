@@ -20,6 +20,8 @@ Grabado en el Cerro de Bugambilias, Jalisco, en octubre de 2026.
 | `Assets/Audio/Sfx/river_loop.wav` | [Ambiance_River_Flow_Small_Loop_Stereo.wav](https://freesound.org/s/479321/) | Nox_Sound | CC0 |
 | `Assets/Audio/Sfx/lake_loop.wav` | [Water_Lapping_River.wav](https://freesound.org/s/318064/) | ceich93 | CC0 |
 | `Assets/Audio/Sfx/heartbeat.wav` | [J.H. FX Heartbeat Wet 2 (G 60 bpm)](https://freesound.org/s/872213/) | Johnnie_Holiday | CC0 |
+| `Assets/Audio/Sfx/flash_charge.wav` | [Anime Charge Sound.wav](https://freesound.org/s/676451/) | TheLittleCrow | CC0 |
+| `Assets/Audio/Sfx/flash_burst.wav` | [Spell impact](https://freesound.org/s/500911/) | Bertsz | CC0 |
 | `Assets/Audio/Sfx/forest_knock_1.wav` | [hit - wooden - tree 01.wav](https://freesound.org/s/406282/) | Anthousai | CC0 |
 | `Assets/Audio/Sfx/forest_knock_2.wav` | [hit - wooden - tree 02.wav](https://freesound.org/s/406281/) | Anthousai | CC0 |
 | `Assets/Audio/Sfx/forest_knock_3.wav` | [Low Pitch Knocking 1.wav](https://freesound.org/s/457742/) | Osiruswaltz | CC0 |
