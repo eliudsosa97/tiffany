@@ -17,12 +17,12 @@ namespace TiffanyGame.Tests
         [TestCase(-1f, 40f, 0f, 0f, 0f)]
         [TestCase(0f, 3f, 1f, 140f, 1f)]
         [TestCase(0f, 0f, 1f, 140f, 1f)]
-        [TestCase(0.5f, 40f, 0.5f, 90f, 0.5588235f)]
-        [TestCase(0.3f, 11.5f, 0.5f, 90f, 0.5588235f)]
-        [TestCase(0.5f, 15f, 0.5f, 90f, 0.5588235f)]
-        [TestCase(0.1499f, 40f, 0.1499f, 0f, 0f)]
-        [TestCase(HeartbeatRate.Audible, 40f, 0.15f, 55f, 0.25f)]
-        [TestCase(0.1501f, 40f, 0.1501f, 55.01f, 0.2500882f)]
+        [TestCase(0.5f, 40f, 0.5f, 90f, 0.4642857f)]
+        [TestCase(0.3f, 11.5f, 0.5f, 90f, 0.4642857f)]
+        [TestCase(0.5f, 15f, 0.5f, 90f, 0.4642857f)]
+        [TestCase(0.2999f, 40f, 0.2999f, 0f, 0f)]
+        [TestCase(HeartbeatRate.Audible, 40f, 0.3f, 70f, 0.25f)]
+        [TestCase(0.3001f, 40f, 0.3001f, 70.01f, 0.2501071f)]
         [TestCase(2f, 40f, 1f, 140f, 1f)]
         public void PanicAndProximityUseTheGreaterIntensity(float panic, float distance, float intensity, float bpm, float volume)
         {

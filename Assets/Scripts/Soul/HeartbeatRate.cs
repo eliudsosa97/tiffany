@@ -5,8 +5,8 @@ namespace TiffanyGame
     public sealed class HeartbeatRate
     {
         public const float NearDistance = 3f;
-        public const float Audible = 0.15f;
-        public const float MinBpm = 55f;
+        public const float Audible = 0.3f;
+        public const float MinBpm = 70f;
         public const float MaxBpm = 140f;
         public const float MinVolume = 0.25f;
         public const float MaxVolume = 1f;
