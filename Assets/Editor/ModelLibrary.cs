@@ -49,6 +49,7 @@ namespace TiffanyGame.EditorTools
             public float[] heightScales;
             public Vector3 lightOffset;
             public BoxSpec hideVolume;
+            public BoxSpec[] colliders;
             public BoneSpec[] skeleton;
             public ControllerSpec controller;
 
@@ -66,6 +67,7 @@ namespace TiffanyGame.EditorTools
         [Serializable]
         public class BoxSpec
         {
+            public string name;
             public Vector3 center;
             public Vector3 size;
         }
