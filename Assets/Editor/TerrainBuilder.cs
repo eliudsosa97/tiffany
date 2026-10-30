@@ -120,9 +120,9 @@ namespace TiffanyGame.EditorTools
         }
 
         public static void PathFloor(Transform parent, string name, Vector3 a, Vector3 b, Vector3 origin,
-            RouteTerrain terrain, Material material)
+            RouteTerrain terrain, Material material, GroundType type = GroundType.Dirt, float lift = 0f)
         {
-            var overlap = Vector3.ProjectOnPlane(b - a, Vector3.up).normalized * 0.05f;
+            var overlap = Vector3.ProjectOnPlane(b - a, Vector3.up).normalized * (type == GroundType.Dirt ? 0.05f : 0f);
             a -= overlap;
             b += overlap;
             int steps = Mathf.CeilToInt(Vector3.Distance(a, b) / GridSize);
@@ -133,7 +133,7 @@ namespace TiffanyGame.EditorTools
             for (int lane = 0; lane < 3; lane++)
             {
                 Vector3 point = Vector3.Lerp(a, b, (float)i / steps) + side * (lane - 1);
-                point.y = terrain.Height(point.x, point.z) + FloorOffset;
+                point.y = terrain.Height(point.x, point.z) + FloorOffset + lift;
                 vertices[i * 3 + lane] = point - origin;
                 if (i == steps || lane == 2) continue;
                 int index = i * 3 + lane;
@@ -142,7 +142,7 @@ namespace TiffanyGame.EditorTools
             var mesh = SaveMesh(parent.parent.name + " " + name, vertices, indices.ToArray());
             var floor = MeshObject(name, parent, mesh, material);
             floor.AddComponent<MeshCollider>().sharedMesh = mesh;
-            floor.AddComponent<GroundSurface>().type = GroundType.Dirt;
+            floor.AddComponent<GroundSurface>().type = type;
             HideFloor(floor);
             floor.GetComponent<Renderer>().enabled = true;
         }

@@ -538,23 +538,26 @@ namespace TiffanyGame.Tests
             surface.voxelSize = 0.1f;
             surface.BuildNavMesh();
             navMeshData = surface.navMeshData;
-            Assert.AreEqual(5, route.GetComponentsInChildren<HideVolume>().Length);
+            Assert.AreEqual(5 + TrailPatches.Count, route.GetComponentsInChildren<HideVolume>().Length);
             var path = new NavMeshPath();
             for (int i = 0; i < 5; i++)
             {
                 var clearing = route.GetChild(i);
                 var hides = clearing.GetComponentsInChildren<HideVolume>();
-                Assert.AreEqual(1, hides.Length, clearing.name);
-                var hide = hides[0];
-                Assert.IsTrue(hide.GetComponent<Collider>().isTrigger, hide.name);
-                Assert.AreEqual(LayerMask.NameToLayer("Ignore Raycast"), hide.gameObject.layer);
+                Assert.AreEqual(1 + TrailPatches.CountForPath(i), hides.Length, clearing.name);
+                Assert.AreEqual(1, System.Array.FindAll(hides, hide => hide.transform.parent == clearing).Length, clearing.name);
                 Assert.IsTrue(NavMesh.SamplePosition(ClearingEntry(i),
                     out var start, 0.5f, NavMesh.AllAreas), clearing.name);
-                foreach (var entry in new[] { hide.HidePoint, hide.HidePoint + Vector3.left * 1.2f })
+                foreach (var hide in hides)
                 {
-                    Assert.IsTrue(NavMesh.SamplePosition(entry, out var end, 0.5f, NavMesh.AllAreas), hide.name);
-                    Assert.IsTrue(NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path), hide.name);
-                    Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, hide.name);
+                    Assert.IsTrue(hide.GetComponent<Collider>().isTrigger, hide.name);
+                    Assert.AreEqual(LayerMask.NameToLayer("Ignore Raycast"), hide.gameObject.layer);
+                    foreach (var entry in new[] { hide.HidePoint, hide.HidePoint + Vector3.left * 1.2f })
+                    {
+                        Assert.IsTrue(NavMesh.SamplePosition(entry, out var end, 0.5f, NavMesh.AllAreas), hide.name);
+                        Assert.IsTrue(NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path), hide.name);
+                        Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, hide.name);
+                    }
                 }
             }
         }
@@ -567,7 +570,7 @@ namespace TiffanyGame.Tests
             Assert.IsNotEmpty(renderers);
             for (int i = 0; i < RouteLayout.Count; i++)
                 Assert.LessOrEqual(route.GetChild(i).GetComponentsInChildren<Renderer>(true).Length, 200, route.GetChild(i).name);
-            Assert.AreEqual(4, System.Array.FindAll(renderers,
+            Assert.AreEqual(4 + TrailPatches.Count, System.Array.FindAll(renderers,
                 renderer => renderer.GetComponentInParent<HideVolume>() != null).Length);
             foreach (var renderer in renderers)
             {
