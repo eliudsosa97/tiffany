@@ -42,13 +42,15 @@ Tiffany despierta sin saber que está muerta. Su lápida le permite entenderlo.
 Al encontrar la pelota aparece Tyler, que la acompaña y comparte su luz.
 La bruja sabe que el alma de Tiffany se le escapó y sale a buscarla.
 
+Tiffany lleva un vestido lila. La pelota de Tyler es azul con costuras blancas.
+
 ## 4. Recorrido y recuerdos
 
 Tiffany recorre ocho claros.
 
 | Orden | Claro | Recuerdo del guion | Poder asociado |
 | --- | --- | --- | --- |
-| 1 | Cementerio | 1. Lápida | Tiffany controla su luz y usa el destello. |
+| 1 | Cementerio | 1. Lápida | Tiffany gana su luz y el destello. |
 | 2 | Planta de agua | 2. Listón | Enciende veladoras. |
 | 3 | Vías del tren | 3. Muñeca | Mueve objetos. |
 | 4 | Establo | 4. Zapato | Se desvanece. |
@@ -58,12 +60,15 @@ Tiffany recorre ocho claros.
 | 8 | Casa de Tiffany | | Llega a la veladora del final. |
 
 En el cementerio Tiffany también recoge la pelota. Con ella aparece Tyler.
-Al recoger un recuerdo, el jugador ve un eco de esa noche y recibe el aviso de su poder.
-Durante el eco ve el mundo sin color y escenas del pasado en el mismo lugar.
-Cada recuerdo incluye además tres dibujos de niña, cada uno con una frase.
-El jugador puede volver a ver los dibujos y sus frases en el cuaderno (Tab).
-Tiffany puede usar la luz desde el inicio. Los otros poderes se habilitan con su recuerdo.
+Al recoger un recuerdo, el juego se detiene y muestra sus tres dibujos, hechos a mano por Claudia.
+Cada dibujo pasa en 4 segundos, o antes con Espacio o Cruz. Suena el ladrido de esa noche y una música baja.
+Al terminar aparece el aviso del poder. Los dibujos se vuelven a ver en el cuaderno (Tab).
+Antes de la lápida, Tiffany solo brilla tenue. La luz se gana en la lápida y cada poder con su recuerdo.
 Con el quinto recuerdo se inician el regreso y la tormenta.
+
+Pájaros amarillos marcan el camino entre claros.
+La planta de agua tiene un tanque elevado oxidado y las vías tienen rieles y durmientes.
+El establo es un granero viejo con paja, abrevadero y lodo. El jacal de la bruja tiene techo de paja.
 
 ## 5. Bucle de juego
 
@@ -79,23 +84,24 @@ En el último combina encender veladoras, distraer a la bruja y desvanecerse.
 
 | Acción | Teclado y ratón | DualSense / gamepad |
 | --- | --- | --- |
-| Movimiento | WASD o flechas | Stick izquierdo |
-| Paso lento | Ctrl, mantenido | L2, gatillo izquierdo, mantenido |
-| Carrera | Shift, mantenido | L3, stick izquierdo presionado y mantenido |
-| Dirección de la luz | Ratón | Stick derecho |
-| Encendido o apagado de la luz | F o clic derecho | Triángulo (norte) |
-| Destello | Clic izquierdo | R2, gatillo derecho |
-| Encendido de veladoras | Q | Cuadrado (oeste) |
-| Movimiento de objetos | E | Círculo (este) |
-| Desvanecimiento | R | R1, hombro derecho |
-| Interacción: recoger, esconderse, salir o activar el final | Espacio | Cruz (sur) |
-| Cuaderno | Tab | Create / Select |
-| Cambio de página | A / D o flechas izquierda / derecha | Cruceta izquierda / derecha |
-| Pausa o continuación | Esc o P | Options / Start |
-| Inicio desde el título | Clic izquierdo, Espacio o Enter | Options / Start o cruz (sur) |
-| Selección de opción del título | W / S o flechas arriba / abajo | Stick izquierdo o cruceta arriba / abajo |
+| Moverse | WASD o flechas | Stick izquierdo |
+| Apuntar la luz | Ratón | Stick derecho |
+| Correr | Shift, mantenido | L3 o R2, mantenido |
+| Ir despacio | Ctrl, mantenido | L2, mantenido |
+| Prender o apagar la luz | Clic o F, un toque | Triángulo, un toque |
+| Cargar el destello | Clic o F, mantenido | Triángulo, mantenido |
+| Encender veladora | Q | Cuadrado |
+| Mover objeto | E | Círculo |
+| Desvanecerse | R | R1 |
+| Recoger, esconderse o salir | Espacio | Cruz |
+| Cuaderno | Tab | Create |
+| Pasar página | A / D o flechas | Cruceta |
+| Mapa | M | L1 |
+| Pausa | Esc o P | Options |
 
-Caminando, Tiffany mira hacia donde apunta. Corriendo, hacia donde corre.
+Tiffany camina a 4 m/s, va despacio a 1.4 m/s y corre a 5.5 m/s.
+Caminando, mira hacia donde apunta. Corriendo, hacia donde corre.
+El mapa de papel muestra el recorrido y no pausa el juego.
 
 ## 7. Energía del alma y veladoras
 
@@ -123,9 +129,10 @@ Si Tyler está cerca, le comparte su luz cuando ella se queda sin energía.
 ## 8. Luz y poderes
 
 Tiffany alumbra el suelo hacia donde apunta. La luz le permite ver, pero la expone.
-El destello aturde a la bruja durante 2 segundos si está en el suelo,
-dentro del cono de luz y sin un obstáculo que bloquee el destello.
-Tiffany puede interrumpir su aviso de embestida para ganar tiempo y escapar.
+El destello se carga en 3 segundos manteniendo el botón de la luz. Un anillo en pantalla muestra la carga.
+Sale en 360° alrededor de Tiffany, hasta 11 metros.
+Aturde a la bruja durante 2 segundos si está en el suelo y nada lo bloquea.
+Con él, Tiffany puede cortar la embestida y escapar.
 
 Tiffany enciende la veladora apagada más cercana, hasta a 2 metros.
 Necesita el poder del listón, energía suficiente y que no esté lloviendo.
@@ -164,6 +171,7 @@ La cobertura sobre Tiffany evita que la bruja la vea desde el aire.
 En vuelo, la bruja es una bola de fuego. Puede detectar la luz de Tiffany a distancia.
 Si pasa cerca y Tiffany está descubierta, puede verla aunque ella apague la luz.
 En el suelo la detecta por vista, oído y olfato.
+Un anillo en el suelo marca hasta dónde ve: 15 metros si Tiffany lleva la luz encendida y 3 metros si va a oscuras.
 Desde las vías se oye cómo imita el ladrido de Tyler para atraerla.
 
 | Estado | Qué ocurre |
@@ -192,8 +200,10 @@ Baja junto a veladoras, al quedarse quieta en un escondite y con Tyler cerca.
 Al llegar al 50 %, el jugador oye pasos falsos. Desde el 75 % también oye susurros.
 Desde el 90 %, la luz de Tiffany tiembla y ella solloza, produciendo ruido fuera del escondite.
 El latido suena con más fuerza y rapidez al subir el pánico o acercarse la bruja a pie.
-Tyler sigue a Tiffany y, si ella se detiene, la guía hacia el siguiente recuerdo.
-Gruñe cuando la bruja está cerca en el suelo.
+Tyler va al lado de Tiffany y la alcanza si se queda atrás. Su voz sale de donde está.
+Sobre él aparecen avisos: ! cuando ladra, !! cuando gruñe por la bruja, ... cuando gime y una flecha hacia el siguiente recuerdo.
+El ladrido falso de la bruja no tiene aviso.
+La música suena solo en el título, la pausa, los dibujos de los recuerdos y el final.
 
 ## 12. Tormenta y regreso
 
