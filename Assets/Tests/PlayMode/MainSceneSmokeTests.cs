@@ -516,6 +516,14 @@ namespace TiffanyGame.Tests
                 Assert.IsTrue(NavMesh.CalculatePath(from.position, entry.position, NavMesh.AllAreas, path), hide.name);
                 Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, hide.name);
             }
+            var barn = route.GetChild(3).Find("Barn/barn");
+            Assert.AreEqual(6, barn.GetComponentsInChildren<Renderer>(true).Length);
+            Assert.IsEmpty(barn.GetComponentsInChildren<MeshCollider>(true));
+            Assert.AreEqual(5, barn.Find("BarnWalls").GetComponentsInChildren<BoxCollider>().Length);
+            Assert.IsFalse(barn.Find("BarnRoof").GetComponent<Renderer>().enabled);
+            Assert.IsTrue(NavMesh.SamplePosition(route.GetChild(3).Find("Memory Point").position, out var barnEntry, 0.5f, NavMesh.AllAreas));
+            Assert.IsTrue(NavMesh.CalculatePath(from.position, barnEntry.position, NavMesh.AllAreas, path));
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status);
             Assert.IsFalse(NavMesh.SamplePosition(route.GetChild(5).Find("Water").position, out _, 1f, NavMesh.AllAreas));
             var river = route.GetChild(5).Find("Path to Next Clearing/River Crossing/River");
             foreach (float side in new[] { -1.8f, 1.8f })

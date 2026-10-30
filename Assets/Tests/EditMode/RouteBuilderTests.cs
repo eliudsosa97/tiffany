@@ -1250,7 +1250,6 @@ namespace TiffanyGame.Tests
             }
         }
 
-        [TestCase(3, "Barn", 5f)]
         [TestCase(7, "House", 4f)]
         public void SheltersKeepFullWallCollisionsAndLowCameraFacingWalls(int index, string name, float height)
         {
@@ -1309,7 +1308,8 @@ namespace TiffanyGame.Tests
                     {
                         if (!renderer.enabled || renderer.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
                         if (spot != null && renderer.transform.IsChildOf(spot.transform)) continue;
-                        if (index == 4 && renderer.transform.IsChildOf(clearing.Find("Hut")))
+                        if ((index == 4 && renderer.transform.IsChildOf(clearing.Find("Hut")))
+                            || (index == 3 && renderer.transform.IsChildOf(clearing.Find("Barn"))))
                         {
                             AssertHutSightline(renderer, ray, direction.magnitude, camera.transform.position,
                                 player.transform.position + Vector3.up * FollowCamera.ChestHeight);
