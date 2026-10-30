@@ -7,7 +7,7 @@ namespace TiffanyGame
     [DefaultExecutionOrder(-900)]
     public sealed partial class WitchDemo : MonoBehaviour
     {
-        public const float NothingDuration = 24f;
+        public const float NothingDuration = 30f;
         public const float HarassDuration = 24f;
         public bool chase;
         public bool stalk;

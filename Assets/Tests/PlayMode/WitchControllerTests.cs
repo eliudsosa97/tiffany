@@ -616,6 +616,7 @@ namespace TiffanyGame.Tests
             }
 
             CreateWitch();
+            UseImmediateHarassTimeout();
             witch.transform.position = Vector3.zero;
             LightPlayerAt(Vector3.right * 6f);
             int caughtCount = 0;

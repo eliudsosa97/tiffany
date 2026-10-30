@@ -77,6 +77,7 @@ namespace TiffanyGame.Tests
             while (Time.time < deadline)
             {
                 WitchDecision decision = witch.Decision;
+                Assert.AreNotEqual(WitchIntent.Harass, decision.Intent, "El origen vacío no debe iniciar el acoso.");
                 Assert.That(decision.State, Is.EqualTo(WitchState.Suspicious).Or.EqualTo(WitchState.Stalking)
                     .Or.EqualTo(WitchState.TakingOff).Or.EqualTo(WitchState.Flying));
                 Assert.AreEqual(1, noises);

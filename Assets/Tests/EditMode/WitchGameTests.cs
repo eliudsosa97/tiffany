@@ -123,9 +123,11 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchState.Suspicious, decision.State);
             bool warned = false;
             bool inspected = false;
+            bool tookOff = false;
             var contacts = new FootContacts();
             const float dt = 1f / 30f;
-            for (int frame = 1; frame <= WitchDemo.NothingDuration / dt; frame++)
+            float remaining = WitchDemo.NothingDuration - profile.LandingDuration - 0.5f;
+            for (int frame = 1; frame <= remaining / dt; frame++)
             {
                 if (secondNoise && frame == 30) senses.Hear(new StepNoise(Vector3.zero, 20f), input.WitchPosition);
                 if (!secondNoise)
@@ -137,6 +139,8 @@ namespace TiffanyGame.Tests
                             input.WitchPosition);
                 }
                 decision = brain.Tick(dt, senses.Sense(in input));
+                if (!secondNoise)
+                    Assert.AreNotEqual(WitchIntent.Harass, decision.Intent, "Un solo ruido lejano no confirma a Tiffany.");
                 warned |= decision.State == WitchState.WindUp;
                 inspected |= decision.State == WitchState.Stalking && decision.Speed == 0f
                     && HorizontalDistance(input.WitchPosition, Vector3.zero) <= profile.ArriveDistance;
@@ -149,12 +153,16 @@ namespace TiffanyGame.Tests
                 {
                     Assert.IsFalse(secondNoise || warned);
                     Assert.IsTrue(inspected);
+                    tookOff = true;
+                }
+                if (tookOff && decision.State == WitchState.Flying)
+                {
                     return;
                 }
                 input.Form = decision.Form;
                 input.WitchPosition = Vector3.MoveTowards(input.WitchPosition, decision.MoveTarget, decision.Speed * dt);
             }
-            Assert.Fail("El encuentro debe terminar en embestida con dos ruidos o en revisión y despegue con uno.");
+            Assert.Fail("El encuentro debe terminar en embestida con dos ruidos o en revisión y regreso al vuelo con uno.");
         }
 
         [Test]
