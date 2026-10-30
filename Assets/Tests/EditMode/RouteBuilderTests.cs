@@ -62,21 +62,6 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void EchoTylerMaterialsStayInsideTheTestFolder()
-        {
-            var echoes = root.GetComponentsInChildren<EchoPlayer>(true);
-            Assert.AreEqual(5, echoes.Length);
-            foreach (var echo in echoes)
-            {
-                var renderers = echo.tyler.GetComponentsInChildren<Renderer>(true);
-                Assert.IsNotEmpty(renderers);
-                foreach (var renderer in renderers)
-                    foreach (var material in renderer.sharedMaterials)
-                        Assert.AreEqual($"{TempFolder}/ModelMaterials/{material.name}.mat", AssetDatabase.GetAssetPath(material));
-            }
-        }
-
-        [Test]
         public void CemeteryBallIsBlueWithWhiteSeams()
         {
             var ball = route.GetChild(0).Find("Ball");
@@ -339,13 +324,13 @@ namespace TiffanyGame.Tests
                 if (i == 0) Assert.AreSame(spots[1], collector.spots[1]);
                 var echo = spots[0].echoPlayer;
                 Assert.IsNotNull(echo);
-                Assert.AreSame(echoes, echo.stageRoot.transform.parent);
-                Assert.Less(Vector3.Distance(spots[0].transform.position, echo.stageRoot.transform.position), 0.001f);
-                Assert.Less(Quaternion.Angle(spots[0].transform.rotation, echo.stageRoot.transform.rotation), 0.001f);
-                Assert.IsFalse(echo.stageRoot.activeSelf);
                 Assert.AreEqual(Vector3.up, spots[0].transform.up);
-                Assert.IsNotNull(echo.ground);
-                Assert.IsTrue(echo.ground.transform.IsChildOf(route.GetChild(i)));
+                Assert.IsEmpty(echoes.GetComponentsInChildren<Renderer>(true));
+                foreach (var source in echo.sources)
+                {
+                    Assert.AreSame(echoes, source.transform.parent.parent);
+                    Assert.IsTrue(source.ignoreListenerPause);
+                }
             }
             var grave = route.GetChild(0).Find("Tiffany Gravestone");
             Assert.Less(Vector3.Distance(grave.position, collector.spots[0].transform.position), 2f);
@@ -385,9 +370,6 @@ namespace TiffanyGame.Tests
                 Assert.AreSame(System.Array.Find(collector.spots, spot => spot.memoryId == stage.spot.memoryId), stage.spot);
                 Assert.AreEqual(MemorySpotKind.Memory, stage.spot.kind);
                 Assert.Less(Vector3.Distance(stage.transform.position, stage.spot.transform.position), 6f);
-                Assert.IsTrue(stage.spot.echoPlayer.ground.Raycast(
-                    new Ray(stage.transform.position + Vector3.up * 3f, Vector3.down), out var hit, 6f));
-                Assert.AreEqual(hit.point.y, stage.transform.position.y, 0.001f);
                 var capture = stage.GetComponent<CaptureStop>();
                 Assert.IsTrue(capture.overrideCamera);
                 Vector3 focus = stage.spot.transform.TransformPoint(new Vector3(0f, 0.7f, 0.8f));
@@ -415,10 +397,75 @@ namespace TiffanyGame.Tests
             var tracks = route.GetChild(2).Find("Tracks");
             for (int side = -1; side <= 1; side += 2)
             {
-                var rail = tracks.Find($"Rail {side}").GetComponent<Collider>();
+                var rail = tracks.Find($"Rail {side}").GetComponent<Renderer>();
                 Assert.Greater(rail.bounds.size.z, rail.bounds.size.x * 10f);
-                Assert.AreEqual(GroundType.Gravel, GroundSurface.TypeOf(rail));
+                Assert.AreEqual(new Vector3(0.07f, 0.15f, 14f), rail.transform.localScale);
+                Assert.IsNull(rail.GetComponent<Collider>());
+                var foot = tracks.Find($"Rail Foot {side}");
+                Assert.AreEqual(new Vector3(0.14f, 0.03f, 14f), foot.localScale);
+                Assert.IsNull(foot.GetComponent<Collider>());
+                Assert.AreSame(rail.sharedMaterial, foot.GetComponent<Renderer>().sharedMaterial);
+                Assert.AreEqual(0.8f, rail.sharedMaterial.GetFloat("_Metallic"), 0.001f);
             }
+            var left = tracks.Find("Rail -1").GetComponent<Renderer>().bounds;
+            var right = tracks.Find("Rail 1").GetComponent<Renderer>().bounds;
+            Assert.AreEqual(1.435f, right.min.x - left.max.x, 0.001f);
+        }
+
+        [Test]
+        public void TrackSleepersShareOneMeshAboveWalkableGravelBallast()
+        {
+            var tracks = route.GetChild(2).Find("Tracks");
+            var sleepers = tracks.Find("Sleepers");
+            var mesh = sleepers.GetComponent<MeshFilter>().sharedMesh;
+            Assert.AreEqual(24 * 12, mesh.triangles.Length / 3);
+            Assert.AreEqual(1, sleepers.GetComponentsInChildren<Renderer>().Length);
+            Assert.AreEqual(2.4f, mesh.bounds.size.x, 0.001f);
+            Assert.AreEqual(0.14f, mesh.bounds.size.y, 0.001f);
+            Assert.AreEqual(0.6f, mesh.vertices[24].z - mesh.vertices[0].z, 0.001f);
+            Assert.AreEqual(0.22f, Mathf.Abs(mesh.vertices[4].z - mesh.vertices[0].z), 0.001f);
+            Assert.IsTrue(AssetDatabase.Contains(mesh));
+            Assert.IsNull(sleepers.GetComponent<Collider>());
+            var ballast = tracks.Find("Ballast").GetComponent<BoxCollider>();
+            Assert.AreEqual(RouteLayout.TrainWidth, ballast.bounds.size.x, 0.001f);
+            Assert.AreEqual(14f, ballast.bounds.size.z, 0.001f);
+            Assert.AreEqual(TerrainBuilder.FloorOffset + 0.1f, ballast.bounds.max.y - tracks.position.y, 0.001f);
+            Assert.AreEqual(GroundType.Gravel, GroundSurface.TypeOf(ballast));
+            Assert.AreEqual(ballast.bounds.max.y, sleepers.GetComponent<Renderer>().bounds.min.y, 0.001f);
+            Assert.LessOrEqual(tracks.GetComponentsInChildren<Renderer>().Length, 6);
+        }
+
+        [Test]
+        public void WaterTowersHaveSharedMaterialsSimpleCollidersAndOpenLegs()
+        {
+            var clearing = route.GetChild(1);
+            var spec = ModelLibrary.LoadSpec("water-tower");
+            var first = clearing.Find("Tank -1");
+            var second = clearing.Find("Tank 1");
+            Assert.AreNotEqual(first.localRotation, second.localRotation);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var tower = clearing.Find($"Tank {side}");
+                Assert.AreEqual(new Vector3(side * 7f, 0f, 8f), tower.localPosition);
+                Assert.That(ModelLibraryTests.TriangleCount(tower), Is.InRange(1L, 3000L));
+                Assert.AreEqual(1, tower.GetComponentsInChildren<Renderer>().Length);
+                Assert.IsEmpty(tower.GetComponentsInChildren<MeshCollider>());
+                Assert.AreEqual(spec.colliders.Length, tower.GetComponentsInChildren<BoxCollider>().Length);
+                for (int leg = 1; leg <= 4; leg++)
+                {
+                    var collider = tower.Find($"Leg {leg}").GetComponent<BoxCollider>();
+                    Assert.AreEqual(6f, collider.size.y);
+                    Assert.IsFalse(collider.bounds.Contains(tower.TransformPoint(new Vector3(0f, 1f, 0f))));
+                }
+                var bounds = ModelLibrary.LocalBounds(tower);
+                Assert.AreEqual(0f, bounds.min.y, 0.02f);
+                Assert.AreEqual(10.05f, bounds.max.y, 0.03f);
+                Assert.AreEqual(1.2f, tower.Find("Hand Pump").GetComponent<BoxCollider>().size.y);
+                foreach (var renderer in tower.GetComponentsInChildren<Renderer>())
+                    Assert.IsTrue(GameObjectUtility.AreStaticEditorFlagsSet(renderer.gameObject, StaticEditorFlags.BatchingStatic));
+            }
+            CollectionAssert.AreEqual(first.GetComponentInChildren<Renderer>().sharedMaterials,
+                second.GetComponentInChildren<Renderer>().sharedMaterials);
         }
 
         [Test]
@@ -1267,18 +1314,16 @@ namespace TiffanyGame.Tests
         }
 
         [Test]
-        public void CemeteryCaptureWaitsUntilThePreviousMemoryEchoHasEnded()
+        public void CemeteryCaptureWaitsUntilThePreviousMemorySlideshowHasEnded()
         {
-            var echo = new MemoryEcho();
             var stage = root.GetComponentInChildren<EchoCaptureStage>();
-            Assert.IsTrue(EchoData.TryLoad(stage.spot.echoPlayer.echoAsset.text, out var data, out _));
-            echo.Start(data.duration);
-            echo.Tick(stage.GetComponent<CaptureStop>().wait);
-            Assert.IsTrue(echo.Active);
-            Assert.Greater(echo.Weight, 0f);
-            echo.Tick(route.GetChild(0).Find("Route 1 Cemetery").GetComponent<CaptureStop>().wait);
-            Assert.IsFalse(echo.Active);
-            Assert.AreEqual(0f, echo.Weight);
+            var asset = AssetDatabase.LoadAssetAtPath<TextAsset>($"Assets/Data/Memories/memory-{stage.spot.memoryId}.json");
+            var show = new MemorySlideshow(JsonUtility.FromJson<MemoryData>(asset.text));
+            show.Tick(stage.GetComponent<CaptureStop>().wait);
+            Assert.IsFalse(show.Finished);
+            Assert.IsTrue(show.PageVisible);
+            show.Tick(route.GetChild(0).Find("Route 1 Cemetery").GetComponent<CaptureStop>().wait);
+            Assert.IsTrue(show.Finished);
         }
 
         bool HitsRoute(Vector3 origin, Vector3 direction, float distance)

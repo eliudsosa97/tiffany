@@ -114,8 +114,9 @@ namespace TiffanyGame.Tests
             Assert.IsTrue(dodge.Started);
         }
 
-        [Test]
-        public void MovesPerpendicularToTheSprintLineLockedAfterWindUp()
+        [TestCase(PlayerMotion.WalkSpeed)]
+        [TestCase(PlayerMotion.RunSpeed)]
+        public void MovesPerpendicularToTheSprintLineLockedAfterWindUp(float playerSpeed)
         {
             var profile = new WitchProfile { GroundChase = true };
             var brain = new WitchBrain(profile, null);
@@ -125,7 +126,7 @@ namespace TiffanyGame.Tests
             Assert.AreEqual(WitchState.WindUp, warning.State);
 
             bool dodging = dodge.Tick(0f, p.PlayerPosition, Vector3.forward, warning.State, p.WitchPosition, true);
-            p.PlayerPosition += (dodging ? dodge.Direction : Vector3.forward) * PlayerMotion.RunSpeed * profile.WindUpDuration;
+            p.PlayerPosition += (dodging ? dodge.Direction : Vector3.forward) * playerSpeed * profile.WindUpDuration;
             p.DistanceToPlayer = Vector3.Distance(p.PlayerPosition, p.WitchPosition);
             WitchDecision sprint = brain.Tick(profile.WindUpDuration, in p);
             Assert.AreEqual(WitchState.Sprinting, sprint.State);
@@ -135,6 +136,11 @@ namespace TiffanyGame.Tests
                 sprint.State, p.WitchPosition, true));
             Assert.AreEqual(0f, Vector3.Dot(dodge.Direction, sprintLine), 1e-4f,
                 "La esquiva debe ser perpendicular a la línea fijada al terminar el aviso.");
+            for (int i = 0; i < 120; i++)
+            {
+                p.PlayerPosition += dodge.Direction * playerSpeed * 0.01f;
+                Assert.AreNotEqual(WitchState.Caught, WitchSim.Step(brain, ref p, 0.01f).State);
+            }
         }
     }
 }

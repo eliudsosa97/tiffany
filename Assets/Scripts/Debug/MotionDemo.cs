@@ -41,7 +41,7 @@ namespace TiffanyGame
             GameInput.MoveOverride = nextPhase == 1 || nextPhase == 2 || nextPhase == 5 || nextPhase == 6 ? move : Vector2.zero;
             GameInput.RunOverride = nextPhase == 2;
             GameInput.SlowOverride = false;
-            GameInput.LightToggleOverride = phase < 0 ? true : null;
+            GameInput.LightHeldOverride = phase < 0 ? true : null;
             if (nextPhase == phase) return;
             phase = nextPhase;
             string label = phase switch
