@@ -133,7 +133,7 @@ def add(name, data, position, target=None):
     return obj
 
 
-def render(folder, model_id, size, center=None):
+def render(folder, model_id, size, center=None, views=None, hide_for_view=None):
     os.makedirs(folder, exist_ok=True)
     scene = bpy.context.scene
     scene.render.engine = "BLENDER_EEVEE"
@@ -161,17 +161,26 @@ def render(folder, model_id, size, center=None):
     camera.data.type, camera.data.ortho_scale = "ORTHO", span * 1.7
     scene.camera = camera
     elevation, azimuth = math.radians(42), math.radians(35)
-    views = {"front": Vector((0, 0, 1)),
-             "threequarter": Vector((math.sin(azimuth) * math.cos(elevation), math.sin(elevation),
-                                      math.cos(azimuth) * math.cos(elevation)))}
+    if views is None:
+        views = {"front": Vector((0, 0, 1)),
+                 "threequarter": Vector((math.sin(azimuth) * math.cos(elevation), math.sin(elevation),
+                                          math.cos(azimuth) * math.cos(elevation)))}
     for view, direction in views.items():
-        camera.location = to_blender(target + direction * span * 3)
+        camera.location = to_blender(target + Vector(direction) * span * 3)
         camera.rotation_euler = (to_blender(target) - camera.location).to_track_quat("-Z", "Y").to_euler()
         scene.render.filepath = os.path.join(folder, f"{model_id}_{view}.png")
-        bpy.ops.render.render(write_still=True)
+        hidden = [(bpy.data.objects[name], bpy.data.objects[name].hide_render)
+                  for name in (hide_for_view or {}).get(view, ())]
+        try:
+            for obj, _ in hidden:
+                obj.hide_render = True
+            bpy.ops.render.render(write_still=True)
+        finally:
+            for obj, was_hidden in hidden:
+                obj.hide_render = was_hidden
 
 
-def run(script, build):
+def run(script, build, preview=render):
     parser = argparse.ArgumentParser()
     parser.add_argument("--render")
     parser.add_argument("--no-export", action="store_true")
@@ -200,7 +209,7 @@ def run(script, build):
             points = [point for mesh in meshes for point in mesh.vertices]
             center = Vector(tuple((min(p[i] for p in points) + max(p[i] for p in points)) / 2 - pivot[i]
                                   for i in range(3)))
-        render(args.render, model_id, size, center)
+        preview(args.render, model_id, size, center)
     if not bpy.app.background:
         for obj in objects:
             obj.select_set(True)

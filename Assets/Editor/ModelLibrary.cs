@@ -20,7 +20,7 @@ namespace TiffanyGame.EditorTools
 
         static readonly HashSet<string> Occluders = new HashSet<string>(StringComparer.Ordinal)
         {
-            "oak", "bougainvillea", "witch-hut",
+            "oak", "bougainvillea", "witch-hut", "barn",
             "Nature/tree_pineTallA_detailed", "Nature/tree_pineTallC_detailed", "Nature/tree_pineRoundC",
             "Nature/rock_largeA", "Nature/stone_tallA"
         };
