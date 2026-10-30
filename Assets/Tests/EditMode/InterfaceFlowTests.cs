@@ -5,6 +5,20 @@ namespace TiffanyGame.Tests
 {
     public sealed class InterfaceFlowTests
     {
+        [Test] public void MemoryFreezesAndBlocksPauseAndNotebookUntilItEnds()
+        {
+            var flow = new InterfaceFlow();
+            flow.SetMemory(true);
+            flow.PressPause();
+            flow.PressNotebook();
+            flow.PressStart();
+            Assert.AreEqual(InterfaceScreen.Memory, flow.Screen);
+            Assert.IsTrue(flow.IsFrozen);
+            flow.SetMemory(false);
+            Assert.AreEqual(InterfaceScreen.Playing, flow.Screen);
+            Assert.IsFalse(flow.IsFrozen);
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void TitleOffersContinueOnlyWithValidSave(bool validSave)

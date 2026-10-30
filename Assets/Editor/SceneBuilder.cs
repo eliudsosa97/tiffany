@@ -811,6 +811,7 @@ namespace TiffanyGame.EditorTools
                 new Vector2(0.1f, 0.37f), new Vector2(0.9f, 0.46f));
 
             ui.notebookPanel = InterfacePanel("Notebook", root.transform, 0.92f);
+            ui.notebookBackground = ui.notebookPanel.GetComponent<Image>();
             var notebook = ui.notebookPanel.transform;
             var frame = InterfaceRect("Drawing Frame", notebook,
                 new Vector2(0.08f, 0.23f), new Vector2(0.92f, 0.84f));
@@ -827,7 +828,7 @@ namespace TiffanyGame.EditorTools
             ui.notebookPage = InterfaceText("Page", notebook, font, "", 28,
                 new Vector2(0.84f, 0.025f), new Vector2(0.97f, 0.085f));
             ui.notebookPage.alignment = TextAnchor.MiddleRight;
-            InterfaceText("Hint", notebook, font, InterfaceTexts.NotebookHint, 26,
+            ui.notebookHint = InterfaceText("Hint", notebook, font, InterfaceTexts.NotebookHint, 26,
                 new Vector2(0.15f, 0.025f), new Vector2(0.85f, 0.085f));
             ui.notebookEmpty = InterfaceText("Empty", notebook, font, InterfaceTexts.NotebookEmpty, 44,
                 new Vector2(0.1f, 0.4f), new Vector2(0.9f, 0.6f));

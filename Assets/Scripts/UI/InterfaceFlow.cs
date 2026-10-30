@@ -27,15 +27,21 @@ namespace TiffanyGame
 
         public void PressPause()
         {
-            if (Screen == InterfaceScreen.Title || Screen == InterfaceScreen.Ending) return;
+            if (Screen == InterfaceScreen.Title || Screen == InterfaceScreen.Ending || Screen == InterfaceScreen.Memory) return;
             Screen = Screen == InterfaceScreen.Playing ? InterfaceScreen.Paused : InterfaceScreen.Playing;
         }
 
         public void PressNotebook()
         {
             if (Screen == InterfaceScreen.Title || Screen == InterfaceScreen.Paused
-                || Screen == InterfaceScreen.Ending) return;
+                || Screen == InterfaceScreen.Ending || Screen == InterfaceScreen.Memory) return;
             Screen = Screen == InterfaceScreen.Playing ? InterfaceScreen.Notebook : InterfaceScreen.Playing;
+        }
+
+        public void SetMemory(bool active)
+        {
+            if (active && Screen == InterfaceScreen.Playing) Screen = InterfaceScreen.Memory;
+            else if (!active && Screen == InterfaceScreen.Memory) Screen = InterfaceScreen.Playing;
         }
 
         public void SetEnding(bool active)

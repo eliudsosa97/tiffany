@@ -216,6 +216,7 @@ namespace TiffanyGame.Tests
             var candles = System.Array.Find(save.memories.challenges, challenge => challenge.kind == ChallengeKind.Candles);
             candles.Rules.MarkCompleted();
             Assert.IsTrue(save.memories.Collect(3));
+            ui.StopMemory();
             var data = JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(SaveKey));
             Assert.AreEqual(1, data.completedChallenges);
             var distract = System.Array.Find(save.memories.challenges, challenge => challenge.kind == ChallengeKind.Distract);

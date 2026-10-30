@@ -24,6 +24,7 @@ namespace TiffanyGame
         public const string PauseHint = "Esc o P para seguir";
         public const string NotebookEmpty = "Aún no recuerdas nada";
         public const string NotebookHint = "A / D para pasar de página · Tab para cerrar";
+        public const string MemoryHint = "Espacio / Cruz para continuar";
         public const float PowerNoticeSeconds = 3f;
 
         public static string ControllerText(string text, bool hasSymbols) => hasSymbols ? text :
