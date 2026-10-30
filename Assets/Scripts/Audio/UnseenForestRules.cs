@@ -2,7 +2,7 @@ using System;
 namespace TiffanyGame
 {
     public enum UnseenZone { Forest, Trail, Town }
-    public enum UnseenSound { Branch, Steps, Whisper, Knock, Name }
+    public enum UnseenSound { Branch, Steps, Whisper, Name }
     public sealed class UnseenForestRules
     {
         public const float ForestMinInterval = 50f, ForestMaxInterval = 80f;
@@ -11,7 +11,7 @@ namespace TiffanyGame
         public const float ChaseCooldown = 12f, OtherScareGap = 8f;
         public const float NameCooldown = 150f;
         public const float MinDistance = 15f, MaxDistance = 30f, FrontHalfAngle = 70f, HalfTurn = 180f;
-        public const int SoundCount = 4;
+        public const int SoundCount = 3;
         public UnseenSound Sound { get; private set; }
         public float Distance { get; private set; }
         public float Angle { get; private set; }

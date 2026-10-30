@@ -2,7 +2,7 @@ using System;
 namespace TiffanyGame
 {
     public enum ApparitionState { Waiting, Shown, Vanishing, Done }
-    public enum ApparitionEvent { None, Appeared, VanishedWithKnock, VanishedQuietly }
+    public enum ApparitionEvent { None, Appeared, VanishedQuietly }
     public sealed class ApparitionRules
     {
         public const float ShowMin = 12f, ShowMax = 25f, WitchClearance = 30f;
@@ -32,7 +32,7 @@ namespace TiffanyGame
                 bool quiet = chasing || witchDistance < WitchClearance || playerDistance > ForgetDistance;
                 if (!quiet && playerDistance >= VanishNear && !lit) return ApparitionEvent.None;
                 State = ApparitionState.Vanishing;
-                return quiet ? ApparitionEvent.VanishedQuietly : ApparitionEvent.VanishedWithKnock;
+                return ApparitionEvent.VanishedQuietly;
             }
             return ApparitionEvent.None;
         }
