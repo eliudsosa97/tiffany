@@ -46,6 +46,7 @@ namespace TiffanyGame
         private WitchSenses witchSenses;
         private WitchBrain brain;
         private WitchChapterTracker chapterTracker;
+        private GameInterface gameInterface;
         private RespawnPoint respawn;
         private Vector3[] hidePoints;
         private RaycastHit[] hits;
@@ -135,6 +136,7 @@ namespace TiffanyGame
                 if (found != null) player = found.transform;
             }
             chapterTracker = FindAnyObjectByType<WitchChapterTracker>();
+            gameInterface = FindAnyObjectByType<GameInterface>();
             if (player != null && player.TryGetComponent<PlayerSoul>(out var soul)) respawn = soul.Respawn;
         }
 
@@ -344,6 +346,8 @@ namespace TiffanyGame
 
         private void Update()
         {
+            if (gameInterface != null && gameInterface.IsFrozen) return;
+
             bool flashThisFrame = flashed;
             flashed = false;
             if (player == null) return;
